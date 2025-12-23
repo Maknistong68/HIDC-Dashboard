@@ -19,7 +19,7 @@ const STEPS = [
   { id: 4, name: 'Complete', icon: CheckCircle },
 ]
 
-const ImportWizard = ({ onComplete, onCancel, mode = 'inline' }) => {
+const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true }) => {
   const { incidents, addIncident, updateIncident, recordImportWarnings, recordImportStats } = useData()
 
   const [currentStep, setCurrentStep] = useState(1)
@@ -219,8 +219,8 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline' }) => {
 
   return (
     <div className={containerClass}>
-      {/* Header - only show in inline mode */}
-      {mode === 'inline' && (
+      {/* Header - only show in inline mode when showHeader is true */}
+      {mode === 'inline' && showHeader && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Import Excel Data</h2>
           <p className="text-gray-500">Import observations from your official HSE system</p>

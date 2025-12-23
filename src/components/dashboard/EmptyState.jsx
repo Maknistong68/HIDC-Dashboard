@@ -23,6 +23,7 @@ const EmptyState = ({ onImportComplete }) => {
 
         <ImportWizard
           mode="inline"
+          showHeader={false}
           onComplete={onImportComplete}
           onCancel={null}
         />
