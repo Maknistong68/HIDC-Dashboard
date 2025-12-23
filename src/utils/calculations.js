@@ -92,17 +92,23 @@ export const calculateEngagementScore = (engagements, targets, startDate, endDat
   return Math.round((totalCompleted / totalTarget) * 100)
 }
 
-// Get incident counts by type (only 4 types exist in official app)
+// Get incident counts by type
 export const getIncidentCountsByType = (incidents) => {
   const counts = {
+    'incident': 0, // Aggregates LTI, MTI, FAC
     'near-miss': 0,
     'unsafe-act': 0,
     'unsafe-condition': 0,
     'positive': 0,
   }
 
+  const incidentTypes = ['lti', 'mti', 'fac']
+
   incidents.forEach(incident => {
-    if (counts.hasOwnProperty(incident.type)) {
+    // Aggregate LTI, MTI, FAC into 'incident' count
+    if (incidentTypes.includes(incident.type)) {
+      counts['incident']++
+    } else if (counts.hasOwnProperty(incident.type)) {
       counts[incident.type]++
     }
   })

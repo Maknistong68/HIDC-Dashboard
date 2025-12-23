@@ -6,6 +6,10 @@ import {
   CalendarClock,
   Calendar,
   ThumbsUp,
+  CheckCheck,
+  UserCheck,
+  ClipboardList,
+  Search,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import KPICard from '../components/dashboard/KPICard'
@@ -201,12 +205,16 @@ const Dashboard = () => {
 
   // Heatmap uses ALL incidents (not filtered by "This Month")
   // Only company filter applies to heatmap
+  // Exclude positive observations from heatmap
   const heatmapIncidents = useMemo(() => {
     let result = [...incidents]
 
     if (filters.company) {
       result = result.filter(i => i.company === filters.company)
     }
+
+    // Exclude positive observations from heatmap
+    result = result.filter(i => i.type !== 'positive')
 
     return recategorizeBlankHazards(result)
   }, [incidents, filters.company])
@@ -217,7 +225,12 @@ const Dashboard = () => {
 
     let filtered = filteredIncidents
     if (drillDown.chart === 'pyramid') {
-      filtered = filteredIncidents.filter(i => i.type === drillDown.filter)
+      // Handle 'incident' type which aggregates lti, mti, fac
+      if (drillDown.filter === 'incident') {
+        filtered = filteredIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type))
+      } else {
+        filtered = filteredIncidents.filter(i => i.type === drillDown.filter)
+      }
     } else if (drillDown.chart === 'observers') {
       filtered = filteredIncidents.filter(i => i.reportedBy === drillDown.filter)
     } else if (drillDown.chart === 'hazards') {
@@ -303,18 +316,22 @@ const Dashboard = () => {
   // Pyramid data with open/closed breakdown
   const pyramidData = useMemo(() => {
     const result = {}
-    const types = ['near-miss', 'unsafe-act', 'unsafe-condition', 'positive']
+    const types = ['incident', 'near-miss', 'unsafe-act', 'unsafe-condition', 'positive']
 
     types.forEach(type => {
       result[type] = { open: 0, closed: 0 }
     })
 
     filteredIncidents.forEach(incident => {
-      if (result[incident.type]) {
+      // Aggregate LTI, MTI, FAC into 'incident' category
+      const incidentTypes = ['lti', 'mti', 'fac']
+      const typeKey = incidentTypes.includes(incident.type) ? 'incident' : incident.type
+
+      if (result[typeKey]) {
         if (incident.actionStatus === 'closed') {
-          result[incident.type].closed++
+          result[typeKey].closed++
         } else {
-          result[incident.type].open++
+          result[typeKey].open++
         }
       }
     })
@@ -356,6 +373,31 @@ const Dashboard = () => {
 
   const positiveCount = useMemo(() => {
     return filteredIncidents.filter(i => i.type === 'positive').length
+  }, [filteredIncidents])
+
+  // Approval status counts (from original approval column)
+  const approvalCounts = useMemo(() => {
+    const counts = {
+      closed: 0,
+      contractorReview: 0,
+      review: 0,
+      contractorInvestigation: 0,
+    }
+
+    filteredIncidents.forEach(incident => {
+      const approval = incident.approvalStatus?.toLowerCase()?.trim() || ''
+      if (approval === 'closed') {
+        counts.closed++
+      } else if (approval === 'contractor review') {
+        counts.contractorReview++
+      } else if (approval === 'review') {
+        counts.review++
+      } else if (approval === 'contractor investigation') {
+        counts.contractorInvestigation++
+      }
+    })
+
+    return counts
   }, [filteredIncidents])
 
   // Observers data with open/closed breakdown
@@ -554,7 +596,7 @@ const Dashboard = () => {
         onClose={() => setShowImportModal(false)}
       />
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Row 1 */}
       <div className="grid grid-cols-4 gap-3">
         <KPICard
           title="Total Observations"
@@ -586,63 +628,46 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* KPI Cards - Row 2 (Approval Status) */}
+      <div className="grid grid-cols-4 gap-3">
+        <KPICard
+          title="Closed"
+          value={approvalCounts.closed}
+          subtitle="Fully closed items"
+          icon={CheckCheck}
+          color="success"
+        />
+        <KPICard
+          title="Contractor Review"
+          value={approvalCounts.contractorReview}
+          subtitle="Pending contractor review"
+          icon={UserCheck}
+          color={approvalCounts.contractorReview > 10 ? 'warning' : 'info'}
+        />
+        <KPICard
+          title="Review"
+          value={approvalCounts.review}
+          subtitle="Pending review"
+          icon={ClipboardList}
+          color={approvalCounts.review > 10 ? 'warning' : 'info'}
+        />
+        <KPICard
+          title="Contractor Investigation"
+          value={approvalCounts.contractorInvestigation}
+          subtitle="Under investigation"
+          icon={Search}
+          color={approvalCounts.contractorInvestigation > 5 ? 'warning' : 'info'}
+        />
+      </div>
+
       {/* Charts Row */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <IncidentPyramid
-            data={incidentCounts}
-            pyramidData={pyramidData}
-            showOpenClosed={showOpenClosed}
-            onTypeClick={(type) => handleDrillDown('pyramid', type)}
-            activeType={drillDown.chart === 'pyramid' ? drillDown.filter : null}
-          />
-          {/* Level 2: Monthly Breakdown */}
-          {drillDown.chart === 'pyramid' && drillDown.level === 2 && monthlyBreakdown.length > 0 && (
-            <div className="mt-2 bg-white rounded-lg border border-gray-200 p-3">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-800 uppercase">
-                  {drillDown.filter} - Monthly Breakdown
-                </h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">
-                  Close
-                </button>
-              </div>
-              <div className="space-y-1">
-                {monthlyBreakdown.map(month => {
-                  const maxCount = Math.max(...monthlyBreakdown.map(m => m.count))
-                  return (
-                    <div
-                      key={month.period}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-                      onClick={() => handleMonthSelect(month.period)}
-                    >
-                      <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded" style={{ width: `${(month.count / maxCount) * 100}%` }} />
-                      </div>
-                      <span className="text-xs font-bold w-8 text-right text-gray-900">{month.count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="text-xs text-gray-400 text-center mt-2">Click a month to view details</p>
-            </div>
-          )}
-          {/* Level 3: Data Table */}
-          {drillDown.chart === 'pyramid' && drillDown.level === 3 && drillDownData.length > 0 && (
-            <div className="mt-2 bg-white rounded-lg border border-gray-200 p-3">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-800 uppercase">
-                  {drillDown.filter} - {drillDown.period ? format(parseISO(drillDown.period + '-01'), 'MMMM yyyy') : ''}
-                </h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">
-                  Back to Monthly
-                </button>
-              </div>
-              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" />
-            </div>
-          )}
-        </div>
+        <IncidentPyramid
+          data={incidentCounts}
+          pyramidData={pyramidData}
+          showOpenClosed={showOpenClosed}
+          incidents={filteredIncidents}
+        />
         <IncidentTrendChart data={incidentTrend} />
       </div>
 

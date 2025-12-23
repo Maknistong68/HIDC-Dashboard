@@ -663,6 +663,7 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
         correctiveAction: 'N/A - Positive observation',
         actionDueDate: parsedDate,
         actionStatus: 'closed',
+        approvalStatus: 'Closed', // Positive observations are always closed
         reportedBy,
         originalClassification: classification,
         originalType: type,
@@ -692,6 +693,7 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       correctiveAction: 'Review required',
       actionDueDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
       actionStatus,
+      approvalStatus: status?.trim() || 'Open', // Preserve original approval status
       reportedBy,
       originalClassification: classification,
       originalType: type,

@@ -15,6 +15,7 @@ const ColumnMapper = ({ headers, mappings, onMappingChange, previewData }) => {
     { key: 'status', label: 'Status', description: 'Open/Closed status' },
     { key: 'reportedBy', label: 'Reported By', description: 'Person who reported' },
     { key: 'hazardCategory', label: 'Hazard Category', description: 'Type of hazard' },
+    { key: 'company', label: 'Company/Site', description: 'Company, site, or project name' },
   ]
 
   const getMappingStatus = (fieldKey) => {
