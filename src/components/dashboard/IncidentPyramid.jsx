@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
+import { Eye } from 'lucide-react'
+import ReportModal from '../common/ReportModal'
 
 const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) => {
   // Internal state for drill-down
   const [selectedType, setSelectedType] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
+  const [viewingRecord, setViewingRecord] = useState(null)
 
   // Colors gradient: Red at top → Green at bottom (safety pyramid)
   const pyramidLevels = [
@@ -91,7 +94,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   )
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
+    <div className="bg-white border border-gray-300 p-4">
       <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">
         Observation Categories
       </h3>
@@ -110,7 +113,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
           return (
             <div key={level.key} className="flex justify-center">
               <div
-                className={`relative flex items-center justify-between transition-all cursor-pointer rounded ${
+                className={`relative flex items-center justify-between transition-all cursor-pointer ${
                   isActive ? 'ring-2 ring-gray-800 ring-offset-1' : 'hover:ring-1 hover:ring-gray-300'
                 }`}
                 style={{
@@ -181,13 +184,13 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
                   return (
                     <div
                       key={month.period}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1"
                       onClick={() => setSelectedMonth(month.period)}
                     >
                       <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                      <div className="flex-1 h-4 bg-gray-100 overflow-hidden">
                         <div
-                          className="h-full bg-blue-500 rounded"
+                          className="h-full bg-blue-500"
                           style={{ width: `${(month.count / maxCount) * 100}%` }}
                         />
                       </div>
@@ -236,23 +239,33 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
                     <th className="text-left p-2 font-medium text-gray-600">Date</th>
                     <th className="text-left p-2 font-medium text-gray-600">Description</th>
                     <th className="text-left p-2 font-medium text-gray-600">Status</th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {monthIncidents.map((incident, idx) => (
-                    <tr key={incident.externalId || idx} className="border-t border-gray-100">
+                    <tr key={incident.externalId || idx} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="p-2 text-gray-700 whitespace-nowrap">{incident.date}</td>
                       <td className="p-2 text-gray-700 truncate max-w-[200px]" title={incident.description}>
                         {incident.description?.substring(0, 60)}...
                       </td>
                       <td className="p-2">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                        <span className={`px-1.5 py-0.5 text-xs font-medium ${
                           incident.actionStatus === 'closed'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
                         }`}>
                           {incident.actionStatus}
                         </span>
+                      </td>
+                      <td className="p-2">
+                        <button
+                          onClick={() => setViewingRecord(incident)}
+                          className="p-1 hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+                          title="View Details"
+                        >
+                          <Eye size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -266,6 +279,12 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
           )}
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        record={viewingRecord}
+        onClose={() => setViewingRecord(null)}
+      />
     </div>
   )
 }

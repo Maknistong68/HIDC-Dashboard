@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, FileSpreadsheet, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, FileSpreadsheet, X, AlertCircle, ShieldCheck } from 'lucide-react'
 
 const FileUpload = ({ onFileSelect, isLoading }) => {
   const [isDragging, setIsDragging] = useState(false)
@@ -163,6 +163,11 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
       <div className="text-sm text-gray-500">
         <p>Supported formats: .xlsx, .xls (Excel files)</p>
         <p>Maximum file size: 10MB</p>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs text-gray-400 mt-2">
+        <ShieldCheck size={14} className="text-green-500" />
+        <span>Your data stays local. No data is collected or sent to any server.</span>
       </div>
     </div>
   )

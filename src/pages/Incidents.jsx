@@ -4,34 +4,61 @@ import { useData } from '../context/DataContext'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import DataTable from '../components/common/DataTable'
 import FilterBar from '../components/common/FilterBar'
+import ReportModal from '../components/common/ReportModal'
 import { INCIDENT_TYPES, ACTION_STATUSES } from '../utils/constants'
 import { format, parseISO } from 'date-fns'
 
 const Incidents = () => {
   const { projects, incidents, deleteIncident, getProjectById } = useData()
   const [deletingIncident, setDeletingIncident] = useState(null)
+  const [viewingRecord, setViewingRecord] = useState(null)
   const [filters, setFilters] = useState({
-    projectId: '',
+    contractor: '',
+    site: '',
     type: '',
     actionStatus: '',
   })
 
   const filteredIncidents = useMemo(() => {
     return incidents.filter((incident) => {
-      if (filters.projectId && incident.projectId !== filters.projectId) return false
+      if (filters.contractor && incident.contractor !== filters.contractor) return false
+      if (filters.site && incident.site !== filters.site) return false
       if (filters.type && incident.type !== filters.type) return false
       if (filters.actionStatus && incident.actionStatus !== filters.actionStatus) return false
       return true
     }).sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [incidents, filters])
 
+  // Get unique contractors
+  const uniqueContractors = useMemo(() => {
+    const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
+    return contractors.sort().map(c => ({ value: c, label: c }))
+  }, [incidents])
+
+  // Get sites filtered by selected contractor (parent-child relationship)
+  const siteOptions = useMemo(() => {
+    let relevantIncidents = incidents
+    if (filters.contractor) {
+      relevantIncidents = incidents.filter(i => i.contractor === filters.contractor)
+    }
+    const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
+    return sites.sort().map(s => ({ value: s, label: s }))
+  }, [incidents, filters.contractor])
+
   const filterConfig = [
     {
-      key: 'projectId',
-      label: 'Project',
+      key: 'contractor',
+      label: 'Contractor',
       type: 'select',
-      placeholder: 'All Projects',
-      options: projects.map((p) => ({ value: p.id, label: p.name })),
+      placeholder: 'All Contractors',
+      options: uniqueContractors,
+    },
+    {
+      key: 'site',
+      label: 'Site',
+      type: 'select',
+      placeholder: 'All Sites',
+      options: siteOptions,
     },
     {
       key: 'type',
@@ -84,10 +111,16 @@ const Incidents = () => {
       width: '120px',
     },
     {
-      key: 'project',
-      header: 'Project',
-      accessor: (row) => getProjectById(row.projectId)?.name || row.projectId || '-',
-      width: '150px',
+      key: 'contractor',
+      header: 'Contractor',
+      accessor: (row) => row.contractor || '-',
+      width: '120px',
+    },
+    {
+      key: 'site',
+      header: 'Site',
+      accessor: (row) => row.site || '-',
+      width: '120px',
     },
     {
       key: 'description',
@@ -190,8 +223,15 @@ const Incidents = () => {
       <FilterBar
         filters={filterConfig}
         activeFilters={filters}
-        onFilterChange={(key, value) => setFilters({ ...filters, [key]: value })}
-        onClearFilters={() => setFilters({ projectId: '', type: '', actionStatus: '' })}
+        onFilterChange={(key, value) => {
+          const newFilters = { ...filters, [key]: value }
+          // Reset site when contractor changes (parent-child relationship)
+          if (key === 'contractor') {
+            newFilters.site = ''
+          }
+          setFilters(newFilters)
+        }}
+        onClearFilters={() => setFilters({ contractor: '', site: '', type: '', actionStatus: '' })}
       />
 
       {/* Table */}
@@ -201,6 +241,7 @@ const Incidents = () => {
         searchPlaceholder="Search data..."
         emptyMessage="No data found. Import Excel to add observations."
         pageSize={20}
+        onViewClick={setViewingRecord}
       />
 
       {/* Delete Confirmation */}
@@ -212,6 +253,12 @@ const Incidents = () => {
         message="Are you sure you want to delete this record? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
+      />
+
+      {/* Report Modal */}
+      <ReportModal
+        record={viewingRecord}
+        onClose={() => setViewingRecord(null)}
       />
     </div>
   )

@@ -1,16 +1,19 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { HardHat, LayoutDashboard, Database, Settings, Eye, EyeOff } from 'lucide-react'
+import { HardHat, LayoutDashboard, Database, FileSpreadsheet, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext'
+import ConfirmDialog from '../common/ConfirmDialog'
+import Footer from './Footer'
 
 const Layout = ({ children }) => {
   const location = useLocation()
-  const { showOpenClosed, setShowOpenClosed, incidents } = useData()
+  const { showOpenClosed, setShowOpenClosed, incidents, clearData } = useData()
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/data', label: 'All Data', icon: Database },
-    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/import', label: 'Import', icon: FileSpreadsheet },
   ]
 
   // Only show toggle if there's data
@@ -18,8 +21,8 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 z-50">
+      {/* Frosted Glass Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm z-50">
         <div className="h-full px-4 flex items-center justify-between">
           {/* Logo + Nav */}
           <div className="flex items-center gap-8">
@@ -70,10 +73,10 @@ const Layout = ({ children }) => {
                   <NavLink
                     key={path}
                     to={path}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-blue-100/80 text-blue-700 shadow-sm backdrop-blur-sm'
+                        : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 hover:shadow-sm'
                     }`}
                   >
                     <Icon size={18} />
@@ -84,27 +87,52 @@ const Layout = ({ children }) => {
             </nav>
           </div>
 
-          {/* Right Side - Toggle */}
-          {hasData && (
-            <button
-              onClick={() => setShowOpenClosed(!showOpenClosed)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                showOpenClosed
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {showOpenClosed ? <Eye size={16} /> : <EyeOff size={16} />}
-              <span>{showOpenClosed ? 'Showing Open/Closed' : 'All Status'}</span>
-            </button>
-          )}
+          {/* Right Side - Toggle & Clear */}
+          <div className="flex items-center gap-2">
+            {hasData && (
+              <button
+                onClick={() => setShowOpenClosed(!showOpenClosed)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  showOpenClosed
+                    ? 'bg-blue-100/80 text-blue-700 shadow-sm backdrop-blur-sm'
+                    : 'bg-white/60 text-gray-600 hover:bg-white/80 hover:shadow-sm'
+                }`}
+              >
+                {showOpenClosed ? <Eye size={16} /> : <EyeOff size={16} />}
+                <span>{showOpenClosed ? 'Showing Open/Closed' : 'All Status'}</span>
+              </button>
+            )}
+            {hasData && (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-red-50/80 text-red-600 hover:bg-red-100/80 hover:shadow-sm backdrop-blur-sm"
+              >
+                <Trash2 size={16} />
+                <span>Clear Data</span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-14 p-4">
+      <main className="pt-14 p-4 min-h-[calc(100vh-56px-48px)]">
         {children}
       </main>
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={clearData}
+        title="Clear All Data"
+        message="Are you sure you want to delete all data? This action cannot be undone."
+        confirmText="Clear All Data"
+        variant="danger"
+      />
     </div>
   )
 }

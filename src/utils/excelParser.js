@@ -23,7 +23,10 @@ export const EXPECTED_COLUMNS = {
   status: ['approval', 'status', 'state', 'actionstatus', 'approvalstatus', 'currentstatus', 'closurestatus'],
   reportedBy: ['reportedby', 'reporter', 'submittedby', 'createdby', 'observer', 'raisedby', 'observername', 'name', 'person'],
   hazardCategory: ['significanthazard', 'hazardcategory', 'hazardtype', 'riskcategory', 'hazard', 'risktype', 'hazardclassification'],
-  company: ['company', 'companies', 'site', 'sitename', 'sitelocation', 'project', 'projectname', 'projectsite', 'location', 'worksite', 'client', 'clientname', 'contractor', 'contractorname', 'organization', 'org', 'entity', 'businessunit', 'bu', 'division', 'department', 'dept', 'area', 'areaname', 'region', 'facility', 'plant', 'branch'],
+  // Two separate filters - each maps to its own column only
+  contractor: ['contractor'],  // Only 'contractor' column
+  site: ['site'],  // Only 'site' column
+  company: ['company', 'companies', 'project', 'projectname', 'location', 'client', 'clientname', 'organization', 'org', 'entity', 'businessunit', 'bu', 'division', 'department', 'dept', 'region', 'area', 'areaname', 'facility', 'plant', 'branch', 'worksite', 'vendor', 'vendorname', 'subcontractor'],
 }
 
 // Classification mappings to dashboard types
@@ -563,7 +566,10 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
     const status = getValue('status') || 'Open'
     const reportedBy = getValue('reportedBy') || 'Unknown'
     const rawHazardCategory = getValue('hazardCategory') || ''
-    const company = getValue('company') || ''
+    // Two separate filters - each from its own column only
+    const contractor = getValue('contractor') || ''  // Only from 'contractor' column
+    const site = getValue('site') || ''  // Only from 'site' column
+    const company = getValue('company') || ''  // For backwards compatibility
 
     // Always categorize using the new 29-category system (eliminates "Others")
     // Pass existing category for normalization, falls back to description-based classification
@@ -658,6 +664,8 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
         type: 'positive',
         description,
         location: hazardCategory,
+        contractor,
+        site,
         company,
         rootCause: 'Positive observation',
         correctiveAction: 'N/A - Positive observation',
@@ -688,6 +696,8 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       type: mapping.incidentType,
       description,
       location: hazardCategory,
+      contractor,
+      site,
       company,
       rootCause: 'Imported from Excel',
       correctiveAction: 'Review required',

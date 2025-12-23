@@ -42,4 +42,13 @@ body {
   .print-break {
     page-break-before: always;
   }
+
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Hide print-only elements on screen */
+.print-only {
+  display: none;
 }

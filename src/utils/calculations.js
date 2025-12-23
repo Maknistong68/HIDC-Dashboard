@@ -116,13 +116,13 @@ export const getIncidentCountsByType = (incidents) => {
   return counts
 }
 
-// Get incidents grouped by month - Observations vs Incidents
+// Get incidents grouped by month - Positive vs Negative Observations
 export const getIncidentsByMonth = (incidents, months = 12) => {
   const now = new Date()
   const result = []
 
   // Define types
-  const observationTypes = ['unsafe-act', 'unsafe-condition', 'near-miss']
+  const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss']
   const incidentTypes = ['lti', 'mti', 'fac']
 
   for (let i = months - 1; i >= 0; i--) {
@@ -137,7 +137,7 @@ export const getIncidentsByMonth = (incidents, months = 12) => {
 
     result.push({
       month: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      observations: monthIncidents.filter(i => observationTypes.includes(i.type)).length,
+      negative: monthIncidents.filter(i => negativeTypes.includes(i.type)).length,
       incidents: monthIncidents.filter(i => incidentTypes.includes(i.type)).length,
       positive: monthIncidents.filter(i => i.type === 'positive').length,
       total: monthIncidents.length,

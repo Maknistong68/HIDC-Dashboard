@@ -48,7 +48,7 @@ const Header = () => {
   }
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+    <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-sm flex items-center justify-between px-6 sticky top-0 z-40">
       <div>
         <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
         <p className="text-sm text-gray-500">
@@ -60,7 +60,7 @@ const Header = () => {
         {/* Quick Export */}
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
           title="Export Data"
         >
           <Download size={18} />
@@ -69,7 +69,7 @@ const Header = () => {
 
         {/* Notifications */}
         <button
-          className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="relative p-2 text-gray-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
           title="Notifications"
         >
           <Bell size={20} />

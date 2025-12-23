@@ -27,7 +27,7 @@ const KPICard = ({
 
   return (
     <div
-      className={`bg-white rounded-sm border border-gray-300 p-3 ${
+      className={`bg-white border border-gray-300 p-3 ${
         onClick ? 'cursor-pointer hover:shadow-sm transition-shadow' : ''
       }`}
       onClick={onClick}
@@ -49,7 +49,7 @@ const KPICard = ({
           )}
         </div>
         {Icon && (
-          <div className={`p-2 rounded-sm ${colorClasses[color]}`}>
+          <div className={`p-2 ${colorClasses[color]}`}>
             <Icon size={20} />
           </div>
         )}

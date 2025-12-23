@@ -20,6 +20,9 @@ import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
 import ImportWarnings from '../components/import/ImportWarnings'
 import QuickImportModal from '../components/import/QuickImportModal'
+import ExportMenu from '../components/dashboard/ExportMenu'
+import ReportModal from '../components/common/ReportModal'
+import { useExport } from '../hooks/useExport'
 import { INCIDENT_TYPES } from '../utils/constants'
 import {
   getIncidentCountsByType,
@@ -50,9 +53,10 @@ const Dashboard = () => {
   // "This Month" quick filter
   const [thisMonthActive, setThisMonthActive] = useState(false)
 
-  // Filter state
+  // Filter state - contractor is parent, site is child
   const [filters, setFilters] = useState({
-    company: '',
+    contractor: '',
+    site: '',
     dateFrom: '',
     dateTo: ''
   })
@@ -71,8 +75,36 @@ const Dashboard = () => {
     month: null,
   })
 
+  // Report modal state
+  const [viewingRecord, setViewingRecord] = useState(null)
+
   // Heatmap scroll ref
   const heatmapScrollRef = useRef(null)
+
+  // Dashboard content ref for full-page PDF capture
+  const dashboardContentRef = useRef(null)
+
+  // Export refs for chart capture
+  const kpiCards1Ref = useRef(null)
+  const kpiCards2Ref = useRef(null)
+  const pyramidRef = useRef(null)
+  const trendChartRef = useRef(null)
+  const topHazardsRef = useRef(null)
+  const topObserversRef = useRef(null)
+  const hazardsHeatmapRef = useRef(null)
+
+  // Chart refs object for export
+  const chartRefs = {
+    kpiCards1: kpiCards1Ref,
+    kpiCards2: kpiCards2Ref,
+    pyramid: pyramidRef,
+    trendChart: trendChartRef,
+    topHazards: topHazardsRef,
+    topObservers: topObserversRef,
+    hazardsHeatmap: hazardsHeatmapRef,
+  }
+
+  // Export hook is called after filteredIncidents is defined (see below)
 
   // Auto-scroll heatmap to end (most recent months) on load
   useEffect(() => {
@@ -105,16 +137,23 @@ const Dashboard = () => {
     setHeatmapDrillDown({ hazard: null, month: null })
   }
 
-  // Handle filter changes
+  // Handle filter changes - reset site when contractor changes
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value }
+      // Reset site filter when contractor changes (parent-child relationship)
+      if (key === 'contractor') {
+        newFilters.site = ''
+      }
+      return newFilters
+    })
     setThisMonthActive(false) // Turn off "This Month" when manual filter changes
     setDrillDown({ chart: null, filter: null, level: 1, period: null })
     setHeatmapDrillDown({ hazard: null, month: null })
   }
 
   const clearFilters = () => {
-    setFilters({ company: '', dateFrom: '', dateTo: '' })
+    setFilters({ contractor: '', site: '', dateFrom: '', dateTo: '' })
     setThisMonthActive(false)
     setDrillDown({ chart: null, filter: null, level: 1, period: null })
     setHeatmapDrillDown({ hazard: null, month: null })
@@ -156,20 +195,38 @@ const Dashboard = () => {
     setDrillDown(prev => ({ ...prev, level: 3, period }))
   }
 
-  // Get unique companies from incidents
-  const uniqueCompanies = useMemo(() => {
-    const companies = [...new Set(incidents.map(i => i.company).filter(Boolean))]
-    return companies.sort().map(company => ({ value: company, label: company }))
+  // Get unique contractors from incidents
+  const uniqueContractors = useMemo(() => {
+    const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
+    return contractors.sort().map(contractor => ({ value: contractor, label: contractor }))
   }, [incidents])
 
-  // Filter configuration
+  // Get sites filtered by selected contractor (parent-child relationship)
+  const siteOptions = useMemo(() => {
+    let relevantIncidents = incidents
+    // If contractor is selected, only show sites belonging to that contractor
+    if (filters.contractor) {
+      relevantIncidents = incidents.filter(i => i.contractor === filters.contractor)
+    }
+    const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
+    return sites.sort().map(site => ({ value: site, label: site }))
+  }, [incidents, filters.contractor])
+
+  // Filter configuration - Contractor (parent) and Site (child)
   const filterConfig = [
     {
-      key: 'company',
+      key: 'contractor',
       type: 'select',
-      label: 'Company/Site',
-      placeholder: 'All Companies/Sites',
-      options: uniqueCompanies
+      label: 'Contractor',
+      placeholder: 'All Contractors',
+      options: uniqueContractors
+    },
+    {
+      key: 'site',
+      type: 'select',
+      label: 'Site',
+      placeholder: 'All Sites',
+      options: siteOptions
     },
     {
       key: 'dateFrom',
@@ -185,12 +242,18 @@ const Dashboard = () => {
     }
   ]
 
-  // Filtered incidents based on company and date (for KPIs, charts, Top Hazards, Top Observers)
+  // Filtered incidents based on contractor, site, and date (for KPIs, charts, Top Hazards, Top Observers)
   const filteredIncidents = useMemo(() => {
     let result = [...incidents]
 
-    if (filters.company) {
-      result = result.filter(i => i.company === filters.company)
+    // Filter by contractor (parent filter)
+    if (filters.contractor) {
+      result = result.filter(i => i.contractor === filters.contractor)
+    }
+
+    // Filter by site (child filter - only shows sites for selected contractor)
+    if (filters.site) {
+      result = result.filter(i => i.site === filters.site)
     }
 
     if (filters.dateFrom) {
@@ -203,21 +266,28 @@ const Dashboard = () => {
     return recategorizeBlankHazards(result)
   }, [incidents, filters])
 
+  // Export hook - dashboardContentRef for PDF full-page capture, chartRefs for PowerPoint
+  // Note: filteredIncidents is passed for summary statistics in exports
+  const { isExporting, exportProgress, handleExportPDF, handleExportPPTX } = useExport(dashboardContentRef, chartRefs, filters, filteredIncidents)
+
   // Heatmap uses ALL incidents (not filtered by "This Month")
-  // Only company filter applies to heatmap
+  // Only contractor/site filter applies to heatmap
   // Exclude positive observations from heatmap
   const heatmapIncidents = useMemo(() => {
     let result = [...incidents]
 
-    if (filters.company) {
-      result = result.filter(i => i.company === filters.company)
+    if (filters.contractor) {
+      result = result.filter(i => i.contractor === filters.contractor)
+    }
+    if (filters.site) {
+      result = result.filter(i => i.site === filters.site)
     }
 
     // Exclude positive observations from heatmap
     result = result.filter(i => i.type !== 'positive')
 
     return recategorizeBlankHazards(result)
-  }, [incidents, filters.company])
+  }, [incidents, filters.contractor, filters.site])
 
   // Get filtered data based on drill-down selection
   const getFilteredBySelection = useMemo(() => {
@@ -290,7 +360,7 @@ const Dashboard = () => {
         const typeInfo = INCIDENT_TYPES.find(t => t.value === row.type)
         return (
           <span
-            className="px-1.5 py-0.5 text-xs rounded font-medium"
+            className="px-1.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor: typeInfo?.color + '20',
               color: typeInfo?.color
@@ -303,7 +373,8 @@ const Dashboard = () => {
     },
     { key: 'description', header: 'Description', accessor: (row) => row.description?.substring(0, 50) + '...' },
     { key: 'location', header: 'Hazard', accessor: (row) => row.location },
-    { key: 'company', header: 'Company/Site', accessor: (row) => row.company || '-' },
+    { key: 'contractor', header: 'Contractor', accessor: (row) => row.contractor || '-' },
+    { key: 'site', header: 'Site', accessor: (row) => row.site || '-' },
     { key: 'reportedBy', header: 'Reporter', accessor: (row) => row.reportedBy },
     { key: 'actionStatus', header: 'Status', accessor: (row) => row.actionStatus }
   ]
@@ -588,6 +659,14 @@ const Dashboard = () => {
           <Upload size={16} />
           Import
         </button>
+
+        {/* Export Menu (3-dot) */}
+        <ExportMenu
+          onExportPDF={handleExportPDF}
+          onExportPPTX={handleExportPPTX}
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+        />
       </div>
 
       {/* Quick Import Modal */}
@@ -596,8 +675,10 @@ const Dashboard = () => {
         onClose={() => setShowImportModal(false)}
       />
 
+      {/* Dashboard Content - wrapped for PDF export full-page capture */}
+      <div ref={dashboardContentRef} className="space-y-3 bg-gray-50 p-2 -m-2">
       {/* KPI Cards - Row 1 */}
-      <div className="grid grid-cols-4 gap-3">
+      <div ref={kpiCards1Ref} className="grid grid-cols-4 gap-3">
         <KPICard
           title="Total Observations"
           value={filteredIncidents.length}
@@ -629,7 +710,7 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Cards - Row 2 (Approval Status) */}
-      <div className="grid grid-cols-4 gap-3">
+      <div ref={kpiCards2Ref} className="grid grid-cols-4 gap-3">
         <KPICard
           title="Closed"
           value={approvalCounts.closed}
@@ -662,19 +743,23 @@ const Dashboard = () => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-2 gap-3">
-        <IncidentPyramid
-          data={incidentCounts}
-          pyramidData={pyramidData}
-          showOpenClosed={showOpenClosed}
-          incidents={filteredIncidents}
-        />
-        <IncidentTrendChart data={incidentTrend} />
+        <div ref={pyramidRef}>
+          <IncidentPyramid
+            data={incidentCounts}
+            pyramidData={pyramidData}
+            showOpenClosed={showOpenClosed}
+            incidents={filteredIncidents}
+          />
+        </div>
+        <div ref={trendChartRef}>
+          <IncidentTrendChart data={incidentTrend} />
+        </div>
       </div>
 
       {/* Top Hazards + Observers */}
       <div className="grid grid-cols-2 gap-3">
         {/* Top Hazards */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
+        <div ref={topHazardsRef} className="bg-white border border-gray-300 p-3">
           <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
             Top Significant Hazards
           </h3>
@@ -691,7 +776,7 @@ const Dashboard = () => {
                 return (
                   <div
                     key={hazard.name}
-                    className={`relative cursor-pointer hover:bg-gray-50 rounded ${isActive ? 'ring-2 ring-gray-800' : ''}`}
+                    className={`relative cursor-pointer hover:bg-gray-50 ${isActive ? 'ring-2 ring-gray-800' : ''}`}
                     onClick={() => handleDrillDown('hazards', hazard.name)}
                     style={{ opacity: drillDown.chart === 'hazards' && !isActive ? 0.5 : 1 }}
                   >
@@ -708,12 +793,12 @@ const Dashboard = () => {
                       </div>
                     </div>
                     {showOpenClosed ? (
-                      <div className="absolute top-0 left-0 h-full flex rounded overflow-hidden" style={{ width: `${totalWidth}%`, zIndex: 0 }}>
+                      <div className="absolute top-0 left-0 h-full flex overflow-hidden" style={{ width: `${totalWidth}%`, zIndex: 0 }}>
                         {hazard.open > 0 && <div className="h-full bg-red-300" style={{ width: `${openPercent}%` }} title={`Open: ${hazard.open}`} />}
                         {hazard.closed > 0 && <div className="h-full bg-green-300" style={{ width: `${closedPercent}%` }} title={`Closed: ${hazard.closed}`} />}
                       </div>
                     ) : (
-                      <div className="absolute top-0 left-0 h-full bg-red-100 rounded" style={{ width: `${totalWidth}%`, zIndex: 0 }} />
+                      <div className="absolute top-0 left-0 h-full bg-red-100" style={{ width: `${totalWidth}%`, zIndex: 0 }} />
                     )}
                   </div>
                 )
@@ -733,10 +818,10 @@ const Dashboard = () => {
                 {monthlyBreakdown.map(month => {
                   const maxCount = Math.max(...monthlyBreakdown.map(m => m.count))
                   return (
-                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded" onClick={() => handleMonthSelect(month.period)}>
+                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1" onClick={() => handleMonthSelect(month.period)}>
                       <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-3 bg-gray-100 rounded overflow-hidden">
-                        <div className="h-full bg-red-400 rounded" style={{ width: `${(month.count / maxCount) * 100}%` }} />
+                      <div className="flex-1 h-3 bg-gray-100 overflow-hidden">
+                        <div className="h-full bg-red-400" style={{ width: `${(month.count / maxCount) * 100}%` }} />
                       </div>
                       <span className="text-xs font-bold w-6 text-right">{month.count}</span>
                     </div>
@@ -751,13 +836,13 @@ const Dashboard = () => {
                 <h4 className="text-xs font-semibold text-gray-700">{drillDown.period ? format(parseISO(drillDown.period + '-01'), 'MMM yyyy') : ''}</h4>
                 <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Back</button>
               </div>
-              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" />
+              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" onViewClick={setViewingRecord} />
             </div>
           )}
         </div>
 
         {/* Top Observers */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
+        <div ref={topObserversRef} className="bg-white border border-gray-300 p-3">
           <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
             Top Observers
           </h3>
@@ -774,7 +859,7 @@ const Dashboard = () => {
                 return (
                   <div
                     key={observer.name}
-                    className={`relative cursor-pointer hover:bg-gray-50 rounded ${isActive ? 'ring-2 ring-gray-800' : ''}`}
+                    className={`relative cursor-pointer hover:bg-gray-50 ${isActive ? 'ring-2 ring-gray-800' : ''}`}
                     onClick={() => handleDrillDown('observers', observer.name)}
                     style={{ opacity: drillDown.chart === 'observers' && !isActive ? 0.5 : 1 }}
                   >
@@ -791,12 +876,12 @@ const Dashboard = () => {
                       </div>
                     </div>
                     {showOpenClosed ? (
-                      <div className="absolute top-0 left-0 h-full flex rounded overflow-hidden" style={{ width: `${totalWidth}%`, zIndex: 0 }}>
+                      <div className="absolute top-0 left-0 h-full flex overflow-hidden" style={{ width: `${totalWidth}%`, zIndex: 0 }}>
                         {observer.open > 0 && <div className="h-full bg-red-300" style={{ width: `${openPercent}%` }} title={`Open: ${observer.open}`} />}
                         {observer.closed > 0 && <div className="h-full bg-green-300" style={{ width: `${closedPercent}%` }} title={`Closed: ${observer.closed}`} />}
                       </div>
                     ) : (
-                      <div className="absolute top-0 left-0 h-full bg-blue-100 rounded" style={{ width: `${totalWidth}%`, zIndex: 0 }} />
+                      <div className="absolute top-0 left-0 h-full bg-blue-100" style={{ width: `${totalWidth}%`, zIndex: 0 }} />
                     )}
                   </div>
                 )
@@ -816,10 +901,10 @@ const Dashboard = () => {
                 {monthlyBreakdown.map(month => {
                   const maxCount = Math.max(...monthlyBreakdown.map(m => m.count))
                   return (
-                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded" onClick={() => handleMonthSelect(month.period)}>
+                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1" onClick={() => handleMonthSelect(month.period)}>
                       <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-3 bg-gray-100 rounded overflow-hidden">
-                        <div className="h-full bg-blue-400 rounded" style={{ width: `${(month.count / maxCount) * 100}%` }} />
+                      <div className="flex-1 h-3 bg-gray-100 overflow-hidden">
+                        <div className="h-full bg-blue-400" style={{ width: `${(month.count / maxCount) * 100}%` }} />
                       </div>
                       <span className="text-xs font-bold w-6 text-right">{month.count}</span>
                     </div>
@@ -834,7 +919,7 @@ const Dashboard = () => {
                 <h4 className="text-xs font-semibold text-gray-700">{drillDown.period ? format(parseISO(drillDown.period + '-01'), 'MMM yyyy') : ''}</h4>
                 <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Back</button>
               </div>
-              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" />
+              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" onViewClick={setViewingRecord} />
             </div>
           )}
         </div>
@@ -842,7 +927,7 @@ const Dashboard = () => {
 
       {/* Hazards Heatmap - Scrollable (max 12 months visible) */}
       {hazardsHeatmap.hazards.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
+        <div ref={hazardsHeatmapRef} className="bg-white border border-gray-300 p-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
               Hazards Heatmap (by Month)
@@ -934,7 +1019,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-end gap-2 mt-2 text-xs">
             <span className="text-gray-500">Low</span>
             <div
-              className="w-24 h-3 rounded"
+              className="w-24 h-3"
               style={{
                 background: 'linear-gradient(to right, #ffffff, #ffffc8, #ffff32, #ffa500, #c81e1e)'
               }}
@@ -962,11 +1047,20 @@ const Dashboard = () => {
                 searchable={true}
                 pageSize={10}
                 emptyMessage="No observations found"
+                onViewClick={setViewingRecord}
               />
             </div>
           )}
         </div>
       )}
+      </div>
+      {/* End of dashboardContentRef wrapper */}
+
+      {/* Report Modal */}
+      <ReportModal
+        record={viewingRecord}
+        onClose={() => setViewingRecord(null)}
+      />
     </div>
   )
 }

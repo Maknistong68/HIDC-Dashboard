@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 
 const DataTable = ({
   data,
@@ -8,6 +8,7 @@ const DataTable = ({
   searchPlaceholder = 'Search...',
   pageSize = 10,
   onRowClick,
+  onViewClick,
   emptyMessage = 'No data available',
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -68,6 +69,33 @@ const DataTable = ({
     setCurrentPage(Math.max(1, Math.min(page, totalPages)))
   }
 
+  // Add view column if onViewClick is provided
+  const displayColumns = useMemo(() => {
+    if (!onViewClick) return columns
+    return [
+      ...columns,
+      {
+        key: '_view',
+        header: '',
+        width: '40px',
+        sortable: false,
+        accessor: () => null,
+        render: (row) => (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewClick(row)
+            }}
+            className="p-1 hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
+        ),
+      },
+    ]
+  }, [columns, onViewClick])
+
   return (
     <div className="bg-white rounded-sm border border-gray-300 overflow-hidden">
       {/* Search */}
@@ -97,7 +125,7 @@ const DataTable = ({
         <table className="w-full">
           <thead className="bg-gray-100">
             <tr>
-              {columns.map((column) => (
+              {displayColumns.map((column) => (
                 <th
                   key={column.key}
                   className={`px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${
@@ -124,7 +152,7 @@ const DataTable = ({
             {paginatedData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={displayColumns.length}
                   className="px-2 py-4 text-center text-xs text-gray-500"
                 >
                   {emptyMessage}
@@ -137,7 +165,7 @@ const DataTable = ({
                   className={`hover:bg-gray-50 ${onRowClick ? 'cursor-pointer' : ''}`}
                   onClick={() => onRowClick && onRowClick(row)}
                 >
-                  {columns.map((column) => (
+                  {displayColumns.map((column) => (
                     <td key={column.key} className="px-2 py-1.5 text-xs text-gray-900">
                       {column.render
                         ? column.render(row)

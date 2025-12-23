@@ -12,9 +12,9 @@ import {
 
 const IncidentTrendChart = ({ data }) => {
   return (
-    <div className="bg-white rounded-sm border border-gray-300 p-3 h-full">
+    <div className="bg-white border border-gray-300 p-3 h-full">
       <h3 className="text-xs font-semibold text-gray-800 mb-2 uppercase tracking-wide">
-        Observation vs Incident Trend
+        Positive vs. Negative Observation Trend
       </h3>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
@@ -44,18 +44,18 @@ const IncidentTrendChart = ({ data }) => {
             <Legend wrapperStyle={{ fontSize: '10px' }} />
             <Line
               type="monotone"
-              dataKey="observations"
-              name="Observations"
-              stroke="#3b82f6"
+              dataKey="positive"
+              name="Positive"
+              stroke="#22c55e"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
             />
             <Line
               type="monotone"
-              dataKey="incidents"
-              name="Incidents"
-              stroke="#dc2626"
+              dataKey="negative"
+              name="Negative"
+              stroke="#ef4444"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
@@ -65,12 +65,12 @@ const IncidentTrendChart = ({ data }) => {
       </div>
       <div className="flex items-center justify-center gap-4 mt-2 text-xs">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-blue-500"></div>
-          <span className="text-gray-500">Observations (Unsafe Act/Condition, Near Miss)</span>
+          <div className="w-3 h-0.5 bg-green-500"></div>
+          <span className="text-gray-500">Positive Observations (Good Practice, Safe Behavior)</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-0.5 bg-red-500"></div>
-          <span className="text-gray-500">Incidents (LTI, MTI, FAC)</span>
+          <span className="text-gray-500">Negative Observations (Unsafe Act/Condition, Near Miss)</span>
         </div>
       </div>
     </div>
