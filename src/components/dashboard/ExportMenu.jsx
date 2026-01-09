@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { MoreVertical, FileText, Presentation, Loader2 } from 'lucide-react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { Download, FileText, Presentation } from 'lucide-react'
+import { LoadingSpinner, ProgressBar } from '../ui'
 
+/**
+ * ExportMenu - Export dropdown with PDF and PowerPoint options
+ */
 const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) => {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef(null)
@@ -24,6 +28,13 @@ const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) 
     }
   }, [isExporting])
 
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false)
+    }
+  }, [])
+
   const handlePDFClick = () => {
     setIsOpen(false)
     onExportPDF()
@@ -35,54 +46,78 @@ const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) 
   }
 
   return (
-    <div className="relative" ref={menuRef}>
-      {/* 3-dot vertical button */}
+    <div className="relative" ref={menuRef} onKeyDown={handleKeyDown}>
+      {/* Export button */}
       <button
         onClick={() => !isExporting && setIsOpen(!isOpen)}
         disabled={isExporting}
         className={`
-          flex items-center justify-center w-10 h-10 rounded-lg transition-colors
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+          transition-all duration-200 ease-out
           ${isExporting
-            ? 'bg-gray-100 cursor-wait'
-            : 'bg-white border border-gray-300 hover:bg-gray-50 cursor-pointer'
+            ? 'bg-surface-100 text-surface-400 cursor-wait'
+            : 'bg-white border border-surface-300 text-surface-700 hover:bg-surface-50 hover:border-surface-400 hover:shadow-sm'
           }
         `}
-        title={isExporting ? 'Exporting...' : 'Export options'}
+        aria-label={isExporting ? 'Exporting...' : 'Export options'}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
       >
         {isExporting ? (
-          <Loader2 size={18} className="animate-spin text-gray-500" />
+          <LoadingSpinner size="xs" color="gray" />
         ) : (
-          <MoreVertical size={18} className="text-gray-600" />
+          <Download size={16} aria-hidden="true" />
         )}
+        <span className="hidden sm:inline">Export</span>
       </button>
 
       {/* Dropdown menu */}
       {isOpen && !isExporting && (
-        <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+        <div
+          className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-medium border border-surface-200 py-1.5 z-50 animate-fade-in-down"
+          role="menu"
+          aria-orientation="vertical"
+        >
           <button
             onClick={handlePDFClick}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+            role="menuitem"
           >
-            <FileText size={16} className="text-red-500" />
-            <span>Export as PDF (A3)</span>
+            <div className="p-1.5 bg-red-50 rounded">
+              <FileText size={16} className="text-safety-critical" aria-hidden="true" />
+            </div>
+            <div className="text-left">
+              <span className="block font-medium">Export as PDF</span>
+              <span className="block text-xs text-surface-500">A3 landscape format</span>
+            </div>
           </button>
           <button
             onClick={handlePPTXClick}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+            role="menuitem"
           >
-            <Presentation size={16} className="text-orange-500" />
-            <span>Export as PowerPoint</span>
+            <div className="p-1.5 bg-orange-50 rounded">
+              <Presentation size={16} className="text-safety-warning" aria-hidden="true" />
+            </div>
+            <div className="text-left">
+              <span className="block font-medium">Export as PowerPoint</span>
+              <span className="block text-xs text-surface-500">Slide deck with charts</span>
+            </div>
           </button>
         </div>
       )}
 
-      {/* Progress indicator (shown when exporting) */}
+      {/* Progress indicator */}
       {isExporting && exportProgress && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50">
-          <div className="flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin text-blue-500 flex-shrink-0" />
-            <p className="text-xs text-gray-600 truncate">{exportProgress}</p>
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-medium border border-surface-200 p-4 z-50 animate-fade-in">
+          <div className="flex items-center gap-3 mb-3">
+            <LoadingSpinner size="small" color="primary" />
+            <div>
+              <p className="text-sm font-medium text-surface-700">Exporting...</p>
+              <p className="text-xs text-surface-500 truncate">{exportProgress}</p>
+            </div>
           </div>
+          <ProgressBar value={50} variant="primary" size="small" animate />
         </div>
       )}
     </div>

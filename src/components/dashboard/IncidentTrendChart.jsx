@@ -6,74 +6,119 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { InfoTooltip } from '../ui/Tooltip'
+import { Card } from '../ui'
 
+/**
+ * IncidentTrendChart - Positive vs Negative observation trend
+ */
 const IncidentTrendChart = ({ data }) => {
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null
+
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-surface-200 rounded-lg shadow-medium p-3 animate-fade-in">
+        <p className="text-xs font-medium text-surface-700 mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center gap-2 text-xs">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-surface-600">{entry.name}:</span>
+            <span className="font-semibold text-surface-800">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-white border border-gray-300 p-3 h-full">
-      <h3 className="text-xs font-semibold text-gray-800 mb-2 uppercase tracking-wide">
-        Positive vs. Negative Observation Trend
-      </h3>
+    <Card padding="default" className="h-full">
+      <Card.Header>
+        <Card.Title>
+          Positive vs. Negative Observation Trend
+          <InfoTooltip text="Monthly trend of positive observations (green) vs negative observations (red). A healthy safety culture shows increasing positive observations over time." />
+        </Card.Title>
+      </Card.Header>
+
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <LineChart
+            data={data}
+            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+          >
+            <defs>
+              <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="negativeGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#e2e8f0"
+              vertical={false}
+            />
             <XAxis
               dataKey="month"
-              tick={{ fontSize: 10, fill: '#6b7280' }}
+              tick={{ fontSize: 11, fill: '#64748b' }}
               tickLine={false}
-              axisLine={{ stroke: '#e5e7eb' }}
+              axisLine={{ stroke: '#e2e8f0' }}
+              dy={5}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: '#6b7280' }}
+              tick={{ fontSize: 11, fill: '#64748b' }}
               tickLine={false}
-              axisLine={{ stroke: '#e5e7eb' }}
+              axisLine={false}
               allowDecimals={false}
-              width={30}
+              width={35}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #d1d5db',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            <Tooltip content={<CustomTooltip />} />
             <Line
               type="monotone"
               dataKey="positive"
               name="Positive"
               stroke="#22c55e"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              strokeWidth={2.5}
+              dot={{ r: 4, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
             />
             <Line
               type="monotone"
               dataKey="negative"
               name="Negative"
               stroke="#ef4444"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              strokeWidth={2.5}
+              dot={{ r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-2 text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-green-500"></div>
-          <span className="text-gray-500">Positive Observations (Good Practice, Safe Behavior)</span>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-6 mt-3 pt-3 border-t border-surface-100">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-safety-success" aria-hidden="true" />
+          <span className="text-xs text-surface-600">
+            Positive (Good Practice, Safe Behavior)
+          </span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-red-500"></div>
-          <span className="text-gray-500">Negative Observations (Unsafe Act/Condition, Near Miss)</span>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-safety-critical" aria-hidden="true" />
+          <span className="text-xs text-surface-600">
+            Negative (Unsafe Act/Condition, Near Miss)
+          </span>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 

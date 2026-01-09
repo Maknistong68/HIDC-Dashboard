@@ -8,7 +8,7 @@ const PrivacyPolicy = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">1. Introduction</h3>
         <p className="text-gray-600 mb-3">
-          HIDC Team ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how the HIDC (Hazard Identification Dashboard & Control) application handles your data.
+          HIDC Team ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how the HIDC (Hazard Identification and Data Control) application handles your data.
         </p>
         <p className="text-gray-600">
           This application is designed for internal HSE (Health, Safety, and Environment) observation tracking within your organization.

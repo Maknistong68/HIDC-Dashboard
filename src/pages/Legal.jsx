@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, FileText, AlertTriangle } from 'lucide-react'
+import { Shield, FileText, AlertTriangle, Lock } from 'lucide-react'
 import PrivacyPolicy from '../components/legal/PrivacyPolicy'
 import TermsOfUse from '../components/legal/TermsOfUse'
 import Disclaimer from '../components/legal/Disclaimer'
+import DataSecurity from '../components/legal/DataSecurity'
 
 const TABS = [
   { id: 'privacy', label: 'Privacy Policy', icon: Shield, component: PrivacyPolicy },
   { id: 'terms', label: 'Terms of Use', icon: FileText, component: TermsOfUse },
   { id: 'disclaimer', label: 'Disclaimer', icon: AlertTriangle, component: Disclaimer },
+  { id: 'security', label: 'Data Security', icon: Lock, component: DataSecurity },
 ]
 
 const Legal = () => {

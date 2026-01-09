@@ -10,6 +10,10 @@ import {
   UserCheck,
   ClipboardList,
   Search,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Info,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import KPICard from '../components/dashboard/KPICard'
@@ -18,12 +22,12 @@ import IncidentPyramid from '../components/dashboard/IncidentPyramid'
 import FilterBar from '../components/common/FilterBar'
 import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
-import ImportWarnings from '../components/import/ImportWarnings'
 import QuickImportModal from '../components/import/QuickImportModal'
 import ExportMenu from '../components/dashboard/ExportMenu'
 import ReportModal from '../components/common/ReportModal'
+import DrillDownModal from '../components/common/DrillDownModal'
 import { useExport } from '../hooks/useExport'
-import { INCIDENT_TYPES } from '../utils/constants'
+import { INCIDENT_TYPES, ACTION_STATUSES } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -44,8 +48,19 @@ const normalizeHazard = (hazard) => {
     .join(' ')
 }
 
+// Info tooltip component for chart explanations
+const InfoTooltip = ({ text }) => (
+  <div className="group relative inline-flex items-center ml-1.5">
+    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
+    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
+      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-gray-900 transform rotate-45"></div>
+      <span className="relative">{text}</span>
+    </div>
+  </div>
+)
+
 const Dashboard = () => {
-  const { projects, incidents, isLoading, importWarnings, showOpenClosed } = useData()
+  const { projects, incidents, isLoading, showOpenClosed } = useData()
 
   // Import modal state
   const [showImportModal, setShowImportModal] = useState(false)
@@ -61,22 +76,27 @@ const Dashboard = () => {
     dateTo: ''
   })
 
-  // Drill-down state with 3 levels
+  // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({
     chart: null,
     filter: null,
     level: 1,
     period: null,
+    modalOpen: false,
   })
 
   // Heatmap cell click state
   const [heatmapDrillDown, setHeatmapDrillDown] = useState({
     hazard: null,
     month: null,
+    modalOpen: false,
   })
 
   // Report modal state
   const [viewingRecord, setViewingRecord] = useState(null)
+
+  // All Records section state
+  const [showAllRecords, setShowAllRecords] = useState(false)
 
   // Heatmap scroll ref
   const heatmapScrollRef = useRef(null)
@@ -133,8 +153,8 @@ const Dashboard = () => {
       setFilters(prev => ({ ...prev, dateFrom: start, dateTo: end }))
       setThisMonthActive(true)
     }
-    setDrillDown({ chart: null, filter: null, level: 1, period: null })
-    setHeatmapDrillDown({ hazard: null, month: null })
+    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
+    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }
 
   // Handle filter changes - reset site when contractor changes
@@ -148,51 +168,46 @@ const Dashboard = () => {
       return newFilters
     })
     setThisMonthActive(false) // Turn off "This Month" when manual filter changes
-    setDrillDown({ chart: null, filter: null, level: 1, period: null })
-    setHeatmapDrillDown({ hazard: null, month: null })
+    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
+    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }
 
   const clearFilters = () => {
     setFilters({ contractor: '', site: '', dateFrom: '', dateTo: '' })
     setThisMonthActive(false)
-    setDrillDown({ chart: null, filter: null, level: 1, period: null })
-    setHeatmapDrillDown({ hazard: null, month: null })
+    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
+    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }
 
-  // Handle heatmap cell click
+  // Handle heatmap cell click - opens modal
   const handleHeatmapCellClick = (hazard, month, value) => {
     if (value === 0) return
-
-    if (heatmapDrillDown.hazard === hazard && heatmapDrillDown.month === month) {
-      setHeatmapDrillDown({ hazard: null, month: null })
-    } else {
-      setHeatmapDrillDown({ hazard, month })
-    }
+    setHeatmapDrillDown({ hazard, month, modalOpen: true })
   }
 
   const closeHeatmapDrillDown = () => {
-    setHeatmapDrillDown({ hazard: null, month: null })
+    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }
 
-  // Handle drill-down - 3 levels
+  // Handle drill-down - opens modal with level 2 (monthly breakdown)
   const handleDrillDown = (chart, filter) => {
-    if (drillDown.chart === chart && drillDown.filter === filter && drillDown.level >= 2) {
-      setDrillDown({ chart: null, filter: null, level: 1, period: null })
-    } else {
-      setDrillDown({ chart, filter, level: 2, period: null })
-    }
+    setDrillDown({ chart, filter, level: 2, period: null, modalOpen: true })
+  }
+
+  const closeDrillDownModal = () => {
+    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
   }
 
   const handleDrillDownBack = () => {
     if (drillDown.level === 3) {
       setDrillDown(prev => ({ ...prev, level: 2, period: null }))
     } else {
-      setDrillDown({ chart: null, filter: null, level: 1, period: null })
+      closeDrillDownModal()
     }
   }
 
-  const handleMonthSelect = (period) => {
-    setDrillDown(prev => ({ ...prev, level: 3, period }))
+  const handleMonthSelect = (monthData) => {
+    setDrillDown(prev => ({ ...prev, level: 3, period: monthData.period }))
   }
 
   // Get unique contractors from incidents
@@ -304,8 +319,11 @@ const Dashboard = () => {
     } else if (drillDown.chart === 'observers') {
       filtered = filteredIncidents.filter(i => i.reportedBy === drillDown.filter)
     } else if (drillDown.chart === 'hazards') {
+      // Exclude positive observations for hazards drill-down (consistent with Top Hazards chart)
       const normalizedFilter = normalizeHazard(drillDown.filter)
-      filtered = filteredIncidents.filter(i => normalizeHazard(i.location) === normalizedFilter)
+      filtered = filteredIncidents.filter(i =>
+        i.type !== 'positive' && normalizeHazard(i.location) === normalizedFilter
+      )
     }
     return filtered
   }, [drillDown.chart, drillDown.filter, filteredIncidents])
@@ -496,10 +514,12 @@ const Dashboard = () => {
       .slice(0, 10)
   }, [filteredIncidents])
 
-  // Top Hazards data
+  // Top Hazards data - EXCLUDES positive observations (only counts non-positive)
   const topHazards = useMemo(() => {
     const counts = {}
-    filteredIncidents.forEach(incident => {
+    // Filter out positive observations - Top Hazards should only show non-positive observations
+    const nonPositiveIncidents = filteredIncidents.filter(i => i.type !== 'positive')
+    nonPositiveIncidents.forEach(incident => {
       const normalized = normalizeHazard(incident.location)
       if (normalized && normalized !== 'Not Specified') {
         if (!counts[normalized]) {
@@ -622,11 +642,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-3">
-      {/* Import Warnings - Embedded (not dismissable) */}
-      {importWarnings && (importWarnings.dateIssues?.length > 0 || importWarnings.hazardIssues?.length > 0) && (
-        <ImportWarnings warnings={importWarnings} onDismiss={null} />
-      )}
-
       {/* Filters Row */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -685,6 +700,7 @@ const Dashboard = () => {
           subtitle={thisMonthActive ? 'This month' : 'All records'}
           icon={FileText}
           color="primary"
+          info="Total number of observations matching current filters. Includes all types: incidents, near misses, unsafe acts/conditions, and positive observations."
         />
         <KPICard
           title="Close Out Rate"
@@ -692,6 +708,7 @@ const Dashboard = () => {
           subtitle={`${filteredIncidents.filter(i => i.actionStatus === 'closed').length} of ${filteredIncidents.length} closed`}
           icon={CheckCircle}
           color={closeOutPercentage >= 80 ? 'success' : closeOutPercentage >= 50 ? 'warning' : 'danger'}
+          info="Percentage of observations that have been closed. Target: 80%+ indicates good follow-through on safety actions."
         />
         <KPICard
           title="Positive Rate"
@@ -699,6 +716,7 @@ const Dashboard = () => {
           subtitle={`${positiveCount} of ${filteredIncidents.length} positive`}
           icon={ThumbsUp}
           color={positivePercentage >= 30 ? 'success' : positivePercentage >= 15 ? 'warning' : 'info'}
+          info="Percentage of positive observations. Higher rates (30%+) indicate proactive safety culture where good behaviors are recognized."
         />
         <KPICard
           title="Open > 1 Month"
@@ -706,6 +724,7 @@ const Dashboard = () => {
           subtitle="Overdue actions"
           icon={CalendarClock}
           color={openMoreThanMonth > 10 ? 'danger' : openMoreThanMonth > 5 ? 'warning' : 'info'}
+          info="Number of observations open for more than 30 days. High numbers indicate action follow-up delays that need attention."
         />
       </div>
 
@@ -717,6 +736,7 @@ const Dashboard = () => {
           subtitle="Fully closed items"
           icon={CheckCheck}
           color="success"
+          info="Observations that have been fully closed and resolved. These require no further action."
         />
         <KPICard
           title="Contractor Review"
@@ -724,6 +744,7 @@ const Dashboard = () => {
           subtitle="Pending contractor review"
           icon={UserCheck}
           color={approvalCounts.contractorReview > 10 ? 'warning' : 'info'}
+          info="Observations awaiting contractor review and response. Monitor to ensure timely contractor engagement."
         />
         <KPICard
           title="Review"
@@ -731,6 +752,7 @@ const Dashboard = () => {
           subtitle="Pending review"
           icon={ClipboardList}
           color={approvalCounts.review > 10 ? 'warning' : 'info'}
+          info="Observations pending internal review. High numbers may indicate review bottleneck."
         />
         <KPICard
           title="Contractor Investigation"
@@ -738,6 +760,7 @@ const Dashboard = () => {
           subtitle="Under investigation"
           icon={Search}
           color={approvalCounts.contractorInvestigation > 5 ? 'warning' : 'info'}
+          info="Observations under contractor investigation. These typically involve more serious issues requiring detailed analysis."
         />
       </div>
 
@@ -760,8 +783,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 gap-3">
         {/* Top Hazards */}
         <div ref={topHazardsRef} className="bg-white border border-gray-300 p-3">
-          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide flex items-center">
             Top Significant Hazards
+            <InfoTooltip text="Top 10 hazard categories ranked by observation count. Click any bar to drill down into specific observations. Red/green bars show open vs closed status." />
           </h3>
           {topHazards.length > 0 ? (
             <div className="space-y-1">
@@ -807,44 +831,13 @@ const Dashboard = () => {
           ) : (
             <p className="text-xs text-gray-400 text-center py-4">No hazard data available</p>
           )}
-          {/* Hazard Drill-down */}
-          {drillDown.chart === 'hazards' && drillDown.level === 2 && monthlyBreakdown.length > 0 && (
-            <div className="mt-2 border-t border-gray-200 pt-2">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-700">{drillDown.filter} - Monthly</h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Close</button>
-              </div>
-              <div className="space-y-1">
-                {monthlyBreakdown.map(month => {
-                  const maxCount = Math.max(...monthlyBreakdown.map(m => m.count))
-                  return (
-                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1" onClick={() => handleMonthSelect(month.period)}>
-                      <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-3 bg-gray-100 overflow-hidden">
-                        <div className="h-full bg-red-400" style={{ width: `${(month.count / maxCount) * 100}%` }} />
-                      </div>
-                      <span className="text-xs font-bold w-6 text-right">{month.count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {drillDown.chart === 'hazards' && drillDown.level === 3 && drillDownData.length > 0 && (
-            <div className="mt-2 border-t border-gray-200 pt-2">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-700">{drillDown.period ? format(parseISO(drillDown.period + '-01'), 'MMM yyyy') : ''}</h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Back</button>
-              </div>
-              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" onViewClick={setViewingRecord} />
-            </div>
-          )}
         </div>
 
         {/* Top Observers */}
         <div ref={topObserversRef} className="bg-white border border-gray-300 p-3">
-          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide flex items-center">
             Top Observers
+            <InfoTooltip text="Top 10 reporters ranked by observation count. Click any bar to see their observations. High reporter activity indicates strong safety culture engagement." />
           </h3>
           {observersData.length > 0 ? (
             <div className="space-y-1">
@@ -890,38 +883,6 @@ const Dashboard = () => {
           ) : (
             <p className="text-xs text-gray-400 text-center py-4">No observer data available</p>
           )}
-          {/* Observer Drill-down */}
-          {drillDown.chart === 'observers' && drillDown.level === 2 && monthlyBreakdown.length > 0 && (
-            <div className="mt-2 border-t border-gray-200 pt-2">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-700">{drillDown.filter} - Monthly</h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Close</button>
-              </div>
-              <div className="space-y-1">
-                {monthlyBreakdown.map(month => {
-                  const maxCount = Math.max(...monthlyBreakdown.map(m => m.count))
-                  return (
-                    <div key={month.period} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1" onClick={() => handleMonthSelect(month.period)}>
-                      <span className="text-xs w-16 text-gray-600">{month.label}</span>
-                      <div className="flex-1 h-3 bg-gray-100 overflow-hidden">
-                        <div className="h-full bg-blue-400" style={{ width: `${(month.count / maxCount) * 100}%` }} />
-                      </div>
-                      <span className="text-xs font-bold w-6 text-right">{month.count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {drillDown.chart === 'observers' && drillDown.level === 3 && drillDownData.length > 0 && (
-            <div className="mt-2 border-t border-gray-200 pt-2">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-xs font-semibold text-gray-700">{drillDown.period ? format(parseISO(drillDown.period + '-01'), 'MMM yyyy') : ''}</h4>
-                <button onClick={handleDrillDownBack} className="text-xs text-blue-600 hover:text-blue-800">Back</button>
-              </div>
-              <DataTable data={drillDownData} columns={incidentColumns} searchable={true} pageSize={5} emptyMessage="No matching records" onViewClick={setViewingRecord} />
-            </div>
-          )}
         </div>
       </div>
 
@@ -929,8 +890,9 @@ const Dashboard = () => {
       {hazardsHeatmap.hazards.length > 0 && (
         <div ref={hazardsHeatmapRef} className="bg-white border border-gray-300 p-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center">
               Hazards Heatmap (by Month)
+              <InfoTooltip text="Monthly distribution of hazard categories. Darker colors indicate higher counts. Click any cell to drill down into that specific hazard/month combination." />
             </h3>
             {hazardsHeatmap.months.length > 12 && (
               <span className="text-xs text-gray-400">
@@ -1027,39 +989,173 @@ const Dashboard = () => {
             <span className="text-gray-500">High</span>
           </div>
 
-          {/* Heatmap Drill-Down Table */}
-          {heatmapDrillDown.hazard && heatmapDrillDown.month && heatmapDrillDownData.length > 0 && (
-            <div className="mt-3 border-t border-gray-200 pt-3">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-sm font-semibold text-gray-800">
-                  {heatmapDrillDown.hazard} - {format(parseISO(heatmapDrillDown.month + '-01'), 'MMMM yyyy')}
-                  <span className="ml-2 text-xs font-normal text-gray-500">
-                    ({heatmapDrillDownData.length} observation{heatmapDrillDownData.length !== 1 ? 's' : ''})
-                  </span>
-                </h4>
-                <button onClick={closeHeatmapDrillDown} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                  Close
-                </button>
-              </div>
-              <DataTable
-                data={heatmapDrillDownData}
-                columns={incidentColumns}
-                searchable={true}
-                pageSize={10}
-                emptyMessage="No observations found"
-                onViewClick={setViewingRecord}
-              />
-            </div>
-          )}
         </div>
       )}
       </div>
       {/* End of dashboardContentRef wrapper */}
 
+      {/* All Records Section - Collapsible */}
+      <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowAllRecords(!showAllRecords)}
+          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Database size={18} className="text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center">
+              All Records
+              <InfoTooltip text="Complete list of all observations matching current filters. Search, sort, and click any row to view full details." />
+            </h3>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+              {filteredIncidents.length} records
+            </span>
+          </div>
+          {showAllRecords ? (
+            <ChevronUp size={18} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={18} className="text-gray-500" />
+          )}
+        </button>
+
+        {showAllRecords && (
+          <div className="border-t border-gray-200 p-3">
+            <DataTable
+              data={filteredIncidents}
+              columns={[
+                {
+                  key: 'date',
+                  header: 'Date',
+                  accessor: (row) => row.date,
+                  render: (row) => {
+                    try {
+                      return format(parseISO(row.date), 'MMM d, yyyy')
+                    } catch {
+                      return row.date
+                    }
+                  },
+                  width: '100px',
+                },
+                {
+                  key: 'type',
+                  header: 'Type',
+                  accessor: (row) => row.type,
+                  render: (row) => {
+                    const type = INCIDENT_TYPES.find((t) => t.value === row.type)
+                    return (
+                      <span
+                        className="px-1.5 py-0.5 text-xs font-medium rounded-sm"
+                        style={{
+                          backgroundColor: `${type?.color}20`,
+                          color: type?.color,
+                        }}
+                      >
+                        {type?.label || row.type}
+                      </span>
+                    )
+                  },
+                  width: '120px',
+                },
+                {
+                  key: 'contractor',
+                  header: 'Contractor',
+                  accessor: (row) => row.contractor || '-',
+                  width: '120px',
+                },
+                {
+                  key: 'site',
+                  header: 'Site',
+                  accessor: (row) => row.site || '-',
+                  width: '120px',
+                },
+                {
+                  key: 'description',
+                  header: 'Description',
+                  accessor: (row) => row.description,
+                  render: (row) => (
+                    <span className="line-clamp-2 text-xs">{row.description}</span>
+                  ),
+                },
+                {
+                  key: 'location',
+                  header: 'Hazard',
+                  accessor: (row) => row.location || '-',
+                  width: '120px',
+                },
+                {
+                  key: 'reportedBy',
+                  header: 'Reporter',
+                  accessor: (row) => row.reportedBy || '-',
+                  width: '120px',
+                },
+                {
+                  key: 'actionStatus',
+                  header: 'Status',
+                  accessor: (row) => row.actionStatus,
+                  render: (row) => {
+                    const status = ACTION_STATUSES.find((s) => s.value === row.actionStatus)
+                    return (
+                      <span
+                        className="px-1.5 py-0.5 text-xs font-medium rounded-sm"
+                        style={{
+                          backgroundColor: `${status?.color}20`,
+                          color: status?.color,
+                        }}
+                      >
+                        {status?.label || row.actionStatus}
+                      </span>
+                    )
+                  },
+                  width: '90px',
+                },
+              ]}
+              searchPlaceholder="Search records..."
+              emptyMessage="No records match the current filters."
+              pageSize={15}
+              onViewClick={setViewingRecord}
+            />
+          </div>
+        )}
+      </div>
+
       {/* Report Modal */}
       <ReportModal
         record={viewingRecord}
         onClose={() => setViewingRecord(null)}
+      />
+
+      {/* Drill-Down Modal for Hazards & Observers */}
+      <DrillDownModal
+        isOpen={drillDown.modalOpen && (drillDown.chart === 'hazards' || drillDown.chart === 'observers')}
+        onClose={closeDrillDownModal}
+        title={
+          drillDown.level === 3 && drillDown.period
+            ? `${drillDown.filter} - ${format(parseISO(drillDown.period + '-01'), 'MMMM yyyy')}`
+            : `${drillDown.filter} - Monthly Breakdown`
+        }
+        data={drillDown.level === 3 ? drillDownData : monthlyBreakdown}
+        type={drillDown.level === 3 ? 'records' : 'monthly'}
+        onDrillDown={handleMonthSelect}
+        onBack={handleDrillDownBack}
+        canGoBack={drillDown.level === 3}
+        breadcrumb={[
+          drillDown.chart === 'hazards' ? 'Top Hazards' : 'Top Observers',
+          drillDown.filter,
+          ...(drillDown.level === 3 && drillDown.period ? [format(parseISO(drillDown.period + '-01'), 'MMM yyyy')] : [])
+        ].filter(Boolean)}
+      />
+
+      {/* Heatmap Drill-Down Modal */}
+      <DrillDownModal
+        isOpen={heatmapDrillDown.modalOpen}
+        onClose={closeHeatmapDrillDown}
+        title={
+          heatmapDrillDown.hazard && heatmapDrillDown.month
+            ? `${heatmapDrillDown.hazard} - ${format(parseISO(heatmapDrillDown.month + '-01'), 'MMMM yyyy')}`
+            : 'Heatmap Details'
+        }
+        data={heatmapDrillDownData}
+        type="records"
+        breadcrumb={['Heatmap', heatmapDrillDown.hazard, heatmapDrillDown.month ? format(parseISO(heatmapDrillDown.month + '-01'), 'MMM yyyy') : ''].filter(Boolean)}
       />
     </div>
   )

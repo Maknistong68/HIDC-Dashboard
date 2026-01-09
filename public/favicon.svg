@@ -1,4 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  <path d="m9 12 2 2 4-4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="shield-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3478f6"/>
+      <stop offset="50%" stop-color="#1e5aeb"/>
+      <stop offset="100%" stop-color="#1646d8"/>
+    </linearGradient>
+    <linearGradient id="check-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield shape -->
+  <path d="M24 4L6 12v12c0 11 8 18 18 22 10-4 18-11 18-22V12L24 4z" fill="url(#shield-gradient)"/>
+
+  <!-- Inner highlight -->
+  <path d="M24 8L10 14v10c0 9 6 14 14 18V8z" fill="white" fill-opacity="0.1"/>
+
+  <!-- Data bars -->
+  <rect x="14" y="26" width="4" height="10" rx="1" fill="white" fill-opacity="0.9"/>
+  <rect x="22" y="22" width="4" height="14" rx="1" fill="white" fill-opacity="0.9"/>
+  <rect x="30" y="18" width="4" height="18" rx="1" fill="white" fill-opacity="0.9"/>
+
+  <!-- Verification checkmark circle -->
+  <circle cx="32" cy="16" r="8" fill="url(#check-gradient)"/>
+  <path d="M28 16l2.5 2.5L35 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

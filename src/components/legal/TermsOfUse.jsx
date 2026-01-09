@@ -8,7 +8,7 @@ const TermsOfUse = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">1. Acceptance of Terms</h3>
         <p className="text-gray-600">
-          By accessing and using the HIDC (Hazard Identification Dashboard & Control) application, you accept and agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use this application.
+          By accessing and using the HIDC (Hazard Identification and Data Control) application, you accept and agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use this application.
         </p>
       </section>
 

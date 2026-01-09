@@ -3,7 +3,8 @@ import { HAZARD_PATTERNS, HAZARD_CATEGORIES } from './constants'
 import { categorizeHazard, normalizeHazardCategory } from './excelParser'
 
 /**
- * Categorize hazard based on description - uses the 29 approved categories
+ * Categorize hazard based on description - uses the 30 approved categories
+ * (13 Major + 17 Sub-Significant hazards)
  * IMPORTANT: Never returns "Others" or "General Safety"
  */
 export const categorizeHazardByDescription = (description, existingCategory = '') => {
@@ -11,30 +12,21 @@ export const categorizeHazardByDescription = (description, existingCategory = ''
 }
 
 /**
- * Recategorize ALL incidents to use the 29 approved hazard categories
- * This ensures consistency across Top Hazards chart and Heat Map
- * IMPORTANT: Eliminates "Others", "General Safety", and any non-approved categories
+ * Recategorize ALL incidents to use the 30 approved hazard categories
+ * Uses context-aware 7-step classification system:
+ * - Checks context redirects first (e.g., "line of fire" → Mobile Plant, not Fire)
+ * - Validates Major hazards against description (prevents wrong categories)
+ * - Prioritizes Major hazards (13) over Sub-Significant (17)
+ * - Never returns "Others", "General Safety", or any non-approved categories
  */
 export const recategorizeBlankHazards = (incidents) => {
   return incidents.map(incident => {
-    const currentCategory = incident.location
-
-    // Always normalize to one of 29 approved categories
-    // First try to normalize existing category, then classify by description
-    const normalizedCategory = normalizeHazardCategory(currentCategory)
-
-    if (normalizedCategory) {
-      // Existing category maps to an approved category
-      return {
-        ...incident,
-        location: normalizedCategory
-      }
-    }
-
-    // Category doesn't map - classify by description
+    // ALWAYS use categorizeHazard which has full validation logic
+    // This ensures Major hazards are validated against description
+    // and prevents incorrect categories like "Working on or Near Water" for PPE issues
     return {
       ...incident,
-      location: categorizeHazard(incident.description, currentCategory)
+      location: categorizeHazard(incident.description, incident.location)
     }
   })
 }

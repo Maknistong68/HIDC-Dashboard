@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, Download, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { X, Download, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, Database, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { INCIDENT_TYPES, ACTION_STATUSES } from '../../utils/constants'
@@ -162,8 +162,8 @@ const ReportModal = ({ record, onClose }) => {
     y = addWrappedText(description, margin, y, contentWidth, 5)
     y += 8
 
-    // Additional Info (if any)
-    if (record.rootCause || record.bodyPart || record.correctiveAction) {
+    // Additional Info (if any) - excluding root cause
+    if (record.bodyPart || record.correctiveAction) {
       pdf.setDrawColor(229, 231, 235)
       pdf.line(margin, y - 3, pageWidth - margin, y - 3)
 
@@ -175,16 +175,6 @@ const ReportModal = ({ record, onClose }) => {
 
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
-
-      if (record.rootCause) {
-        pdf.setFont('helvetica', 'bold')
-        pdf.setTextColor(...labelColor)
-        pdf.text('Root Cause:', margin, y)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...valueColor)
-        pdf.text(record.rootCause, margin + 25, y)
-        y += 6
-      }
 
       if (record.bodyPart) {
         pdf.setFont('helvetica', 'bold')
@@ -395,19 +385,13 @@ const ReportModal = ({ record, onClose }) => {
               </div>
             </div>
 
-            {/* Additional Fields (if any) */}
-            {(record.rootCause || record.bodyPart || record.correctiveAction) && (
+            {/* Additional Fields (if any) - excluding root cause */}
+            {(record.bodyPart || record.correctiveAction) && (
               <div className="mb-4">
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 border-b border-gray-200 pb-1">
                   Additional Information
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                  {record.rootCause && (
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Root Cause: </span>
-                      <span className="text-sm text-gray-900">{record.rootCause}</span>
-                    </div>
-                  )}
                   {record.bodyPart && (
                     <div>
                       <span className="text-xs font-medium text-gray-500">Body Part Affected: </span>
@@ -423,6 +407,9 @@ const ReportModal = ({ record, onClose }) => {
                 </div>
               </div>
             )}
+
+            {/* Data Quality Section */}
+            <DataQualitySection record={record} />
 
             {/* History/Timeline (if available) */}
             {record.history && record.history.length > 0 && (
@@ -455,6 +442,74 @@ const ReportModal = ({ record, onClose }) => {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Data Quality Section Component - Compact & Collapsible
+ * Shows whether hazard category was from Excel or auto-classified
+ */
+const DataQualitySection = ({ record }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+
+  // Check if data quality fields exist (only for newly imported records)
+  const hasDataQualityInfo = record.hazardCategorySource !== undefined
+  if (!hasDataQualityInfo) return null
+
+  const isFromExcel = record.hazardCategorySource === 'excel'
+  const isValidated = record.hazardCategoryValidated
+  const hasIssue = record.dataQualityIssue && !isValidated
+
+  // Compact status indicator
+  const getStatusBadge = () => {
+    if (hasIssue) {
+      return { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Review Needed' }
+    }
+    if (!isValidated) {
+      return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
+    }
+    return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
+  }
+
+  const badge = getStatusBadge()
+  const BadgeIcon = badge.icon
+
+  return (
+    <div className="mb-4">
+      {/* Compact Header - Click to expand */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`w-full flex items-center justify-between px-2 py-1.5 text-xs transition-colors ${badge.bg} hover:opacity-80`}
+      >
+        <div className="flex items-center gap-2">
+          <BadgeIcon size={12} className={badge.color} />
+          <span className={`font-medium ${badge.color}`}>{badge.label}</span>
+          <span className="text-gray-400">•</span>
+          <span className="text-gray-500">
+            {isFromExcel ? 'From Excel' : 'Auto-classified'}
+            {record.originalHazardCategory && record.originalHazardCategory !== record.location &&
+              ` (was "${record.originalHazardCategory}")`
+            }
+          </span>
+        </div>
+        <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="mt-1 p-2 bg-gray-50 border border-gray-200 text-xs space-y-1">
+          {record.dataQualityIssue && (
+            <p className="text-gray-600">{record.dataQualityIssue}</p>
+          )}
+          <p className="text-gray-500">
+            {isValidated
+              ? `Description contains "${record.location}" keywords`
+              : `No "${record.location}" keywords found in description`
+            }
+          </p>
+        </div>
+      )}
     </div>
   )
 }

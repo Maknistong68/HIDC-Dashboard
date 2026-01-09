@@ -71,7 +71,7 @@ export const exportToPDF = async (dashboardRef, filterInfo, incidents = [], onPr
 
   // Save PDF
   onProgress?.('Saving PDF...')
-  const filename = `HSE-Dashboard-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`
+  const filename = `HIDC-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`
   pdf.save(filename)
 
   onProgress?.(null)
@@ -186,45 +186,67 @@ const addSummarySection = (pdf, incidents, x, y, contentWidth, pageWidth) => {
 }
 
 /**
- * Add header to PDF (centered)
+ * Add header to PDF (centered) - Data-focused
  */
 const addHeader = (pdf, filterInfo, x, y, pageWidth, contentWidth) => {
+  // Build dynamic title based on filters - prioritize data context
+  let mainTitle = 'Observation Report'
+  const subtitleParts = []
+
+  // Build meaningful title from filter context
+  if (filterInfo.company) {
+    mainTitle = `${filterInfo.company} - Observation Report`
+  }
+  if (filterInfo.contractor) {
+    subtitleParts.push(filterInfo.contractor)
+  }
+  if (filterInfo.site) {
+    subtitleParts.push(filterInfo.site)
+  }
+
   // Center the title
   pdf.setFontSize(16)
   pdf.setFont('helvetica', 'bold')
   pdf.setTextColor(31, 41, 55)
-  pdf.text('HSE Safety Dashboard Report', pageWidth / 2, y + 5, { align: 'center' })
+  pdf.text(mainTitle, pageWidth / 2, y + 5, { align: 'center' })
 
+  // Subtitle with contractor/site if available
+  if (subtitleParts.length > 0) {
+    pdf.setFontSize(11)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(55, 65, 81)
+    pdf.text(subtitleParts.join(' | '), pageWidth / 2, y + 11, { align: 'center' })
+  }
+
+  // Date info on a separate line
   pdf.setFontSize(9)
   pdf.setFont('helvetica', 'normal')
   pdf.setTextColor(107, 114, 128)
 
-  const parts = [`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`]
-  if (filterInfo.company) parts.push(`Company: ${filterInfo.company}`)
-  if (filterInfo.contractor) parts.push(`Contractor: ${filterInfo.contractor}`)
-  if (filterInfo.site) parts.push(`Site: ${filterInfo.site}`)
+  const dateParts = []
   if (filterInfo.dateFrom || filterInfo.dateTo) {
     const from = filterInfo.dateFrom || 'Start'
     const to = filterInfo.dateTo || 'Present'
-    parts.push(`Date Range: ${from} to ${to}`)
+    dateParts.push(`Period: ${from} to ${to}`)
   }
+  dateParts.push(`Generated: ${format(new Date(), 'MMMM d, yyyy')}`)
 
-  // Center the filter info line
-  pdf.text(parts.join('  |  '), pageWidth / 2, y + 10, { align: 'center' })
+  const yOffset = subtitleParts.length > 0 ? 17 : 11
+  pdf.text(dateParts.join('  |  '), pageWidth / 2, y + yOffset, { align: 'center' })
   pdf.setTextColor(0, 0, 0)
 }
 
 /**
- * Add footer to PDF
+ * Add footer to PDF - Minimal, data-focused
  */
 const addFooter = (pdf, pageWidth, pageHeight, margin) => {
   pdf.setFontSize(8)
   pdf.setTextColor(156, 163, 175)
   pdf.text(
-    'HSE Safety Dashboard - Confidential',
-    pageWidth / 2,
+    'HIDC - Hazard Identification and Data Control',
+    margin,
     pageHeight - margin + 5,
-    { align: 'center' }
+    { align: 'left' }
   )
   pdf.text(
     'Page 1 of 1',

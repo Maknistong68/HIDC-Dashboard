@@ -1,6 +1,12 @@
 import React from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { AnimatedNumber } from '../ui'
+import { InfoTooltip } from '../ui/Tooltip'
 
+/**
+ * KPICard - Key Performance Indicator display card
+ * Features: Animated numbers, trend indicators, accessible tooltips
+ */
 const KPICard = ({
   title,
   value,
@@ -10,47 +16,116 @@ const KPICard = ({
   trendValue,
   color = 'primary',
   onClick,
+  info,
+  animate = true,
+  className = '',
 }) => {
   const colorClasses = {
-    primary: 'bg-primary-50 text-primary-600',
-    success: 'bg-green-50 text-green-600',
-    warning: 'bg-orange-50 text-orange-600',
-    danger: 'bg-red-50 text-red-600',
-    info: 'bg-blue-50 text-blue-600',
+    primary: {
+      bg: 'bg-primary-50',
+      icon: 'text-primary-600',
+      glow: 'group-hover:shadow-glow-primary',
+    },
+    success: {
+      bg: 'bg-safety-success-light',
+      icon: 'text-safety-success',
+      glow: 'group-hover:shadow-glow-success',
+    },
+    warning: {
+      bg: 'bg-safety-warning-light',
+      icon: 'text-safety-warning',
+      glow: '',
+    },
+    danger: {
+      bg: 'bg-safety-critical-light',
+      icon: 'text-safety-critical',
+      glow: 'group-hover:shadow-glow-danger',
+    },
+    info: {
+      bg: 'bg-safety-info-light',
+      icon: 'text-safety-info',
+      glow: '',
+    },
   }
 
-  const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    neutral: 'text-gray-500',
+  const trendConfig = {
+    up: { icon: TrendingUp, color: 'text-safety-success' },
+    down: { icon: TrendingDown, color: 'text-safety-critical' },
+    neutral: { icon: Minus, color: 'text-surface-400' },
   }
+
+  const colors = colorClasses[color] || colorClasses.primary
+  const TrendIcon = trend ? trendConfig[trend]?.icon : null
+
+  // Parse numeric value for animation
+  const numericValue = typeof value === 'string'
+    ? parseFloat(value.replace(/[^0-9.-]/g, ''))
+    : value
+  const isNumeric = !isNaN(numericValue) && typeof value !== 'string'
+  const valuePrefix = typeof value === 'string' && value.includes('%') ? '' : ''
+  const valueSuffix = typeof value === 'string' && value.includes('%') ? '%' : ''
 
   return (
     <div
-      className={`bg-white border border-gray-300 p-3 ${
-        onClick ? 'cursor-pointer hover:shadow-sm transition-shadow' : ''
-      }`}
+      className={`
+        group bg-white border border-surface-200 rounded-lg p-4
+        transition-all duration-300 ease-out
+        hover:shadow-medium hover:border-surface-300
+        ${onClick ? 'cursor-pointer' : ''}
+        ${colors.glow}
+        ${className}
+      `}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick(e) : undefined}
     >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
-          <p className="text-xl font-bold text-gray-900 mt-0.5">{value}</p>
+        <div className="flex-1 min-w-0">
+          {/* Title with tooltip */}
+          <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide flex items-center">
+            <span className="truncate">{title}</span>
+            {info && <InfoTooltip text={info} />}
+          </p>
+
+          {/* Value with animation */}
+          <p className="text-2xl font-bold text-surface-800 mt-1 tabular-nums">
+            {animate && isNumeric ? (
+              <>
+                {valuePrefix}
+                <AnimatedNumber value={numericValue} />
+                {valueSuffix}
+              </>
+            ) : (
+              value
+            )}
+          </p>
+
+          {/* Subtitle */}
           {subtitle && (
-            <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+            <p className="text-xs text-surface-500 mt-1 truncate">{subtitle}</p>
           )}
-          {trend && (
-            <div className={`flex items-center gap-1 mt-1 ${trendColors[trend]}`}>
-              {trend === 'up' && <TrendingUp size={14} />}
-              {trend === 'down' && <TrendingDown size={14} />}
-              {trend === 'neutral' && <Minus size={14} />}
+
+          {/* Trend indicator */}
+          {trend && TrendIcon && (
+            <div className={`flex items-center gap-1 mt-2 ${trendConfig[trend].color}`}>
+              <TrendIcon size={14} aria-hidden="true" />
               <span className="text-xs font-medium">{trendValue}</span>
             </div>
           )}
         </div>
+
+        {/* Icon */}
         {Icon && (
-          <div className={`p-2 ${colorClasses[color]}`}>
-            <Icon size={20} />
+          <div
+            className={`
+              flex-shrink-0 p-2.5 rounded-lg
+              transition-transform duration-300 ease-out
+              group-hover:scale-110
+              ${colors.bg} ${colors.icon}
+            `}
+          >
+            <Icon size={22} aria-hidden="true" />
           </div>
         )}
       </div>

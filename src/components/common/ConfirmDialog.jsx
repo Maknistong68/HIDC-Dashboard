@@ -1,7 +1,11 @@
 import React from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Info, CheckCircle } from 'lucide-react'
 import Modal from './Modal'
+import { Button } from '../ui'
 
+/**
+ * ConfirmDialog - Accessible confirmation dialog
+ */
 const ConfirmDialog = ({
   isOpen,
   onClose,
@@ -11,39 +15,90 @@ const ConfirmDialog = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'danger',
+  loading = false,
 }) => {
-  const variantClasses = {
-    danger: 'bg-red-600 hover:bg-red-700',
-    warning: 'bg-orange-600 hover:bg-orange-700',
-    primary: 'bg-primary-600 hover:bg-primary-700',
+  const variantConfig = {
+    danger: {
+      icon: AlertTriangle,
+      iconBg: 'bg-safety-critical-light',
+      iconColor: 'text-safety-critical',
+      buttonVariant: 'danger',
+    },
+    warning: {
+      icon: AlertTriangle,
+      iconBg: 'bg-safety-warning-light',
+      iconColor: 'text-safety-warning',
+      buttonVariant: 'danger',
+    },
+    primary: {
+      icon: Info,
+      iconBg: 'bg-primary-50',
+      iconColor: 'text-primary-600',
+      buttonVariant: 'primary',
+    },
+    success: {
+      icon: CheckCircle,
+      iconBg: 'bg-safety-success-light',
+      iconColor: 'text-safety-success',
+      buttonVariant: 'success',
+    },
+  }
+
+  const config = variantConfig[variant] || variantConfig.danger
+  const Icon = config.icon
+
+  const handleConfirm = () => {
+    onConfirm()
+    onClose()
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="sm"
+      closeOnBackdrop={!loading}
+      closeOnEscape={!loading}
+    >
       <div className="text-center py-4">
-        <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
+        {/* Icon */}
+        <div
+          className={`
+            mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4
+            animate-scale-in
+            ${config.iconBg}
+          `}
+        >
+          <Icon
+            className={`w-7 h-7 ${config.iconColor}`}
+            aria-hidden="true"
+          />
         </div>
-        <p className="text-gray-600">{message}</p>
+
+        {/* Message */}
+        <p className="text-surface-600 leading-relaxed">{message}</p>
       </div>
 
-      <div className="flex gap-3 mt-4">
-        <button
+      {/* Actions */}
+      <Modal.Footer>
+        <Button
+          variant="secondary"
           onClick={onClose}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+          disabled={loading}
+          className="flex-1"
         >
           {cancelText}
-        </button>
-        <button
-          onClick={() => {
-            onConfirm()
-            onClose()
-          }}
-          className={`flex-1 px-4 py-2 text-white rounded-lg font-medium ${variantClasses[variant]}`}
+        </Button>
+        <Button
+          variant={config.buttonVariant}
+          onClick={handleConfirm}
+          loading={loading}
+          className="flex-1"
         >
           {confirmText}
-        </button>
-      </div>
+        </Button>
+      </Modal.Footer>
     </Modal>
   )
 }

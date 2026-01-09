@@ -1,6 +1,86 @@
 import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
-import { HAZARD_PATTERNS, HAZARD_CATEGORIES, HAZARD_PHRASES, CATEGORY_PRIORITY } from './constants'
+import {
+  HAZARD_PATTERNS,
+  HAZARD_CATEGORIES,
+  HAZARD_PHRASES,
+  CATEGORY_PRIORITY,
+  HAZARD_EXCLUSIONS,
+  CONTEXT_REDIRECTS,
+  MAJOR_HAZARDS
+} from './constants'
+import { analyzeObservation } from './contextClassifier'
+import {
+  getSettings,
+  cleanText,
+  cleanName,
+  validateDate,
+  validateRecord,
+  calculateRecordQuality,
+  checkDuplicate,
+  getCategorizationSettings,
+  meetsConfidenceThreshold,
+  mapType,
+  mapStatus
+} from './settingsReader'
+
+// ============================================
+// NEOM EXCEL FORMAT - STRICT VALIDATION
+// ============================================
+
+// Required NEOM columns (can be in any order)
+export const NEOM_REQUIRED_COLUMNS = [
+  'Event ID',
+  'Type',
+  'Classification',
+  'Event Date',
+  'Event Description',
+  'Approval',
+  'Approval Process Requirements',
+  'Reported by',
+  'Significant Hazard'
+]
+
+/**
+ * Validate Excel has NEOM format (columns can be in any order)
+ * Returns { valid: boolean, missing: string[] }
+ */
+export const validateNEOMFormat = (headers) => {
+  const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
+  const missing = NEOM_REQUIRED_COLUMNS.filter(col =>
+    !normalizedHeaders.includes(col.toLowerCase())
+  )
+  return { valid: missing.length === 0, missing }
+}
+
+/**
+ * Auto-map NEOM columns by header name (not position)
+ * Returns column index mappings for transformRows
+ */
+export const mapNEOMColumns = (headers) => {
+  const mappings = {}
+  const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
+
+  // Map NEOM header names to internal field names
+  const columnMap = {
+    'event id': 'eventId',
+    'type': 'type',
+    'classification': 'classification',
+    'event date': 'date',
+    'event description': 'description',
+    'approval': 'status',
+    'approval process requirements': 'approvalStatus',
+    'reported by': 'reportedBy',
+    'significant hazard': 'hazardCategory'
+  }
+
+  Object.entries(columnMap).forEach(([header, field]) => {
+    const index = normalizedHeaders.indexOf(header)
+    if (index !== -1) mappings[field] = index
+  })
+
+  return mappings
+}
 
 /**
  * Normalize header for matching - removes special chars, spaces, lowercases
@@ -19,6 +99,7 @@ export const EXPECTED_COLUMNS = {
   type: ['type', 'observationtype', 'eventtype', 'category', 'obstype', 'incidenttype'],
   classification: ['classification', 'class', 'subtype', 'subcategory', 'subclass'],
   date: ['eventdate', 'date', 'observationdate', 'createddate', 'dateofobservation', 'datetime', 'incidentdate', 'dateraised'],
+  time: ['time', 'eventtime', 'observationtime', 'createdtime', 'timeofday', 'hourtime'],
   description: ['eventdescription', 'description', 'details', 'observation', 'findings', 'comments', 'notes', 'summary', 'observationdetails'],
   status: ['approval', 'status', 'state', 'actionstatus', 'approvalstatus', 'currentstatus', 'closurestatus'],
   reportedBy: ['reportedby', 'reporter', 'submittedby', 'createdby', 'observer', 'raisedby', 'observername', 'name', 'person'],
@@ -136,7 +217,8 @@ export const classifyByKeywords = (description, hazardCategory = '') => {
 }
 
 /**
- * Normalize hazard category to match one of 29 approved categories
+ * Normalize hazard category to match one of 30 approved categories
+ * (13 Major + 17 Sub-Significant hazards)
  * This handles variations in naming from imported data
  */
 export const normalizeHazardCategory = (category) => {
@@ -217,9 +299,29 @@ export const normalizeHazardCategory = (category) => {
     'competenc': 'Training and Competency',
     'emergency': 'Emergency Preparedness',
     'evacuation': 'Emergency Preparedness',
-    'heat': 'Working on Heat',
-    'hot surface': 'Working on Heat',
-    'thermal': 'Working on Heat',
+    'heat': 'Working in Heat',
+    'hot surface': 'Working in Heat',
+    'thermal': 'Working in Heat',
+    'working on heat': 'Working in Heat',
+    'working in heat': 'Working in Heat',
+    'working in the heat': 'Working in Heat',
+    'water': 'Working on or Near Water',
+    'marine': 'Working on or Near Water',
+    'drowning': 'Working on or Near Water',
+
+    // Excel variations - map to standard names
+    'work at height': 'Working at Height',
+    'working at heights': 'Working at Height',
+    'work at heights': 'Working at Height',
+    'breaking ground & excavations': 'Breaking Ground & Excavation',
+    'excavations': 'Breaking Ground & Excavation',
+    'energised system': 'Energized System',
+    'energised systems': 'Energized System',
+    'energized systems': 'Energized System',
+    'hot works': 'Hot Work',
+    'hotwork': 'Hot Work',
+    'hotworks': 'Hot Work',
+
     // Legacy mappings from old categories
     'slip': 'Access',
     'trip': 'Access',
@@ -243,36 +345,149 @@ export const normalizeHazardCategory = (category) => {
 }
 
 /**
- * 3-Layer Hazard Classification System
+ * Check if text contains any exclusion term for a category
+ * Returns true if the text should be EXCLUDED from matching this category
+ * Respects the useExclusionRules setting
+ */
+const isExcludedTerm = (text, category) => {
+  // Check if exclusion rules are enabled in settings
+  const catSettings = getCategorizationSettings()
+  if (catSettings.rules?.useExclusionRules === false) {
+    return false // Exclusion rules disabled
+  }
+
+  const exclusions = HAZARD_EXCLUSIONS[category] || []
+  return exclusions.some(exclusion => text.includes(exclusion.toLowerCase()))
+}
+
+/**
+ * Verify if description actually supports a given category
+ * Returns true if description contains at least one keyword/phrase for the category
+ * This prevents trusting incorrect source categories from Excel
+ */
+const descriptionSupportsCategory = (text, category) => {
+  if (!text || !category) return false
+
+  // Check if any phrase matches
+  const phrases = HAZARD_PHRASES[category] || []
+  for (const phrase of phrases) {
+    if (text.includes(phrase.toLowerCase())) {
+      return true
+    }
+  }
+
+  // Check if any keyword matches
+  const keywords = HAZARD_PATTERNS[category] || []
+  for (const keyword of keywords) {
+    if (text.includes(keyword.toLowerCase())) {
+      return true
+    }
+  }
+
+  return false
+}
+
+// Export for use in data quality checking
+export { descriptionSupportsCategory }
+
+/**
+ * Check for context redirects - terms that should redirect to a different category
+ * Returns the redirect category if found, null otherwise
+ */
+const checkContextRedirects = (text) => {
+  // Sort redirects by length (longest first) to match most specific phrases first
+  const sortedRedirects = Object.entries(CONTEXT_REDIRECTS)
+    .sort((a, b) => b[0].length - a[0].length)
+
+  for (const [phrase, category] of sortedRedirects) {
+    if (text.includes(phrase.toLowerCase())) {
+      return category
+    }
+  }
+  return null
+}
+
+/**
+ * 7-Step Context-Aware Hazard Classification System
  *
- * LAYER 1: Trust Excel category first (if valid approved category)
- * LAYER 2: Check multi-word PHRASES (more specific, avoids generic word conflicts)
- * LAYER 3: Check single KEYWORDS in priority order (high-risk categories first)
+ * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
+ *         - Handles misleading terms like "line of fire" → Mobile Plant, not Fire
+ * STEP 2: Trust Excel category if valid (respecting exclusions)
+ * STEP 3: Check PHRASES for MAJOR hazards (13 significant hazards)
+ * STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (17 lower priority)
+ * STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
+ * STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards (with exclusion checking)
+ * STEP 7: Default fallback → "Work Environment" (never "Others")
  *
- * IMPORTANT: Never returns "Others" or "General Safety"
+ * FULLY AUTOMATED - No manual review required
  */
 export const categorizeHazard = (description, existingCategory = '') => {
+  const text = (description || '').toLowerCase()
+
+  // Get categorization settings
+  const catSettings = getCategorizationSettings()
+  const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
+
   // ============================================
-  // LAYER 1: Trust Excel category if valid
+  // STEP 0: Context-Aware Analysis (NEW - Complementary Engine)
+  // Uses Hazard Object → Action → Potential Outcome reasoning
+  // Only overrides when confidence meets settings threshold or disambiguation rule matches
+  // ============================================
+  const contextResult = analyzeObservation(description, existingCategory)
+
+  // If context engine found a disambiguation rule or meets confidence threshold, use it
+  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold) {
+    return contextResult.category
+  }
+
+  // Store context result for later use (will be attached to incident record)
+  // This allows existing logic to continue as fallback
+
+  // ============================================
+  // STEP 1: Check CONTEXT_REDIRECTS first (HIGHEST PRIORITY)
+  // This handles misleading terms like "line of fire", "fire extinguisher", etc.
+  // Only applies if useSmartCorrections is enabled in settings
+  // ============================================
+  if (catSettings.rules?.useSmartCorrections !== false) {
+    const redirectCategory = checkContextRedirects(text)
+    if (redirectCategory) {
+      return redirectCategory // Immediate return - no further checking
+    }
+  }
+
+  // ============================================
+  // STEP 2: Validate Excel category against description
+  // Only trust source category if description SUPPORTS it
+  // This prevents incorrect source categorization from being blindly accepted
   // ============================================
   if (existingCategory && existingCategory.trim() !== '') {
     const normalized = normalizeHazardCategory(existingCategory)
-    // Trust the source data if it's a valid category (not just defaulting to Work Environment)
     if (normalized && normalized !== 'Work Environment') {
-      return normalized
+      // For MAJOR hazards, REQUIRE the description to contain relevant keywords
+      // This prevents misclassification like PPE issues being tagged as "Water"
+      if (MAJOR_HAZARDS.includes(normalized)) {
+        if (!isExcludedTerm(text, normalized) && descriptionSupportsCategory(text, normalized)) {
+          return normalized // Source category is validated by description
+        }
+        // Source says Major hazard but description doesn't support it - fall through
+      } else {
+        // For Sub-Significant hazards, still trust source if not excluded
+        if (!isExcludedTerm(text, normalized)) {
+          return normalized
+        }
+      }
     }
   }
 
   // No valid category from Excel - classify by description
-  if (!description) return 'Work Environment'
-
-  const text = description.toLowerCase()
+  if (!text) return 'Work Environment'
 
   // ============================================
-  // LAYER 2: Check PHRASES first (highest priority)
-  // Multi-word phrases are more specific and avoid conflicts
+  // STEP 3: Check PHRASES for MAJOR hazards first (13 significant)
   // ============================================
-  for (const category of CATEGORY_PRIORITY) {
+  for (const category of MAJOR_HAZARDS) {
+    if (isExcludedTerm(text, category)) continue // Skip if excluded
+
     const phrases = HAZARD_PHRASES[category] || []
     for (const phrase of phrases) {
       if (text.includes(phrase.toLowerCase())) {
@@ -282,27 +497,57 @@ export const categorizeHazard = (description, existingCategory = '') => {
   }
 
   // ============================================
-  // LAYER 3: Check single KEYWORDS in priority order
-  // High-risk categories checked first, generic last
+  // STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (17 lower priority)
   // ============================================
   for (const category of CATEGORY_PRIORITY) {
+    if (MAJOR_HAZARDS.includes(category)) continue // Already checked
+    if (isExcludedTerm(text, category)) continue // Skip if excluded
+
+    const phrases = HAZARD_PHRASES[category] || []
+    for (const phrase of phrases) {
+      if (text.includes(phrase.toLowerCase())) {
+        return category // Phrase match wins immediately
+      }
+    }
+  }
+
+  // ============================================
+  // STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
+  // ============================================
+  for (const category of MAJOR_HAZARDS) {
+    if (isExcludedTerm(text, category)) continue // Skip if excluded
+
     const keywords = HAZARD_PATTERNS[category] || []
     for (const keyword of keywords) {
-      // Skip very short generic words for lower-priority (generic) categories
-      // This prevents "tool" matching "Tools" when it's in "toolbox talk"
+      if (text.includes(keyword.toLowerCase())) {
+        return category // First keyword match wins
+      }
+    }
+  }
+
+  // ============================================
+  // STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards
+  // ============================================
+  for (const category of CATEGORY_PRIORITY) {
+    if (MAJOR_HAZARDS.includes(category)) continue // Already checked
+    if (isExcludedTerm(text, category)) continue // Skip if excluded
+
+    const keywords = HAZARD_PATTERNS[category] || []
+    for (const keyword of keywords) {
+      // Skip very short generic words for generic categories
       const categoryIndex = CATEGORY_PRIORITY.indexOf(category)
       if (keyword.length <= 4 && categoryIndex >= 20) {
         continue // Skip short words for generic categories
       }
 
       if (text.includes(keyword.toLowerCase())) {
-        return category // First keyword match in priority order wins
+        return category // First keyword match wins
       }
     }
   }
 
   // ============================================
-  // DEFAULT: Work Environment (never "Others")
+  // STEP 7: DEFAULT fallback → Work Environment (never "Others")
   // ============================================
   return 'Work Environment'
 }
@@ -542,34 +787,68 @@ const isPositiveObservation = (type, classification, description) => {
 
 /**
  * Transform Excel rows to dashboard format
+ * Note: Maximum 2000 rows are processed (source system limitation - rows beyond 2000 are typically footer/warnings)
  */
+const MAX_DATA_ROWS = 2000
+
 export const transformRows = (rows, headers, columnMappings, projectId) => {
   const incidents = []
   const needsMapping = []
   const warnings = {
     dateIssues: [],
     hazardIssues: [],
+    rowLimitApplied: false,
   }
   const today = format(new Date(), 'yyyy-MM-dd')
 
-  rows.forEach((row, index) => {
+  // Limit to MAX_DATA_ROWS to exclude footer/warning rows from source system
+  const dataRows = rows.slice(0, MAX_DATA_ROWS)
+  if (rows.length > MAX_DATA_ROWS) {
+    warnings.rowLimitApplied = true
+    console.log(`Import limited to ${MAX_DATA_ROWS} rows (${rows.length - MAX_DATA_ROWS} footer/warning rows excluded)`)
+  }
+
+  // Get current settings for processing
+  const settings = getSettings()
+  const categorizationSettings = getCategorizationSettings()
+
+  dataRows.forEach((row, index) => {
     const getValue = (field) => {
       const colIndex = columnMappings[field]
       return colIndex !== undefined ? row[colIndex] : null
     }
 
     const eventId = getValue('eventId') || `imported-${Date.now()}-${index}`
-    const type = getValue('type') || ''
+    const rawType = getValue('type') || ''
     const classification = getValue('classification') || ''
     const dateValue = getValue('date')
-    const description = getValue('description') || ''
-    const status = getValue('status') || 'Open'
-    const reportedBy = getValue('reportedBy') || 'Unknown'
+    const timeValue = getValue('time') // Dedicated time column
+    const rawDescription = getValue('description') || ''
+    const rawStatus = getValue('status') || 'Open'
+    const rawReportedBy = getValue('reportedBy') || 'Unknown'
     const rawHazardCategory = getValue('hazardCategory') || ''
     // Two separate filters - each from its own column only
-    const contractor = getValue('contractor') || ''  // Only from 'contractor' column
-    const site = getValue('site') || ''  // Only from 'site' column
+    const rawContractor = getValue('contractor') || ''  // Only from 'contractor' column
+    const rawSite = getValue('site') || ''  // Only from 'site' column
     const company = getValue('company') || ''  // For backwards compatibility
+
+    // ============================================
+    // APPLY SETTINGS-BASED CLEANUP
+    // ============================================
+
+    // Clean description text
+    const description = cleanText(rawDescription, 'description')
+
+    // Clean and normalize names based on settings
+    const reportedBy = cleanName(rawReportedBy, 'reporter') || 'Unknown'
+    const contractor = cleanName(rawContractor, 'contractor')
+    const site = cleanName(rawSite, 'site')
+
+    // Apply type mapping from settings
+    const type = mapType(rawType) || rawType
+
+    // Apply status mapping from settings
+    const status = mapStatus(rawStatus) || rawStatus
 
     // Always categorize using the new 29-category system (eliminates "Others")
     // Pass existing category for normalization, falls back to description-based classification
@@ -580,6 +859,30 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
     const wasAutoClassified = !rawHazardCategory ||
       genericHazards.includes(rawHazardCategory.toLowerCase().trim())
 
+    // Data Quality Tracking
+    // Determine if hazard category came from Excel or was auto-classified
+    const normalizedExcelCategory = normalizeHazardCategory(rawHazardCategory)
+    const hazardCategorySource = (!rawHazardCategory || wasAutoClassified || hazardCategory !== normalizedExcelCategory)
+      ? 'auto-classified'
+      : 'excel'
+
+    // Check if description actually supports the assigned category
+    const descriptionText = (description || '').toLowerCase()
+    const hazardCategoryValidated = descriptionSupportsCategory(descriptionText, hazardCategory)
+
+    // Detect potential data quality issues
+    let dataQualityIssue = null
+    if (hazardCategorySource === 'excel' && !hazardCategoryValidated) {
+      // Excel had a category but description doesn't support it - likely wrong data entry
+      dataQualityIssue = `Source data had "${rawHazardCategory}" but description has no related keywords. Possible data entry error.`
+    } else if (hazardCategorySource === 'auto-classified' && wasAutoClassified && rawHazardCategory) {
+      // Original was generic like "Other" - auto-classified based on description
+      dataQualityIssue = `Original category "${rawHazardCategory}" was generic. Auto-classified as "${hazardCategory}" based on description keywords.`
+    }
+
+    // Context-Aware Analysis - stores reasoning and confidence for UI display
+    const contextAnalysis = analyzeObservation(description, rawHazardCategory)
+
     if (wasAutoClassified && hazardCategory !== 'Work Environment') {
       warnings.hazardIssues.push({
         row: index + 2,
@@ -589,14 +892,59 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       })
     }
 
-    // Parse date - handles DD/MM/YYYY (European) and other formats
+    // Parse date - handles DD/MM/YYYY HH:MM (European) and other formats
+    // Also extracts time separately for hour-of-day analysis
     let parsedDate
+    let eventTime = null // Store time as "HH:MM" for hour analysis
     let dateFellBack = false
+
+    // First, check for dedicated time column (highest priority)
+    if (timeValue) {
+      if (typeof timeValue === 'string') {
+        const timeMatch = timeValue.trim().match(/(\d{1,2}):(\d{2})/)
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1], 10)
+          const minutes = parseInt(timeMatch[2], 10)
+          if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+            eventTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+          }
+        }
+      } else if (typeof timeValue === 'number') {
+        // Excel time serial (fractional day, e.g., 0.5 = 12:00 noon)
+        // Handle both pure time serials (0-1) and datetime serials
+        const fractionalPart = timeValue % 1
+        const totalMinutes = Math.round(fractionalPart * 24 * 60)
+        const hours = Math.floor(totalMinutes / 60) % 24
+        const minutes = totalMinutes % 60
+        eventTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+      }
+    }
+
     try {
       if (dateValue instanceof Date) {
         parsedDate = format(dateValue, 'yyyy-MM-dd')
+        // Extract time from Date object (only if not already set from time column)
+        if (!eventTime) {
+          const hours = dateValue.getHours()
+          const minutes = dateValue.getMinutes()
+          if (hours !== 0 || minutes !== 0) {
+            eventTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+          }
+        }
       } else if (typeof dateValue === 'string') {
         const cleaned = dateValue.trim()
+
+        // Extract time from string (HH:MM format anywhere in string) - only if not already set
+        if (!eventTime) {
+          const timeMatch = cleaned.match(/(\d{1,2}):(\d{2})/)
+          if (timeMatch) {
+            const hours = parseInt(timeMatch[1])
+            const minutes = parseInt(timeMatch[2])
+            if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+              eventTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+            }
+          }
+        }
 
         // Try DD/MM/YYYY format first (European - most common in this data)
         const ddmmMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
@@ -630,9 +978,19 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
           }
         }
       } else if (typeof dateValue === 'number') {
-        // Excel serial date
-        const date = new Date((dateValue - 25569) * 86400 * 1000)
+        // Excel serial date (includes fractional day for time)
+        const totalDays = dateValue - 25569
+        const wholeDays = Math.floor(totalDays)
+        const fractionalDay = totalDays - wholeDays
+        const date = new Date(wholeDays * 86400 * 1000)
         parsedDate = format(date, 'yyyy-MM-dd')
+        // Extract time from fractional day (only if not already set from time column)
+        if (!eventTime && fractionalDay > 0) {
+          const totalMinutes = Math.round(fractionalDay * 24 * 60)
+          const hours = Math.floor(totalMinutes / 60)
+          const minutes = totalMinutes % 60
+          eventTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+        }
       } else {
         parsedDate = today
         dateFellBack = true
@@ -661,6 +1019,7 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
         externalId: eventId,
         projectId,
         date: parsedDate,
+        eventTime, // Store time separately for hour-of-day analysis
         type: 'positive',
         description,
         location: hazardCategory,
@@ -676,6 +1035,24 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
         originalClassification: classification,
         originalType: type,
         autoClassified: false,
+        // Data Quality fields
+        originalHazardCategory: rawHazardCategory || null,
+        hazardCategorySource,
+        hazardCategoryValidated,
+        dataQualityIssue,
+        // Context-Aware Classification Analysis
+        contextAnalysis: {
+          hazardObject: contextAnalysis.hazardObject,
+          hazardObjects: contextAnalysis.hazardObjects,
+          action: contextAnalysis.action,
+          actionType: contextAnalysis.actionType,
+          potentialOutcome: contextAnalysis.potentialOutcome,
+          outcomeSource: contextAnalysis.outcomeSource,
+          confidence: contextAnalysis.confidence,
+          reasoning: contextAnalysis.reasoning,
+          subHazard: contextAnalysis.subHazard,
+          disambiguation: contextAnalysis.disambiguation
+        }
       })
       return
     }
@@ -693,6 +1070,7 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       externalId: eventId,
       projectId,
       date: parsedDate,
+      eventTime, // Store time separately for hour-of-day analysis
       type: mapping.incidentType,
       description,
       location: hazardCategory,
@@ -708,6 +1086,24 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       originalClassification: classification,
       originalType: type,
       autoClassified: mapping.autoClassified || false,
+      // Data Quality fields
+      originalHazardCategory: rawHazardCategory || null,
+      hazardCategorySource,
+      hazardCategoryValidated,
+      dataQualityIssue,
+      // Context-Aware Classification Analysis
+      contextAnalysis: {
+        hazardObject: contextAnalysis.hazardObject,
+        hazardObjects: contextAnalysis.hazardObjects,
+        action: contextAnalysis.action,
+        actionType: contextAnalysis.actionType,
+        potentialOutcome: contextAnalysis.potentialOutcome,
+        outcomeSource: contextAnalysis.outcomeSource,
+        confidence: contextAnalysis.confidence,
+        reasoning: contextAnalysis.reasoning,
+        subHazard: contextAnalysis.subHazard,
+        disambiguation: contextAnalysis.disambiguation
+      }
     })
   })
 
@@ -716,29 +1112,65 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
 
 /**
  * Check for duplicates against existing data
+ * Now uses settings for duplicate detection behavior
  */
 export const checkDuplicates = (newItems, existingItems, matchField = 'externalId') => {
+  const settings = getSettings()
+  const dupSettings = settings.duplicates || {}
+
   const newRecords = []
   const updates = []
   const skipped = []
+  const flaggedDuplicates = []
 
   newItems.forEach(item => {
-    const existingItem = existingItems.find(e => e[matchField] === item[matchField])
+    // First check by exact ID match
+    const existingById = existingItems.find(e => e[matchField] === item[matchField])
 
-    if (!existingItem) {
-      newRecords.push(item)
-    } else if (existingItem.actionStatus !== item.actionStatus) {
-      updates.push({
-        existing: existingItem,
-        new: item,
-        changes: { actionStatus: item.actionStatus }
-      })
-    } else {
-      skipped.push(item)
+    if (existingById) {
+      // Exact ID match - check for updates
+      if (existingById.actionStatus !== item.actionStatus) {
+        updates.push({
+          existing: existingById,
+          new: item,
+          changes: { actionStatus: item.actionStatus }
+        })
+      } else {
+        skipped.push(item)
+      }
+      return
     }
+
+    // If duplicate detection enabled, do fuzzy duplicate check
+    if (dupSettings.enabled) {
+      for (const existing of existingItems) {
+        const dupResult = checkDuplicate(item, existing)
+        if (dupResult.isDuplicate) {
+          const action = dupSettings.whenFound?.action || 'flag'
+
+          if (action === 'skip') {
+            skipped.push({ ...item, duplicateOf: existing.externalId })
+          } else if (action === 'flag') {
+            flaggedDuplicates.push({
+              new: item,
+              existing: existing,
+              similarity: dupResult.similarity
+            })
+            // Still add to newRecords but mark as potential duplicate
+            newRecords.push({ ...item, _potentialDuplicate: true, _duplicateOf: existing.externalId })
+          } else if (action === 'importAnyway') {
+            newRecords.push(item)
+          }
+          return
+        }
+      }
+    }
+
+    // No duplicate found
+    newRecords.push(item)
   })
 
-  return { newRecords, updates, skipped }
+  return { newRecords, updates, skipped, flaggedDuplicates }
 }
 
 /**

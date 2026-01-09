@@ -11,10 +11,10 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
   const pptx = new PptxGenJS()
 
   // Set presentation properties
-  pptx.author = 'HSE Dashboard'
-  pptx.title = 'HSE Safety Dashboard Report'
+  pptx.author = 'HIDC'
+  pptx.title = 'HIDC - Hazard Identification and Data Control Report'
   pptx.subject = `Generated on ${format(new Date(), 'MMMM d, yyyy')}`
-  pptx.company = filterInfo.company || 'HSE Dashboard'
+  pptx.company = filterInfo.company || 'HIDC'
 
   // Capture all charts
   const images = await captureAllCharts(chartRefs, onProgress)
@@ -55,7 +55,7 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
 
   // Save PPTX
   onProgress?.('Saving PowerPoint...')
-  const filename = `HSE-Dashboard-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pptx`
+  const filename = `HIDC-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pptx`
   await pptx.writeFile({ fileName: filename })
 
   onProgress?.(null)
@@ -70,7 +70,7 @@ const addTitleSlide = (pptx, filterInfo) => {
 
   slide.background = { color: 'FFFFFF' }
 
-  slide.addText('HSE Safety Dashboard Report', {
+  slide.addText('HIDC Report', {
     x: 0.5,
     y: 2,
     w: '90%',
@@ -78,6 +78,17 @@ const addTitleSlide = (pptx, filterInfo) => {
     fontSize: 36,
     bold: true,
     color: '1f2937',
+    align: 'center',
+    fontFace: 'Arial',
+  })
+
+  slide.addText('Hazard Identification and Data Control', {
+    x: 0.5,
+    y: 2.6,
+    w: '90%',
+    h: 0.5,
+    fontSize: 18,
+    color: '6b7280',
     align: 'center',
     fontFace: 'Arial',
   })
@@ -95,7 +106,7 @@ const addTitleSlide = (pptx, filterInfo) => {
 
   slide.addText(filterText, {
     x: 0.5,
-    y: 3,
+    y: 3.3,
     w: '90%',
     h: 0.5,
     fontSize: 14,
@@ -106,7 +117,7 @@ const addTitleSlide = (pptx, filterInfo) => {
 
   slide.addText(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, {
     x: 0.5,
-    y: 3.6,
+    y: 3.9,
     w: '90%',
     h: 0.4,
     fontSize: 12,
@@ -117,7 +128,7 @@ const addTitleSlide = (pptx, filterInfo) => {
 
   slide.addShape(pptx.ShapeType.rect, {
     x: 3,
-    y: 4.3,
+    y: 4.6,
     w: 4,
     h: 0.02,
     fill: { color: 'e5e7eb' },
@@ -274,7 +285,7 @@ const addSummarySlide = (pptx, incidents) => {
   }
 
   // Footer
-  slide.addText('HSE Safety Dashboard', {
+  slide.addText('HIDC - Hazard Identification and Data Control', {
     x: 0.5,
     y: 5.2,
     w: 4,
@@ -338,7 +349,7 @@ const addCombinedKPISlide = (pptx, kpiCards1Image, kpiCards2Image) => {
   }
 
   // Footer
-  slide.addText('HSE Safety Dashboard', {
+  slide.addText('HIDC - Hazard Identification and Data Control', {
     x: 0.5,
     y: 5.2,
     w: 4,
@@ -381,7 +392,7 @@ const addChartSlide = (pptx, imageDataUrl, title) => {
     },
   })
 
-  slide.addText('HSE Safety Dashboard', {
+  slide.addText('HIDC - Hazard Identification and Data Control', {
     x: 0.5,
     y: 5.2,
     w: 4,
