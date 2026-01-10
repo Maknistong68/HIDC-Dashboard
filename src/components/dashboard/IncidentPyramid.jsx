@@ -12,11 +12,11 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  // Safety pyramid levels (severity gradient)
+  // Safety pyramid levels (severity gradient) - Triangle shape: narrower at top, wider at bottom
   const pyramidLevels = [
     {
       key: 'incident',
-      label: 'Incident (LTI/MTI/FAC)',
+      label: 'Incident (LTI/MTI/FAC/Property Damage)',
       color: 'var(--color-critical)',
       bgColor: 'var(--color-critical-light)',
       colorClass: 'text-safety-critical',
@@ -29,6 +29,14 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
       bgColor: 'var(--color-warning-light)',
       colorClass: 'text-safety-warning',
       bgClass: 'bg-safety-warning-light',
+    },
+    {
+      key: 'ncr',
+      label: 'Non-Conformance',
+      color: '#9333ea',
+      bgColor: '#f3e8ff',
+      colorClass: 'text-purple-600',
+      bgClass: 'bg-purple-100',
     },
     {
       key: 'unsafe-act',
@@ -53,6 +61,14 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
       bgColor: 'var(--color-success-light)',
       colorClass: 'text-safety-success',
       bgClass: 'bg-safety-success-light',
+    },
+    {
+      key: 'leadership',
+      label: 'Leadership Event',
+      color: '#0891b2',
+      bgColor: '#cffafe',
+      colorClass: 'text-cyan-600',
+      bgClass: 'bg-cyan-100',
     },
   ]
 
@@ -144,7 +160,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
           const total = statusData.open + statusData.closed
           const openPercent = total > 0 ? (statusData.open / total) * 100 : 0
           const closedPercent = total > 0 ? (statusData.closed / total) * 100 : 0
-          const widthPercent = 40 + (index * 15)
+          const widthPercent = 35 + (index * 10)
 
           return (
             <div key={level.key} className="flex justify-center">

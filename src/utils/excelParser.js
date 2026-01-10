@@ -130,10 +130,22 @@ export const CLASSIFICATION_MAPPING = {
   'FAC': { type: 'incident', incidentType: 'fac' },
   'First Aid': { type: 'incident', incidentType: 'fac' },
 
+  // Non-Conformance (NCR) - separate category
+  'Non-Conformance': { type: 'incident', incidentType: 'ncr' },
+  'NCR': { type: 'incident', incidentType: 'ncr' },
+  'Non Conformance': { type: 'incident', incidentType: 'ncr' },
+  'Nonconformance': { type: 'incident', incidentType: 'ncr' },
+
+  // Leadership Event - proactive safety engagement
+  'Leadership Event': { type: 'incident', incidentType: 'leadership' },
+  'Leadership': { type: 'incident', incidentType: 'leadership' },
+  'Management Visit': { type: 'incident', incidentType: 'leadership' },
+  'Safety Walk': { type: 'incident', incidentType: 'leadership' },
+  'Safety Tour': { type: 'incident', incidentType: 'leadership' },
+
   // "Others" - will be auto-classified by keywords
   'To Be Determined': { type: 'unknown', needsMapping: true },
   'Safety': { type: 'unknown', needsMapping: true },
-  'Non-Conformance': { type: 'unknown', needsMapping: true },
   'Other': { type: 'unknown', needsMapping: true },
   'Others': { type: 'unknown', needsMapping: true },
 }

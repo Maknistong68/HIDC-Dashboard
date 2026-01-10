@@ -4,9 +4,11 @@ export const INCIDENT_TYPES = [
   { value: 'mti', label: 'Medical Treatment Injury (MTI)', severity: 'high', color: '#f97316' },
   { value: 'fac', label: 'First Aid Case (FAC)', severity: 'medium', color: '#eab308' },
   { value: 'near-miss', label: 'Near Miss', severity: 'low', color: '#3b82f6' },
+  { value: 'ncr', label: 'Non-Conformance', severity: 'low', color: '#9333ea' },
   { value: 'unsafe-act', label: 'Unsafe Act', severity: 'observation', color: '#8b5cf6' },
   { value: 'unsafe-condition', label: 'Unsafe Condition', severity: 'observation', color: '#6366f1' },
   { value: 'positive', label: 'Positive Observation', severity: 'positive', color: '#22c55e' },
+  { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#0891b2' },
 ]
 
 // 30 Approved Hazard Categories (Fixed - No "Others" allowed)

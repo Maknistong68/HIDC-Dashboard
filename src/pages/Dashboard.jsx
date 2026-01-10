@@ -19,6 +19,8 @@ import { useData } from '../context/DataContext'
 import KPICard from '../components/dashboard/KPICard'
 import IncidentTrendChart from '../components/dashboard/IncidentTrendChart'
 import IncidentPyramid from '../components/dashboard/IncidentPyramid'
+import ObservationsByDayOfWeek from '../components/dashboard/ObservationsByDayOfWeek'
+import ObservationsByHourOfDay from '../components/dashboard/ObservationsByHourOfDay'
 import FilterBar from '../components/common/FilterBar'
 import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
@@ -405,7 +407,7 @@ const Dashboard = () => {
   // Pyramid data with open/closed breakdown
   const pyramidData = useMemo(() => {
     const result = {}
-    const types = ['incident', 'near-miss', 'unsafe-act', 'unsafe-condition', 'positive']
+    const types = ['incident', 'near-miss', 'ncr', 'unsafe-act', 'unsafe-condition', 'positive', 'leadership']
 
     types.forEach(type => {
       result[type] = { open: 0, closed: 0 }
@@ -884,6 +886,12 @@ const Dashboard = () => {
             <p className="text-xs text-gray-400 text-center py-4">No observer data available</p>
           )}
         </div>
+      </div>
+
+      {/* Observations by Day of Week + Hour of Day */}
+      <div className="grid grid-cols-2 gap-3">
+        <ObservationsByDayOfWeek incidents={filteredIncidents} />
+        <ObservationsByHourOfDay incidents={filteredIncidents} />
       </div>
 
       {/* Hazards Heatmap - Scrollable (max 12 months visible) */}

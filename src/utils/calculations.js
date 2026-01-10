@@ -89,9 +89,11 @@ export const getIncidentCountsByType = (incidents) => {
   const counts = {
     'incident': 0, // Aggregates LTI, MTI, FAC
     'near-miss': 0,
+    'ncr': 0, // Non-Conformance
     'unsafe-act': 0,
     'unsafe-condition': 0,
     'positive': 0,
+    'leadership': 0, // Leadership Event
   }
 
   const incidentTypes = ['lti', 'mti', 'fac']
@@ -114,7 +116,7 @@ export const getIncidentsByMonth = (incidents, months = 12) => {
   const result = []
 
   // Define types
-  const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss']
+  const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr']
   const incidentTypes = ['lti', 'mti', 'fac']
 
   for (let i = months - 1; i >= 0; i--) {
@@ -164,6 +166,7 @@ export const calculateProjectSafetyScore = (project, incidents, engagements) => 
       case 'lti': score -= 25; break
       case 'mti': score -= 15; break
       case 'fac': score -= 10; break
+      case 'ncr': score -= 5; break // Non-Conformance
       case 'near-miss': score -= 3; break
       default: score -= 1
     }

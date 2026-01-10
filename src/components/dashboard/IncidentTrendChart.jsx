@@ -37,7 +37,7 @@ const IncidentTrendChart = ({ data }) => {
   }
 
   return (
-    <Card padding="default" className="h-full">
+    <Card padding="default" className="h-full flex flex-col">
       <Card.Header>
         <Card.Title>
           Positive vs. Negative Observation Trend
@@ -45,7 +45,7 @@ const IncidentTrendChart = ({ data }) => {
         </Card.Title>
       </Card.Header>
 
-      <div className="h-64">
+      <div className="flex-1 min-h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}

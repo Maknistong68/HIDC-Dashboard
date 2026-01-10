@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Users,
   FileText,
-  Clock,
   Calendar,
   Building2,
   Download,
@@ -42,8 +41,6 @@ import {
 import { useData } from '../context/DataContext'
 import {
   calculateQualityScore,
-  getObservationsByDayOfWeek,
-  getObservationsByHour,
   getCategorizationMetrics,
   getDescriptionMetrics,
   getNearMissMetrics,
@@ -51,7 +48,6 @@ import {
   getContractorMetrics,
   getCoverageMetrics,
   getQualityTrend,
-  getCoverageAlerts,
   getDuplicateDescriptions,
   getOtherHazardAnalysis,
   getReporterDeepDive,
@@ -309,8 +305,6 @@ const DataQuality = () => {
     if (filteredIncidents.length === 0) return null
 
     const quality = calculateQualityScore(filteredIncidents)
-    const dayOfWeek = getObservationsByDayOfWeek(filteredIncidents)
-    const hourData = getObservationsByHour(filteredIncidents)
     const categorization = getCategorizationMetrics(filteredIncidents)
     const description = getDescriptionMetrics(filteredIncidents)
     const nearMiss = getNearMissMetrics(filteredIncidents)
@@ -318,7 +312,7 @@ const DataQuality = () => {
     const contractors = getContractorMetrics(filteredIncidents)
     const coverage = getCoverageMetrics(filteredIncidents)
     const trend = getQualityTrend(filteredIncidents, 12)
-    const alerts = getCoverageAlerts(dayOfWeek, hourData)
+    const alerts = [] // Coverage alerts removed - charts moved to Dashboard
     const duplicates = getDuplicateDescriptions(filteredIncidents)
     const otherHazards = getOtherHazardAnalysis(filteredIncidents)
 
@@ -340,8 +334,6 @@ const DataQuality = () => {
 
     return {
       quality,
-      dayOfWeek,
-      hourData,
       categorization,
       description,
       nearMiss,
@@ -826,7 +818,7 @@ const DataQuality = () => {
     )
   }
 
-  const { quality, dayOfWeek, hourData, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, otherHazards, confidenceStats, lowConfidenceRecords } = qualityData
+  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, otherHazards, confidenceStats, lowConfidenceRecords } = qualityData
 
   // Pie chart colors
   const COLORS = ['#22c55e', '#94a3b8', '#f97316']
@@ -1709,117 +1701,7 @@ const DataQuality = () => {
         </div>
       )}
 
-      {/* SECTION 2: Coverage Analysis */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Day of Week */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-              <Calendar size={14} />
-              Observations by Day of Week
-              <InfoTooltip text="Distribution of observations by day. Red bars indicate coverage gaps (below 50% of average). Gray bars are weekends. Click any bar to drill down." />
-            </h3>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dayOfWeek} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis dataKey="day" type="category" tick={{ fontSize: 11 }} width={40} />
-                <Tooltip
-                  contentStyle={{ fontSize: 12 }}
-                  formatter={(value, name, props) => [
-                    `${value} (${props.payload.percentage}%)`,
-                    'Observations'
-                  ]}
-                />
-                <Bar
-                  dataKey="count"
-                  radius={[0, 4, 4, 0]}
-                  onClick={(data) => handleDayDrillDown(data)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {dayOfWeek.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.isGap ? '#ef4444' : entry.isWeekend ? '#94a3b8' : '#3b82f6'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-center gap-4 mt-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded"></span> Weekday</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-400 rounded"></span> Weekend</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded"></span> Gap</span>
-          </div>
-        </div>
-
-        {/* Hour of Day */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-              <Clock size={14} />
-              Observations by Hour of Day
-              <InfoTooltip text="When observations are submitted during the day. Helps identify if reporting happens in real-time during work or is batch-entered later. Click bars to drill down." />
-            </h3>
-          </div>
-          {hourData.summary.hasTimeData ? (
-            <>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hourData.hourly}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="hour"
-                      tick={{ fontSize: 9 }}
-                      interval={2}
-                    />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 12 }}
-                      formatter={(value, name, props) => [
-                        `${value} (${props.payload.percentage}%)`,
-                        props.payload.shift === 'day' ? 'Day Shift' : 'Night Shift'
-                      ]}
-                    />
-                    <Bar
-                      dataKey="count"
-                      radius={[4, 4, 0, 0]}
-                      onClick={(data) => handleHourDrillDown(data)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {hourData.hourly.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.shift === 'day' ? '#3b82f6' : '#6366f1'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 bg-blue-500 rounded"></span>
-                  Day Shift: {hourData.summary.dayShiftPct}%
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 bg-indigo-500 rounded"></span>
-                  Night Shift: {hourData.summary.nightShiftPct}%
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="h-56 flex items-center justify-center text-gray-400 text-sm">
-              Time data not available in imported records
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* SECTION 3: Reporter & Contractor Analytics */}
+      {/* SECTION 2: Reporter & Contractor Analytics */}
       <div className="grid grid-cols-2 gap-4">
         {/* Reporter Performance */}
         <div className="bg-white border border-gray-300 rounded-lg p-4">
