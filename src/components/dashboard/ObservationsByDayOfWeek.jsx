@@ -61,16 +61,16 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
       <div className="flex-1 flex flex-col justify-center space-y-1.5">
         {dayData.map((day) => (
           <div key={day.key} className="flex items-center gap-2">
-            <span className="w-8 text-xs font-medium text-gray-500">{day.name}</span>
-            <div className="flex-1 h-6 bg-gray-100 rounded-sm overflow-hidden relative">
+            <span className="w-8 text-xs font-medium text-surface-500">{day.name}</span>
+            <div className="flex-1 h-6 bg-surface-100 rounded-sm overflow-hidden relative">
               <div
                 className={`h-full transition-all duration-300 ${
-                  day.isWeekend ? 'bg-gray-300' : 'bg-blue-300'
+                  day.isWeekend ? 'bg-surface-300' : 'bg-blue-300'
                 }`}
                 style={{ width: `${day.percent}%` }}
               />
               {day.count > 0 && (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-600">
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-surface-600">
                   {day.count}
                 </span>
               )}
@@ -80,7 +80,7 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
       </div>
 
       {/* X-axis labels */}
-      <div className="flex justify-between mt-2 px-10 text-xs text-gray-400">
+      <div className="flex justify-between mt-2 px-10 text-xs text-surface-400">
         <span>0</span>
         <span>{Math.round(maxCount / 4)}</span>
         <span>{Math.round(maxCount / 2)}</span>
@@ -89,14 +89,14 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-2 pt-2 border-t border-gray-100">
+      <div className="flex items-center justify-center gap-6 mt-2 pt-2 border-t border-surface-100">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-blue-300" />
-          <span className="text-xs text-gray-500">Weekday ({totals.weekday})</span>
+          <span className="text-xs text-surface-500">Weekday ({totals.weekday})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-gray-300" />
-          <span className="text-xs text-gray-500">Weekend ({totals.weekend})</span>
+          <span className="w-2.5 h-2.5 rounded-sm bg-surface-300" />
+          <span className="text-xs text-surface-500">Weekend ({totals.weekend})</span>
         </div>
       </div>
     </Card>

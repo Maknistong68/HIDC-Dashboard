@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 const Disclaimer = () => {
   return (
     <div className="prose prose-sm max-w-none">
-      <p className="text-sm text-gray-500 mb-6">Last Updated: December 2024</p>
+      <p className="text-sm text-surface-500 mb-6">Last Updated: December 2024</p>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8 flex gap-3">
         <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -17,28 +17,28 @@ const Disclaimer = () => {
       </div>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">1. Not Professional HSE Advice</h3>
-        <p className="text-gray-600 mb-3">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">1. Not Professional HSE Advice</h3>
+        <p className="text-surface-600 mb-3">
           The HIDC application is a data management and visualization tool only. It is <strong>NOT</strong> a substitute for:
         </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
+        <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Professional health and safety advice or consultancy</li>
           <li>Qualified HSE assessments and audits</li>
           <li>Legal compliance advice</li>
           <li>Risk assessment by certified professionals</li>
           <li>Official incident investigation procedures</li>
         </ul>
-        <p className="text-gray-600 mt-3">
+        <p className="text-surface-600 mt-3">
           Always consult qualified HSE professionals for safety-critical decisions.
         </p>
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">2. Data Accuracy Responsibility</h3>
-        <p className="text-gray-600 mb-3">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">2. Data Accuracy Responsibility</h3>
+        <p className="text-surface-600 mb-3">
           The accuracy, completeness, and reliability of data entered into this application is entirely the responsibility of the user. We do not:
         </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
+        <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Verify the accuracy of imported or entered data</li>
           <li>Validate observation classifications or hazard categories</li>
           <li>Check for compliance with any regulatory standards</li>
@@ -47,7 +47,7 @@ const Disclaimer = () => {
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">3. No Guarantee of Regulatory Compliance</h3>
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">3. No Guarantee of Regulatory Compliance</h3>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">
             Using this application does <strong>NOT</strong> guarantee compliance with any health, safety, or environmental regulations, standards, or laws. Organizations must ensure their own regulatory compliance through appropriate channels and qualified personnel.
@@ -56,11 +56,11 @@ const Disclaimer = () => {
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">4. Local Storage Limitations</h3>
-        <p className="text-gray-600 mb-3">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">4. Local Storage Limitations</h3>
+        <p className="text-surface-600 mb-3">
           This application stores data in your browser's localStorage. Be aware that:
         </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
+        <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Browser updates may clear localStorage</li>
           <li>Clearing browser data/cache will delete all application data</li>
           <li>Private/incognito browsing does not persist data</li>
@@ -71,7 +71,7 @@ const Disclaimer = () => {
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">5. Backup Responsibility</h3>
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">5. Backup Responsibility</h3>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-blue-800">
             <strong>You are solely responsible for backing up your data.</strong> Use the export function regularly to create backups. We strongly recommend exporting your data after every significant update or at least weekly.
@@ -80,38 +80,38 @@ const Disclaimer = () => {
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">6. No Liability for Decisions</h3>
-        <p className="text-gray-600 mb-3">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">6. No Liability for Decisions</h3>
+        <p className="text-surface-600 mb-3">
           HIDC Team shall not be held liable for any decisions, actions, or outcomes based on:
         </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
+        <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Data displayed or analyzed in this application</li>
           <li>Charts, trends, or statistics generated by the application</li>
           <li>Reports or exports created from the application</li>
           <li>Any interpretation of the data or visualizations</li>
         </ul>
-        <p className="text-gray-600 mt-3">
+        <p className="text-surface-600 mt-3">
           All safety-critical decisions should be made by qualified personnel using verified data sources and professional judgment.
         </p>
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">7. Third-Party Data</h3>
-        <p className="text-gray-600">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">7. Third-Party Data</h3>
+        <p className="text-surface-600">
           If you import data from external systems (such as Excel exports from other HSE software), we make no representations about the accuracy, completeness, or reliability of that data. Verify all imported data for accuracy.
         </p>
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">8. Use at Your Own Risk</h3>
-        <p className="text-gray-600">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">8. Use at Your Own Risk</h3>
+        <p className="text-surface-600">
           Your use of this application is at your sole risk. The application is provided for convenience and internal tracking purposes only. For official HSE records, compliance documentation, or regulatory submissions, use your organization's approved systems and processes.
         </p>
       </section>
 
       <section className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">9. Acknowledgment</h3>
-        <p className="text-gray-600">
+        <h3 className="text-lg font-semibold text-surface-900 mb-3">9. Acknowledgment</h3>
+        <p className="text-surface-600">
           By using this application, you acknowledge that you have read, understood, and agree to this disclaimer. If you do not agree with any part of this disclaimer, please discontinue use of the application.
         </p>
       </section>

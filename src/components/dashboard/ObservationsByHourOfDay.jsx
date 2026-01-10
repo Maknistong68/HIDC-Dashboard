@@ -98,14 +98,14 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex items-end relative">
           {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-400 pr-1 w-6">
+          <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-surface-400 pr-1 w-6">
             <span>{maxCount}</span>
             <span>{Math.round(maxCount / 2)}</span>
             <span>0</span>
           </div>
 
           {/* Bars */}
-          <div className="ml-7 flex-1 flex items-end gap-px h-full border-b border-l border-gray-200">
+          <div className="ml-7 flex-1 flex items-end gap-px h-full border-b border-l border-surface-200">
             {hourData.map((hour) => (
               <div
                 key={hour.hour}
@@ -124,7 +124,7 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
 
                 {/* Tooltip on hover */}
                 {hour.count > 0 && (
-                  <div className="hidden group-hover:block absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+                  <div className="hidden group-hover:block absolute -top-6 left-1/2 -translate-x-1/2 bg-surface-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap z-10">
                     {hour.count}
                   </div>
                 )}
@@ -134,7 +134,7 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
         </div>
 
         {/* X-axis labels */}
-        <div className="ml-7 flex justify-between mt-1 text-xs text-gray-400">
+        <div className="ml-7 flex justify-between mt-1 text-xs text-surface-400">
           <span>00</span>
           <span>06</span>
           <span>12</span>
@@ -144,18 +144,18 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
       </div>
 
       {/* Legend - all in one line */}
-      <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 flex-wrap">
+      <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-surface-100 text-xs text-surface-500 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-gray-300" />
+          <span className="w-2.5 h-2.5 rounded-sm bg-surface-300" />
           <span>Day ({shiftTotals.dayPercent}%)</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-sm bg-gray-500" />
+          <span className="w-2.5 h-2.5 rounded-sm bg-surface-500" />
           <span>Night ({shiftTotals.nightPercent}%)</span>
         </div>
-        <span className="text-gray-300">|</span>
+        <span className="text-surface-300">|</span>
         <div className="flex items-center gap-1">
-          <span className="text-gray-400">Low</span>
+          <span className="text-surface-400">Low</span>
           <div className="flex gap-px">
             <span className="w-3 h-2.5 rounded-sm bg-amber-100" />
             <span className="w-3 h-2.5 rounded-sm bg-amber-200" />
@@ -163,7 +163,7 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
             <span className="w-3 h-2.5 rounded-sm bg-orange-400" />
             <span className="w-3 h-2.5 rounded-sm bg-red-400" />
           </div>
-          <span className="text-gray-400">High</span>
+          <span className="text-surface-400">High</span>
         </div>
       </div>
     </Card>

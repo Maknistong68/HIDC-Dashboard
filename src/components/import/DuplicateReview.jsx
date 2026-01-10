@@ -34,41 +34,41 @@ const DuplicateReview = ({ results, onProceed }) => {
           <p className="text-xs text-blue-600 mt-2">Existing records with status changes</p>
         </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="bg-surface-50 border border-surface-200 rounded-lg p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <SkipForward className="w-5 h-5 text-gray-600" />
+            <div className="w-10 h-10 bg-surface-100 rounded-lg flex items-center justify-center">
+              <SkipForward className="w-5 h-5 text-surface-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-600">{skipped.length}</p>
-              <p className="text-sm text-gray-700">Skipped</p>
+              <p className="text-2xl font-bold text-surface-600">{skipped.length}</p>
+              <p className="text-sm text-surface-700">Skipped</p>
             </div>
           </div>
-          <p className="text-xs text-gray-600 mt-2">Already exist with no changes</p>
+          <p className="text-xs text-surface-600 mt-2">Already exist with no changes</p>
         </div>
       </div>
 
       {/* Status Updates Preview */}
       {updates.length > 0 && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="bg-blue-50 px-4 py-3 border-b border-gray-200">
-            <h4 className="font-medium text-gray-900">Status Updates Preview</h4>
-            <p className="text-sm text-gray-600">These records will have their status updated</p>
+        <div className="border border-surface-200 rounded-lg overflow-hidden">
+          <div className="bg-blue-50 px-4 py-3 border-b border-surface-200">
+            <h4 className="font-medium text-surface-900">Status Updates Preview</h4>
+            <p className="text-sm text-surface-600">These records will have their status updated</p>
           </div>
           <div className="max-h-64 overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-surface-50 sticky top-0">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Event ID</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Current Status</th>
-                  <th className="px-4 py-2 text-center font-medium text-gray-600"></th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">New Status</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Event ID</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Current Status</th>
+                  <th className="px-4 py-2 text-center font-medium text-surface-600"></th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">New Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-surface-100">
                 {updates.slice(0, 20).map((update, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-mono text-gray-700">
+                  <tr key={index} className="hover:bg-surface-50">
+                    <td className="px-4 py-2 font-mono text-surface-700">
                       {update.existing.externalId?.substring(0, 30) || update.existing.id}
                     </td>
                     <td className="px-4 py-2">
@@ -81,7 +81,7 @@ const DuplicateReview = ({ results, onProceed }) => {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <ArrowRight className="w-4 h-4 text-gray-400 mx-auto" />
+                      <ArrowRight className="w-4 h-4 text-surface-400 mx-auto" />
                     </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 text-xs rounded-full ${
@@ -97,7 +97,7 @@ const DuplicateReview = ({ results, onProceed }) => {
               </tbody>
             </table>
             {updates.length > 20 && (
-              <p className="px-4 py-2 text-sm text-gray-500 bg-gray-50">
+              <p className="px-4 py-2 text-sm text-surface-500 bg-surface-50">
                 And {updates.length - 20} more...
               </p>
             )}
@@ -107,31 +107,31 @@ const DuplicateReview = ({ results, onProceed }) => {
 
       {/* New Records Preview */}
       {newRecords.length > 0 && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="bg-green-50 px-4 py-3 border-b border-gray-200">
-            <h4 className="font-medium text-gray-900">New Records Preview</h4>
-            <p className="text-sm text-gray-600">These records will be added</p>
+        <div className="border border-surface-200 rounded-lg overflow-hidden">
+          <div className="bg-green-50 px-4 py-3 border-b border-surface-200">
+            <h4 className="font-medium text-surface-900">New Records Preview</h4>
+            <p className="text-sm text-surface-600">These records will be added</p>
           </div>
           <div className="max-h-64 overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-surface-50 sticky top-0">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Date</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Type</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Description</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-600">Status</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Date</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Type</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Description</th>
+                  <th className="px-4 py-2 text-left font-medium text-surface-600">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-surface-100">
                 {newRecords.slice(0, 20).map((record, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 text-gray-700">{record.date}</td>
+                  <tr key={index} className="hover:bg-surface-50">
+                    <td className="px-4 py-2 text-surface-700">{record.date}</td>
                     <td className="px-4 py-2">
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
+                      <span className="px-2 py-0.5 text-xs bg-surface-100 text-surface-700 rounded">
                         {record.type}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-gray-700 max-w-xs truncate">
+                    <td className="px-4 py-2 text-surface-700 max-w-xs truncate">
                       {record.description?.substring(0, 50)}...
                     </td>
                     <td className="px-4 py-2">
@@ -148,7 +148,7 @@ const DuplicateReview = ({ results, onProceed }) => {
               </tbody>
             </table>
             {newRecords.length > 20 && (
-              <p className="px-4 py-2 text-sm text-gray-500 bg-gray-50">
+              <p className="px-4 py-2 text-sm text-surface-500 bg-surface-50">
                 And {newRecords.length - 20} more...
               </p>
             )}
@@ -158,10 +158,10 @@ const DuplicateReview = ({ results, onProceed }) => {
 
       {/* Empty State */}
       {newRecords.length === 0 && updates.length === 0 && (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-          <SkipForward className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600">No changes to make</p>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="text-center py-8 bg-surface-50 rounded-lg border border-surface-200">
+          <SkipForward className="w-12 h-12 text-surface-300 mx-auto mb-3" />
+          <p className="text-surface-600">No changes to make</p>
+          <p className="text-sm text-surface-500 mt-1">
             All {skipped.length} records already exist with the same status
           </p>
         </div>

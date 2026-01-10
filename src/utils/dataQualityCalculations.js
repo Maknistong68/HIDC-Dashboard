@@ -222,18 +222,24 @@ export const getDescriptionMetrics = (incidents) => {
 
 /**
  * Calculate near miss rate (leading indicator)
+ * Denominator: Only incident types that form the traditional safety pyramid
+ * (LTI, MTI, FAC, Near-miss, Unsafe Act, Unsafe Condition)
+ * Excludes: Positive observations, NCR, Leadership events
  */
 export const getNearMissMetrics = (incidents) => {
-  const nonPositive = incidents.filter(i => i.type !== 'positive')
+  // Only include traditional safety pyramid types in denominator
+  const pyramidTypes = ['lti', 'mti', 'fac', 'near-miss', 'unsafe-act', 'unsafe-condition']
+  const pyramidIncidents = incidents.filter(i => pyramidTypes.includes(i.type))
   const nearMisses = incidents.filter(i => i.type === 'near-miss')
 
-  const total = nonPositive.length
+  const total = pyramidIncidents.length
   const nmCount = nearMisses.length
   const rate = total > 0 ? (nmCount / total) * 100 : 0
 
   return {
     count: nmCount,
     total,
+    nonPositiveCount: total, // For backward compatibility with drill-down
     rate: rate.toFixed(1),
     // Scale: 5%+ = good, 2-5% = warning, <2% = poor (underreporting)
     status: rate >= 5 ? 'good' : rate >= 2 ? 'warning' : 'poor',
@@ -796,6 +802,253 @@ export const getOtherHazardAnalysis = (incidents) => {
 }
 
 /**
+ * Get Auto-Classification Summary - Shows what WAS auto-classified from blank/generic to proper categories
+ * Uses originalHazardCategory (before) vs location (after) to track changes
+ */
+export const getAutoClassificationSummary = (incidents) => {
+  const blankValues = ['', null, undefined, '(blank)']
+  const genericValues = ['other', 'others', 'general', 'general safety', 'not specified']
+
+  // Filter incidents that were auto-classified (category changed from original)
+  const autoClassified = incidents.filter(incident => {
+    // Must have tracking data
+    if (!incident.originalHazardCategory && incident.hazardCategorySource !== 'auto-classified') {
+      return false
+    }
+
+    const original = (incident.originalHazardCategory || '').toLowerCase().trim()
+    const current = (incident.location || '').toLowerCase().trim()
+
+    // Include if:
+    // 1. hazardCategorySource is 'auto-classified', OR
+    // 2. Original was blank/generic and current is different
+    if (incident.hazardCategorySource === 'auto-classified') return true
+
+    const wasBlank = !incident.originalHazardCategory || blankValues.includes(original)
+    const wasGeneric = genericValues.includes(original)
+
+    return (wasBlank || wasGeneric) && original !== current
+  })
+
+  // Group by "from -> to" mapping
+  const mappingGroups = {}
+
+  autoClassified.forEach(incident => {
+    const originalRaw = incident.originalHazardCategory
+    const from = !originalRaw || originalRaw.trim() === '' ? '(blank)' : originalRaw
+    const to = incident.location || 'Work Environment'
+    const key = `${from}|||${to}`
+
+    if (!mappingGroups[key]) {
+      mappingGroups[key] = {
+        from,
+        to,
+        count: 0,
+        records: [],
+        confidenceSum: 0,
+        highConfidence: 0,
+        mediumConfidence: 0,
+        lowConfidence: 0
+      }
+    }
+
+    mappingGroups[key].count++
+    mappingGroups[key].records.push(incident)
+
+    // Use contextAnalysis confidence if available
+    const confidence = incident.contextAnalysis?.confidence || 0
+    mappingGroups[key].confidenceSum += confidence
+
+    if (confidence >= 85) {
+      mappingGroups[key].highConfidence++
+    } else if (confidence >= 65) {
+      mappingGroups[key].mediumConfidence++
+    } else {
+      mappingGroups[key].lowConfidence++
+    }
+  })
+
+  // Convert to array and sort by count
+  const mappings = Object.values(mappingGroups)
+    .map(group => ({
+      ...group,
+      avgConfidence: group.count > 0 ? Math.round(group.confidenceSum / group.count) : 0,
+      confidenceLevel: group.highConfidence > group.count / 2 ? 'high' :
+        group.mediumConfidence > group.count / 2 ? 'medium' : 'low'
+    }))
+    .sort((a, b) => b.count - a.count)
+
+  // Group by original category
+  const byOriginalCategory = {}
+  mappings.forEach(m => {
+    if (!byOriginalCategory[m.from]) {
+      byOriginalCategory[m.from] = { count: 0, destinations: {} }
+    }
+    byOriginalCategory[m.from].count += m.count
+    byOriginalCategory[m.from].destinations[m.to] = m.count
+  })
+
+  // Group by new category
+  const byNewCategory = {}
+  mappings.forEach(m => {
+    if (!byNewCategory[m.to]) {
+      byNewCategory[m.to] = { count: 0, sources: {} }
+    }
+    byNewCategory[m.to].count += m.count
+    byNewCategory[m.to].sources[m.from] = m.count
+  })
+
+  // Calculate summary stats
+  let fromBlank = 0
+  let fromOther = 0
+  let fromGeneric = 0
+  let highConfidence = 0
+  let mediumConfidence = 0
+  let lowConfidence = 0
+
+  autoClassified.forEach(incident => {
+    const original = (incident.originalHazardCategory || '').toLowerCase().trim()
+
+    if (!incident.originalHazardCategory || original === '' || original === '(blank)') {
+      fromBlank++
+    } else if (original === 'other' || original === 'others') {
+      fromOther++
+    } else if (genericValues.includes(original)) {
+      fromGeneric++
+    }
+
+    const confidence = incident.contextAnalysis?.confidence || 0
+    if (confidence >= 85) highConfidence++
+    else if (confidence >= 65) mediumConfidence++
+    else lowConfidence++
+  })
+
+  return {
+    totalAutoClassified: autoClassified.length,
+    percentageOfTotal: incidents.length > 0
+      ? ((autoClassified.length / incidents.length) * 100).toFixed(1)
+      : '0.0',
+    mappings,
+    byOriginalCategory,
+    byNewCategory,
+    summary: {
+      fromBlank,
+      fromOther,
+      fromGeneric,
+      highConfidence,
+      mediumConfidence,
+      lowConfidence
+    }
+  }
+}
+
+/**
+ * Get Before/After Categorization Metrics - Shows comparison of Excel vs Current state
+ * Before: Based on originalHazardCategory (what Excel had)
+ * After: Based on location (current state after classification)
+ */
+export const getBeforeAfterCategorizationMetrics = (incidents) => {
+  const blankCategories = ['', null, undefined, 'Not Specified', 'Not specified']
+  const otherCategories = ['Other', 'Others', 'other', 'others', 'General', 'General Safety']
+
+  // Helper to categorize a value
+  const categorizeValue = (value) => {
+    const trimmed = (value || '').trim()
+    if (!trimmed || blankCategories.includes(trimmed)) return 'blank'
+    if (otherCategories.includes(trimmed)) return 'other'
+    return 'proper'
+  }
+
+  // Calculate BEFORE metrics (using originalHazardCategory)
+  const before = { proper: 0, blank: 0, other: 0, byCategory: {} }
+
+  // Calculate AFTER metrics (using location)
+  const after = { proper: 0, blank: 0, other: 0, byCategory: {} }
+
+  // Track transitions for drill-down
+  const transitions = {}
+
+  incidents.forEach(incident => {
+    // Before state (original from Excel)
+    const originalValue = incident.originalHazardCategory
+    const beforeType = categorizeValue(originalValue)
+    before[beforeType]++
+
+    // Track category distribution for before
+    const beforeCat = originalValue || '(blank)'
+    before.byCategory[beforeCat] = (before.byCategory[beforeCat] || 0) + 1
+
+    // After state (current)
+    const currentValue = incident.location
+    const afterType = categorizeValue(currentValue)
+    after[afterType]++
+
+    // Track category distribution for after
+    const afterCat = currentValue || '(blank)'
+    after.byCategory[afterCat] = (after.byCategory[afterCat] || 0) + 1
+
+    // Track transitions if changed
+    if (beforeType !== afterType || beforeCat !== afterCat) {
+      const key = `${beforeType}|||${afterType}`
+      if (!transitions[key]) {
+        transitions[key] = { from: beforeType, to: afterType, count: 0, records: [] }
+      }
+      transitions[key].count++
+      transitions[key].records.push(incident)
+    }
+  })
+
+  const total = incidents.length
+
+  // Calculate rates
+  before.total = total
+  before.properRate = total > 0 ? ((before.proper / total) * 100).toFixed(1) : '0.0'
+  before.status = (before.proper / total) >= 0.8 ? 'good' : (before.proper / total) >= 0.6 ? 'warning' : 'poor'
+
+  after.total = total
+  after.properRate = total > 0 ? ((after.proper / total) * 100).toFixed(1) : '0.0'
+  after.status = (after.proper / total) >= 0.8 ? 'good' : (after.proper / total) >= 0.6 ? 'warning' : 'poor'
+
+  // Convert byCategory to sorted arrays
+  before.byCategoryList = Object.entries(before.byCategory)
+    .map(([name, count]) => ({ name, count, percentage: ((count / total) * 100).toFixed(1) }))
+    .sort((a, b) => b.count - a.count)
+
+  after.byCategoryList = Object.entries(after.byCategory)
+    .map(([name, count]) => ({ name, count, percentage: ((count / total) * 100).toFixed(1) }))
+    .sort((a, b) => b.count - a.count)
+
+  // Calculate improvement
+  const properDelta = after.proper - before.proper
+  const blankDelta = after.blank - before.blank
+  const otherDelta = after.other - before.other
+  const properRateDelta = (parseFloat(after.properRate) - parseFloat(before.properRate)).toFixed(1)
+
+  let message = ''
+  if (properDelta > 0) {
+    message = `Auto-classification improved proper categorization from ${before.properRate}% to ${after.properRate}% (+${properDelta} records)`
+  } else if (properDelta === 0) {
+    message = 'No change in categorization between Excel and current state'
+  } else {
+    message = `Categorization changed from ${before.properRate}% to ${after.properRate}%`
+  }
+
+  return {
+    before,
+    after,
+    improvement: {
+      properDelta,
+      blankDelta,
+      otherDelta,
+      properRateDelta: properRateDelta > 0 ? `+${properRateDelta}` : properRateDelta,
+      message,
+      hasImprovement: properDelta > 0
+    },
+    transitions: Object.values(transitions).sort((a, b) => b.count - a.count)
+  }
+}
+
+/**
  * Get comprehensive reporter analytics for deep dive modal
  */
 export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
@@ -1311,6 +1564,208 @@ export const getMisclassificationAnalysis = (incidents) => {
       mediumConfidence: misclassifiedRecords.filter(r => r.confidence === 'medium').length,
       lowConfidence: misclassifiedRecords.filter(r => r.confidence === 'low').length,
       majorHazardMismatches: misclassifiedRecords.filter(r => r.isMajorHazardMismatch).length
+    }
+  }
+}
+
+/**
+ * Get Unclassifiable Records - Identifies records that couldn't be properly classified
+ * These are records that need manual review:
+ * - No description: Empty/blank description field
+ * - Too short: Description under 10 characters
+ * - Unrecognized category: Original Excel category couldn't be normalized
+ * - Low confidence: Auto-classified with confidence < 65%
+ */
+export const getUnclassifiableRecords = (incidents) => {
+  if (!incidents || incidents.length === 0) {
+    return {
+      total: 0,
+      byReason: {
+        noDescription: { count: 0, records: [], percentage: '0.0' },
+        tooShort: { count: 0, records: [], percentage: '0.0' },
+        unrecognizedCategory: { count: 0, records: [], percentage: '0.0' },
+        lowConfidence: { count: 0, records: [], percentage: '0.0' }
+      },
+      summary: {
+        actionable: 0,
+        total: 0,
+        percentage: '0.0'
+      }
+    }
+  }
+
+  // Track records by reason (a record can belong to multiple categories)
+  const noDescription = []
+  const tooShort = []
+  const unrecognizedCategory = []
+  const lowConfidence = []
+
+  // Track unique records (for total count - avoid double counting)
+  const allUnclassifiable = new Set()
+
+  // Approved categories that normalize correctly
+  const approvedCategories = [
+    'Working at Height', 'Lifting', 'Confined Spaces', 'Energized System',
+    'Fire', 'Hot Work', 'Mobile Plant & Equipment', 'Breaking Ground & Excavation',
+    'Temporary Works', 'Working in Heat', 'Working on or Near Live Roads',
+    'Working on or Near Water', 'Driving', 'PPE', 'Housekeeping', 'Work Environment',
+    'Noise', 'Dust', 'Hazardous Substances', 'Manual Handling', 'Struck By',
+    'Slips Trips Falls', 'Tools & Equipment', 'Workplace Transport',
+    'Fatigue', 'Environmental', 'Ergonomics'
+  ]
+
+  // Generic/blank values that indicate classification issues
+  const genericValues = ['other', 'others', 'general', 'general safety', 'not specified', '', '(blank)']
+
+  // Placeholder values that should be treated as "no description"
+  const emptyPlaceholders = ['n/a', 'na', 'none', '-', '.', '...', 'nil', 'null', 'empty', '(empty)', '(blank)', 'blank', 'tbd', 'tbc', 'pending', 'no description', 'not applicable', 'n.a.', 'n.a']
+
+  incidents.forEach(incident => {
+    const description = (incident.description || '').trim()
+    const descriptionLower = description.toLowerCase()
+    const originalCategory = incident.originalHazardCategory
+    const confidence = incident.contextAnalysis?.confidence || 0
+    const source = incident.hazardCategorySource
+
+    let hasIssue = false
+
+    // Check 1: No description (empty or placeholder values)
+    const isEmptyDescription = !description || description === '' || emptyPlaceholders.includes(descriptionLower)
+    if (isEmptyDescription) {
+      noDescription.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description || '(empty)',
+        originalCategory: originalCategory || '(blank)',
+        currentCategory: incident.location || 'Work Environment',
+        reason: description ? `Placeholder value: "${description}"` : 'No description provided',
+        incident
+      })
+      hasIssue = true
+    }
+    // Check 2: Too short description (0-5 words, matching Description Distribution's "Poor" category)
+    const wordCount = description.split(/\s+/).filter(w => w.length > 0).length
+    if (wordCount > 0 && wordCount <= 5) {
+      tooShort.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description,
+        wordCount: wordCount,
+        originalCategory: originalCategory || '(blank)',
+        currentCategory: incident.location || 'Work Environment',
+        reason: `Description too short (${wordCount} word${wordCount === 1 ? '' : 's'})`,
+        incident
+      })
+      hasIssue = true
+    }
+
+    // Check 3: Unrecognized original category from Excel
+    // (category exists in Excel but doesn't match any approved category)
+    // Only flag if system couldn't reclassify with high confidence
+    if (originalCategory && originalCategory.trim() !== '') {
+      const originalLower = originalCategory.toLowerCase().trim()
+      const isGeneric = genericValues.includes(originalLower)
+      const isApproved = approvedCategories.some(cat =>
+        cat.toLowerCase() === originalLower ||
+        originalLower.includes(cat.toLowerCase()) ||
+        cat.toLowerCase().includes(originalLower)
+      )
+
+      if (!isGeneric && !isApproved) {
+        // Only flag as unrecognized if confidence is LOW
+        // High confidence (>=65%) means successful reclassification regardless of source
+        if (confidence < 65) {
+          unrecognizedCategory.push({
+            id: incident.externalId || incident.id,
+            date: incident.date,
+            reporter: incident.reportedBy || 'Unknown',
+            contractor: incident.contractor || '',
+            site: incident.site || '',
+            description: description || '(empty)',
+            originalCategory: originalCategory,
+            currentCategory: incident.location || 'Work Environment',
+            confidence: confidence,
+            reason: confidence > 0
+              ? `Unrecognized category "${originalCategory}" (reclassified with ${confidence}% confidence)`
+              : `Unrecognized category: "${originalCategory}"`,
+            incident
+          })
+          hasIssue = true
+        }
+      }
+    }
+
+    // Check 4: Low confidence auto-classification
+    if (source === 'auto-classified' && confidence > 0 && confidence < 65) {
+      lowConfidence.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description || '(empty)',
+        originalCategory: originalCategory || '(blank)',
+        currentCategory: incident.location || 'Work Environment',
+        confidence: confidence,
+        reason: `Low confidence classification (${confidence}%)`,
+        incident
+      })
+      hasIssue = true
+    }
+
+    if (hasIssue) {
+      allUnclassifiable.add(incident.id || incident.externalId)
+    }
+  })
+
+  const total = allUnclassifiable.size
+  const totalIncidents = incidents.length
+
+  return {
+    total,
+    byReason: {
+      noDescription: {
+        count: noDescription.length,
+        records: noDescription,
+        percentage: totalIncidents > 0 ? ((noDescription.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'No Description',
+        description: 'Records with empty or blank description field'
+      },
+      tooShort: {
+        count: tooShort.length,
+        records: tooShort,
+        percentage: totalIncidents > 0 ? ((tooShort.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'Too Short (0-5 words)',
+        description: 'Descriptions with 5 words or less (Poor quality)'
+      },
+      unrecognizedCategory: {
+        count: unrecognizedCategory.length,
+        records: unrecognizedCategory,
+        percentage: totalIncidents > 0 ? ((unrecognizedCategory.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'Unrecognized Category',
+        description: 'Original Excel category not in approved list'
+      },
+      lowConfidence: {
+        count: lowConfidence.length,
+        records: lowConfidence,
+        percentage: totalIncidents > 0 ? ((lowConfidence.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'Low Confidence',
+        description: 'Auto-classified with less than 65% confidence'
+      }
+    },
+    summary: {
+      actionable: total,
+      total: totalIncidents,
+      percentage: totalIncidents > 0 ? ((total / totalIncidents) * 100).toFixed(1) : '0.0',
+      message: total > 0
+        ? `${total} records (${((total / totalIncidents) * 100).toFixed(1)}%) require manual review`
+        : 'All records properly classified'
     }
   }
 }

@@ -1,5 +1,5 @@
 import { differenceInDays, startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear } from 'date-fns'
-import { HAZARD_PATTERNS, HAZARD_CATEGORIES } from './constants'
+import { HAZARD_PATTERNS, HAZARD_CATEGORIES, MAJOR_HAZARDS } from './constants'
 import { categorizeHazard, normalizeHazardCategory } from './excelParser'
 
 /**
@@ -29,6 +29,58 @@ export const recategorizeBlankHazards = (incidents) => {
       location: categorizeHazard(incident.description, incident.location)
     }
   })
+}
+
+/**
+ * Fix mis-categorized Major Hazards that were wrongly changed to "Work Environment"
+ * This migration fixes records where:
+ * 1. originalHazardCategory was a valid Major Hazard (e.g., "Energised Systems")
+ * 2. But location was set to "Work Environment" due to empty/minimal description
+ *
+ * The fix re-processes using the original Excel category, which will now be trusted
+ * for Major Hazards when description is empty.
+ */
+export const fixMiscategorizedMajorHazards = (incidents) => {
+  let fixedCount = 0
+
+  const fixed = incidents.map(incident => {
+    // Only fix records that meet all criteria:
+    // 1. Has originalHazardCategory from Excel
+    // 2. Current location is "Work Environment"
+    // 3. Original category normalizes to a Major Hazard
+    if (
+      incident.originalHazardCategory &&
+      incident.location === 'Work Environment' &&
+      incident.hazardCategorySource === 'auto-classified'
+    ) {
+      const normalizedOriginal = normalizeHazardCategory(incident.originalHazardCategory)
+
+      if (normalizedOriginal && MAJOR_HAZARDS.includes(normalizedOriginal)) {
+        // Re-run categorization with the original category
+        // The updated categorizeHazard will now trust the Excel category
+        const newCategory = categorizeHazard(incident.description, incident.originalHazardCategory)
+
+        // Only update if the category changed
+        if (newCategory !== incident.location) {
+          fixedCount++
+          return {
+            ...incident,
+            location: newCategory,
+            hazardCategorySource: 'excel', // Now it's from Excel
+            dataQualityIssue: null // Clear any previous issue
+          }
+        }
+      }
+    }
+
+    return incident
+  })
+
+  if (fixedCount > 0) {
+    console.log(`[Migration] Fixed ${fixedCount} mis-categorized Major Hazard records`)
+  }
+
+  return fixed
 }
 
 // Calculate TRIR (Total Recordable Incident Rate)

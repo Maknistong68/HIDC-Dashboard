@@ -32,7 +32,7 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
         <p className={`mt-2 ${hasErrors ? 'text-orange-600' : 'text-green-600'}`}>
           {totalProcessed} records processed
         </p>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-surface-500 mt-1">
           <Calendar className="w-4 h-4 inline mr-1" />
           {format(new Date(), 'MMMM d, yyyy HH:mm')}
         </p>
@@ -56,12 +56,12 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
           <p className="text-sm text-blue-700">Status Updated</p>
         </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <SkipForward className="w-5 h-5 text-gray-600" />
+        <div className="bg-surface-50 border border-surface-200 rounded-lg p-4 text-center">
+          <div className="w-10 h-10 bg-surface-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <SkipForward className="w-5 h-5 text-surface-600" />
           </div>
-          <p className="text-2xl font-bold text-gray-600">{skipped}</p>
-          <p className="text-sm text-gray-700">Skipped</p>
+          <p className="text-2xl font-bold text-surface-600">{skipped}</p>
+          <p className="text-sm text-surface-700">Skipped</p>
         </div>
       </div>
 
@@ -81,9 +81,9 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
       )}
 
       {/* What's Next */}
-      <div className="bg-gray-50 rounded-lg p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">What's Next?</h3>
-        <ul className="space-y-3 text-sm text-gray-600">
+      <div className="bg-surface-50 rounded-lg p-6">
+        <h3 className="font-semibold text-surface-900 mb-4">What's Next?</h3>
+        <ul className="space-y-3 text-sm text-surface-600">
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
             <span>Review imported data in the All Data page</span>
@@ -109,7 +109,7 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
         </button>
         <button
           onClick={onImportMore}
-          className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+          className="flex-1 px-6 py-3 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 font-medium transition-colors"
         >
           Import More Data
         </button>

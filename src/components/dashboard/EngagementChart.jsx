@@ -33,8 +33,8 @@ const EngagementChart = ({ data, onBarClick, activeBar }) => {
   }
 
   return (
-    <div className="bg-white rounded-sm border border-gray-300 p-3">
-      <h3 className="text-xs font-semibold text-gray-800 mb-2 uppercase tracking-wide">
+    <div className="bg-white rounded-sm border border-surface-200 p-3">
+      <h3 className="text-xs font-semibold text-surface-800 mb-2 uppercase tracking-wide">
         Engagements by Type
       </h3>
       <div className="h-64">
@@ -88,7 +88,7 @@ const EngagementChart = ({ data, onBarClick, activeBar }) => {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-gray-400 text-center mt-1">
+      <p className="text-xs text-surface-400 text-center mt-1">
         Click bar to drill down
       </p>
     </div>

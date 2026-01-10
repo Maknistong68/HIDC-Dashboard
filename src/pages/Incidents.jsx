@@ -190,31 +190,31 @@ const Incidents = () => {
     <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">All Observation Data</h2>
-        <span className="text-xs text-gray-500">{incidents.length} total records</span>
+        <h2 className="text-sm font-bold text-surface-800 uppercase tracking-wide">All Observation Data</h2>
+        <span className="text-xs text-surface-500">{incidents.length} total records</span>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white border border-gray-300 rounded-sm p-2 flex items-center gap-2">
+        <div className="bg-white border border-surface-200 rounded-sm p-2 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-red-500" />
           <div>
             <p className="text-lg font-bold text-red-600">{openActions}</p>
-            <p className="text-xs text-gray-500">Open</p>
+            <p className="text-xs text-surface-500">Open</p>
           </div>
         </div>
-        <div className="bg-white border border-gray-300 rounded-sm p-2 flex items-center gap-2">
+        <div className="bg-white border border-surface-200 rounded-sm p-2 flex items-center gap-2">
           <Clock className="w-4 h-4 text-orange-500" />
           <div>
             <p className="text-lg font-bold text-orange-600">{inProgressActions}</p>
-            <p className="text-xs text-gray-500">In Progress</p>
+            <p className="text-xs text-surface-500">In Progress</p>
           </div>
         </div>
-        <div className="bg-white border border-gray-300 rounded-sm p-2 flex items-center gap-2">
+        <div className="bg-white border border-surface-200 rounded-sm p-2 flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-green-500" />
           <div>
             <p className="text-lg font-bold text-green-600">{closedActions}</p>
-            <p className="text-xs text-gray-500">Closed</p>
+            <p className="text-xs text-surface-500">Closed</p>
           </div>
         </div>
       </div>

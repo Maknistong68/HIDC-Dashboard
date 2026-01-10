@@ -21,7 +21,7 @@ const ProjectSelector = ({ projects, selectedProjectId, onProjectSelect }) => {
               p-4 rounded-lg border-2 cursor-pointer transition-all
               ${selectedProjectId === project.id
                 ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-200 hover:border-gray-300 bg-white'
+                : 'border-surface-200 hover:border-surface-300 bg-white'
               }
             `}
           >
@@ -29,29 +29,29 @@ const ProjectSelector = ({ projects, selectedProjectId, onProjectSelect }) => {
               <div className="flex items-center gap-3">
                 <div className={`
                   w-10 h-10 rounded-lg flex items-center justify-center
-                  ${selectedProjectId === project.id ? 'bg-primary-100' : 'bg-gray-100'}
+                  ${selectedProjectId === project.id ? 'bg-primary-100' : 'bg-surface-100'}
                 `}>
-                  <Building2 className={`w-5 h-5 ${selectedProjectId === project.id ? 'text-primary-600' : 'text-gray-500'}`} />
+                  <Building2 className={`w-5 h-5 ${selectedProjectId === project.id ? 'text-primary-600' : 'text-surface-500'}`} />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{project.name}</h4>
-                  <p className="text-sm text-gray-500">{project.client}</p>
+                  <h4 className="font-medium text-surface-900">{project.name}</h4>
+                  <p className="text-sm text-surface-500">{project.client}</p>
                 </div>
               </div>
               {selectedProjectId === project.id && (
                 <CheckCircle className="w-5 h-5 text-primary-600" />
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-3">{project.location}</p>
+            <p className="text-sm text-surface-500 mt-3">{project.location}</p>
           </div>
         ))}
       </div>
 
       {activeProjects.length === 0 && (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600">No active projects found</p>
-          <p className="text-sm text-gray-500 mt-1">Please create a project first before importing data</p>
+        <div className="text-center py-8 bg-surface-50 rounded-lg border border-surface-200">
+          <Building2 className="w-12 h-12 text-surface-300 mx-auto mb-3" />
+          <p className="text-surface-600">No active projects found</p>
+          <p className="text-sm text-surface-500 mt-1">Please create a project first before importing data</p>
         </div>
       )}
     </div>

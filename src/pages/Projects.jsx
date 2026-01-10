@@ -31,7 +31,7 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Project Name *
           </label>
           <input
@@ -39,12 +39,12 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="Enter project name"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Client *
           </label>
           <input
@@ -52,12 +52,12 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
             required
             value={formData.client}
             onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="Enter client name"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Location *
           </label>
           <input
@@ -65,18 +65,18 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
             required
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="Enter location"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Status
           </label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           >
             {PROJECT_STATUSES.map((status) => (
               <option key={status.value} value={status.value}>
@@ -86,7 +86,7 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Start Date *
           </label>
           <input
@@ -94,34 +94,34 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
             required
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             End Date
           </label>
           <input
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Estimated Man-Hours
           </label>
           <input
             type="number"
             value={formData.manHours}
             onChange={(e) => setFormData({ ...formData, manHours: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="0"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Weekly Target Engagements
           </label>
           <input
@@ -136,19 +136,19 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
                 },
               })
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-surface-700 mb-1">
           Notes
         </label>
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           placeholder="Additional notes..."
         />
       </div>
@@ -156,7 +156,7 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+          className="flex-1 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 font-medium"
         >
           Cancel
         </button>
@@ -181,15 +181,15 @@ const ProjectCard = ({ project, safetyScore, onEdit, onDelete, incidentCount, en
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl border border-surface-200 p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
             <Building2 className="w-5 h-5 text-primary-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{project.name}</h3>
-            <p className="text-sm text-gray-500">{project.client}</p>
+            <h3 className="font-semibold text-surface-900">{project.name}</h3>
+            <p className="text-sm text-surface-500">{project.client}</p>
           </div>
         </div>
         <span
@@ -204,29 +204,29 @@ const ProjectCard = ({ project, safetyScore, onEdit, onDelete, incidentCount, en
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <MapPin size={16} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-surface-600">
+          <MapPin size={16} className="text-surface-400" />
           {project.location}
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar size={16} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-surface-600">
+          <Calendar size={16} className="text-surface-400" />
           {format(parseISO(project.startDate), 'MMM d, yyyy')}
           {project.endDate && ` - ${format(parseISO(project.endDate), 'MMM d, yyyy')}`}
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Users size={16} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-surface-600">
+          <Users size={16} className="text-surface-400" />
           {project.manHours?.toLocaleString() || 0} man-hours
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="text-center p-2 bg-gray-50 rounded-lg">
-          <p className="text-lg font-bold text-gray-900">{incidentCount}</p>
-          <p className="text-xs text-gray-500">Incidents</p>
+        <div className="text-center p-2 bg-surface-50 rounded-lg">
+          <p className="text-lg font-bold text-surface-900">{incidentCount}</p>
+          <p className="text-xs text-surface-500">Incidents</p>
         </div>
-        <div className="text-center p-2 bg-gray-50 rounded-lg">
-          <p className="text-lg font-bold text-gray-900">{engagementCount}</p>
-          <p className="text-xs text-gray-500">Engagements</p>
+        <div className="text-center p-2 bg-surface-50 rounded-lg">
+          <p className="text-lg font-bold text-surface-900">{engagementCount}</p>
+          <p className="text-xs text-surface-500">Engagements</p>
         </div>
         <div className={`text-center p-2 rounded-lg ${getScoreColor(safetyScore)}`}>
           <p className="text-lg font-bold">{safetyScore}%</p>
@@ -237,7 +237,7 @@ const ProjectCard = ({ project, safetyScore, onEdit, onDelete, incidentCount, en
       <div className="flex gap-2">
         <button
           onClick={() => onEdit(project)}
-          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-surface-600 hover:bg-surface-100 rounded-lg transition-colors"
         >
           <Edit size={16} />
           Edit
@@ -304,8 +304,8 @@ const Projects = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
-          <p className="text-gray-500">Manage your construction projects</p>
+          <h2 className="text-2xl font-bold text-surface-900">Projects</h2>
+          <p className="text-surface-500">Manage your construction projects</p>
         </div>
         <button
           onClick={() => {
@@ -326,7 +326,7 @@ const Projects = () => {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             statusFilter === 'all'
               ? 'bg-primary-100 text-primary-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           }`}
         >
           All ({projects.length})
@@ -340,7 +340,7 @@ const Projects = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 statusFilter === status.value
                   ? 'bg-primary-100 text-primary-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
               }`}
             >
               {status.label} ({count})
@@ -368,10 +368,10 @@ const Projects = () => {
       </div>
 
       {filteredProjects.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
-          <p className="text-gray-500 mb-4">Get started by adding your first project</p>
+        <div className="text-center py-12 bg-white rounded-xl border border-surface-200">
+          <Building2 className="w-12 h-12 text-surface-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-surface-900 mb-2">No projects found</h3>
+          <p className="text-surface-500 mb-4">Get started by adding your first project</p>
           <button
             onClick={() => setIsModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"

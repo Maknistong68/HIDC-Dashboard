@@ -19,8 +19,8 @@ const ProjectComparison = ({ data }) => {
   }
 
   return (
-    <div className="bg-white rounded-sm border border-gray-300 p-3">
-      <h3 className="text-xs font-semibold text-gray-800 mb-2 uppercase tracking-wide">
+    <div className="bg-white rounded-sm border border-surface-200 p-3">
+      <h3 className="text-xs font-semibold text-surface-800 mb-2 uppercase tracking-wide">
         Project Safety Scores
       </h3>
       <div className="h-48">
@@ -68,15 +68,15 @@ const ProjectComparison = ({ data }) => {
       <div className="flex items-center justify-center gap-4 mt-2 text-xs">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 bg-green-500"></div>
-          <span className="text-gray-500">≥80</span>
+          <span className="text-surface-500">≥80</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 bg-orange-500"></div>
-          <span className="text-gray-500">60-79</span>
+          <span className="text-surface-500">60-79</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 bg-red-500"></div>
-          <span className="text-gray-500">&lt;60</span>
+          <span className="text-surface-500">&lt;60</span>
         </div>
       </div>
     </div>

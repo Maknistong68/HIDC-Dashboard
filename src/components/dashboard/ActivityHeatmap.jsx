@@ -68,8 +68,8 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap' }) => {
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   return (
-    <div className="bg-white rounded-sm border border-gray-300 p-3">
-      <h3 className="text-xs font-semibold text-gray-800 mb-2 uppercase tracking-wide">{title}</h3>
+    <div className="bg-white rounded-sm border border-surface-200 p-3">
+      <h3 className="text-xs font-semibold text-surface-800 mb-2 uppercase tracking-wide">{title}</h3>
 
       <div className="overflow-x-auto">
         <div className="inline-block min-w-full">
@@ -80,7 +80,7 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap' }) => {
               {monthLabels.map((label, index) => (
                 <div
                   key={index}
-                  className="text-xs text-gray-400"
+                  className="text-xs text-surface-400"
                   style={{
                     position: 'relative',
                     left: `${label.week * 11}px`,
@@ -100,7 +100,7 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap' }) => {
               {dayLabels.map((label, index) => (
                 <div
                   key={label}
-                  className="h-2.5 text-gray-400 flex items-center"
+                  className="h-2.5 text-surface-400 flex items-center"
                   style={{ visibility: index % 2 === 1 ? 'visible' : 'hidden', fontSize: '8px' }}
                 >
                   {label.substring(0, 1)}
@@ -127,7 +127,7 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap' }) => {
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-1 mt-2">
-            <span className="text-gray-400" style={{ fontSize: '9px' }}>Less</span>
+            <span className="text-surface-400" style={{ fontSize: '9px' }}>Less</span>
             {[0, 1, 2, 3, 4].map((level) => (
               <div
                 key={level}
@@ -135,7 +135,7 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap' }) => {
                 style={{ backgroundColor: getLevelColor(level, false) }}
               />
             ))}
-            <span className="text-gray-400" style={{ fontSize: '9px' }}>More</span>
+            <span className="text-surface-400" style={{ fontSize: '9px' }}>More</span>
           </div>
         </div>
       </div>

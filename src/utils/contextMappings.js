@@ -193,7 +193,47 @@ export const OUTCOME_TO_HAZARD = {
   'hit by passing vehicle': 'Working on or Near Live Roads',
   'struck by traffic': 'Working on or Near Live Roads',
   'work zone incident': 'Working on or Near Live Roads',
-  'roadside incident': 'Working on or Near Live Roads'
+  'roadside incident': 'Working on or Near Live Roads',
+
+  // Struck By outcomes (sharp objects, falling objects, impalement)
+  'impalement': 'Struck By',
+  'impaled': 'Struck By',
+  'impalement injury': 'Struck By',
+  'impalement hazard': 'Struck By',
+  'puncture': 'Struck By',
+  'puncture wound': 'Struck By',
+  'punctured': 'Struck By',
+  'pierced': 'Struck By',
+  'penetration injury': 'Struck By',
+  'struck by rebar': 'Struck By',
+  'struck by nail': 'Struck By',
+  'struck by sharp': 'Struck By',
+  'struck by object': 'Struck By',
+  'struck by falling': 'Struck By',
+  'hit by object': 'Struck By',
+  'hit by falling': 'Struck By',
+  'falling object': 'Struck By',
+  'falling objects': 'Struck By',
+  'dropped object': 'Struck By',
+  'object fell': 'Struck By',
+  'cut by': 'Struck By',
+  'laceration': 'Struck By',
+  'lacerated': 'Struck By',
+
+  // Environmental outcomes
+  'contamination': 'Environmental',
+  'ground contamination': 'Environmental',
+  'soil contamination': 'Environmental',
+  'environmental contamination': 'Environmental',
+  'pollution': 'Environmental',
+  'polluted': 'Environmental',
+  'environmental damage': 'Environmental',
+  'environmental hazard': 'Environmental',
+  'overflow': 'Environmental',
+  'overflowing': 'Environmental',
+  'septic overflow': 'Environmental',
+  'sewage': 'Environmental',
+  'sewage overflow': 'Environmental'
 }
 
 // ============================================================================
@@ -393,6 +433,58 @@ export const HAZARD_OBJECTS = {
     'road closure', 'lane closure'
   ],
 
+  // Struck By - Sharp objects, falling objects, protruding items causing injury
+  'Struck By': [
+    // Protruding rebars and sharp objects (primary hazard = impalement/puncture)
+    'protruding rebar', 'protruding rebars', 'exposed rebar', 'exposed rebars',
+    'rebar without cap', 'without rebar cap', 'no rebar cap', 'rebar cap missing',
+    'unprotected rebar', 'uncapped rebar', 'sharp rebar', 'sharp rebars',
+    'steel bar protruding', 'protruding steel', 'exposed steel bar', 'sharp steel',
+    'tie rod', 'tie rods', 'tie rod without', 'extended rebars', 'rebar extending',
+    'impalement', 'impalement hazard', 'risk of impalement', 'impalement risk',
+    'impalement injury', 'puncture hazard', 'puncture risk',
+    // Protruding nails
+    'protruding nail', 'protruding nails', 'exposed nail', 'exposed nails',
+    'nail protruding', 'nails protruding', 'timber with nails', 'wood with nails',
+    'planks with nails', 'plywood with nails',
+    // Falling objects
+    'falling object', 'falling objects', 'dropped object', 'dropped objects',
+    'object falling', 'material falling', 'debris falling', 'falling debris',
+    'falling hazard', 'drop hazard', 'overhead hazard',
+    'unsecured load', 'unsecured material', 'unstable stack', 'unstable stacking',
+    // Sharp edges
+    'sharp edge', 'sharp edges', 'sharp corner', 'sharp metal', 'sharp object',
+    'cutting hazard', 'laceration hazard', 'cut hazard'
+  ],
+
+  // Environmental - Contamination, pollution, waste affecting environment
+  'Environmental': [
+    'contamination', 'contaminated', 'ground contamination', 'soil contamination',
+    'environmental contamination', 'pollution', 'polluted', 'polluting',
+    'environmental damage', 'environmental hazard', 'environmental risk',
+    'septic tank', 'septic overflow', 'sewage', 'sewage overflow', 'sewage leak',
+    'effluent', 'wastewater', 'waste water',
+    'diesel spill', 'oil spill', 'fuel spill', 'chemical spill',
+    'drip tray full', 'drip tray overflow', 'drip tray overflowing',
+    'concrete waste', 'concrete on soil', 'waste on soil', 'dumping',
+    'illegal dumping', 'improper disposal', 'environmental violation'
+  ],
+
+  // Slips Trips Falls - Ground-level hazards causing slips, trips, or falls
+  'Slips Trips Falls': [
+    'slip', 'slipped', 'slipping', 'slippery', 'slippery floor', 'slippery surface',
+    'trip', 'tripped', 'tripping', 'trip hazard', 'tripping hazard',
+    'fall', 'fell', 'falling', 'fall hazard',
+    'slip trip fall', 'slip, trip, and fall', 'slip trip and fall', 'stf',
+    'uneven surface', 'uneven floor', 'uneven ground',
+    'wet floor', 'wet surface', 'water on floor', 'oil on floor',
+    'obstacle', 'obstruction', 'obstructed', 'blocked pathway', 'blocked access',
+    'cables on floor', 'hoses on floor', 'materials on floor',
+    'poor lighting', 'inadequate lighting', 'dark area',
+    'missing handrail', 'broken step', 'damaged floor', 'hole in floor',
+    'floor opening', 'unmarked opening'
+  ],
+
   // ============================================================================
   // SUB-SIGNIFICANT HAZARD OBJECTS (NEW - 17 categories added)
   // ============================================================================
@@ -452,38 +544,30 @@ export const HAZARD_OBJECTS = {
   ],
 
   'Housekeeping': [
+    // Core housekeeping terms
     'housekeeping', 'house keeping', 'cleanup', 'clean up', 'cleaning', 'clean',
     'tidy', 'tidying', 'organized', 'organisation', 'organization',
     'poor housekeeping', 'good housekeeping', 'housekeeping issue',
-    // Waste
-    'waste', 'waste bin', 'rubbish', 'garbage', 'trash', 'debris', 'litter',
+    // Waste management (true housekeeping)
+    'waste', 'waste bin', 'rubbish', 'garbage', 'trash', 'litter',
     'food waste', 'wrappers', 'refuse', 'waste management', 'bin overflowing',
     'overflowing bin', 'waste disposal', 'empty bags', 'cement bags', 'empty cement bags',
-    // Disorder
+    'garbage bag', 'polythene bag', 'waste not removed', 'bin not changed',
+    // Disorder & clutter (without injury hazard)
     'clutter', 'cluttered', 'mess', 'messy', 'disorganized', 'untidy',
-    'scattered', 'strewn', 'disorder', 'disorderly',
-    // Hazards - Rebar & Sharp Objects
-    'spillage', 'spill', 'slippery', 'wet floor', 'oil on floor', 'slipping hazard',
-    'protruding nail', 'protruding nails', 'sharp edge', 'sharp edges',
-    'trip hazard', 'tripping hazard', 'obstruction',
-    'rebar cap', 'rebar caps', 'protruding rebar', 'exposed rebar', 'protruding rebars',
-    'exposed rebars', 'rebar without cap', 'without rebar cap', 'no rebar cap',
-    'steel bar without', 'exposed steel', 'sharp steel', 'puncture hazard',
-    'impalement hazard', 'impalement', 'tie rod', 'tie rods', 'extended rebars',
-    // Wood & Timber hazards
-    'wood timber', 'wood timbers', 'wooden planks', 'timber with nails', 'nails not removed',
-    'unwanted wood', 'wood materials', 'planks with nails',
-    'exposed nails', 'exposed nail', 'timber with exposed nails',
-    'falling object hazard', 'falling object', 'falling objects',
-    'spikes protruding', 'spikes', 'protruding spikes',
-    'slip trip fall', 'slip, trip, and fall', 'slip trip and fall',
-    // Storage
-    'stacked improperly', 'improper storage', 'stored incorrectly', 'unstable stack',
-    'materials scattered', 'poor storage', 'improper stacking', 'unsecured materials',
-    'without proper barrication', 'rebar storage', 'storage area without',
+    'scattered materials', 'strewn', 'disorder', 'disorderly',
+    'unwanted materials', 'unwanted wood', 'wood materials', 'wooden planks',
+    // Storage issues (organizational, not safety-critical)
+    'improper storage', 'stored incorrectly', 'poor storage', 'improper stacking',
+    'materials not sorted', 'unsorted materials', 'rebar storage',
+    'storage area', 'material storage',
     // Misc housekeeping
     'empty oil can', 'oil can', 'polythene covering', 'without covering',
-    'water drum', 'need to be removed', 'not removed from site'
+    'water drum', 'need to be removed', 'not removed from site',
+    'not replaced', 'not changed', 'cabin housekeeping'
+    // NOTE: Rebar/impalement hazards moved to 'Struck By'
+    // NOTE: Slip/trip hazards moved to 'Slips Trips Falls'
+    // NOTE: Falling objects moved to 'Struck By'
   ],
 
   'Emergency Preparedness': [
@@ -512,6 +596,7 @@ export const HAZARD_OBJECTS = {
   ],
 
   'Safety Supervision': [
+    // Legitimate supervision-related keywords only
     'safety officer', 'safety supervisor', 'safety personnel', 'safety team',
     'safety coverage', 'safety oversight', 'supervision', 'supervised',
     'unsupervised', 'no supervision', 'without supervision', 'lack of supervision',
@@ -522,14 +607,10 @@ export const HAZARD_OBJECTS = {
     'lap', 'lifting appointed person', 'appointed person', 'competent supervisor',
     'banksman', 'signal person', 'spotter', 'flagman', 'signalman',
     'safety watch', 'hole watch', 'fire watch', 'confined space attendant',
-    'permit holder', 'permit issuer', 'area authority',
-    // Site Inspection & Walkthrough patterns
-    'site inspection', 'morning inspection', 'morning site inspection', 'daily inspection',
-    'weekly inspection', 'walkthrough', 'site walkthrough', 'management walkthrough',
-    'project management walkthrough', 'hsse raised', 'observations raised',
-    'raised observations', 'submitted for rectification', 'closed within',
-    'observations were closed', 'tksac', 'tcc', 'rectification',
-    'actively participated', 'inspection it was observed'
+    'permit holder', 'permit issuer', 'area authority'
+    // NOTE: Removed generic inspection patterns (site inspection, walkthrough, etc.)
+    // These are CONTEXT about HOW the observation was made, not the actual HAZARD
+    // The actual hazard should be classified based on WHAT was found, not WHERE/WHEN
   ],
 
   'Training and Competency': [
@@ -1214,18 +1295,9 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'polythene covering', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material protection' },
   { pattern: 'without covering', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'storage issue' },
 
-  // Site inspection patterns (high priority - common in data)
-  { pattern: 'during the site inspection', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
-  { pattern: 'during site inspection', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
-  { pattern: 'morning site inspection', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
-  { pattern: 'during morning site inspection', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
-  { pattern: 'weekly project management walkthrough', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'management oversight' },
-  { pattern: 'it was observed that', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection finding' },
-  { pattern: 'observations were closed', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'followup activity' },
-  { pattern: 'submitted for rectification', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'followup activity' },
-  { pattern: 'closed within', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'followup activity' },
-  { pattern: 'hsse raised', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
-  { pattern: 'tksac raised', wrongCategory: null, correctCategory: 'Safety Supervision', reason: 'inspection activity' },
+  // NOTE: Removed inspection context patterns that were overriding actual hazards
+  // "during site inspection", "it was observed" etc. are CONTEXT, not the hazard itself
+  // The WHAT (actual hazard) should take priority over WHEN/WHERE (inspection context)
 
   // Manlift and aerial platform patterns
   { pattern: 'operating the manlift', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'aerial platform operation' },
@@ -1349,13 +1421,14 @@ export const HAZARD_SEVERITY = {
   'Safety Sign': 3,
   'Site Security': 3,
   'Site Welfare': 3,
-  'Safety Supervision': 3,
   'Training and Competency': 3,
   'Emergency Preparedness': 3,
   'Permit and RAMS': 3,
   'BBS': 3,
   'Housekeeping': 3,
   'Access': 3,
+  // Level 4 - Lower priority (context/process categories)
+  'Safety Supervision': 4, // Lower priority so actual hazards win ties
   'Work Environment': 4 // Lowest priority (default)
 }
 
@@ -1475,5 +1548,8 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'BBS',
   'Housekeeping',
   'Access',
-  'Work Environment'
+  'Work Environment',
+  'Struck By',
+  'Environmental',
+  'Slips Trips Falls'
 ]

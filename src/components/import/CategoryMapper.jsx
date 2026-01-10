@@ -72,12 +72,12 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
       </div>
 
       {/* Progress */}
-      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center justify-between bg-surface-50 rounded-lg p-4">
         <div>
-          <span className="text-sm text-gray-600">Progress: </span>
-          <span className="font-medium text-gray-900">{mappedCount} of {items.length} mapped</span>
+          <span className="text-sm text-surface-600">Progress: </span>
+          <span className="font-medium text-surface-900">{mappedCount} of {items.length} mapped</span>
         </div>
-        <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-48 h-2 bg-surface-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-primary-500 transition-all"
             style={{ width: `${(mappedCount / items.length) * 100}%` }}
@@ -87,12 +87,12 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
 
       {/* Bulk Mapping */}
       {unmappedCount > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-          <span className="text-sm text-gray-600">Bulk assign all unmapped ({unmappedCount}) to:</span>
+        <div className="flex items-center gap-3 p-4 bg-surface-50 rounded-lg">
+          <span className="text-sm text-surface-600">Bulk assign all unmapped ({unmappedCount}) to:</span>
           <select
             value={bulkMapping}
             onChange={(e) => setBulkMapping(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-1.5 border border-surface-200 rounded-lg text-sm"
           >
             <option value="">Select category...</option>
             {MAPPING_OPTIONS.map(opt => (
@@ -112,9 +112,9 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
       {/* Grouped Items */}
       <div className="space-y-4">
         {Object.entries(groupedByClassification).map(([classification, groupItems]) => (
-          <div key={classification} className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
-              <span className="font-medium text-gray-900">
+          <div key={classification} className="border border-surface-200 rounded-lg overflow-hidden">
+            <div className="bg-surface-50 px-4 py-3 flex items-center justify-between">
+              <span className="font-medium text-surface-900">
                 {classification} ({groupItems.length} items)
               </span>
               <select
@@ -127,7 +127,7 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
                     onMappingChange(newMappings)
                   }
                 }}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1 border border-surface-200 rounded text-sm"
               >
                 <option value="">Assign all in group...</option>
                 {MAPPING_OPTIONS.map(opt => (
@@ -136,16 +136,16 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
               </select>
             </div>
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-surface-100">
               {groupItems.map((item) => (
                 <div key={item.originalIndex} className="bg-white">
                   <div
-                    className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+                    className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-surface-50"
                     onClick={() => toggleExpand(item.originalIndex)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-mono text-gray-500">
+                        <span className="text-sm font-mono text-surface-500">
                           {item.eventId ? item.eventId.substring(0, 20) + '...' : 'No ID'}
                         </span>
                         {mappedItems[item.originalIndex] && (
@@ -159,7 +159,7 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 mt-1 truncate">
+                      <p className="text-sm text-surface-700 mt-1 truncate">
                         {item.description}
                       </p>
                     </div>
@@ -168,7 +168,7 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
                         value={mappedItems[item.originalIndex] || ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleSingleMapping(item.originalIndex, e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="px-2 py-1 border border-surface-200 rounded text-sm"
                       >
                         <option value="">Select...</option>
                         {MAPPING_OPTIONS.map(opt => (
@@ -176,36 +176,36 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
                         ))}
                       </select>
                       {expandedItems.has(item.originalIndex) ? (
-                        <ChevronUp size={18} className="text-gray-400" />
+                        <ChevronUp size={18} className="text-surface-400" />
                       ) : (
-                        <ChevronDown size={18} className="text-gray-400" />
+                        <ChevronDown size={18} className="text-surface-400" />
                       )}
                     </div>
                   </div>
 
                   {expandedItems.has(item.originalIndex) && (
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                    <div className="px-4 py-3 bg-surface-50 border-t border-surface-100">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-500">Date:</span>
-                          <span className="ml-2 text-gray-900">{item.date}</span>
+                          <span className="text-surface-500">Date:</span>
+                          <span className="ml-2 text-surface-900">{item.date}</span>
                         </div>
                         <div>
-                          <span className="text-gray-500">Type:</span>
-                          <span className="ml-2 text-gray-900">{item.type}</span>
+                          <span className="text-surface-500">Type:</span>
+                          <span className="ml-2 text-surface-900">{item.type}</span>
                         </div>
                         <div>
-                          <span className="text-gray-500">Status:</span>
-                          <span className="ml-2 text-gray-900">{item.status}</span>
+                          <span className="text-surface-500">Status:</span>
+                          <span className="ml-2 text-surface-900">{item.status}</span>
                         </div>
                         <div>
-                          <span className="text-gray-500">Reported By:</span>
-                          <span className="ml-2 text-gray-900">{item.reportedBy}</span>
+                          <span className="text-surface-500">Reported By:</span>
+                          <span className="ml-2 text-surface-900">{item.reportedBy}</span>
                         </div>
                       </div>
                       <div className="mt-3">
-                        <span className="text-gray-500 text-sm">Full Description:</span>
-                        <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
+                        <span className="text-surface-500 text-sm">Full Description:</span>
+                        <p className="text-sm text-surface-900 mt-1 whitespace-pre-wrap">
                           {item.fullDescription || item.description}
                         </p>
                       </div>

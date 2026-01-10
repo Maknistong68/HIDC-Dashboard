@@ -122,13 +122,27 @@ export const CLASSIFICATION_MAPPING = {
   'Best Practice': { type: 'incident', incidentType: 'positive' },
   'Safe Behavior': { type: 'incident', incidentType: 'positive' },
 
-  // Type-based mappings (when classification doesn't match)
-  'Hazard Identification': { type: 'incident', incidentType: 'unsafe-condition' },
+  // Type-based mappings - Incident (all case variations)
   'Incident': { type: 'incident', incidentType: 'fac' },
+  'incident': { type: 'incident', incidentType: 'fac' },
+  'INCIDENT': { type: 'incident', incidentType: 'fac' },
+
+  // Hazard Identification
+  'Hazard Identification': { type: 'incident', incidentType: 'unsafe-condition' },
+  'Hazard identification': { type: 'incident', incidentType: 'unsafe-condition' },
+  'hazard identification': { type: 'incident', incidentType: 'unsafe-condition' },
+
+  // LTI/MTI/FAC variations
   'LTI': { type: 'incident', incidentType: 'lti' },
+  'lti': { type: 'incident', incidentType: 'lti' },
+  'Lost Time Injury': { type: 'incident', incidentType: 'lti' },
   'MTI': { type: 'incident', incidentType: 'mti' },
+  'mti': { type: 'incident', incidentType: 'mti' },
+  'Medical Treatment Injury': { type: 'incident', incidentType: 'mti' },
   'FAC': { type: 'incident', incidentType: 'fac' },
+  'fac': { type: 'incident', incidentType: 'fac' },
   'First Aid': { type: 'incident', incidentType: 'fac' },
+  'First Aid Case': { type: 'incident', incidentType: 'fac' },
 
   // Non-Conformance (NCR) - separate category
   'Non-Conformance': { type: 'incident', incidentType: 'ncr' },
@@ -469,24 +483,41 @@ export const categorizeHazard = (description, existingCategory = '') => {
 
   // ============================================
   // STEP 2: Validate Excel category against description
-  // Only trust source category if description SUPPORTS it
-  // This prevents incorrect source categorization from being blindly accepted
+  // Trust the Excel source category unless:
+  // - It's explicitly excluded by the description (contradiction)
+  // - The description clearly indicates a DIFFERENT major hazard
   // ============================================
   if (existingCategory && existingCategory.trim() !== '') {
     const normalized = normalizeHazardCategory(existingCategory)
     if (normalized && normalized !== 'Work Environment') {
-      // For MAJOR hazards, REQUIRE the description to contain relevant keywords
-      // This prevents misclassification like PPE issues being tagged as "Water"
-      if (MAJOR_HAZARDS.includes(normalized)) {
-        if (!isExcludedTerm(text, normalized) && descriptionSupportsCategory(text, normalized)) {
-          return normalized // Source category is validated by description
+      // Check if this category is explicitly excluded by the description
+      if (isExcludedTerm(text, normalized)) {
+        // Description contradicts the Excel category - fall through to description-based
+      } else if (MAJOR_HAZARDS.includes(normalized)) {
+        // For MAJOR hazards from Excel:
+        // Trust the source unless description EXPLICITLY supports a DIFFERENT major hazard
+        // This prevents "Energised Systems" being changed to "Work Environment" when description is empty
+
+        // Check if description clearly indicates a different major hazard
+        let descriptionSupportsDifferentMajor = false
+        if (text && text.length > 10) { // Only check if there's meaningful description
+          for (const otherCategory of MAJOR_HAZARDS) {
+            if (otherCategory === normalized) continue // Skip the current category
+            if (descriptionSupportsCategory(text, otherCategory) && !isExcludedTerm(text, otherCategory)) {
+              descriptionSupportsDifferentMajor = true
+              break
+            }
+          }
         }
-        // Source says Major hazard but description doesn't support it - fall through
-      } else {
-        // For Sub-Significant hazards, still trust source if not excluded
-        if (!isExcludedTerm(text, normalized)) {
+
+        // Trust Excel category unless description clearly contradicts it
+        if (!descriptionSupportsDifferentMajor) {
           return normalized
         }
+        // Description supports a different major hazard - fall through to description-based
+      } else {
+        // For Sub-Significant hazards, trust source if not excluded
+        return normalized
       }
     }
   }
@@ -833,6 +864,11 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
     const eventId = getValue('eventId') || `imported-${Date.now()}-${index}`
     const rawType = getValue('type') || ''
     const classification = getValue('classification') || ''
+
+    // DEBUG: Log when Type column contains "Incident"
+    if (rawType && rawType.toString().toLowerCase().trim() === 'incident') {
+      console.log(`[Import] Row ${index + 1}: Type="${rawType}" detected as Incident → will map to FAC`)
+    }
     const dateValue = getValue('date')
     const timeValue = getValue('time') // Dedicated time column
     const rawDescription = getValue('description') || ''
@@ -884,9 +920,17 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
 
     // Detect potential data quality issues
     let dataQualityIssue = null
+    const hasDescription = description && description.trim().length > 10 &&
+      !description.toLowerCase().includes('no description provided')
+
     if (hazardCategorySource === 'excel' && !hazardCategoryValidated) {
-      // Excel had a category but description doesn't support it - likely wrong data entry
-      dataQualityIssue = `Source data had "${rawHazardCategory}" but description has no related keywords. Possible data entry error.`
+      if (!hasDescription) {
+        // No description to validate - not an error, just missing data
+        dataQualityIssue = null // No issue - we trust the Excel category
+      } else {
+        // Excel had a category but description doesn't support it - potential mismatch
+        dataQualityIssue = `Source category "${rawHazardCategory}" could not be verified against description keywords.`
+      }
     } else if (hazardCategorySource === 'auto-classified' && wasAutoClassified && rawHazardCategory) {
       // Original was generic like "Other" - auto-classified based on description
       dataQualityIssue = `Original category "${rawHazardCategory}" was generic. Auto-classified as "${hazardCategory}" based on description keywords.`
@@ -991,11 +1035,14 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
         }
       } else if (typeof dateValue === 'number') {
         // Excel serial date (includes fractional day for time)
+        // Excel epoch is Dec 30, 1899, Unix epoch is Jan 1, 1970
+        // Difference is 25569 days
         const totalDays = dateValue - 25569
         const wholeDays = Math.floor(totalDays)
         const fractionalDay = totalDays - wholeDays
-        const date = new Date(wholeDays * 86400 * 1000)
-        parsedDate = format(date, 'yyyy-MM-dd')
+        // Use UTC to avoid timezone issues - construct date directly
+        const utcDate = new Date(Date.UTC(1970, 0, 1 + wholeDays))
+        parsedDate = utcDate.toISOString().split('T')[0]
         // Extract time from fractional day (only if not already set from time column)
         if (!eventTime && fractionalDay > 0) {
           const totalMinutes = Math.round(fractionalDay * 24 * 60)
@@ -1069,10 +1116,44 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
       return
     }
 
-    // Determine type mapping
-    let mapping = CLASSIFICATION_MAPPING[classification] || CLASSIFICATION_MAPPING[type]
+    // Helper to find mapping case-insensitively
+    const findMapping = (value) => {
+      if (!value) return null
+      const normalized = value.trim()
+      // Try exact match first
+      if (CLASSIFICATION_MAPPING[normalized]) return CLASSIFICATION_MAPPING[normalized]
+      // Try case-insensitive match
+      const key = Object.keys(CLASSIFICATION_MAPPING).find(
+        k => k.toLowerCase() === normalized.toLowerCase()
+      )
+      return key ? CLASSIFICATION_MAPPING[key] : null
+    }
 
-    // Auto-classify "Others" using keyword analysis
+    // Determine type mapping (case-insensitive lookup)
+    // PRIORITY: Check Type column first for "Incident", then Classification
+    let mapping = null
+
+    // DIRECT CHECK: If Type column is exactly "Incident" (case-insensitive), force FAC mapping
+    const normalizedType = (type || '').toString().toLowerCase().trim()
+    if (normalizedType === 'incident') {
+      mapping = { type: 'incident', incidentType: 'fac', autoClassified: false }
+      console.log(`[Import] Row: Type="${type}" → Forced mapping to FAC (incidentType: 'fac')`)
+    } else {
+      const typeMapping = findMapping(type)
+      const classMapping = findMapping(classification)
+
+      // If Type column has a valid mapping, use it
+      if (typeMapping && !typeMapping.needsMapping) {
+        mapping = typeMapping
+      } else if (classMapping && !classMapping.needsMapping) {
+        mapping = classMapping
+      } else {
+        // Try type again as fallback
+        mapping = typeMapping || classMapping
+      }
+    }
+
+    // Auto-classify using keyword analysis only if no valid mapping found
     if (!mapping || mapping.needsMapping) {
       const autoClassifiedType = classifyByKeywords(description, hazardCategory)
       mapping = { type: 'incident', incidentType: autoClassifiedType, autoClassified: true }

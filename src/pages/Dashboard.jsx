@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   FileText,
   Upload,
@@ -53,9 +53,9 @@ const normalizeHazard = (hazard) => {
 // Info tooltip component for chart explanations
 const InfoTooltip = ({ text }) => (
   <div className="group relative inline-flex items-center ml-1.5">
-    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
-    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
-      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-gray-900 transform rotate-45"></div>
+    <Info size={14} className="text-surface-400 cursor-help hover:text-surface-600 transition-colors" />
+    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
+      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
       <span className="relative">{text}</span>
     </div>
   </div>
@@ -143,8 +143,8 @@ const Dashboard = () => {
     return { start, end }
   }
 
-  // Handle "This Month" toggle
-  const handleThisMonthToggle = () => {
+  // Handle "This Month" toggle - memoized to prevent child re-renders
+  const handleThisMonthToggle = useCallback(() => {
     if (thisMonthActive) {
       // Turn off - clear date filters
       setFilters(prev => ({ ...prev, dateFrom: '', dateTo: '' }))
@@ -157,10 +157,10 @@ const Dashboard = () => {
     }
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }
+  }, [thisMonthActive])
 
   // Handle filter changes - reset site when contractor changes
-  const handleFilterChange = (key, value) => {
+  const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => {
       const newFilters = { ...prev, [key]: value }
       // Reset site filter when contractor changes (parent-child relationship)
@@ -172,45 +172,46 @@ const Dashboard = () => {
     setThisMonthActive(false) // Turn off "This Month" when manual filter changes
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }
+  }, [])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters({ contractor: '', site: '', dateFrom: '', dateTo: '' })
     setThisMonthActive(false)
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }
+  }, [])
 
   // Handle heatmap cell click - opens modal
-  const handleHeatmapCellClick = (hazard, month, value) => {
+  const handleHeatmapCellClick = useCallback((hazard, month, value) => {
     if (value === 0) return
     setHeatmapDrillDown({ hazard, month, modalOpen: true })
-  }
+  }, [])
 
-  const closeHeatmapDrillDown = () => {
+  const closeHeatmapDrillDown = useCallback(() => {
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }
+  }, [])
 
   // Handle drill-down - opens modal with level 2 (monthly breakdown)
-  const handleDrillDown = (chart, filter) => {
+  const handleDrillDown = useCallback((chart, filter) => {
     setDrillDown({ chart, filter, level: 2, period: null, modalOpen: true })
-  }
+  }, [])
 
-  const closeDrillDownModal = () => {
+  const closeDrillDownModal = useCallback(() => {
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
-  }
+  }, [])
 
-  const handleDrillDownBack = () => {
-    if (drillDown.level === 3) {
-      setDrillDown(prev => ({ ...prev, level: 2, period: null }))
-    } else {
-      closeDrillDownModal()
-    }
-  }
+  const handleDrillDownBack = useCallback(() => {
+    setDrillDown(prev => {
+      if (prev.level === 3) {
+        return { ...prev, level: 2, period: null }
+      }
+      return { chart: null, filter: null, level: 1, period: null, modalOpen: false }
+    })
+  }, [])
 
-  const handleMonthSelect = (monthData) => {
+  const handleMonthSelect = useCallback((monthData) => {
     setDrillDown(prev => ({ ...prev, level: 3, period: monthData.period }))
-  }
+  }, [])
 
   // Get unique contractors from incidents
   const uniqueContractors = useMemo(() => {
@@ -660,8 +661,8 @@ const Dashboard = () => {
           onClick={handleThisMonthToggle}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             thisMonthActive
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              ? 'bg-primary-600 text-white'
+              : 'bg-white border border-surface-300 text-surface-700 hover:bg-surface-50'
           }`}
         >
           <Calendar size={16} />
@@ -671,7 +672,7 @@ const Dashboard = () => {
         {/* Import More Button */}
         <button
           onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium whitespace-nowrap"
+          className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
         >
           <Upload size={16} />
           Import
@@ -693,9 +694,9 @@ const Dashboard = () => {
       />
 
       {/* Dashboard Content - wrapped for PDF export full-page capture */}
-      <div ref={dashboardContentRef} className="space-y-3 bg-gray-50 p-2 -m-2">
+      <div ref={dashboardContentRef} className="space-y-3 bg-surface-50 p-2 -m-2">
       {/* KPI Cards - Row 1 */}
-      <div ref={kpiCards1Ref} className="grid grid-cols-4 gap-3">
+      <div ref={kpiCards1Ref} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
           title="Total Observations"
           value={filteredIncidents.length}
@@ -731,7 +732,7 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Cards - Row 2 (Approval Status) */}
-      <div ref={kpiCards2Ref} className="grid grid-cols-4 gap-3">
+      <div ref={kpiCards2Ref} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
           title="Closed"
           value={approvalCounts.closed}
@@ -767,7 +768,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div ref={pyramidRef}>
           <IncidentPyramid
             data={incidentCounts}
@@ -782,10 +783,10 @@ const Dashboard = () => {
       </div>
 
       {/* Top Hazards + Observers */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Top Hazards */}
-        <div ref={topHazardsRef} className="bg-white border border-gray-300 p-3">
-          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide flex items-center">
+        <div ref={topHazardsRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Top Significant Hazards
             <InfoTooltip text="Top 10 hazard categories ranked by observation count. Click any bar to drill down into specific observations. Red/green bars show open vs closed status." />
           </h3>
@@ -802,20 +803,24 @@ const Dashboard = () => {
                 return (
                   <div
                     key={hazard.name}
-                    className={`relative cursor-pointer hover:bg-gray-50 ${isActive ? 'ring-2 ring-gray-800' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Drill down on ${hazard.name}: ${hazard.total} observations`}
+                    className={`relative cursor-pointer hover:bg-surface-50 focus:outline-none focus:ring-2 focus:ring-primary-500 ${isActive ? 'ring-2 ring-surface-800' : ''}`}
                     onClick={() => handleDrillDown('hazards', hazard.name)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDrillDown('hazards', hazard.name)}
                     style={{ opacity: drillDown.chart === 'hazards' && !isActive ? 0.5 : 1 }}
                   >
                     <div className="flex items-center justify-between p-1.5 relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 w-4">{index + 1}</span>
-                        <span className="text-xs text-gray-700 truncate">{hazard.name}</span>
+                        <span className="text-xs font-bold text-surface-400 w-4">{index + 1}</span>
+                        <span className="text-xs text-surface-700 truncate">{hazard.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {showOpenClosed && (
-                          <span className="text-xs text-gray-500">{hazard.open}o/{hazard.closed}c</span>
+                          <span className="text-xs text-surface-500">{hazard.open}o/{hazard.closed}c</span>
                         )}
-                        <span className="text-xs font-bold text-gray-900">{hazard.total}</span>
+                        <span className="text-xs font-bold text-surface-900">{hazard.total}</span>
                       </div>
                     </div>
                     {showOpenClosed ? (
@@ -831,13 +836,13 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <p className="text-xs text-gray-400 text-center py-4">No hazard data available</p>
+            <p className="text-xs text-surface-400 text-center py-4">No hazard data available</p>
           )}
         </div>
 
         {/* Top Observers */}
-        <div ref={topObserversRef} className="bg-white border border-gray-300 p-3">
-          <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide flex items-center">
+        <div ref={topObserversRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Top Observers
             <InfoTooltip text="Top 10 reporters ranked by observation count. Click any bar to see their observations. High reporter activity indicates strong safety culture engagement." />
           </h3>
@@ -854,20 +859,24 @@ const Dashboard = () => {
                 return (
                   <div
                     key={observer.name}
-                    className={`relative cursor-pointer hover:bg-gray-50 ${isActive ? 'ring-2 ring-gray-800' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Drill down on ${observer.name}: ${observer.total} observations`}
+                    className={`relative cursor-pointer hover:bg-surface-50 focus:outline-none focus:ring-2 focus:ring-primary-500 ${isActive ? 'ring-2 ring-surface-800' : ''}`}
                     onClick={() => handleDrillDown('observers', observer.name)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDrillDown('observers', observer.name)}
                     style={{ opacity: drillDown.chart === 'observers' && !isActive ? 0.5 : 1 }}
                   >
                     <div className="flex items-center justify-between p-1.5 relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 w-4">{index + 1}</span>
-                        <span className="text-xs text-gray-700 truncate">{observer.name}</span>
+                        <span className="text-xs font-bold text-surface-400 w-4">{index + 1}</span>
+                        <span className="text-xs text-surface-700 truncate">{observer.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {showOpenClosed && (
-                          <span className="text-xs text-gray-500">{observer.open}o/{observer.closed}c</span>
+                          <span className="text-xs text-surface-500">{observer.open}o/{observer.closed}c</span>
                         )}
-                        <span className="text-xs font-bold text-gray-900">{observer.total}</span>
+                        <span className="text-xs font-bold text-surface-900">{observer.total}</span>
                       </div>
                     </div>
                     {showOpenClosed ? (
@@ -883,27 +892,27 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <p className="text-xs text-gray-400 text-center py-4">No observer data available</p>
+            <p className="text-xs text-surface-400 text-center py-4">No observer data available</p>
           )}
         </div>
       </div>
 
       {/* Observations by Day of Week + Hour of Day */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <ObservationsByDayOfWeek incidents={filteredIncidents} />
         <ObservationsByHourOfDay incidents={filteredIncidents} />
       </div>
 
       {/* Hazards Heatmap - Scrollable (max 12 months visible) */}
       {hazardsHeatmap.hazards.length > 0 && (
-        <div ref={hazardsHeatmapRef} className="bg-white border border-gray-300 p-3">
+        <div ref={hazardsHeatmapRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center">
               Hazards Heatmap (by Month)
               <InfoTooltip text="Monthly distribution of hazard categories. Darker colors indicate higher counts. Click any cell to drill down into that specific hazard/month combination." />
             </h3>
             {hazardsHeatmap.months.length > 12 && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-surface-400">
                 Showing {hazardsHeatmap.months.length} months - scroll to view all
               </span>
             )}
@@ -916,13 +925,13 @@ const Dashboard = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr>
-                  <th className="text-left p-1.5 font-medium text-gray-600 sticky left-0 bg-white min-w-[140px] border-b border-gray-200">Hazard</th>
+                  <th className="text-left p-1.5 font-medium text-surface-600 sticky left-0 bg-white min-w-[140px] border-b border-surface-200">Hazard</th>
                   {hazardsHeatmap.months.map(month => (
-                    <th key={month} className="p-1.5 font-medium text-gray-600 text-center min-w-[50px] border-b border-gray-200">
+                    <th key={month} className="p-1.5 font-medium text-surface-600 text-center min-w-[50px] border-b border-surface-200">
                       {format(parseISO(month + '-01'), 'MMM yy')}
                     </th>
                   ))}
-                  <th className="p-1.5 font-medium text-gray-600 text-center min-w-[50px] border-b border-gray-200 bg-gray-50">Total</th>
+                  <th className="p-1.5 font-medium text-surface-600 text-center min-w-[50px] border-b border-surface-200 bg-surface-50">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -933,7 +942,7 @@ const Dashboard = () => {
                   )
                   return (
                     <tr key={hazard}>
-                      <td className="p-1.5 text-gray-700 sticky left-0 bg-white truncate max-w-[140px] border-b border-gray-100" title={hazard}>
+                      <td className="p-1.5 text-surface-700 sticky left-0 bg-white truncate max-w-[140px] border-b border-surface-100" title={hazard}>
                         {hazard}
                       </td>
                       {hazardsHeatmap.months.map(month => {
@@ -943,7 +952,7 @@ const Dashboard = () => {
                         return (
                           <td
                             key={month}
-                            className={`p-1.5 text-center font-semibold border-b border-gray-100 ${value > 0 ? 'cursor-pointer hover:opacity-80' : ''}`}
+                            className={`p-1.5 text-center font-semibold border-b border-surface-100 ${value > 0 ? 'cursor-pointer hover:opacity-80' : ''}`}
                             style={{
                               backgroundColor: color.bg,
                               color: color.text,
@@ -956,7 +965,7 @@ const Dashboard = () => {
                           </td>
                         )
                       })}
-                      <td className="p-1.5 text-center font-bold text-gray-900 bg-gray-50 border-b border-gray-100">
+                      <td className="p-1.5 text-center font-bold text-surface-900 bg-surface-50 border-b border-surface-100">
                         {rowTotal}
                       </td>
                     </tr>
@@ -964,20 +973,20 @@ const Dashboard = () => {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-300">
-                  <td className="p-1.5 font-bold text-gray-800 sticky left-0 bg-white">Total</td>
+                <tr className="border-t-2 border-surface-300">
+                  <td className="p-1.5 font-bold text-surface-800 sticky left-0 bg-white">Total</td>
                   {hazardsHeatmap.months.map(month => {
                     const colTotal = hazardsHeatmap.hazards.reduce(
                       (sum, hazard) => sum + (hazardsHeatmap.data[hazard]?.[month] || 0),
                       0
                     )
                     return (
-                      <td key={month} className="p-1.5 text-center font-bold text-gray-900 bg-gray-50">
+                      <td key={month} className="p-1.5 text-center font-bold text-surface-900 bg-surface-50">
                         {colTotal}
                       </td>
                     )
                   })}
-                  <td className="p-1.5 text-center font-bold text-gray-900 bg-gray-200">
+                  <td className="p-1.5 text-center font-bold text-surface-900 bg-surface-200">
                     {heatmapIncidents.filter(i => i.location && i.location !== 'Not specified').length}
                   </td>
                 </tr>
@@ -987,14 +996,14 @@ const Dashboard = () => {
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-2 mt-2 text-xs">
-            <span className="text-gray-500">Low</span>
+            <span className="text-surface-500">Low</span>
             <div
-              className="w-24 h-3"
+              className="w-24 h-3 rounded"
               style={{
                 background: 'linear-gradient(to right, #ffffff, #ffffc8, #ffff32, #ffa500, #c81e1e)'
               }}
             ></div>
-            <span className="text-gray-500">High</span>
+            <span className="text-surface-500">High</span>
           </div>
 
         </div>
@@ -1003,30 +1012,30 @@ const Dashboard = () => {
       {/* End of dashboardContentRef wrapper */}
 
       {/* All Records Section - Collapsible */}
-      <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+      <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">
         <button
           onClick={() => setShowAllRecords(!showAllRecords)}
-          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center justify-between p-3 hover:bg-surface-50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Database size={18} className="text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center">
+            <Database size={18} className="text-surface-600" />
+            <h3 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center">
               All Records
               <InfoTooltip text="Complete list of all observations matching current filters. Search, sort, and click any row to view full details." />
             </h3>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-surface-500 bg-surface-100 px-2 py-0.5 rounded-full">
               {filteredIncidents.length} records
             </span>
           </div>
           {showAllRecords ? (
-            <ChevronUp size={18} className="text-gray-500" />
+            <ChevronUp size={18} className="text-surface-500" />
           ) : (
-            <ChevronDown size={18} className="text-gray-500" />
+            <ChevronDown size={18} className="text-surface-500" />
           )}
         </button>
 
         {showAllRecords && (
-          <div className="border-t border-gray-200 p-3">
+          <div className="border-t border-surface-200 p-3">
             <DataTable
               data={filteredIncidents}
               columns={[

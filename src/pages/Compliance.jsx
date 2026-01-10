@@ -31,14 +31,14 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Project *
           </label>
           <select
             required
             value={formData.projectId}
             onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
@@ -48,14 +48,14 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Compliance Type *
           </label>
           <select
             required
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           >
             {COMPLIANCE_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
@@ -65,7 +65,7 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Item Name / Description *
           </label>
           <input
@@ -73,12 +73,12 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
             required
             value={formData.itemName}
             onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="e.g., Tower Crane TC-001, John Smith - Rigger"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Issue Date *
           </label>
           <input
@@ -86,11 +86,11 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
             required
             value={formData.issueDate}
             onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Expiry Date *
           </label>
           <input
@@ -98,11 +98,11 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
             required
             value={formData.expiryDate}
             onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Responsible Person *
           </label>
           <input
@@ -110,33 +110,33 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
             required
             value={formData.responsiblePerson}
             onChange={(e) => setFormData({ ...formData, responsiblePerson: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="Person responsible for renewal"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Document Reference
           </label>
           <input
             type="text"
             value={formData.documentRef}
             onChange={(e) => setFormData({ ...formData, documentRef: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="e.g., CERT-2024-001"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-surface-700 mb-1">
           Notes
         </label>
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           placeholder="Additional notes..."
         />
       </div>
@@ -145,7 +145,7 @@ const ComplianceForm = ({ item, projects, onSubmit, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+          className="flex-1 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 font-medium"
         >
           Cancel
         </button>
@@ -277,7 +277,7 @@ const Compliance = () => {
               e.stopPropagation()
               handleEdit(row)
             }}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
+            className="p-1.5 text-surface-500 hover:bg-surface-100 rounded-lg"
           >
             <Edit size={16} />
           </button>
@@ -328,8 +328,8 @@ const Compliance = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Compliance</h2>
-          <p className="text-gray-500">Track permits, certifications, and inspections</p>
+          <h2 className="text-2xl font-bold text-surface-900">Compliance</h2>
+          <p className="text-surface-500">Track permits, certifications, and inspections</p>
         </div>
         <button
           onClick={() => {
@@ -390,7 +390,7 @@ const Compliance = () => {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             statusFilter === 'all'
               ? 'bg-primary-100 text-primary-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           }`}
         >
           All ({compliance.length})
@@ -400,7 +400,7 @@ const Compliance = () => {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             statusFilter === 'expired'
               ? 'bg-red-100 text-red-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           }`}
         >
           Expired ({expiredCount})
@@ -410,7 +410,7 @@ const Compliance = () => {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             statusFilter === 'expiring'
               ? 'bg-orange-100 text-orange-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           }`}
         >
           Expiring ({expiringCount})
@@ -420,7 +420,7 @@ const Compliance = () => {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             statusFilter === 'valid'
               ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           }`}
         >
           Valid ({validCount})

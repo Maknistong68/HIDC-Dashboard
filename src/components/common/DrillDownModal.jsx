@@ -43,21 +43,21 @@ const DrillDownModal = ({
         {/* Glass Card */}
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200/50 bg-white/50">
+          <div className="px-6 py-4 border-b border-surface-200/50 bg-white/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {canGoBack && (
                   <button
                     onClick={onBack}
-                    className="p-1.5 rounded-lg hover:bg-gray-100/80 text-gray-500 hover:text-gray-700 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-surface-100/80 text-surface-500 hover:text-surface-700 transition-colors"
                   >
                     <ChevronLeft size={20} />
                   </button>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                  <h3 className="text-lg font-semibold text-surface-900">{title}</h3>
                   {breadcrumb.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                    <div className="flex items-center gap-1 text-xs text-surface-500 mt-0.5">
                       {breadcrumb.map((item, idx) => (
                         <span key={idx} className="flex items-center gap-1">
                           {idx > 0 && <ChevronRight size={12} />}
@@ -70,7 +70,7 @@ const DrillDownModal = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl hover:bg-gray-100/80 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-2 rounded-xl hover:bg-surface-100/80 text-surface-400 hover:text-surface-600 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -97,13 +97,15 @@ const DrillDownModal = ({
               <RecordsTable
                 data={data}
                 onViewDetails={setSelectedRecord}
+                breadcrumb={breadcrumb}
+                title={title}
               />
             )}
           </div>
 
           {/* Footer hint */}
-          <div className="px-6 py-3 border-t border-gray-200/50 bg-white/30">
-            <p className="text-xs text-gray-400 text-center">
+          <div className="px-6 py-3 border-t border-surface-200/50 bg-white/30">
+            <p className="text-xs text-surface-400 text-center">
               {type === 'monthly' ? 'Click a period to view observations' :
                type === 'monthly-breakdown' ? 'Click metrics to see contributing observations' :
                `${data.length} observation${data.length !== 1 ? 's' : ''} found`}
@@ -145,7 +147,7 @@ const DrillDownModal = ({
 const MonthlyBreakdown = ({ data, onSelect }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-surface-500">
         No data available for this selection
       </div>
     )
@@ -159,21 +161,21 @@ const MonthlyBreakdown = ({ data, onSelect }) => {
         <div
           key={item.period || idx}
           onClick={() => onSelect(item)}
-          className="group flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-all duration-200 border border-transparent hover:border-gray-200/50"
+          className="group flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-all duration-200 border border-transparent hover:border-surface-200/50"
         >
-          <div className="w-20 text-sm font-medium text-gray-700">
+          <div className="w-20 text-sm font-medium text-surface-700">
             {item.label}
           </div>
-          <div className="flex-1 h-8 bg-gray-100/80 rounded-lg overflow-hidden">
+          <div className="flex-1 h-8 bg-surface-100/80 rounded-lg overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-500 group-hover:from-blue-600 group-hover:to-blue-700"
               style={{ width: `${(item.count / maxCount) * 100}%` }}
             />
           </div>
           <div className="w-12 text-right">
-            <span className="text-lg font-bold text-gray-900">{item.count}</span>
+            <span className="text-lg font-bold text-surface-900">{item.count}</span>
           </div>
-          <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+          <ChevronRight size={16} className="text-surface-400 group-hover:text-surface-600 transition-colors" />
         </div>
       ))}
     </div>
@@ -187,7 +189,7 @@ const MonthlyBreakdown = ({ data, onSelect }) => {
 const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
   if (!data) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-surface-500">
         No data available
       </div>
     )
@@ -200,21 +202,21 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
   }
 
   const MetricCard = ({ title, score, formula, details, icon: Icon }) => (
-    <div className="p-3 rounded-xl bg-white/60 border border-gray-200/50 hover:bg-white/80 transition-colors">
+    <div className="p-3 rounded-xl bg-white/60 border border-surface-200/50 hover:bg-white/80 transition-colors">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          {Icon && <Icon size={14} className="text-gray-500" />}
-          <span className="text-sm font-medium text-gray-700">{title}</span>
+          {Icon && <Icon size={14} className="text-surface-500" />}
+          <span className="text-sm font-medium text-surface-700">{title}</span>
         </div>
         <span className={`px-2 py-0.5 rounded-full text-sm font-bold border ${getScoreColor(score)}`}>
           {score}%
         </span>
       </div>
-      <div className="text-xs text-gray-500 font-mono bg-gray-100/80 px-2 py-1 rounded">
+      <div className="text-xs text-surface-500 font-mono bg-surface-100/80 px-2 py-1 rounded">
         {formula}
       </div>
       {details && (
-        <div className="mt-2 text-xs text-gray-600">
+        <div className="mt-2 text-xs text-surface-600">
           {details}
         </div>
       )}
@@ -225,9 +227,9 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
     <div className="space-y-4">
       {/* Header Summary */}
       <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-        <div className="text-3xl font-bold text-gray-900">{data.qualityScore}%</div>
-        <div className="text-sm text-gray-600">Overall Quality Score</div>
-        <div className="text-xs text-gray-500 mt-1">Based on {data.totalObservations} observations</div>
+        <div className="text-3xl font-bold text-surface-900">{data.qualityScore}%</div>
+        <div className="text-sm text-surface-600">Overall Quality Score</div>
+        <div className="text-xs text-surface-500 mt-1">Based on {data.totalObservations} observations</div>
       </div>
 
       {/* Metrics Grid */}
@@ -298,12 +300,12 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
 /**
  * Records Table View
  */
-const RecordsTable = ({ data, onViewDetails }) => {
+const RecordsTable = ({ data, onViewDetails, breadcrumb = [], title = '' }) => {
   const [copied, setCopied] = useState(false)
 
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-surface-500">
         No observations found
       </div>
     )
@@ -328,7 +330,9 @@ const RecordsTable = ({ data, onViewDetails }) => {
       return `${idx + 1}. [${analysis.confidence}%] ${record.location || 'Unknown'}\n   "${record.description || 'No description'}"`
     }).join('\n\n')
 
-    const header = `=== LOW CONFIDENCE OBSERVATIONS (${Math.min(50, data.length)} of ${data.length}) ===\nFormat: [Confidence%] Category\n"Description"\n\n`
+    // Use the actual title/breadcrumb instead of hardcoded label
+    const contextLabel = breadcrumb.length > 0 ? breadcrumb.join(' > ') : title
+    const header = `=== ${contextLabel.toUpperCase()} (${Math.min(50, data.length)} of ${data.length}) ===\nFormat: [Confidence%] Category\n"Description"\n\n`
 
     navigator.clipboard.writeText(header + exportData)
     setCopied(true)
@@ -354,22 +358,22 @@ const RecordsTable = ({ data, onViewDetails }) => {
       {data.map((record, idx) => (
         <div
           key={record.externalId || idx}
-          className="group p-4 rounded-xl bg-white/60 border border-gray-200/50 hover:bg-white/80 hover:border-gray-300/50 transition-all duration-200"
+          className="group p-4 rounded-xl bg-white/60 border border-surface-200/50 hover:bg-white/80 hover:border-surface-300/50 transition-all duration-200"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-surface-900">
                   {record.date}
                 </span>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(record.actionStatus)}`}>
                   {record.actionStatus || 'open'}
                 </span>
               </div>
-              <p className="text-sm text-gray-600 line-clamp-2">
+              <p className="text-sm text-surface-600 line-clamp-2">
                 {record.description || 'No description'}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+              <div className="flex items-center gap-4 mt-2 text-xs text-surface-500">
                 {record.contractor && (
                   <span className="flex items-center gap-1">
                     <Building2 size={12} />
@@ -611,13 +615,13 @@ const RecordDetailsModal = ({ record, onClose }) => {
       <div className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto animate-modal-in">
         <div className="bg-white/90 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200/50 bg-gradient-to-r from-gray-50/80 to-white/80">
+          <div className="px-6 py-4 border-b border-surface-200/50 bg-gradient-to-r from-surface-50/80 to-white/80">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
                   {record.type?.toUpperCase() || 'OBSERVATION'}
                 </span>
-                <span className="text-sm text-gray-500">{formatDate(record.date)}</span>
+                <span className="text-sm text-surface-500">{formatDate(record.date)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -630,7 +634,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl hover:bg-gray-100/80 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-2 rounded-xl hover:bg-surface-100/80 text-surface-400 hover:text-surface-600 transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -650,7 +654,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
               {/* Status with icon */}
               <div className="space-y-1">
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <div className="text-xs font-medium text-surface-500 uppercase tracking-wide">
                   Status
                 </div>
                 <div className="flex items-center gap-2">
@@ -664,10 +668,10 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
             {/* Description */}
             <div className="space-y-2">
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              <div className="text-xs font-medium text-surface-500 uppercase tracking-wide">
                 Description
               </div>
-              <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-200/50 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              <div className="p-4 bg-surface-50/80 rounded-xl border border-surface-200/50 text-sm text-surface-700 leading-relaxed whitespace-pre-wrap">
                 {record.description || 'No description provided.'}
               </div>
             </div>
@@ -675,20 +679,20 @@ const RecordDetailsModal = ({ record, onClose }) => {
             {/* Additional Info - excluding root cause */}
             {(record.bodyPart || record.correctiveAction) && (
               <div className="space-y-3">
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <div className="text-xs font-medium text-surface-500 uppercase tracking-wide">
                   Additional Information
                 </div>
                 <div className="space-y-2">
                   {record.bodyPart && (
                     <div className="flex gap-2 text-sm">
-                      <span className="font-medium text-gray-500">Body Part:</span>
-                      <span className="text-gray-900">{record.bodyPart}</span>
+                      <span className="font-medium text-surface-500">Body Part:</span>
+                      <span className="text-surface-900">{record.bodyPart}</span>
                     </div>
                   )}
                   {record.correctiveAction && (
                     <div className="flex gap-2 text-sm">
-                      <span className="font-medium text-gray-500">Corrective Action:</span>
-                      <span className="text-gray-900">{record.correctiveAction}</span>
+                      <span className="font-medium text-surface-500">Corrective Action:</span>
+                      <span className="text-surface-900">{record.correctiveAction}</span>
                     </div>
                   )}
                 </div>
@@ -703,15 +707,15 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
             {/* Reference ID with Copy Button */}
             {record.externalId && (
-              <div className="pt-4 border-t border-gray-200/50">
+              <div className="pt-4 border-t border-surface-200/50">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Reference: {record.externalId}</span>
+                  <span className="text-xs text-surface-400">Reference: {record.externalId}</span>
                   <button
                     onClick={handleCopyEventId}
                     className={`p-1.5 rounded transition-all ${
                       copied
                         ? 'text-green-600 bg-green-50'
-                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                        : 'text-surface-400 hover:text-blue-600 hover:bg-blue-50'
                     }`}
                     title={copied ? 'Copied!' : 'Copy Event ID'}
                   >
@@ -735,11 +739,11 @@ const RecordDetailsModal = ({ record, onClose }) => {
  */
 const DetailField = ({ icon: Icon, label, value }) => (
   <div className="space-y-1">
-    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
+    <div className="flex items-center gap-1.5 text-xs font-medium text-surface-500 uppercase tracking-wide">
       {Icon && <Icon size={12} />}
       {label}
     </div>
-    <div className="text-sm text-gray-900">{value || '-'}</div>
+    <div className="text-sm text-surface-900">{value || '-'}</div>
   </div>
 )
 
@@ -758,22 +762,44 @@ const DataQualitySection = ({ record }) => {
   const isValidated = record.hazardCategoryValidated
   const hasIssue = record.dataQualityIssue && !isValidated
 
-  // Compact status indicator
+  // Check if there's a meaningful description to validate against
+  const description = record.description || ''
+  const hasDescription = description.trim().length > 10 &&
+    !description.toLowerCase().includes('no description provided')
+
+  // Compact status indicator - adjusted logic for missing descriptions
   const getStatusBadge = () => {
     if (hasIssue) {
       return { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Review Needed' }
     }
-    if (!isValidated) {
-      return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
+    if (isValidated) {
+      return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
     }
-    return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
+    // No validation but also no issue - could be missing description
+    if (isFromExcel && !hasDescription) {
+      // Excel category trusted, no description to validate - show neutral status
+      return { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-50', label: 'From Source' }
+    }
+    // Has description but no keywords match
+    return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
   }
 
   const badge = getStatusBadge()
   const BadgeIcon = badge.icon
 
+  // Generate appropriate explanation text
+  const getExplanationText = () => {
+    if (isValidated) {
+      return `Description contains "${record.location}" keywords`
+    }
+    if (isFromExcel && !hasDescription) {
+      return 'Category from source data (no description to verify against)'
+    }
+    return `No "${record.location}" keywords found in description`
+  }
+
   return (
-    <div className="pt-3 border-t border-gray-200/50">
+    <div className="pt-3 border-t border-surface-200/50">
       {/* Compact Header - Click to expand */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -782,29 +808,24 @@ const DataQualitySection = ({ record }) => {
         <div className="flex items-center gap-2">
           <BadgeIcon size={12} className={badge.color} />
           <span className={`font-medium ${badge.color}`}>{badge.label}</span>
-          <span className="text-gray-400">•</span>
-          <span className="text-gray-500">
+          <span className="text-surface-400">•</span>
+          <span className="text-surface-500">
             {isFromExcel ? 'From Excel' : 'Auto-classified'}
             {record.originalHazardCategory && record.originalHazardCategory !== record.location &&
               ` (was "${record.originalHazardCategory}")`
             }
           </span>
         </div>
-        <ChevronRight size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-2 p-2 bg-gray-50/80 rounded-lg text-xs space-y-1">
+        <div className="mt-2 p-2 bg-surface-50/80 rounded-lg text-xs space-y-1">
           {record.dataQualityIssue && (
-            <p className="text-gray-600">{record.dataQualityIssue}</p>
+            <p className="text-surface-600">{record.dataQualityIssue}</p>
           )}
-          <p className="text-gray-500">
-            {isValidated
-              ? `Description contains "${record.location}" keywords`
-              : `No "${record.location}" keywords found in description`
-            }
-          </p>
+          <p className="text-surface-500">{getExplanationText()}</p>
         </div>
       )}
     </div>
@@ -844,7 +865,7 @@ const ContextAnalysisSection = ({ record }) => {
   const confidenceStyle = getConfidenceStyle(analysis.confidence)
 
   return (
-    <div className="pt-3 border-t border-gray-200/50">
+    <div className="pt-3 border-t border-surface-200/50">
       {/* Compact Header - Click to expand */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -853,21 +874,21 @@ const ContextAnalysisSection = ({ record }) => {
         <div className="flex items-center gap-2">
           <Brain size={12} className="text-blue-600" />
           <span className="font-medium text-blue-700">Classification Reasoning</span>
-          <span className="text-gray-400">•</span>
+          <span className="text-surface-400">•</span>
           <span className={`font-medium ${confidenceStyle.color}`}>
             {analysis.confidence}% {confidenceStyle.label}
           </span>
         </div>
-        <ChevronRight size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
       </button>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-2 p-3 bg-gray-50/80 rounded-lg text-xs space-y-3">
+        <div className="mt-2 p-3 bg-surface-50/80 rounded-lg text-xs space-y-3">
           {/* Reasoning text */}
           <div className="flex items-start gap-2">
             <HelpCircle size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-            <p className="text-gray-700 leading-relaxed">{analysis.reasoning}</p>
+            <p className="text-surface-700 leading-relaxed">{analysis.reasoning}</p>
           </div>
 
           {/* Analysis Grid */}
@@ -875,25 +896,25 @@ const ContextAnalysisSection = ({ record }) => {
             {analysis.hazardObject && (
               <div className="flex items-center gap-1.5">
                 <Target size={11} className="text-purple-500" />
-                <span className="text-gray-500">Object:</span>
-                <span className="text-gray-800 font-medium">{analysis.hazardObject}</span>
+                <span className="text-surface-500">Object:</span>
+                <span className="text-surface-800 font-medium">{analysis.hazardObject}</span>
               </div>
             )}
             {analysis.action && (
               <div className="flex items-center gap-1.5">
                 <Zap size={11} className="text-orange-500" />
-                <span className="text-gray-500">Action:</span>
-                <span className="text-gray-800 font-medium">{analysis.action}</span>
+                <span className="text-surface-500">Action:</span>
+                <span className="text-surface-800 font-medium">{analysis.action}</span>
               </div>
             )}
           </div>
 
           {/* Potential Outcome */}
           {analysis.potentialOutcome && (
-            <div className="flex items-center gap-1.5 pt-1 border-t border-gray-200/50">
+            <div className="flex items-center gap-1.5 pt-1 border-t border-surface-200/50">
               <AlertTriangle size={11} className="text-red-500" />
-              <span className="text-gray-500">Potential Outcome:</span>
-              <span className="text-gray-800 font-medium">{analysis.potentialOutcome}</span>
+              <span className="text-surface-500">Potential Outcome:</span>
+              <span className="text-surface-800 font-medium">{analysis.potentialOutcome}</span>
             </div>
           )}
 
@@ -917,12 +938,12 @@ const ContextAnalysisSection = ({ record }) => {
           )}
 
           {/* Confidence bar */}
-          <div className="pt-2 border-t border-gray-200/50">
-            <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+          <div className="pt-2 border-t border-surface-200/50">
+            <div className="flex items-center justify-between text-[10px] text-surface-500 mb-1">
               <span>Confidence Level</span>
               <span className={confidenceStyle.color}>{analysis.confidence}%</span>
             </div>
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   analysis.confidence >= 85 ? 'bg-green-500' :

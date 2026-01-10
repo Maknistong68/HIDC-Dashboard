@@ -18,7 +18,9 @@ import {
   Eye,
   Brain,
   Target,
-  Zap
+  Zap,
+  Type,
+  Copy
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import FilterBar from '../components/common/FilterBar'
@@ -54,10 +56,13 @@ import {
   extractHour,
   getImportClassificationMetrics,
   getMonthlyQualityBreakdown,
-  getMisclassificationAnalysis
+  getMisclassificationAnalysis,
+  getAutoClassificationSummary,
+  getBeforeAfterCategorizationMetrics,
+  getUnclassifiableRecords
 } from '../utils/dataQualityCalculations'
+import { detectMisspellings } from '../utils/spellChecker'
 import ReporterModal from '../components/common/ReporterModal'
-import { getConfidenceStats, analyzeObservation } from '../utils/contextClassifier'
 import DrillDownModal from '../components/common/DrillDownModal'
 import QuickImportModal from '../components/import/QuickImportModal'
 
@@ -67,7 +72,7 @@ const getStatusColor = (status) => {
     case 'good': return { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' }
     case 'warning': return { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300' }
     case 'poor': return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' }
-    default: return { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' }
+    default: return { bg: 'bg-surface-100', text: 'text-surface-700', border: 'border-surface-300' }
   }
 }
 
@@ -83,9 +88,9 @@ const getStatusIcon = (status) => {
 // Info Tooltip Component - Shows explanation on hover
 const InfoTooltip = ({ text }) => (
   <div className="group relative inline-flex items-center ml-1.5">
-    <Info size={14} className="text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
-    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
-      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-gray-900 transform rotate-45"></div>
+    <Info size={14} className="text-surface-400 cursor-help hover:text-surface-600 transition-colors" />
+    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
+      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
       <span className="relative">{text}</span>
     </div>
   </div>
@@ -123,15 +128,15 @@ const QualityScoreGauge = ({ score }) => {
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-2xl font-bold text-gray-900">{score}</span>
+          <span className="text-2xl font-bold text-surface-900">{score}</span>
         </div>
       </div>
       <div>
-        <div className="flex items-center text-sm font-medium text-gray-500">
+        <div className="flex items-center text-sm font-medium text-surface-500">
           Data Quality Score
           <InfoTooltip text="Overall rating (0-100) based on: Categorization (25%), Description quality (25%), Near miss rate (20%), Coverage (20%), and Reporter engagement (10%)." />
         </div>
-        <div className="text-xs text-gray-400">out of 100</div>
+        <div className="text-xs text-surface-400">out of 100</div>
       </div>
     </div>
   )
@@ -142,22 +147,22 @@ const KPIMiniCard = ({ title, value, unit, status, icon: Icon, subtitle, onClick
   const colors = getStatusColor(status)
   return (
     <div
-      className={`bg-white border ${colors.border} rounded-lg p-3 ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all' : ''}`}
+      className={`bg-white border ${colors.border} rounded-lg p-3 shadow-soft ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all' : ''}`}
       onClick={onClick}
       title={onClick ? 'Click to view details' : undefined}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center">
-          <span className="text-xs font-medium text-gray-500 uppercase">{title}</span>
+          <span className="text-xs font-medium text-surface-500 uppercase">{title}</span>
           {info && <InfoTooltip text={info} />}
         </div>
-        <Icon size={14} className="text-gray-400" />
+        <Icon size={14} className="text-surface-400" />
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xl font-bold text-gray-900">{value}{unit}</span>
+        <span className="text-xl font-bold text-surface-900">{value}{unit}</span>
         {getStatusIcon(status)}
       </div>
-      {subtitle && <div className="text-xs text-gray-400 mt-1">{subtitle}</div>}
+      {subtitle && <div className="text-xs text-surface-400 mt-1">{subtitle}</div>}
     </div>
   )
 }
@@ -169,13 +174,17 @@ const DataQuality = () => {
   const [contractorSort, setContractorSort] = useState('totalObs')
   const [selectedReporter, setSelectedReporter] = useState(null)
   const [showDuplicates, setShowDuplicates] = useState(false)
-  const [showOtherHazards, setShowOtherHazards] = useState(false)
-  const [flaggedTab, setFlaggedTab] = useState('short') // 'short' | 'duplicate' | 'other' | 'vague'
   const [showImportModal, setShowImportModal] = useState(false)
   const [showClassificationReview, setShowClassificationReview] = useState(false)
   const [classificationTab, setClassificationTab] = useState('summary') // 'summary' | 'detailed'
   const [showMisclassification, setShowMisclassification] = useState(false)
   const [misclassificationTab, setMisclassificationTab] = useState('detailed') // 'detailed' | 'byCurrent' | 'bySuggested'
+  const [showUnclassifiable, setShowUnclassifiable] = useState(false)
+  const [showSpellingIssues, setShowSpellingIssues] = useState(false)
+
+  // Spell checker is always ready (hybrid approach - no async loading)
+  const spellCheckerReady = true
+  const spellCheckerLoading = false
 
   // Drill-down state
   const [drillDown, setDrillDown] = useState({
@@ -314,23 +323,18 @@ const DataQuality = () => {
     const trend = getQualityTrend(filteredIncidents, 12)
     const alerts = [] // Coverage alerts removed - charts moved to Dashboard
     const duplicates = getDuplicateDescriptions(filteredIncidents)
+    // Spelling issues - instant hybrid spell checker (no loading required)
+    const spellingIssues = detectMisspellings(filteredIncidents)
     const otherHazards = getOtherHazardAnalysis(filteredIncidents)
 
-    // Classification Confidence Stats
-    const confidenceStats = getConfidenceStats(filteredIncidents)
+    // Auto-Classification Summary (shows what WAS auto-classified)
+    const autoClassification = getAutoClassificationSummary(filteredIncidents)
 
-    // Low Confidence Records (for Records Needing Attention tab)
-    const lowConfidenceRecords = filteredIncidents.filter(inc => {
-      const analysis = analyzeObservation(inc.description, inc.originalHazardCategory || inc.location)
-      return analysis.confidence < 65
-    }).map(inc => {
-      const analysis = analyzeObservation(inc.description, inc.originalHazardCategory || inc.location)
-      return {
-        ...inc,
-        confidence: analysis.confidence,
-        reasoning: analysis.reasoning
-      }
-    })
+    // Before/After Categorization Comparison
+    const categorizationComparison = getBeforeAfterCategorizationMetrics(filteredIncidents)
+
+    // Unclassifiable Records (records needing manual review)
+    const unclassifiableRecords = getUnclassifiableRecords(filteredIncidents)
 
     return {
       quality,
@@ -343,9 +347,11 @@ const DataQuality = () => {
       trend,
       alerts,
       duplicates,
+      spellingIssues,
       otherHazards,
-      confidenceStats,
-      lowConfidenceRecords
+      autoClassification,
+      categorizationComparison,
+      unclassifiableRecords
     }
   }, [filteredIncidents])
 
@@ -540,6 +546,64 @@ const DataQuality = () => {
     )
   }
 
+  // Spelling drill-down - show single incident with misspellings
+  const handleSpellingDrillDown = (record) => {
+    openDrillDown(
+      `Spelling Issue - ${record.misspellings.length} misspelling${record.misspellings.length > 1 ? 's' : ''}`,
+      [record.incident],
+      ['Data Quality', 'Spelling'],
+      { misspellings: record.misspellings }
+    )
+  }
+
+  // Copy spelling report to clipboard
+  const copySpellingReport = () => {
+    if (!qualityData?.spellingIssues?.records) return
+
+    // Group misspellings by word
+    const misspellingCounts = {}
+    qualityData.spellingIssues.records.forEach(record => {
+      record.misspellings.forEach(m => {
+        const key = `${m.misspelled} → ${m.correction}`
+        misspellingCounts[key] = (misspellingCounts[key] || 0) + 1
+      })
+    })
+
+    // Sort by frequency
+    const sorted = Object.entries(misspellingCounts)
+      .sort((a, b) => b[1] - a[1])
+
+    // Generate report
+    const lines = [
+      '## SPELLING ISSUES REPORT',
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Records with Issues: ${qualityData.spellingIssues.count}`,
+      `Percentage of Total: ${qualityData.spellingIssues.percentage}%`,
+      '',
+      '### Top Misspellings by Frequency',
+      '',
+      '| Misspelling | Correction | Count |',
+      '|-------------|------------|-------|',
+      ...sorted.slice(0, 50).map(([key, count]) => {
+        const [misspelled, correction] = key.split(' → ')
+        return `| ${misspelled} | ${correction} | ${count} |`
+      }),
+      '',
+      '---',
+      'Use this report to:',
+      '1. Add false positives to SPELL_CHECK_WHITELIST in constants.js',
+      '2. Add missing misspellings to COMMON_MISSPELLINGS in spellChecker.js',
+    ]
+
+    const report = lines.join('\n')
+    navigator.clipboard.writeText(report).then(() => {
+      alert('Spelling report copied to clipboard!')
+    }).catch(err => {
+      console.error('Failed to copy:', err)
+      alert('Failed to copy report')
+    })
+  }
+
   // Other hazard drill-down - show single incident details
   const handleOtherHazardDrillDown = (suggestion) => {
     // Single suggestion = single incident
@@ -625,6 +689,33 @@ const DataQuality = () => {
     )
   }
 
+  // Unclassifiable records drill-down - show records by reason
+  const handleUnclassifiableDrillDown = (reason) => {
+    if (!qualityData?.unclassifiableRecords?.byReason?.[reason]) return
+
+    const reasonData = qualityData.unclassifiableRecords.byReason[reason]
+    const records = reasonData.records.map(r => r.incident).filter(Boolean)
+
+    const reasonLabels = {
+      noDescription: 'No Description',
+      tooShort: 'Too Short',
+      unrecognizedCategory: 'Unrecognized Category',
+      lowConfidence: 'Low Confidence'
+    }
+
+    openDrillDown(
+      `Unclassifiable - ${reasonLabels[reason]}`,
+      records,
+      ['Data Quality', 'Unclassifiable', reasonLabels[reason]],
+      {
+        reason,
+        reasonLabel: reasonLabels[reason],
+        reasonDescription: reasonData.description,
+        count: reasonData.count
+      }
+    )
+  }
+
   // Trend chart drill-down - show monthly quality breakdown
   const handleTrendDrillDown = (monthData) => {
     if (!monthData || !monthData.monthKey) return
@@ -657,98 +748,6 @@ const DataQuality = () => {
     }
   }
 
-  // Classification Confidence drill-down - show records by confidence level
-  // Calculates confidence on-the-fly for records that don't have it stored
-  const handleConfidenceDrillDown = (level) => {
-    let levelLabel = ''
-    let minConfidence = 0
-    let maxConfidence = 100
-
-    if (level === 'high') {
-      minConfidence = 85
-      maxConfidence = 100
-      levelLabel = 'High Confidence (85%+)'
-    } else if (level === 'medium') {
-      minConfidence = 65
-      maxConfidence = 84
-      levelLabel = 'Medium Confidence (65-84%)'
-    } else {
-      minConfidence = 0
-      maxConfidence = 64
-      levelLabel = 'Low Confidence (<65%)'
-    }
-
-    // Filter records by calculating confidence on-the-fly
-    const records = filteredIncidents.filter(inc => {
-      // Use stored confidence or calculate it
-      let confidence = inc.contextAnalysis?.confidence
-      if (confidence === undefined || confidence === null) {
-        const analysis = analyzeObservation(inc.description, inc.originalHazardCategory || inc.location)
-        confidence = analysis.confidence
-      }
-      return confidence >= minConfidence && confidence <= maxConfidence
-    })
-
-    openDrillDown(
-      `${levelLabel} - ${records.length} Records`,
-      records,
-      ['Data Quality', 'Classification Confidence', levelLabel],
-      { confidenceLevel: level }
-    )
-  }
-
-  // Export flagged records based on active tab
-  const exportFlaggedCSV = (type) => {
-    if (!qualityData) return
-
-    let csv = ''
-    let filename = ''
-
-    if (type === 'short') {
-      const records = qualityData.description.flaggedRecords
-      csv = [
-        'Date,Reporter,Issue,Word Count,Description',
-        ...records.map(r =>
-          `"${r.date}","${r.reporter}","${r.issue}",${r.wordCount},"${(r.description || '').replace(/"/g, '""')}"`
-        )
-      ].join('\n')
-      filename = 'flagged_short_descriptions.csv'
-    } else if (type === 'duplicate') {
-      const records = duplicates.duplicateGroups.flatMap(g =>
-        g.incidents.map(inc => ({
-          date: inc.date,
-          reporter: inc.reportedBy || 'Unknown',
-          description: inc.description,
-          duplicateCount: g.count
-        }))
-      )
-      csv = [
-        'Date,Reporter,Duplicate Count,Description',
-        ...records.map(r =>
-          `"${r.date}","${r.reporter}",${r.duplicateCount},"${(r.description || '').replace(/"/g, '""')}"`
-        )
-      ].join('\n')
-      filename = 'flagged_duplicates.csv'
-    } else if (type === 'other') {
-      const records = otherHazards.suggestions
-      csv = [
-        'Date,Reporter,Current Hazard,Suggested Hazard,Confidence,Keywords,Description',
-        ...records.map(r =>
-          `"${r.date}","${r.reporter}","${r.currentHazard}","${r.suggestedHazard}","${r.confidence}","${r.keywords.join('; ')}","${(r.description || '').replace(/"/g, '""')}"`
-        )
-      ].join('\n')
-      filename = 'flagged_other_hazards.csv'
-    }
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -759,7 +758,7 @@ const DataQuality = () => {
 
   if (incidents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+      <div className="flex flex-col items-center justify-center h-64 text-surface-500">
         <BarChart3 size={48} className="mb-4 opacity-50" />
         <p>No data available. Import observations to see data quality metrics.</p>
       </div>
@@ -787,7 +786,7 @@ const DataQuality = () => {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               thisMonthActive
                 ? 'bg-blue-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
             }`}
           >
             <Calendar size={16} />
@@ -797,7 +796,7 @@ const DataQuality = () => {
           {/* Import Button */}
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
           >
             <Upload size={16} />
             Import Data
@@ -810,7 +809,7 @@ const DataQuality = () => {
           onClose={() => setShowImportModal(false)}
         />
 
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+        <div className="flex flex-col items-center justify-center h-64 text-surface-500">
           <BarChart3 size={48} className="mb-4 opacity-50" />
           <p>No observations match the current filters.</p>
         </div>
@@ -818,7 +817,7 @@ const DataQuality = () => {
     )
   }
 
-  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, otherHazards, confidenceStats, lowConfidenceRecords } = qualityData
+  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, spellingIssues, otherHazards, autoClassification, categorizationComparison, unclassifiableRecords } = qualityData
 
   // Pie chart colors
   const COLORS = ['#22c55e', '#94a3b8', '#f97316']
@@ -842,7 +841,7 @@ const DataQuality = () => {
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             thisMonthActive
               ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
           }`}
         >
           <Calendar size={16} />
@@ -852,7 +851,7 @@ const DataQuality = () => {
         {/* Import Button */}
         <button
           onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium whitespace-nowrap"
+          className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
         >
           <Upload size={16} />
           Import Data
@@ -866,18 +865,18 @@ const DataQuality = () => {
       />
 
       {/* SECTION 1: Quality Score Banner */}
-      <div className="bg-white border border-gray-300 rounded-lg p-4">
+      <div className="bg-white border border-surface-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
             <BarChart3 size={16} />
             Data Quality Overview
           </h2>
-          <span className="text-xs text-gray-400">{filteredIncidents.length} of {incidents.length} observations</span>
+          <span className="text-xs text-surface-400">{filteredIncidents.length} of {incidents.length} observations</span>
         </div>
 
         <div className="grid grid-cols-6 gap-4">
           {/* Quality Score Gauge */}
-          <div className="col-span-1 flex items-center justify-center border-r border-gray-200">
+          <div className="col-span-1 flex items-center justify-center border-r border-surface-200">
             <QualityScoreGauge score={quality.score} />
           </div>
 
@@ -960,13 +959,13 @@ const DataQuality = () => {
 
       {/* SECTION 1B: Quality Trend Chart */}
       {trend.length > 0 && (
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
+          <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
             <TrendingUp size={14} />
-            Data Quality Trend (Last 12 Months)
-            <InfoTooltip text="Monthly trend of key quality metrics. Data Integrity = 100 - (Duplicate Rate × 5). Dashed lines show targets: 75% Quality Score, 80% Coverage." />
+            Quality Score Trend (Last 12 Months)
+            <InfoTooltip text="Monthly trend of overall data quality score. Click on any point to see that month's observations." />
           </h3>
-          <div className="h-48">
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} onClick={(data) => data?.activePayload?.[0]?.payload && handleTrendDrillDown(data.activePayload[0].payload)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -974,13 +973,10 @@ const DataQuality = () => {
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{ fontSize: 12 }}
-                  formatter={(value, name) => [`${value}%`, name]}
+                  formatter={(value) => [`${value}%`, 'Quality Score']}
                   labelFormatter={(label) => `${label} (click for details)`}
                 />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {/* Target threshold lines */}
-                <ReferenceLine y={75} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} label={{ value: '75%', position: 'right', fontSize: 10, fill: '#3b82f6' }} />
-                <ReferenceLine y={80} stroke="#f97316" strokeDasharray="5 5" strokeWidth={1} label={{ value: '80%', position: 'left', fontSize: 10, fill: '#f97316' }} />
+                <ReferenceLine y={75} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} label={{ value: '75% target', position: 'right', fontSize: 10, fill: '#3b82f6' }} />
                 <Line
                   type="monotone"
                   dataKey="qualityScore"
@@ -990,176 +986,18 @@ const DataQuality = () => {
                   dot={{ r: 4, style: { cursor: 'pointer' } }}
                   activeDot={{ r: 6, style: { cursor: 'pointer' } }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="categorizationRate"
-                  name="Categorization"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={{ r: 3, style: { cursor: 'pointer' } }}
-                  activeDot={{ r: 5, style: { cursor: 'pointer' } }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="coverageScore"
-                  name="Coverage"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  dot={{ r: 3, style: { cursor: 'pointer' } }}
-                  activeDot={{ r: 5, style: { cursor: 'pointer' } }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="dataIntegrity"
-                  name="Data Integrity"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  dot={{ r: 3, style: { cursor: 'pointer' } }}
-                  activeDot={{ r: 5, style: { cursor: 'pointer' } }}
-                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* SECTION 1B2: Classification Confidence */}
-      {confidenceStats && confidenceStats.total > 0 && (
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Brain size={14} />
-            Classification Confidence
-            <InfoTooltip text="Shows how confidently observations are classified. High confidence (85%+) means clear hazard patterns. Low confidence means ambiguous descriptions needing review." />
-          </h3>
-
-          <div className="grid grid-cols-5 gap-4">
-            {/* Average Confidence Gauge */}
-            <div className="flex items-center gap-3">
-              <div className="relative w-16 h-16">
-                <svg className="w-16 h-16 transform -rotate-90">
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="#e5e7eb" strokeWidth="6" />
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="26"
-                    fill="none"
-                    stroke={confidenceStats.avgConfidence >= 85 ? '#22c55e' : confidenceStats.avgConfidence >= 65 ? '#f59e0b' : '#ef4444'}
-                    strokeWidth="6"
-                    strokeDasharray={`${(confidenceStats.avgConfidence / 100) * 163.4} 163.4`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-lg font-bold text-gray-900">{confidenceStats.avgConfidence}%</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Avg Confidence</div>
-                <div className="text-xs text-gray-400">{confidenceStats.total} observations</div>
-              </div>
-            </div>
-
-            {/* High Confidence */}
-            <div
-              className="bg-green-50 border border-green-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-              onClick={() => handleConfidenceDrillDown('high')}
-              title="Click to view high confidence records"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle size={14} className="text-green-600" />
-                <span className="text-xs font-medium text-green-700">High Confidence</span>
-                <Eye size={12} className="text-green-400 ml-auto" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-green-700">{confidenceStats.high}</span>
-                <span className="text-xs text-green-600">{confidenceStats.highPercentage}%</span>
-              </div>
-              <div className="text-xs text-green-600 mt-1">Clear hazard patterns (85%+)</div>
-            </div>
-
-            {/* Medium Confidence */}
-            <div
-              className="bg-amber-50 border border-amber-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-              onClick={() => handleConfidenceDrillDown('medium')}
-              title="Click to view medium confidence records"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle size={14} className="text-amber-600" />
-                <span className="text-xs font-medium text-amber-700">Medium Confidence</span>
-                <Eye size={12} className="text-amber-400 ml-auto" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-amber-700">{confidenceStats.medium}</span>
-                <span className="text-xs text-amber-600">{confidenceStats.mediumPercentage}%</span>
-              </div>
-              <div className="text-xs text-amber-600 mt-1">Partial match (65-84%)</div>
-            </div>
-
-            {/* Low Confidence */}
-            <div
-              className="bg-red-50 border border-red-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-              onClick={() => handleConfidenceDrillDown('low')}
-              title="Click to view low confidence records"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <XCircle size={14} className="text-red-600" />
-                <span className="text-xs font-medium text-red-700">Low Confidence</span>
-                <Eye size={12} className="text-red-400 ml-auto" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-red-700">{confidenceStats.low}</span>
-                <span className="text-xs text-red-600">{confidenceStats.lowPercentage}%</span>
-              </div>
-              <div className="text-xs text-red-600 mt-1">Needs review (&lt;65%)</div>
-            </div>
-
-            {/* Confidence Bar */}
-            <div className="flex flex-col justify-center">
-              <div className="text-xs font-medium text-gray-500 mb-2">Distribution</div>
-              <div className="h-4 bg-gray-200 rounded-full overflow-hidden flex">
-                <div
-                  className="h-full bg-green-500"
-                  style={{ width: `${confidenceStats.highPercentage}%` }}
-                  title={`High: ${confidenceStats.highPercentage}%`}
-                />
-                <div
-                  className="h-full bg-amber-500"
-                  style={{ width: `${confidenceStats.mediumPercentage}%` }}
-                  title={`Medium: ${confidenceStats.mediumPercentage}%`}
-                />
-                <div
-                  className="h-full bg-red-500"
-                  style={{ width: `${confidenceStats.lowPercentage}%` }}
-                  title={`Low: ${confidenceStats.lowPercentage}%`}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                <span>High</span>
-                <span>Medium</span>
-                <span>Low</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Low Confidence Alert */}
-          {confidenceStats.lowPercentage > 20 && (
-            <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertTriangle size={14} className="text-red-600 flex-shrink-0" />
-              <p className="text-xs text-red-700">
-                <span className="font-medium">{confidenceStats.lowPercentage}%</span> of observations have low classification confidence.
-                Consider reviewing these records for potential misclassification or adding more descriptive text.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* SECTION 1C: Data Quality Issues */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* SECTION 1C: Duplicate Detection & Spelling Issues */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Duplicate Detection */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <FileText size={14} />
               Duplicate Descriptions
               <InfoTooltip text="Identifies copy-paste descriptions indicating low-quality data entry. Same description used multiple times suggests reporters aren't providing unique observations." />
@@ -1178,18 +1016,18 @@ const DataQuality = () => {
             <div className={`text-2xl font-bold ${duplicates.totalGroups > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
               {duplicates.totalGroups}
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-surface-600">
               <div>duplicate groups found</div>
-              <div className="text-xs text-gray-400">{duplicates.totalDuplicates} total duplicate entries ({duplicates.duplicateRate}%)</div>
+              <div className="text-xs text-surface-400">{duplicates.totalDuplicates} total duplicate entries ({duplicates.duplicateRate}%)</div>
             </div>
           </div>
 
           {showDuplicates && duplicates.duplicateGroups.length > 0 && (
-            <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-gray-200 pt-3">
+            <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-surface-200 pt-3">
               {duplicates.duplicateGroups.slice(0, 10).map((group, idx) => (
                 <div
                   key={idx}
-                  className="bg-gray-50 rounded p-2 text-xs cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="bg-surface-50 rounded p-2 text-xs cursor-pointer hover:bg-surface-100 transition-colors"
                   onClick={() => handleDuplicateDrillDown(group)}
                   title="Click to view all records with this description"
                 >
@@ -1198,13 +1036,13 @@ const DataQuality = () => {
                       Used {group.count}x {group.isSameReporter ? '(same reporter)' : `(${group.reporters.length} reporters)`}
                     </span>
                   </div>
-                  <p className="text-gray-600 italic truncate" title={group.description}>
+                  <p className="text-surface-600 italic truncate" title={group.description}>
                     "{group.description}"
                   </p>
                 </div>
               ))}
               {duplicates.duplicateGroups.length > 10 && (
-                <div className="text-xs text-gray-400 text-center">
+                <div className="text-xs text-surface-400 text-center">
                   +{duplicates.duplicateGroups.length - 10} more groups
                 </div>
               )}
@@ -1219,91 +1057,278 @@ const DataQuality = () => {
           )}
         </div>
 
-        {/* "Other" Hazard Reclassification */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
+        {/* Spelling Issues */}
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-              <AlertTriangle size={14} />
-              "Other" Hazard Opportunities
-              <InfoTooltip text="Observations tagged as 'Other' that could be properly classified into one of the 13 major hazards based on keywords in their description." />
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
+              <Type size={14} className="text-orange-500" />
+              Spelling Issues
+              <InfoTooltip text="Uses Typo.js with full English dictionary to detect misspellings. Construction/safety technical terms are whitelisted to avoid false positives." />
             </h3>
-            {otherHazards.reclassifiable > 0 && (
-              <button
-                onClick={() => setShowOtherHazards(!showOtherHazards)}
-                className="text-xs text-blue-600 hover:text-blue-800"
-              >
-                {showOtherHazards ? 'Hide' : 'View'} Suggestions
-              </button>
+            {spellCheckerReady && spellingIssues.count > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copySpellingReport}
+                  className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800"
+                  title="Copy spelling report to clipboard"
+                >
+                  <Copy size={12} />
+                  Copy Report
+                </button>
+                <button
+                  onClick={() => setShowSpellingIssues(!showSpellingIssues)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {showSpellingIssues ? 'Hide' : 'View'} Details
+                </button>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center gap-4 mb-3">
-            <div className={`text-2xl font-bold ${otherHazards.reclassifiable > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-              {otherHazards.reclassifiable}
+          {/* Loading State */}
+          {spellCheckerLoading && (
+            <div className="flex items-center gap-2 text-blue-600 text-sm">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              Loading spell checker dictionary...
             </div>
-            <div className="text-sm text-gray-600">
-              <div>of {otherHazards.totalOther} "Other" could be reclassified</div>
-              <div className="text-xs text-gray-400">Based on description keyword analysis</div>
+          )}
+
+          {/* Ready State */}
+          {spellCheckerReady && (
+            <>
+              <div className="flex items-center gap-4 mb-3">
+                <div className={`text-2xl font-bold ${spellingIssues.count > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {spellingIssues.count}
+                </div>
+                <div className="text-sm text-surface-600">
+                  <div>records with misspellings</div>
+                  <div className="text-xs text-surface-400">{spellingIssues.percentage}% of total records</div>
+                </div>
+              </div>
+
+              {showSpellingIssues && spellingIssues.records.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-surface-200 pt-3">
+                  {spellingIssues.records.slice(0, 10).map((record, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-surface-50 rounded p-2 text-xs cursor-pointer hover:bg-surface-100 transition-colors"
+                      onClick={() => handleSpellingDrillDown(record)}
+                      title="Click to view record details"
+                    >
+                      <div className="flex justify-between mb-1">
+                        <span className="font-medium text-orange-600">
+                          {record.misspellings.map(m => `"${m.misspelled}" → "${m.correction}"`).join(', ')}
+                        </span>
+                      </div>
+                      <p className="text-surface-600 italic truncate" title={record.description}>
+                        "{record.description}"
+                      </p>
+                    </div>
+                  ))}
+                  {spellingIssues.records.length > 10 && (
+                    <div className="text-xs text-surface-400 text-center">
+                      +{spellingIssues.records.length - 10} more records
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {spellingIssues.count === 0 && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle size={16} />
+                  No spelling issues detected
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Error State - spell checker failed to load */}
+          {!spellCheckerLoading && !spellCheckerReady && (
+            <div className="flex items-center gap-2 text-surface-400 text-sm">
+              <AlertTriangle size={16} />
+              Spell checker unavailable
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SECTION: Unclassifiable Records - Records Needing Manual Review */}
+      {qualityData.unclassifiableRecords && qualityData.unclassifiableRecords.total > 0 && (
+        <div className="bg-white border border-amber-300 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
+              <AlertTriangle size={14} className="text-amber-600" />
+              Unclassifiable Records
+              <InfoTooltip text="Records that couldn't be properly classified due to missing/short descriptions, unrecognized categories, or low classification confidence. These require manual review." />
+              <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
+                {qualityData.unclassifiableRecords.total}
+              </span>
+            </h3>
+            <button
+              onClick={() => setShowUnclassifiable(!showUnclassifiable)}
+              className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800"
+            >
+              {showUnclassifiable ? 'Hide' : 'View'} Details
+              {showUnclassifiable ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-5 gap-2 mb-3">
+            <div className="bg-amber-50 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-amber-700">{qualityData.unclassifiableRecords.total}</div>
+              <div className="text-xs text-amber-600">Total</div>
+            </div>
+            <div
+              className="bg-surface-50 rounded-lg p-2 text-center cursor-pointer hover:bg-surface-100 transition-colors"
+              onClick={() => handleUnclassifiableDrillDown('noDescription')}
+              title="Click to view records"
+            >
+              <div className="text-lg font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.noDescription.count}</div>
+              <div className="text-xs text-surface-600">No Description</div>
+            </div>
+            <div
+              className="bg-orange-50 rounded-lg p-2 text-center cursor-pointer hover:bg-orange-100 transition-colors"
+              onClick={() => handleUnclassifiableDrillDown('tooShort')}
+              title="Click to view records"
+            >
+              <div className="text-lg font-bold text-orange-700">{qualityData.unclassifiableRecords.byReason.tooShort.count}</div>
+              <div className="text-xs text-orange-600">Too Short</div>
+            </div>
+            <div
+              className="bg-purple-50 rounded-lg p-2 text-center cursor-pointer hover:bg-purple-100 transition-colors"
+              onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
+              title="Click to view records"
+            >
+              <div className="text-lg font-bold text-purple-700">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count}</div>
+              <div className="text-xs text-purple-600">Unrecognized</div>
+            </div>
+            <div
+              className="bg-red-50 rounded-lg p-2 text-center cursor-pointer hover:bg-red-100 transition-colors"
+              onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
+              title="Click to view records"
+            >
+              <div className="text-lg font-bold text-red-700">{qualityData.unclassifiableRecords.byReason.lowConfidence.count}</div>
+              <div className="text-xs text-red-600">Low Confidence</div>
             </div>
           </div>
 
-          {showOtherHazards && otherHazards.suggestions.length > 0 && (
-            <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-gray-200 pt-3">
-              {otherHazards.suggestions.slice(0, 10).map((suggestion, idx) => (
+          {/* Expanded Details */}
+          {showUnclassifiable && (
+            <div className="space-y-3 mt-3 border-t border-surface-200 pt-3">
+              {/* No Description */}
+              {qualityData.unclassifiableRecords.byReason.noDescription.count > 0 && (
                 <div
-                  key={idx}
-                  className="bg-gray-50 rounded p-2 text-xs cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleOtherHazardDrillDown(suggestion)}
-                  title="Click to view this record"
+                  className="bg-surface-50 rounded-lg p-3 cursor-pointer hover:bg-surface-100 transition-colors"
+                  onClick={() => handleUnclassifiableDrillDown('noDescription')}
                 >
-                  <div className="flex justify-between items-center mb-1">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 ${
-                        suggestion.confidence === 'high' ? 'bg-green-100 text-green-700' :
-                        suggestion.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOtherHazardCategoryDrillDown(suggestion.suggestedHazard)
-                      }}
-                      title={`Click to view all ${suggestion.suggestedHazard} suggestions`}
-                    >
-                      {suggestion.suggestedHazard}
-                    </span>
-                    <span className="text-gray-400">{suggestion.confidence}</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-surface-500"></div>
+                      <span className="text-sm font-medium text-surface-700">No Description</span>
+                    </div>
+                    <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.noDescription.count}</span>
                   </div>
-                  <p className="text-gray-600 truncate" title={suggestion.description}>
-                    {suggestion.description}
-                  </p>
-                  <div className="text-gray-400 mt-1">
-                    Keywords: {suggestion.keywords.join(', ')}
+                  <p className="text-xs text-surface-500">Records with empty or blank description field - cannot verify classification</p>
+                  <div className="mt-2 h-1.5 bg-surface-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-surface-500 rounded-full"
+                      style={{ width: `${qualityData.unclassifiableRecords.byReason.noDescription.percentage}%` }}
+                    />
                   </div>
+                  <div className="text-right text-xs text-surface-400 mt-1">{qualityData.unclassifiableRecords.byReason.noDescription.percentage}% of records</div>
                 </div>
-              ))}
-              {otherHazards.suggestions.length > 10 && (
-                <div className="text-xs text-gray-400 text-center">
-                  +{otherHazards.suggestions.length - 10} more suggestions
+              )}
+
+              {/* Too Short */}
+              {qualityData.unclassifiableRecords.byReason.tooShort.count > 0 && (
+                <div
+                  className="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition-colors"
+                  onClick={() => handleUnclassifiableDrillDown('tooShort')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                      <span className="text-sm font-medium text-orange-700">Too Short</span>
+                    </div>
+                    <span className="text-sm font-bold text-orange-700">{qualityData.unclassifiableRecords.byReason.tooShort.count}</span>
+                  </div>
+                  <p className="text-xs text-orange-600">Descriptions under 10 characters - not enough context for reliable classification</p>
+                  <div className="mt-2 h-1.5 bg-orange-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-orange-500 rounded-full"
+                      style={{ width: `${qualityData.unclassifiableRecords.byReason.tooShort.percentage}%` }}
+                    />
+                  </div>
+                  <div className="text-right text-xs text-orange-400 mt-1">{qualityData.unclassifiableRecords.byReason.tooShort.percentage}% of records</div>
+                </div>
+              )}
+
+              {/* Unrecognized Category */}
+              {qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count > 0 && (
+                <div
+                  className="bg-purple-50 rounded-lg p-3 cursor-pointer hover:bg-purple-100 transition-colors"
+                  onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="text-sm font-medium text-purple-700">Unrecognized Category</span>
+                    </div>
+                    <span className="text-sm font-bold text-purple-700">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count}</span>
+                  </div>
+                  <p className="text-xs text-purple-600">Original Excel category not in approved list - may be misspelled or custom</p>
+                  <div className="mt-2 h-1.5 bg-purple-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-purple-500 rounded-full"
+                      style={{ width: `${qualityData.unclassifiableRecords.byReason.unrecognizedCategory.percentage}%` }}
+                    />
+                  </div>
+                  <div className="text-right text-xs text-purple-400 mt-1">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.percentage}% of records</div>
+                </div>
+              )}
+
+              {/* Low Confidence */}
+              {qualityData.unclassifiableRecords.byReason.lowConfidence.count > 0 && (
+                <div
+                  className="bg-red-50 rounded-lg p-3 cursor-pointer hover:bg-red-100 transition-colors"
+                  onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <span className="text-sm font-medium text-red-700">Low Confidence</span>
+                    </div>
+                    <span className="text-sm font-bold text-red-700">{qualityData.unclassifiableRecords.byReason.lowConfidence.count}</span>
+                  </div>
+                  <p className="text-xs text-red-600">Auto-classified with less than 65% confidence - classification may be inaccurate</p>
+                  <div className="mt-2 h-1.5 bg-red-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-red-500 rounded-full"
+                      style={{ width: `${qualityData.unclassifiableRecords.byReason.lowConfidence.percentage}%` }}
+                    />
+                  </div>
+                  <div className="text-right text-xs text-red-400 mt-1">{qualityData.unclassifiableRecords.byReason.lowConfidence.percentage}% of records</div>
                 </div>
               )}
             </div>
           )}
 
-          {otherHazards.totalOther === 0 && (
-            <div className="flex items-center gap-2 text-green-600 text-sm">
-              <CheckCircle size={16} />
-              No "Other" hazards to review
-            </div>
-          )}
+          {/* Summary Message */}
+          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-700">
+              {qualityData.unclassifiableRecords.summary.message}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* SECTION: Potential Misclassifications */}
       {misclassificationData && misclassificationData.totalMisclassified > 0 && (
         <div className="bg-white border border-orange-300 rounded-lg p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <AlertTriangle size={14} className="text-orange-600" />
               Potential Misclassifications
               <InfoTooltip text="Records where the current hazard category doesn't match what the description suggests. These may need manual review and correction." />
@@ -1324,23 +1349,23 @@ const DataQuality = () => {
           <div className="grid grid-cols-5 gap-3 mb-3">
             <div className="bg-orange-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-orange-700">{misclassificationData.totalMisclassified}</div>
-              <div className="text-xs text-gray-500">Total Found</div>
+              <div className="text-xs text-surface-500">Total Found</div>
             </div>
             <div className="bg-orange-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-orange-700">{misclassificationData.percentageOfTotal}%</div>
-              <div className="text-xs text-gray-500">% of Records</div>
+              <div className="text-xs text-surface-500">% of Records</div>
             </div>
             <div className="bg-red-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-red-700">{misclassificationData.summary.majorHazardMismatches}</div>
-              <div className="text-xs text-gray-500">Major Hazard</div>
+              <div className="text-xs text-surface-500">Major Hazard</div>
             </div>
             <div className="bg-green-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-green-700">{misclassificationData.summary.highConfidence}</div>
-              <div className="text-xs text-gray-500">High Confidence</div>
+              <div className="text-xs text-surface-500">High Confidence</div>
             </div>
             <div className="bg-yellow-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-yellow-700">{misclassificationData.summary.mediumConfidence}</div>
-              <div className="text-xs text-gray-500">Medium Confidence</div>
+              <div className="text-xs text-surface-500">Medium Confidence</div>
             </div>
           </div>
 
@@ -1348,13 +1373,13 @@ const DataQuality = () => {
           {showMisclassification && (
             <>
               {/* Tabs */}
-              <div className="flex gap-1 mb-3 border-b border-gray-200">
+              <div className="flex gap-1 mb-3 border-b border-surface-200">
                 <button
                   onClick={() => setMisclassificationTab('detailed')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
                     misclassificationTab === 'detailed'
                       ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   All Records ({misclassificationData.misclassifiedRecords.length})
@@ -1364,7 +1389,7 @@ const DataQuality = () => {
                   className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
                     misclassificationTab === 'byCurrent'
                       ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   By Current Category ({misclassificationData.byCurrentCategory.length})
@@ -1374,7 +1399,7 @@ const DataQuality = () => {
                   className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
                     misclassificationTab === 'bySuggested'
                       ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   By Suggested Category ({misclassificationData.bySuggestedCategory.length})
@@ -1385,24 +1410,24 @@ const DataQuality = () => {
               {misclassificationTab === 'detailed' && (
                 <div className="overflow-auto max-h-96">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
+                    <thead className="sticky top-0 bg-surface-50">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Date</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Current</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Should Be</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Description</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Keywords</th>
-                        <th className="text-center p-2 font-medium text-gray-600">View</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Date</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Current</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Should Be</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Description</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Keywords</th>
+                        <th className="text-center p-2 font-medium text-surface-600">View</th>
                       </tr>
                     </thead>
                     <tbody>
                       {misclassificationData.misclassifiedRecords.slice(0, 50).map((record, idx) => (
                         <tr
                           key={record.id || idx}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-50 cursor-pointer`}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-orange-50 cursor-pointer`}
                           onClick={() => handleMisclassificationDrillDown(record)}
                         >
-                          <td className="p-2 text-gray-600">{record.date?.substring(0, 10)}</td>
+                          <td className="p-2 text-surface-600">{record.date?.substring(0, 10)}</td>
                           <td className="p-2">
                             <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">
                               {record.currentCategory}
@@ -1424,7 +1449,7 @@ const DataQuality = () => {
                                 </span>
                               ))}
                               {record.triggeringKeywords.length > 2 && (
-                                <span className="text-gray-400">+{record.triggeringKeywords.length - 2}</span>
+                                <span className="text-surface-400">+{record.triggeringKeywords.length - 2}</span>
                               )}
                             </div>
                           </td>
@@ -1436,7 +1461,7 @@ const DataQuality = () => {
                     </tbody>
                   </table>
                   {misclassificationData.misclassifiedRecords.length > 50 && (
-                    <div className="text-xs text-gray-400 mt-2 text-center">
+                    <div className="text-xs text-surface-400 mt-2 text-center">
                       Showing 50 of {misclassificationData.misclassifiedRecords.length} records
                     </div>
                   )}
@@ -1447,18 +1472,18 @@ const DataQuality = () => {
               {misclassificationTab === 'byCurrent' && (
                 <div className="overflow-auto max-h-80">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
+                    <thead className="sticky top-0 bg-surface-50">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Current Category (Wrong)</th>
-                        <th className="text-right p-2 font-medium text-gray-600">Count</th>
-                        <th className="text-center p-2 font-medium text-gray-600">Action</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Current Category (Wrong)</th>
+                        <th className="text-right p-2 font-medium text-surface-600">Count</th>
+                        <th className="text-center p-2 font-medium text-surface-600">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {misclassificationData.byCurrentCategory.map((cat, idx) => (
                         <tr
                           key={cat.category}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-50 cursor-pointer`}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-orange-50 cursor-pointer`}
                           onClick={() => handleMisclassificationCategoryDrillDown(cat, 'current')}
                         >
                           <td className="p-2">
@@ -1481,18 +1506,18 @@ const DataQuality = () => {
               {misclassificationTab === 'bySuggested' && (
                 <div className="overflow-auto max-h-80">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
+                    <thead className="sticky top-0 bg-surface-50">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Should Be Category (Correct)</th>
-                        <th className="text-right p-2 font-medium text-gray-600">Count</th>
-                        <th className="text-center p-2 font-medium text-gray-600">Action</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Should Be Category (Correct)</th>
+                        <th className="text-right p-2 font-medium text-surface-600">Count</th>
+                        <th className="text-center p-2 font-medium text-surface-600">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {misclassificationData.bySuggestedCategory.map((cat, idx) => (
                         <tr
                           key={cat.category}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-50 cursor-pointer`}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-orange-50 cursor-pointer`}
                           onClick={() => handleMisclassificationCategoryDrillDown(cat, 'suggested')}
                         >
                           <td className="p-2">
@@ -1520,7 +1545,7 @@ const DataQuality = () => {
         <div className="bg-white border border-blue-300 rounded-lg p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <Tag size={14} className="text-blue-600" />
               Import Classification Review
               <InfoTooltip text="Records automatically classified during import when the original hazard category was blank or generic ('Other'). Shows the keywords that triggered each classification." />
@@ -1541,23 +1566,23 @@ const DataQuality = () => {
           <div className="grid grid-cols-5 gap-3 mb-3">
             <div className="bg-blue-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-blue-700">{classificationReviewData.totalAutoClassified}</div>
-              <div className="text-xs text-gray-500">Auto-Classified</div>
+              <div className="text-xs text-surface-500">Auto-Classified</div>
             </div>
             <div className="bg-blue-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-blue-700">{classificationReviewData.percentageOfImport}%</div>
-              <div className="text-xs text-gray-500">% of Import</div>
+              <div className="text-xs text-surface-500">% of Import</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-gray-700">{classificationReviewData.summary.fromBlank}</div>
-              <div className="text-xs text-gray-500">From Blank</div>
+            <div className="bg-surface-50 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-surface-700">{classificationReviewData.summary.fromBlank}</div>
+              <div className="text-xs text-surface-500">From Blank</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-gray-700">{classificationReviewData.summary.fromOther}</div>
-              <div className="text-xs text-gray-500">From Other</div>
+            <div className="bg-surface-50 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-surface-700">{classificationReviewData.summary.fromOther}</div>
+              <div className="text-xs text-surface-500">From Other</div>
             </div>
             <div className="bg-green-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-green-700">{classificationReviewData.summary.highConfidence}</div>
-              <div className="text-xs text-gray-500">High Confidence</div>
+              <div className="text-xs text-surface-500">High Confidence</div>
             </div>
           </div>
 
@@ -1565,13 +1590,13 @@ const DataQuality = () => {
           {showClassificationReview && (
             <>
               {/* Tabs */}
-              <div className="flex gap-1 mb-3 border-b border-gray-200">
+              <div className="flex gap-1 mb-3 border-b border-surface-200">
                 <button
                   onClick={() => setClassificationTab('summary')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
                     classificationTab === 'summary'
                       ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   By Category ({classificationReviewData.byCategory.length})
@@ -1581,7 +1606,7 @@ const DataQuality = () => {
                   className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
                     classificationTab === 'detailed'
                       ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   Full Details ({classificationReviewData.detailedRecords.length})
@@ -1592,19 +1617,19 @@ const DataQuality = () => {
               {classificationTab === 'summary' && (
                 <div className="overflow-auto max-h-80">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
+                    <thead className="sticky top-0 bg-surface-50">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Category</th>
-                        <th className="text-right p-2 font-medium text-gray-600">Count</th>
-                        <th className="text-right p-2 font-medium text-gray-600">%</th>
-                        <th className="text-center p-2 font-medium text-gray-600">Action</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Category</th>
+                        <th className="text-right p-2 font-medium text-surface-600">Count</th>
+                        <th className="text-right p-2 font-medium text-surface-600">%</th>
+                        <th className="text-center p-2 font-medium text-surface-600">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {classificationReviewData.byCategory.map((cat, idx) => (
                         <tr
                           key={cat.category}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-blue-50 cursor-pointer`}
                           onClick={() => handleClassificationCategoryDrillDown(cat)}
                         >
                           <td className="p-2">
@@ -1613,7 +1638,7 @@ const DataQuality = () => {
                             </span>
                           </td>
                           <td className="p-2 text-right font-medium">{cat.count}</td>
-                          <td className="p-2 text-right text-gray-500">{cat.percentage}%</td>
+                          <td className="p-2 text-right text-surface-500">{cat.percentage}%</td>
                           <td className="p-2 text-center">
                             <Eye size={14} className="text-blue-600 inline" />
                           </td>
@@ -1628,31 +1653,31 @@ const DataQuality = () => {
               {classificationTab === 'detailed' && (
                 <div className="overflow-auto max-h-96">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-50">
+                    <thead className="sticky top-0 bg-surface-50">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Row</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Event ID</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Original</th>
-                        <th className="text-left p-2 font-medium text-gray-600">New Category</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Description</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Keywords</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Reporter</th>
-                        <th className="text-center p-2 font-medium text-gray-600">View</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Row</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Event ID</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Original</th>
+                        <th className="text-left p-2 font-medium text-surface-600">New Category</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Description</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Keywords</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
+                        <th className="text-center p-2 font-medium text-surface-600">View</th>
                       </tr>
                     </thead>
                     <tbody>
                       {classificationReviewData.detailedRecords.slice(0, 50).map((record, idx) => (
                         <tr
                           key={record.eventId || idx}
-                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-blue-50 cursor-pointer`}
                           onClick={() => handleClassificationDrillDown(record)}
                         >
-                          <td className="p-2 text-gray-600">{record.row}</td>
-                          <td className="p-2 text-gray-500 font-mono truncate max-w-[80px]" title={record.eventId}>
+                          <td className="p-2 text-surface-600">{record.row}</td>
+                          <td className="p-2 text-surface-500 font-mono truncate max-w-[80px]" title={record.eventId}>
                             {record.eventId?.substring(0, 12)}...
                           </td>
                           <td className="p-2">
-                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                            <span className="px-1.5 py-0.5 bg-surface-100 text-surface-600 rounded text-xs">
                               {record.originalValue}
                             </span>
                           </td>
@@ -1672,10 +1697,10 @@ const DataQuality = () => {
                                 </span>
                               ))}
                               {record.triggeringKeywords.length > 3 && (
-                                <span className="text-gray-400">+{record.triggeringKeywords.length - 3}</span>
+                                <span className="text-surface-400">+{record.triggeringKeywords.length - 3}</span>
                               )}
                               {record.triggeringKeywords.length === 0 && (
-                                <span className="text-gray-400 italic">auto-default</span>
+                                <span className="text-surface-400 italic">auto-default</span>
                               )}
                             </div>
                           </td>
@@ -1690,7 +1715,7 @@ const DataQuality = () => {
                     </tbody>
                   </table>
                   {classificationReviewData.detailedRecords.length > 50 && (
-                    <div className="text-xs text-gray-400 mt-2 text-center">
+                    <div className="text-xs text-surface-400 mt-2 text-center">
                       Showing 50 of {classificationReviewData.detailedRecords.length} records
                     </div>
                   )}
@@ -1704,9 +1729,9 @@ const DataQuality = () => {
       {/* SECTION 2: Reporter & Contractor Analytics */}
       <div className="grid grid-cols-2 gap-4">
         {/* Reporter Performance */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <Users size={14} />
               Reporter Performance
               <InfoTooltip text="Top reporters ranked by observation count. Shows near miss rate and description quality rate. Click any row for detailed analytics." />
@@ -1714,7 +1739,7 @@ const DataQuality = () => {
             <select
               value={reporterSort}
               onChange={(e) => setReporterSort(e.target.value)}
-              className="text-xs border border-gray-300 rounded px-2 py-1"
+              className="text-xs border border-surface-200 rounded px-2 py-1"
             >
               <option value="total">Sort by Total</option>
               <option value="nearMiss">Sort by Near Miss</option>
@@ -1723,19 +1748,19 @@ const DataQuality = () => {
           </div>
           <div className="overflow-auto max-h-64">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-gray-50">
+              <thead className="sticky top-0 bg-surface-50">
                 <tr>
-                  <th className="text-left p-2 font-medium text-gray-600">Reporter</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Total</th>
-                  <th className="text-center p-2 font-medium text-gray-600">NM</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Quality</th>
+                  <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Total</th>
+                  <th className="text-center p-2 font-medium text-surface-600">NM</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Quality</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedReporters.map((reporter, idx) => (
                   <tr
                     key={reporter.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
                     onClick={() => handleReporterClick(reporter.name)}
                     title="Click to view detailed analytics"
                   >
@@ -1767,9 +1792,9 @@ const DataQuality = () => {
         </div>
 
         {/* Contractor Quality */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <Building2 size={14} />
               Contractor Quality Comparison
               <InfoTooltip text="Quality metrics by contractor: observation count, quality score, categorization rate, and active days. Click any row to see all their observations." />
@@ -1777,7 +1802,7 @@ const DataQuality = () => {
             <select
               value={contractorSort}
               onChange={(e) => setContractorSort(e.target.value)}
-              className="text-xs border border-gray-300 rounded px-2 py-1"
+              className="text-xs border border-surface-200 rounded px-2 py-1"
             >
               <option value="totalObs">Sort by Total</option>
               <option value="qualityScore">Sort by Score</option>
@@ -1786,19 +1811,19 @@ const DataQuality = () => {
           </div>
           <div className="overflow-auto max-h-64">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-gray-50">
+              <thead className="sticky top-0 bg-surface-50">
                 <tr>
-                  <th className="text-left p-2 font-medium text-gray-600">Contractor</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Obs</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Score</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Days</th>
+                  <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Obs</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Score</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Days</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedContractors.map((contractor, idx) => (
                   <tr
                     key={contractor.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
                     onClick={() => handleContractorDrillDown(contractor)}
                     title="Click to view all observations"
                   >
@@ -1814,7 +1839,7 @@ const DataQuality = () => {
                         {contractor.qualityScore}
                       </span>
                     </td>
-                    <td className="p-2 text-center text-gray-600">{contractor.activeDays}</td>
+                    <td className="p-2 text-center text-surface-600">{contractor.activeDays}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1823,69 +1848,129 @@ const DataQuality = () => {
         </div>
       </div>
 
-      {/* SECTION 4: Data Quality Details */}
+      {/* SECTION 4: Data Quality Details - Side by Side */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Categorization Breakdown */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
-            Categorization Breakdown
-            <InfoTooltip text="How observations are categorized: Proper (valid hazard selected), Blank (no hazard selected), or Other (generic category). Click segments to drill down." />
-          </h3>
-          <div className="flex items-center gap-6">
-            <div className="w-32 h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Proper', value: categorization.proper },
-                      { name: 'Blank', value: categorization.blank },
-                      { name: 'Other', value: categorization.other }
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={25}
-                    outerRadius={45}
-                    dataKey="value"
-                    onClick={(data) => handleCategorizationDrillDown(data.name, data.value)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {COLORS.map((color, index) => (
-                      <Cell key={`cell-${index}`} fill={color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, 'Count']} />
-                </PieChart>
-              </ResponsiveContainer>
+        {/* Categorization Before vs After Comparison */}
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
+        <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+          Categorization Breakdown (Before vs After)
+          <InfoTooltip text="Compare how observations were categorized in Excel (before) vs current state (after auto-classification). Shows the improvement from auto-classification." />
+        </h3>
+
+        <div className="grid grid-cols-2 gap-8">
+          {/* BEFORE - From Excel */}
+          <div>
+            <div className="text-center text-xs font-medium text-surface-500 mb-2 uppercase">Before (From Excel)</div>
+            <div className="flex items-center gap-4">
+              <div className="w-28 h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Proper', value: categorizationComparison.before.proper },
+                        { name: 'Blank', value: categorizationComparison.before.blank },
+                        { name: 'Other', value: categorizationComparison.before.other }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={20}
+                      outerRadius={40}
+                      dataKey="value"
+                      onClick={(data) => {
+                        const records = filteredIncidents.filter(inc => {
+                          const val = (inc.originalHazardCategory || '').trim()
+                          if (data.name === 'Proper') return val && !['Other', 'Others', 'other', 'others', 'General', 'General Safety', '', 'Not Specified'].includes(val)
+                          if (data.name === 'Blank') return !val || val === '' || val === 'Not Specified'
+                          return ['Other', 'Others', 'other', 'others', 'General', 'General Safety'].includes(val)
+                        })
+                        openDrillDown(`Original ${data.name}`, records, ['Data Quality', 'Before', data.name])
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {COLORS.map((color, index) => (
+                        <Cell key={`cell-before-${index}`} fill={color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, 'Count']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded"></span>
+                  <span>Proper: {categorizationComparison.before.proper} ({categorizationComparison.before.properRate}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-surface-400 rounded"></span>
+                  <span>Blank: {categorizationComparison.before.blank}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-orange-500 rounded"></span>
+                  <span>Other: {categorizationComparison.before.other}</span>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2 text-xs">
-              <div
-                className="flex items-center gap-2 cursor-pointer hover:bg-green-50 rounded px-2 py-1 -mx-2 transition-colors"
-                onClick={() => handleCategorizationDrillDown('Proper', categorization.proper)}
-              >
-                <span className="w-3 h-3 bg-green-500 rounded"></span>
-                <span>Proper: {categorization.proper} ({categorization.properRate}%)</span>
+          </div>
+
+          {/* AFTER - Current State */}
+          <div>
+            <div className="text-center text-xs font-medium text-surface-500 mb-2 uppercase">After (Current)</div>
+            <div className="flex items-center gap-4">
+              <div className="w-28 h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Proper', value: categorizationComparison.after.proper },
+                        { name: 'Blank', value: categorizationComparison.after.blank },
+                        { name: 'Other', value: categorizationComparison.after.other }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={20}
+                      outerRadius={40}
+                      dataKey="value"
+                      onClick={(data) => handleCategorizationDrillDown(data.name, data.value)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {COLORS.map((color, index) => (
+                        <Cell key={`cell-after-${index}`} fill={color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, 'Count']} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-              <div
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 transition-colors"
-                onClick={() => handleCategorizationDrillDown('Blank', categorization.blank)}
-              >
-                <span className="w-3 h-3 bg-gray-400 rounded"></span>
-                <span>Blank: {categorization.blank}</span>
-              </div>
-              <div
-                className="flex items-center gap-2 cursor-pointer hover:bg-orange-50 rounded px-2 py-1 -mx-2 transition-colors"
-                onClick={() => handleCategorizationDrillDown('Other', categorization.other)}
-              >
-                <span className="w-3 h-3 bg-orange-500 rounded"></span>
-                <span>Other: {categorization.other}</span>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded"></span>
+                  <span>Proper: {categorizationComparison.after.proper} ({categorizationComparison.after.properRate}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-surface-400 rounded"></span>
+                  <span>Blank: {categorizationComparison.after.blank}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-orange-500 rounded"></span>
+                  <span>Other: {categorizationComparison.after.other}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Improvement Summary - Compact */}
+        {categorizationComparison.improvement.hasImprovement && (
+          <div className="mt-3 pt-2 border-t border-surface-200 text-center text-xs text-green-600">
+            <TrendingUp size={12} className="inline mr-1" />
+            +{categorizationComparison.improvement.properRateDelta}% proper rate ({categorizationComparison.improvement.blankDelta} blanks filled)
+          </div>
+        )}
+        </div>
+
         {/* Description Length Distribution */}
-        <div className="bg-white border border-gray-300 rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+        <div className="bg-white border border-surface-200 rounded-lg p-4">
+          <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
             Description Length Distribution
             <InfoTooltip text="Word count distribution of observation descriptions. Good descriptions have 16+ words providing sufficient detail. Click bars to see records in each range." />
           </h3>
@@ -1898,12 +1983,12 @@ const DataQuality = () => {
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 rounded px-2 py-1 -mx-2 transition-colors"
+                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-surface-50 rounded px-2 py-1 -mx-2 transition-colors"
                 onClick={() => handleDescriptionDrillDown(item.range, item.label)}
                 title={`Click to view ${item.value} records`}
               >
-                <span className="w-28 text-gray-600">{item.label}</span>
-                <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                <span className="w-28 text-surface-600">{item.label}</span>
+                <div className="flex-1 h-4 bg-surface-100 rounded overflow-hidden">
                   <div
                     className={`h-full ${item.color}`}
                     style={{ width: `${(item.value / incidents.length) * 100}%` }}
@@ -1918,270 +2003,6 @@ const DataQuality = () => {
           </div>
         </div>
       </div>
-
-      {/* Records Needing Attention - Consolidated Flagged Items */}
-      {(description.flaggedCount > 0 || duplicates.totalDuplicates > 0 || otherHazards.reclassifiable > 0 || lowConfidenceRecords.length > 0) && (
-        <div className="bg-white border border-yellow-300 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-              <AlertTriangle size={14} className="text-yellow-500" />
-              Records Needing Attention
-              <InfoTooltip text="All observations that need review: short descriptions, duplicate entries, misclassified hazards, and vague/low confidence descriptions. Use tabs to filter by issue type." />
-              <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
-                {description.flaggedCount + duplicates.totalDuplicates + otherHazards.reclassifiable + lowConfidenceRecords.length}
-              </span>
-            </h3>
-            <button
-              onClick={() => exportFlaggedCSV(flaggedTab)}
-              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-            >
-              <Download size={12} />
-              Export {flaggedTab === 'short' ? 'Short' : flaggedTab === 'duplicate' ? 'Duplicates' : flaggedTab === 'vague' ? 'Vague' : 'Other Hazards'}
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 mb-3 border-b border-gray-200">
-            <button
-              onClick={() => setFlaggedTab('short')}
-              className={`px-3 py-2 text-xs font-medium rounded-t transition-colors ${
-                flaggedTab === 'short'
-                  ? 'bg-red-100 text-red-700 border-b-2 border-red-500'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Short Descriptions
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                flaggedTab === 'short' ? 'bg-red-200' : 'bg-gray-200'
-              }`}>
-                {description.flaggedCount}
-              </span>
-            </button>
-            <button
-              onClick={() => setFlaggedTab('duplicate')}
-              className={`px-3 py-2 text-xs font-medium rounded-t transition-colors ${
-                flaggedTab === 'duplicate'
-                  ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-500'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Duplicates
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                flaggedTab === 'duplicate' ? 'bg-orange-200' : 'bg-gray-200'
-              }`}>
-                {duplicates.totalDuplicates}
-              </span>
-            </button>
-            <button
-              onClick={() => setFlaggedTab('other')}
-              className={`px-3 py-2 text-xs font-medium rounded-t transition-colors ${
-                flaggedTab === 'other'
-                  ? 'bg-purple-100 text-purple-700 border-b-2 border-purple-500'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Misclassified Hazards
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                flaggedTab === 'other' ? 'bg-purple-200' : 'bg-gray-200'
-              }`}>
-                {otherHazards.reclassifiable}
-              </span>
-            </button>
-            <button
-              onClick={() => setFlaggedTab('vague')}
-              className={`px-3 py-2 text-xs font-medium rounded-t transition-colors ${
-                flaggedTab === 'vague'
-                  ? 'bg-gray-600 text-white border-b-2 border-gray-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Vague Descriptions
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                flaggedTab === 'vague' ? 'bg-gray-500 text-white' : 'bg-gray-200'
-              }`}>
-                {lowConfidenceRecords.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="overflow-auto max-h-64">
-            {/* Short Descriptions Tab */}
-            {flaggedTab === 'short' && (
-              description.flaggedCount > 0 ? (
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-50">
-                    <tr>
-                      <th className="text-left p-2 font-medium text-gray-600">Date</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Reporter</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Words</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {description.flaggedRecords.slice(0, 30).map((record, idx) => (
-                      <tr key={record.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="p-2 text-gray-600">{record.date}</td>
-                        <td className="p-2">{record.reporter}</td>
-                        <td className="p-2">
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded">
-                            {record.wordCount}
-                          </span>
-                        </td>
-                        <td className="p-2 truncate max-w-[350px]" title={record.description}>
-                          "{record.description}"
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center text-gray-400 py-8">No short descriptions found</div>
-              )
-            )}
-
-            {/* Duplicates Tab */}
-            {flaggedTab === 'duplicate' && (
-              duplicates.totalGroups > 0 ? (
-                <div className="space-y-2">
-                  {duplicates.duplicateGroups.slice(0, 15).map((group, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-orange-50 border border-orange-200 rounded p-3 cursor-pointer hover:bg-orange-100 transition-colors"
-                      onClick={() => handleDuplicateDrillDown(group)}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-xs font-medium ${group.isSameReporter ? 'text-red-600' : 'text-orange-600'}`}>
-                          Used {group.count}x {group.isSameReporter ? '(same reporter - likely copy-paste)' : `by ${group.reporters.length} reporters`}
-                        </span>
-                        <span className="text-xs text-gray-400">Click to view all</span>
-                      </div>
-                      <p className="text-xs text-gray-600 italic line-clamp-2">
-                        "{group.description}"
-                      </p>
-                      <div className="mt-1 text-xs text-gray-400">
-                        Reporters: {group.reporters.slice(0, 3).join(', ')}{group.reporters.length > 3 ? ` +${group.reporters.length - 3} more` : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-gray-400 py-8">No duplicate descriptions found</div>
-              )
-            )}
-
-            {/* Other Hazards Tab */}
-            {flaggedTab === 'other' && (
-              otherHazards.reclassifiable > 0 ? (
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-50">
-                    <tr>
-                      <th className="text-left p-2 font-medium text-gray-600">Date</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Reporter</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Suggested Hazard</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Confidence</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {otherHazards.suggestions.slice(0, 30).map((suggestion, idx) => (
-                      <tr
-                        key={suggestion.id || idx}
-                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-purple-50`}
-                        onClick={() => handleOtherHazardDrillDown(suggestion)}
-                      >
-                        <td className="p-2 text-gray-600">{suggestion.date}</td>
-                        <td className="p-2">{suggestion.reporter}</td>
-                        <td className="p-2">
-                          <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                            {suggestion.suggestedHazard}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <span className={`px-1.5 py-0.5 rounded text-xs ${
-                            suggestion.confidence === 'high' ? 'bg-green-100 text-green-700' :
-                            suggestion.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-600'
-                          }`}>
-                            {suggestion.confidence}
-                          </span>
-                        </td>
-                        <td className="p-2 truncate max-w-[250px]" title={suggestion.description}>
-                          "{suggestion.description?.substring(0, 60)}..."
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center text-gray-400 py-8">No misclassified hazards found</div>
-              )
-            )}
-
-            {/* Vague Descriptions Tab */}
-            {flaggedTab === 'vague' && (
-              lowConfidenceRecords.length > 0 ? (
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-50">
-                    <tr>
-                      <th className="text-left p-2 font-medium text-gray-600">Date</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Reporter</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Confidence</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Category</th>
-                      <th className="text-left p-2 font-medium text-gray-600">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowConfidenceRecords.slice(0, 30).map((record, idx) => (
-                      <tr key={record.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="p-2 text-gray-600">{record.date}</td>
-                        <td className="p-2">{record.reportedBy || '-'}</td>
-                        <td className="p-2">
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">
-                            {record.confidence}%
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                            {record.location || 'Unknown'}
-                          </span>
-                        </td>
-                        <td className="p-2 truncate max-w-[250px]" title={record.description}>
-                          "{record.description?.substring(0, 60) || 'No description'}..."
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center text-gray-400 py-8">No vague descriptions found - great data quality!</div>
-              )
-            )}
-          </div>
-
-          {/* Show more indicator */}
-          {flaggedTab === 'short' && description.flaggedRecords.length > 30 && (
-            <div className="text-xs text-gray-400 mt-2 text-center">
-              Showing 30 of {description.flaggedRecords.length} records
-            </div>
-          )}
-          {flaggedTab === 'duplicate' && duplicates.duplicateGroups.length > 15 && (
-            <div className="text-xs text-gray-400 mt-2 text-center">
-              Showing 15 of {duplicates.duplicateGroups.length} duplicate groups
-            </div>
-          )}
-          {flaggedTab === 'other' && otherHazards.suggestions.length > 30 && (
-            <div className="text-xs text-gray-400 mt-2 text-center">
-              Showing 30 of {otherHazards.suggestions.length} suggestions
-            </div>
-          )}
-          {flaggedTab === 'vague' && lowConfidenceRecords.length > 30 && (
-            <div className="text-xs text-gray-400 mt-2 text-center">
-              Showing 30 of {lowConfidenceRecords.length} vague descriptions
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Reporter Deep Dive Modal */}
       <ReporterModal

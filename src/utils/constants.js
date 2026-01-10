@@ -43,6 +43,9 @@ export const HAZARD_CATEGORIES = [
   'Permit and RAMS',
   'Training and Competency',
   'Emergency Preparedness',
+  'Struck By',
+  'Environmental',
+  'Slips Trips Falls',
 ]
 
 // 13 Major (Significant) Hazards - HIGHEST PRIORITY in classification
@@ -62,7 +65,7 @@ export const MAJOR_HAZARDS = [
   'Driving',
 ]
 
-// 17 Sub-Significant Hazards - LOWER PRIORITY in classification
+// 20 Sub-Significant Hazards - LOWER PRIORITY in classification
 export const SUB_SIGNIFICANT_HAZARDS = [
   'Traffic Management',
   'Tools',
@@ -81,6 +84,9 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'Site Security',
   'Site Welfare',
   'Safety Supervision',
+  'Struck By',
+  'Environmental',
+  'Slips Trips Falls',
 ]
 
 // HAZARD_EXCLUSIONS - Terms that should EXCLUDE a category from matching
@@ -581,6 +587,217 @@ export const CONTEXT_REDIRECTS = {
   'trailer driver': 'Driving',
   'trailer was not': 'Driving',
   'left the vehicle': 'Driving',
+
+  // Ladder storage → Housekeeping (not Working at Height)
+  'ladder stored': 'Housekeeping',
+  'ladder lying': 'Housekeeping',
+  'ladder on ground': 'Housekeeping',
+  'ladder not stored': 'Housekeeping',
+  'storing ladder': 'Housekeeping',
+
+  // Harness storage/inspection → PPE (not Working at Height)
+  'harness stored': 'PPE',
+  'harness on rack': 'PPE',
+  'harness inspection': 'PPE',
+  'harness storage': 'PPE',
+  'body harness inspection': 'PPE',
+  'harness not inspected': 'PPE',
+  'expired harness': 'PPE',
+  'damaged harness': 'PPE',
+
+  // Generator → Energized System
+  'generator running': 'Energized System',
+  'diesel generator': 'Energized System',
+  'backup generator': 'Energized System',
+  'portable generator': 'Energized System',
+  'generator fuel': 'Energized System',
+  'generator maintenance': 'Energized System',
+
+  // Compressor → Energized System (not Tools)
+  'air compressor': 'Energized System',
+  'compressor running': 'Energized System',
+  'compressor hose': 'Energized System',
+
+  // Scaffold storage → Housekeeping (not Temporary Works)
+  'scaffold material stored': 'Housekeeping',
+  'scaffold parts stored': 'Housekeeping',
+  'scaffold components lying': 'Housekeeping',
+
+  // Safety equipment inspection → PPE
+  'ppe inspection': 'PPE',
+  'helmet inspection': 'PPE',
+  'gloves inspection': 'PPE',
+  'safety glasses inspection': 'PPE',
+
+  // Site Welfare patterns (override inspection context)
+  'toilet was not': 'Site Welfare',
+  'toilet not cleaned': 'Site Welfare',
+  'toilets not cleaned': 'Site Welfare',
+  'no water available': 'Site Welfare',
+  'water not available': 'Site Welfare',
+  'water was not available': 'Site Welfare',
+  'drinking water container': 'Site Welfare',
+  'water color': 'Site Welfare',
+  'water cooler': 'Site Welfare',
+  'smoking tray': 'Site Welfare',
+  'smoking shelter': 'Site Welfare',
+
+  // Housekeeping patterns (override inspection context)
+  'housekeeping was not': 'Housekeeping',
+  'housekeeping not conducted': 'Housekeeping',
+  'waste material': 'Housekeeping',
+  'waste not removed': 'Housekeeping',
+  'scattered materials': 'Housekeeping',
+  'empty bottles': 'Housekeeping',
+  'empty cement bag': 'Housekeeping',
+  'empty bags': 'Housekeeping',
+  'steel rebar was found': 'Housekeeping',
+  'rebar was found stored': 'Housekeeping',
+  'material was found stored': 'Housekeeping',
+  'found scattered': 'Housekeeping',
+
+  // Dust Control (override inspection context)
+  'dust was observed': 'Dust Control',
+  'dust accumulating': 'Dust Control',
+  'dust observed': 'Dust Control',
+
+  // Confined Spaces (override inspection context)
+  'gas test': 'Confined Spaces',
+  'gas test was not': 'Confined Spaces',
+  'confined space entry': 'Confined Spaces',
+
+  // Breaking Ground & Excavation (override inspection context)
+  'deep excavation': 'Breaking Ground & Excavation',
+  'deep trench': 'Breaking Ground & Excavation',
+  'trench was left': 'Breaking Ground & Excavation',
+  'excavation walls': 'Breaking Ground & Excavation',
+
+  // Barricades (override inspection context)
+  'excavation left open': 'Barricades',
+  'without any physical barriers': 'Barricades',
+  'without barriers': 'Barricades',
+  'no barriers': 'Barricades',
+  'no barricades': 'Barricades',
+  'jersey barriers': 'Barricades',
+  'left open without': 'Barricades',
+  'unprotected edges': 'Barricades',
+  'edges of a deep': 'Barricades',
+  'trench edges': 'Barricades',
+
+  // Mobile Plant & Equipment (override inspection context)
+  'excavator documents': 'Mobile Plant & Equipment',
+  'jcb documents': 'Mobile Plant & Equipment',
+  'wheel loader checklist': 'Mobile Plant & Equipment',
+  'compactor is not equipped': 'Mobile Plant & Equipment',
+  'pwas': 'Mobile Plant & Equipment',
+  'proximity warning': 'Mobile Plant & Equipment',
+  'dump truck without': 'Mobile Plant & Equipment',
+
+  // Energized System (override inspection context)
+  'electrical cables': 'Energized System',
+  'electrical cable': 'Energized System',
+  'exposed conductors': 'Energized System',
+  'exposed wire': 'Energized System',
+  'loose connection': 'Energized System',
+  'earthing rod': 'Energized System',
+  'grounding': 'Energized System',
+  'generator inspection': 'Energized System',
+  'quarterly sticker': 'Tools',
+
+  // Site Security (override inspection context)
+  'security was not available': 'Site Security',
+  'no security personnel': 'Site Security',
+  'security log sheet': 'Site Security',
+  'security cabin': 'Site Security',
+
+  // Lifting (override inspection context)
+  'lifting activity': 'Lifting',
+  'lifting operation': 'Lifting',
+  'crane operating': 'Lifting',
+  'exclusion zone': 'Lifting',
+
+  // Hot Work (override inspection context)
+  'welding activities': 'Hot Work',
+  'welding machine': 'Hot Work',
+
+  // Sharp objects / Impalement → Struck By (primary hazard is impalement injury)
+  'protruding rebar': 'Struck By',
+  'protruding rebars': 'Struck By',
+  'exposed rebar': 'Struck By',
+  'exposed rebars': 'Struck By',
+  'rebar without cap': 'Struck By',
+  'without rebar cap': 'Struck By',
+  'rebar caps missing': 'Struck By',
+  'impalement': 'Struck By',
+  'impalement hazard': 'Struck By',
+  'risk of impalement': 'Struck By',
+  'impalement injuries': 'Struck By',
+  'sharp steel': 'Struck By',
+  'sharp objects': 'Struck By',
+  'exposed nails': 'Struck By',
+  'timber with nails': 'Struck By',
+  'nails protruding': 'Struck By',
+  'protruding nails': 'Struck By',
+  'falling object': 'Struck By',
+  'falling objects': 'Struck By',
+  'object fell': 'Struck By',
+  'tie rod': 'Struck By',
+  'tie rods': 'Struck By',
+
+  // Environmental contamination → Environmental
+  'septic tank': 'Environmental',
+  'septic tank overflowing': 'Environmental',
+  'septic tank was found': 'Environmental',
+  'septic overflow': 'Environmental',
+  'sewage overflow': 'Environmental',
+  'environmental contamination': 'Environmental',
+  'ground contamination': 'Environmental',
+  'soil contamination': 'Environmental',
+  'concrete waste on soil': 'Environmental',
+  'waste on soil': 'Environmental',
+
+  // Food waste/hygiene → Site Welfare (still appropriate)
+  'food waste was not removed': 'Site Welfare',
+  'food waste was observed': 'Site Welfare',
+  'food waste not removed': 'Site Welfare',
+  'hygiene risk': 'Site Welfare',
+  'hygiene concerns': 'Site Welfare',
+  'pest attraction': 'Site Welfare',
+  'first aid box': 'Emergency Preparedness',
+  'first aid kit': 'Emergency Preparedness',
+
+  // Structural/Support → Temporary Works or Access
+  'makeshift wooden': 'Temporary Works',
+  'makeshift support': 'Temporary Works',
+  'not properly fixed': 'Access',
+  'wooden steps': 'Access',
+  'steps not properly': 'Access',
+
+  // Electrical cables → Energized System (not Housekeeping)
+  'grounding cables': 'Energized System',
+  'grounding cable': 'Energized System',
+  'earthing cables': 'Energized System',
+
+  // Fire/Chemical hazards → Fire (diesel = fire hazard)
+  'drip tray full of diesel': 'Fire',
+  'drip tray was full': 'Fire',
+  'full of diesel': 'Fire',
+  'diesel spill': 'Fire',
+  'diesel overflow': 'Fire',
+  'fuel spill': 'Fire',
+  'oil spill': 'COSHH',
+
+  // Material storage/stacking → Work Environment (collapse hazard)
+  'not properly stacked': 'Work Environment',
+  'improper stacking': 'Work Environment',
+  'without stoppers': 'Work Environment',
+  'prevent rolling': 'Work Environment',
+  'risk of collapse': 'Work Environment',
+
+  // Falling objects → Working at Height
+  'falling object hazard': 'Working at Height',
+  'on top of pillars': 'Working at Height',
+  'timber on top': 'Working at Height',
 }
 
 // Hazard category patterns for auto-classification (30 approved categories)
@@ -594,7 +811,11 @@ export const HAZARD_PATTERNS = {
     'energized', 'electrical', 'live wire', 'power line', 'voltage', 'electric shock',
     'electrocution', 'circuit', 'switchboard', 'transformer', 'generator', 'cable',
     'wiring', 'panel', 'breaker', 'fuse', 'arc flash', 'loto', 'lockout', 'tagout',
-    'isolation', 'de-energize', 'energised'
+    'isolation', 'de-energize', 'energised', 'db box', 'distribution box', 'junction box',
+    'power cable', 'electrical connection', 'grounding', 'earthing', 'socket', 'outlet',
+    'plug', 'conduit', 'busbar', 'electrical tape', 'insulation tape', 'wire splice',
+    'mccb', 'mcb', 'rcd', 'elcb', 'power distribution', 'electrical panel', 'db board',
+    'control panel', 'motor', 'pump', 'compressor', 'inverter', 'ups', 'battery bank'
   ],
   'Mobile Plant & Equipment': [
     'mobile plant', 'heavy equipment', 'excavator', 'bulldozer', 'loader', 'grader',
@@ -645,7 +866,13 @@ export const HAZARD_PATTERNS = {
     'working at height', 'height', 'fall', 'ladder', 'roof', 'edge protection',
     'guardrail', 'handrail', 'fall arrest', 'harness', 'lanyard', 'anchor point',
     'elevated', 'platform', 'mewp', 'scissor lift', 'cherry picker', 'boom lift',
-    'access tower', 'stepladder', 'fall hazard', 'unprotected edge', 'opening'
+    'access tower', 'stepladder', 'fall hazard', 'unprotected edge', 'opening',
+    'elevated platform', 'roof work', 'rooftop', 'parapet', 'toe board', 'catch net',
+    'safety net', 'lifeline', 'fall arrest system', 'retractable lanyard', 'srl',
+    'vertical lifeline', 'horizontal lifeline', 'edge of slab', 'floor opening',
+    'void', 'shaft opening', 'stairwell opening', 'leading edge', 'perimeter edge',
+    'scaffolding access', 'ladder climbing', 'roofing work', 'structural steel',
+    'formwork deck', 'elevated walkway', 'aerial work', 'skylight', 'fragile roof'
   ],
   'Barricades': [
     'barricade', 'barrier', 'fencing', 'exclusion zone', 'safety fence', 'tape',
@@ -672,13 +899,24 @@ export const HAZARD_PATTERNS = {
     'housekeeping', 'clutter', 'debris', 'clean', 'tidy', 'storage', 'obstruction',
     'mess', 'disorganized', 'untidy', 'waste', 'rubbish', 'garbage', 'sorting',
     'stacking', 'pile', 'trip hazard', 'walkway blocked', 'aisle', 'clear access',
-    'skip', 'bin', 'container', '5s', 'workplace organization'
+    'skip', 'bin', 'container', '5s', 'workplace organization', 'cluttered',
+    'messy', 'cleanup', 'clean up', 'tidying', 'organize', 'organised', 'organized',
+    'sort out', 'dispose', 'disposal', 'clear area', 'scrap', 'offcuts', 'leftover',
+    'scattered material', 'loose material', 'unorganized', 'disorderly', 'disorder',
+    'accumulation', 'accumulated', 'piled up', 'lying around', 'dumped', 'abandoned',
+    'unused material', 'excess material', 'material stacking', 'material storage'
   ],
   'PPE': [
     'ppe', 'personal protective', 'helmet', 'hard hat', 'safety glasses', 'goggles',
     'gloves', 'safety boots', 'steel toe', 'hi-vis', 'high visibility', 'vest',
     'ear protection', 'ear plugs', 'ear muffs', 'face shield', 'respirator',
-    'mask', 'coverall', 'protective clothing', 'safety equipment', 'fall protection'
+    'mask', 'coverall', 'protective clothing', 'safety equipment', 'fall protection',
+    'safety shoe', 'safety boot', 'safety helmet', 'bump cap', 'n95', 'dust mask',
+    'half mask', 'full face mask', 'scba', 'safety harness', 'body harness',
+    'reflective vest', 'safety vest', 'work glove', 'leather glove', 'nitrile glove',
+    'cut resistant', 'impact glove', 'chemical glove', 'hearing protection',
+    'safety lanyard', 'chin strap', 'safety gear', 'protective gear', 'safety wear',
+    'eye protection', 'hand protection', 'foot protection', 'head protection'
   ],
   'Safety Sign': [
     'safety sign', 'signage', 'warning sign', 'caution sign', 'danger sign',
@@ -703,14 +941,21 @@ export const HAZARD_PATTERNS = {
   'Safety Supervision': [
     'supervision', 'supervisor', 'competent person', 'safety officer', 'hse',
     'safety manager', 'site manager', 'foreman', 'charge hand', 'oversight',
-    'monitoring', 'inspection', 'audit', 'leadership', 'management', 'accountability',
-    'safety meeting', 'toolbox talk', 'briefing', 'induction'
+    'monitoring', 'leadership', 'management', 'accountability', 'safety meeting',
+    'unsupervised', 'no supervision', 'lack of supervision', 'without supervision'
+    // NOTE: Removed 'inspection', 'audit', 'toolbox talk', 'briefing', 'induction'
+    // These are either too generic or belong to Training and Competency
   ],
   'Tools': [
     'tool', 'hand tool', 'power tool', 'equipment', 'wrench', 'hammer', 'screwdriver',
     'drill', 'saw', 'grinder', 'cutter', 'pliers', 'chisel', 'knife', 'blade',
     'defective tool', 'damaged tool', 'tool inspection', 'wrong tool', 'improvised tool',
-    'tool storage', 'tool box', 'sharp', 'cutting tool'
+    'tool storage', 'tool box', 'sharp', 'cutting tool', 'impact driver', 'angle grinder',
+    'circular saw', 'reciprocating saw', 'jigsaw', 'mitre saw', 'bench grinder',
+    'wire brush', 'file', 'rasp', 'level', 'measuring tape', 'tape measure', 'spirit level',
+    'crowbar', 'pry bar', 'bolt cutter', 'cable cutter', 'pipe wrench', 'adjustable wrench',
+    'socket set', 'ratchet', 'allen key', 'hex key', 'torque wrench', 'multimeter',
+    'inspection sticker', 'color code', 'colour code', 'quarterly inspection'
   ],
   'Traffic Management': [
     'traffic management', 'traffic control', 'pedestrian', 'segregation', 'crossing',
@@ -1023,3 +1268,85 @@ export const DEFAULT_TARGETS = {
     'risk-assessment': 2,
   }
 }
+
+// Construction/Safety technical terms whitelist - words that should NOT be flagged as misspellings
+// These are valid industry terms that standard dictionaries might not recognize
+export const SPELL_CHECK_WHITELIST = [
+  // Acronyms & Abbreviations
+  'ppe', 'mewp', 'loto', 'hiab', 'cpcs', 'cscs', 'rams', 'swms', 'jsea', 'jha', 'pta', 'ptw',
+  'coshh', 'msds', 'sds', 'osha', 'hse', 'bbs', 'kpi', 'tlb', 'jcb', 'cctv', 'rfid', 'qr',
+
+  // Equipment & Tools
+  'rebar', 'rebars', 'formwork', 'falsework', 'shuttering', 'scafftag', 'banksman',
+  'telehandler', 'excavator', 'backhoe', 'bobcat', 'skidsteer', 'dumper', 'tipper',
+  'grinder', 'hilti', 'makita', 'dewalt', 'stihl', 'husqvarna', 'kango', 'wacker',
+  'breaker', 'compactor', 'vibrator', 'screed', 'trowel', 'bolster', 'stillage',
+
+  // Construction Terms
+  'precast', 'insitu', 'situ', 'rfi', 'submittal', 'punchlist', 'snag', 'snagging',
+  'backfill', 'subgrade', 'subbase', 'blinding', 'oversite', 'dpm', 'dpc', 'tanking',
+  'underpinning', 'piling', 'cfa', 'secant', 'contiguous', 'kingpost', 'waling',
+  'shoring', 'propping', 'acrow', 'strongboy', 'needling', 'lintel', 'padstone',
+
+  // Safety Terms
+  'toolbox', 'standup', 'walkdown', 'induction', 'signage', 'demarcation',
+  'exclusion', 'barricading', 'isolator', 'lockout', 'tagout', 'energised', 'energized',
+  'deenergised', 'deenergized', 'earthing', 'bonding', 'equipotential',
+
+  // Materials
+  'geotextile', 'geomembrane', 'geocell', 'gabion', 'riprap', 'aggregates',
+  'bitumen', 'asphalt', 'macadam', 'tarmac', 'screedable', 'pourable',
+
+  // Certifications & Documents
+  'competency', 'briefing', 'debriefing', 'walkthrough', 'signoff', 'checklist',
+
+  // Common site words
+  'hoarding', 'heras', 'fencing', 'welfare', 'canteen', 'drying', 'muster',
+  'laydown', 'hardstanding', 'haul', 'haulage', 'spoil', 'arisings', 'muckaway',
+
+  // Brands often used generically
+  'portakabin', 'portaloo', 'acrow', 'kee', 'klamp', 'scaffolders', 'scaffolder',
+
+  // Common English words that fuzzy matching might incorrectly flag
+  // (words similar to other words but are valid themselves)
+  'unavailable', 'available', 'workers', 'worker', 'areas', 'area',
+  'current', 'correct', 'house', 'hose', 'houses', 'hoses',
+  'form', 'forms', 'from', 'were', 'where', 'wear', 'there', 'their', 'they',
+  'than', 'then', 'through', 'though', 'thorough',
+  'loose', 'lose', 'loss', 'lost',
+  'quite', 'quiet', 'quit',
+  'affect', 'effect', 'effects', 'affects',
+  'accept', 'except', 'expect',
+  'advice', 'advise',
+  'ensure', 'insure', 'assure',
+  'beside', 'besides',
+  'farther', 'further',
+  'principal', 'principle',
+  'stationary', 'stationery',
+  'complement', 'compliment',
+  'desert', 'dessert',
+  'personal', 'personnel',
+  'proceed', 'precede',
+  'continuous', 'continual',
+  'discreet', 'discrete',
+  'elicit', 'illicit',
+  'emigrate', 'immigrate',
+  'eminent', 'imminent',
+  'ensure', 'insure',
+  'weather', 'whether',
+  'whose', 'whos',
+  'later', 'latter',
+  'lead', 'led',
+  'maybe', 'may',
+  'passed', 'past',
+  'piece', 'peace',
+  'plain', 'plane',
+  'presence', 'presents',
+  'raise', 'rise',
+  'role', 'roll',
+  'sight', 'site', 'cite',
+  'than', 'then',
+  'threw', 'through',
+  'week', 'weak',
+  'which', 'witch',
+]

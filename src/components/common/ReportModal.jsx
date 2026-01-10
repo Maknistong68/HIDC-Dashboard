@@ -272,7 +272,7 @@ const ReportModal = ({ record, onClose }) => {
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white shadow-xl w-full max-w-2xl transform transition-all">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-gray-50">
+          <div className="flex items-center justify-between p-4 border-b border-surface-200 bg-surface-50">
             <div className="flex items-center gap-3">
               <span
                 className="px-3 py-1 text-xs font-semibold"
@@ -283,7 +283,7 @@ const ReportModal = ({ record, onClose }) => {
               >
                 {typeInfo?.label || record.type}
               </span>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-surface-500">
                 {formatDate(record.date)}
               </span>
             </div>
@@ -298,7 +298,7 @@ const ReportModal = ({ record, onClose }) => {
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                className="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100"
               >
                 <X size={18} />
               </button>
@@ -310,47 +310,47 @@ const ReportModal = ({ record, onClose }) => {
             {/* Details Grid */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   <Calendar size={12} />
                   Date
                 </div>
-                <div className="text-sm text-gray-900">{formatDate(record.date)}</div>
+                <div className="text-sm text-surface-900">{formatDate(record.date)}</div>
               </div>
 
               <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   <Building2 size={12} />
                   Contractor
                 </div>
-                <div className="text-sm text-gray-900">{record.contractor || '-'}</div>
+                <div className="text-sm text-surface-900">{record.contractor || '-'}</div>
               </div>
 
               <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   <MapPin size={12} />
                   Site
                 </div>
-                <div className="text-sm text-gray-900">{record.site || '-'}</div>
+                <div className="text-sm text-surface-900">{record.site || '-'}</div>
               </div>
 
               <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   <AlertCircle size={12} />
                   Hazard Category
                 </div>
-                <div className="text-sm text-gray-900">{record.location || '-'}</div>
+                <div className="text-sm text-surface-900">{record.location || '-'}</div>
               </div>
 
               <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   <User size={12} />
                   Reported By
                 </div>
-                <div className="text-sm text-gray-900">{record.reportedBy || '-'}</div>
+                <div className="text-sm text-surface-900">{record.reportedBy || '-'}</div>
               </div>
 
               <div className="field">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   Action Status
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -368,19 +368,19 @@ const ReportModal = ({ record, onClose }) => {
               </div>
 
               <div className="field">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                   Approval Status
                 </div>
-                <div className="text-sm text-gray-900">{record.approvalStatus || '-'}</div>
+                <div className="text-sm text-surface-900">{record.approvalStatus || '-'}</div>
               </div>
             </div>
 
             {/* Description */}
             <div className="mb-4">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 border-b border-gray-200 pb-1">
+              <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
                 Description
               </div>
-              <div className="bg-gray-50 p-3 border border-gray-200 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <div className="bg-surface-50 p-3 border border-surface-200 text-sm text-surface-700 whitespace-pre-wrap leading-relaxed">
                 {record.description || 'No description provided.'}
               </div>
             </div>
@@ -388,20 +388,20 @@ const ReportModal = ({ record, onClose }) => {
             {/* Additional Fields (if any) - excluding root cause */}
             {(record.bodyPart || record.correctiveAction) && (
               <div className="mb-4">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 border-b border-gray-200 pb-1">
+                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
                   Additional Information
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {record.bodyPart && (
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Body Part Affected: </span>
-                      <span className="text-sm text-gray-900">{record.bodyPart}</span>
+                      <span className="text-xs font-medium text-surface-500">Body Part Affected: </span>
+                      <span className="text-sm text-surface-900">{record.bodyPart}</span>
                     </div>
                   )}
                   {record.correctiveAction && (
                     <div>
-                      <span className="text-xs font-medium text-gray-500">Corrective Action: </span>
-                      <span className="text-sm text-gray-900">{record.correctiveAction}</span>
+                      <span className="text-xs font-medium text-surface-500">Corrective Action: </span>
+                      <span className="text-sm text-surface-900">{record.correctiveAction}</span>
                     </div>
                   )}
                 </div>
@@ -414,18 +414,18 @@ const ReportModal = ({ record, onClose }) => {
             {/* History/Timeline (if available) */}
             {record.history && record.history.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 border-b border-gray-200 pb-1">
+                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
                   Action History
                 </div>
                 <div className="space-y-2">
                   {record.history.map((item, index) => (
                     <div key={index} className="flex gap-3 text-sm">
-                      <div className="text-xs text-gray-400 w-24 flex-shrink-0">
+                      <div className="text-xs text-surface-400 w-24 flex-shrink-0">
                         {item.date}
                       </div>
                       <div className="flex-1">
-                        <span className="font-medium text-gray-700">{item.action}</span>
-                        {item.by && <span className="text-gray-500"> by {item.by}</span>}
+                        <span className="font-medium text-surface-700">{item.action}</span>
+                        {item.by && <span className="text-surface-500"> by {item.by}</span>}
                       </div>
                     </div>
                   ))}
@@ -435,8 +435,8 @@ const ReportModal = ({ record, onClose }) => {
 
             {/* Reference ID */}
             {record.externalId && (
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <span className="text-xs text-gray-400">Reference ID: {record.externalId}</span>
+              <div className="mt-4 pt-3 border-t border-surface-200">
+                <span className="text-xs text-surface-400">Reference ID: {record.externalId}</span>
               </div>
             )}
           </div>
@@ -461,19 +461,41 @@ const DataQualitySection = ({ record }) => {
   const isValidated = record.hazardCategoryValidated
   const hasIssue = record.dataQualityIssue && !isValidated
 
-  // Compact status indicator
+  // Check if there's a meaningful description to validate against
+  const description = record.description || ''
+  const hasDescription = description.trim().length > 10 &&
+    !description.toLowerCase().includes('no description provided')
+
+  // Compact status indicator - adjusted logic for missing descriptions
   const getStatusBadge = () => {
     if (hasIssue) {
       return { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Review Needed' }
     }
-    if (!isValidated) {
-      return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
+    if (isValidated) {
+      return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
     }
-    return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
+    // No validation but also no issue - could be missing description
+    if (isFromExcel && !hasDescription) {
+      // Excel category trusted, no description to validate - show neutral status
+      return { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-50', label: 'From Source' }
+    }
+    // Has description but no keywords match
+    return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
   }
 
   const badge = getStatusBadge()
   const BadgeIcon = badge.icon
+
+  // Generate appropriate explanation text
+  const getExplanationText = () => {
+    if (isValidated) {
+      return `Description contains "${record.location}" keywords`
+    }
+    if (isFromExcel && !hasDescription) {
+      return 'Category from source data (no description to verify against)'
+    }
+    return `No "${record.location}" keywords found in description`
+  }
 
   return (
     <div className="mb-4">
@@ -485,29 +507,24 @@ const DataQualitySection = ({ record }) => {
         <div className="flex items-center gap-2">
           <BadgeIcon size={12} className={badge.color} />
           <span className={`font-medium ${badge.color}`}>{badge.label}</span>
-          <span className="text-gray-400">•</span>
-          <span className="text-gray-500">
+          <span className="text-surface-400">•</span>
+          <span className="text-surface-500">
             {isFromExcel ? 'From Excel' : 'Auto-classified'}
             {record.originalHazardCategory && record.originalHazardCategory !== record.location &&
               ` (was "${record.originalHazardCategory}")`
             }
           </span>
         </div>
-        <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-1 p-2 bg-gray-50 border border-gray-200 text-xs space-y-1">
+        <div className="mt-1 p-2 bg-surface-50 border border-surface-200 text-xs space-y-1">
           {record.dataQualityIssue && (
-            <p className="text-gray-600">{record.dataQualityIssue}</p>
+            <p className="text-surface-600">{record.dataQualityIssue}</p>
           )}
-          <p className="text-gray-500">
-            {isValidated
-              ? `Description contains "${record.location}" keywords`
-              : `No "${record.location}" keywords found in description`
-            }
-          </p>
+          <p className="text-surface-500">{getExplanationText()}</p>
         </div>
       )}
     </div>

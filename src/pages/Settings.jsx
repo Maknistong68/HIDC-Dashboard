@@ -77,7 +77,7 @@ const Settings = () => {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading settings...</div>
+        <div className="text-surface-500">Loading settings...</div>
       </div>
     )
   }
@@ -91,8 +91,8 @@ const Settings = () => {
             <SettingsIcon size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-            <p className="text-sm text-gray-500">Configure how your data is cleaned, validated, and organized</p>
+            <h1 className="text-2xl font-bold text-surface-900">Settings</h1>
+            <p className="text-sm text-surface-500">Configure how your data is cleaned, validated, and organized</p>
           </div>
         </div>
       </div>
@@ -250,7 +250,7 @@ const Settings = () => {
                       min={1990}
                       max={2100}
                     />
-                    <span className="text-gray-400">to</span>
+                    <span className="text-surface-400">to</span>
                     <NumberInput
                       value={getSetting('cleanup.dates.validDateRange.maxYear')}
                       onChange={(v) => updateSetting('cleanup.dates.validDateRange.maxYear', v)}
@@ -980,8 +980,8 @@ const Settings = () => {
               />
             </SettingRow>
             {getSetting('transform.typeMapping.enabled') && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500 mb-2">Map imported values to standard types:</p>
+              <div className="mt-3 p-3 bg-surface-50 rounded-lg">
+                <p className="text-xs text-surface-500 mb-2">Map imported values to standard types:</p>
                 <MappingTable
                   mappings={getSetting('transform.typeMapping.mappings') || {}}
                   onChange={(v) => updateSetting('transform.typeMapping.mappings', v)}
@@ -1018,8 +1018,8 @@ const Settings = () => {
               />
             </SettingRow>
             {getSetting('transform.statusMapping.enabled') && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500 mb-2">Map imported values to standard statuses:</p>
+              <div className="mt-3 p-3 bg-surface-50 rounded-lg">
+                <p className="text-xs text-surface-500 mb-2">Map imported values to standard statuses:</p>
                 <MappingTable
                   mappings={getSetting('transform.statusMapping.mappings') || {}}
                   onChange={(v) => updateSetting('transform.statusMapping.mappings', v)}
@@ -1309,11 +1309,11 @@ const Settings = () => {
       </div>
 
       {/* Footer Actions */}
-      <div className="mt-8 pt-6 border-t border-gray-200">
+      <div className="mt-8 pt-6 border-t border-surface-200">
         <div className="flex items-center justify-between">
           <button
             onClick={resetToDefaults}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-surface-700 bg-white border border-surface-200 rounded-lg hover:bg-surface-50 transition-colors"
           >
             <RotateCcw size={16} />
             Reset to Defaults
@@ -1322,7 +1322,7 @@ const Settings = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={exportSettings}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-surface-700 bg-white border border-surface-200 rounded-lg hover:bg-surface-50 transition-colors"
             >
               <Download size={16} />
               Export Settings

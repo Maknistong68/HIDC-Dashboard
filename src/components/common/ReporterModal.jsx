@@ -86,26 +86,26 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
       />
 
       {/* Modal */}
-      <div className="relative bg-white/95 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-200 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-surface-200 px-6 py-4 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <User size={20} className="text-blue-600" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{data.name}</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-lg font-bold text-surface-900">{data.name}</h2>
+                <p className="text-sm text-surface-500">
                   {data.total} observations | Active {data.activeDays} days
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-surface-100 rounded-lg transition-colors"
             >
-              <X size={20} className="text-gray-500" />
+              <X size={20} className="text-surface-500" />
             </button>
           </div>
 
@@ -135,8 +135,8 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
           {/* Row 1: Type Breakdown + Team Comparison */}
           <div className="grid grid-cols-2 gap-4">
             {/* Observation Type Breakdown */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-surface-50 rounded-xl p-4">
+              <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <BarChart3 size={14} />
                 Observation Types
               </h3>
@@ -164,7 +164,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                   {pieData.map((item) => (
                     <div key={item.name} className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded" style={{ backgroundColor: item.color }}></span>
-                      <span className="text-gray-600">{item.name}:</span>
+                      <span className="text-surface-600">{item.name}:</span>
                       <span className="font-medium">{item.value}</span>
                     </div>
                   ))}
@@ -173,8 +173,8 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
             </div>
 
             {/* Team Comparison */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-surface-50 rounded-xl p-4">
+              <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Target size={14} />
                 vs Team Average
               </h3>
@@ -208,8 +208,8 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
           </div>
 
           {/* Row 2: Top Hazards */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+          <div className="bg-surface-50 rounded-xl p-4">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
               <AlertTriangle size={14} />
               Top Hazards Reported
             </h3>
@@ -222,12 +222,12 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                     <div key={hazard.name} className="relative">
                       <div className="flex items-center justify-between p-2 relative z-10">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-400 w-4">{idx + 1}</span>
-                          <span className="text-sm text-gray-700">{hazard.name}</span>
+                          <span className="text-xs font-bold text-surface-400 w-4">{idx + 1}</span>
+                          <span className="text-sm text-surface-700">{hazard.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">{hazard.percentage}%</span>
-                          <span className="text-sm font-bold text-gray-900">{hazard.count}</span>
+                          <span className="text-xs text-surface-500">{hazard.percentage}%</span>
+                          <span className="text-sm font-bold text-surface-900">{hazard.count}</span>
                         </div>
                       </div>
                       <div
@@ -239,15 +239,15 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-4">No hazard data available</p>
+              <p className="text-sm text-surface-400 text-center py-4">No hazard data available</p>
             )}
           </div>
 
           {/* Row 3: Time Pattern + Description Quality */}
           <div className="grid grid-cols-2 gap-4">
             {/* Time of Reporting */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-surface-50 rounded-xl p-4">
+              <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Clock size={14} />
                 Time of Reporting
               </h3>
@@ -276,36 +276,36 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                   </div>
                 </>
               ) : (
-                <div className="h-32 flex items-center justify-center text-gray-400 text-sm">
+                <div className="h-32 flex items-center justify-center text-surface-400 text-sm">
                   Time data not available
                 </div>
               )}
             </div>
 
             {/* Description Quality */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-surface-50 rounded-xl p-4">
+              <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <FileText size={14} />
                 Description Quality
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Avg Word Count</span>
-                  <span className="font-bold text-gray-900">{data.avgWordCount} words</span>
+                  <span className="text-sm text-surface-600">Avg Word Count</span>
+                  <span className="font-bold text-surface-900">{data.avgWordCount} words</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Quality Rate (&gt;15 words)</span>
+                  <span className="text-sm text-surface-600">Quality Rate (&gt;15 words)</span>
                   <span className={`font-bold ${parseFloat(data.qualityRate) >= 75 ? 'text-green-600' : 'text-yellow-600'}`}>
                     {data.qualityRate}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Flagged (poor quality)</span>
+                  <span className="text-sm text-surface-600">Flagged (poor quality)</span>
                   <span className={`font-bold ${data.flaggedCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
                     {data.flaggedCount} records
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-xs text-gray-500">
+                <div className="flex justify-between items-center text-xs text-surface-500">
                   <span>Range</span>
                   <span>{data.minWordCount} - {data.maxWordCount} words</span>
                 </div>
@@ -315,8 +315,8 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
 
           {/* Row 4: Monthly Trend */}
           {data.monthlyTrend.length > 1 && (
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <div className="bg-surface-50 rounded-xl p-4">
+              <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <TrendingUp size={14} />
                 Monthly Activity
               </h3>
@@ -356,11 +356,11 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {data.flaggedRecords.slice(0, 5).map((record, idx) => (
                       <div key={record.id || idx} className="bg-white/70 rounded p-2 text-xs">
-                        <div className="flex justify-between text-gray-500 mb-1">
+                        <div className="flex justify-between text-surface-500 mb-1">
                           <span>{record.date}</span>
                           <span className="text-red-600 font-medium">{record.wordCount} words</span>
                         </div>
-                        <p className="text-gray-700 italic truncate">"{record.description || '(empty)'}"</p>
+                        <p className="text-surface-700 italic truncate">"{record.description || '(empty)'}"</p>
                       </div>
                     ))}
                     {data.flaggedRecords.length > 5 && (
@@ -381,11 +381,11 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {data.duplicateDescriptions.slice(0, 5).map((record, idx) => (
                       <div key={record.id || idx} className="bg-white/70 rounded p-2 text-xs">
-                        <div className="flex justify-between text-gray-500 mb-1">
+                        <div className="flex justify-between text-surface-500 mb-1">
                           <span>{record.date}</span>
                           <span className="text-orange-600 font-medium">Used {record.duplicateCount}x</span>
                         </div>
-                        <p className="text-gray-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
                       </div>
                     ))}
                     {data.duplicateDescriptions.length > 5 && (
@@ -399,22 +399,22 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
               {data.vagueDescriptions?.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 bg-gray-300 text-gray-700 rounded text-xs font-medium">
+                    <span className="px-2 py-0.5 bg-surface-300 text-surface-700 rounded text-xs font-medium">
                       Vague/Unclear ({data.vagueDescriptions.length})
                     </span>
                   </div>
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {data.vagueDescriptions.slice(0, 5).map((record, idx) => (
                       <div key={record.id || idx} className="bg-white/70 rounded p-2 text-xs">
-                        <div className="flex justify-between text-gray-500 mb-1">
+                        <div className="flex justify-between text-surface-500 mb-1">
                           <span>{record.date}</span>
-                          <span className="text-gray-600 font-medium">{record.confidence}% confidence</span>
+                          <span className="text-surface-600 font-medium">{record.confidence}% confidence</span>
                         </div>
-                        <p className="text-gray-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
                       </div>
                     ))}
                     {data.vagueDescriptions.length > 5 && (
-                      <div className="text-xs text-gray-500 text-center">+{data.vagueDescriptions.length - 5} more</div>
+                      <div className="text-xs text-surface-500 text-center">+{data.vagueDescriptions.length - 5} more</div>
                     )}
                   </div>
                 </div>
@@ -438,11 +438,11 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
 // Comparison Row Component
 const ComparisonRow = ({ label, reporter, team, better }) => (
   <div className="flex items-center justify-between text-sm">
-    <span className="text-gray-600">{label}</span>
+    <span className="text-surface-600">{label}</span>
     <div className="flex items-center gap-2">
-      <span className={`font-bold ${better ? 'text-green-600' : 'text-gray-700'}`}>{reporter}</span>
-      <span className="text-gray-400">vs</span>
-      <span className="text-gray-500">{team}</span>
+      <span className={`font-bold ${better ? 'text-green-600' : 'text-surface-700'}`}>{reporter}</span>
+      <span className="text-surface-400">vs</span>
+      <span className="text-surface-500">{team}</span>
       {better ? (
         <CheckCircle size={14} className="text-green-500" />
       ) : (

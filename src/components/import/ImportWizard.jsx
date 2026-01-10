@@ -215,8 +215,8 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
       {/* Header - only show in inline mode when showHeader is true */}
       {mode === 'inline' && showHeader && (
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Import Excel Data</h2>
-          <p className="text-gray-500">Import observations from your official HSE system</p>
+          <h2 className="text-2xl font-bold text-surface-900">Import Excel Data</h2>
+          <p className="text-surface-500">Import observations from your official HSE system</p>
         </div>
       )}
 
@@ -232,7 +232,7 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
                     ? 'bg-green-500 text-white'
                     : currentStep === step.id
                       ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
+                      : 'bg-surface-200 text-surface-500'
                   }
                 `}>
                   {currentStep > step.id ? (
@@ -242,14 +242,14 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
                   )}
                 </div>
                 <span className={`text-xs mt-2 ${
-                  currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+                  currentStep >= step.id ? 'text-surface-900' : 'text-surface-500'
                 }`}>
                   {step.name}
                 </span>
               </div>
               {index < STEPS.length - 1 && (
                 <div className={`flex-1 h-1 mx-2 rounded ${
-                  currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
+                  currentStep > step.id ? 'bg-green-500' : 'bg-surface-200'
                 }`} />
               )}
             </React.Fragment>
@@ -258,7 +258,7 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
       </div>
 
       {/* Step Content */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 min-h-[400px]">
+      <div className="bg-white rounded-xl border border-surface-200 p-6 min-h-[400px]">
         {currentStep === 1 && (
           <>
             <FileUpload onFileSelect={handleFileSelect} isLoading={isProcessing} />
@@ -327,7 +327,7 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
           <button
             onClick={currentStep === 1 && onCancel ? onCancel : handleBack}
             disabled={currentStep === 1 && !onCancel}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex items-center gap-2 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <ChevronLeft size={20} />
             {currentStep === 1 && onCancel ? 'Cancel' : 'Back'}

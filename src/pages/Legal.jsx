@@ -31,13 +31,13 @@ const Legal = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Legal Information</h1>
-        <p className="text-gray-500">Review our policies and terms of use</p>
+        <h1 className="text-2xl font-bold text-surface-900">Legal Information</h1>
+        <p className="text-surface-500">Review our policies and terms of use</p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200">
+      <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+        <div className="border-b border-surface-200">
           <nav className="flex">
             {TABS.map((tab) => {
               const Icon = tab.icon
@@ -49,7 +49,7 @@ const Legal = () => {
                   className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                     isActive
                       ? 'border-blue-500 text-blue-600 bg-blue-50/50'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'border-transparent text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                   }`}
                 >
                   <Icon size={18} />

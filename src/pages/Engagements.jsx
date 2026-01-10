@@ -37,14 +37,14 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Project *
           </label>
           <select
             required
             value={formData.projectId}
             onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
@@ -54,7 +54,7 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Date *
           </label>
           <input
@@ -62,18 +62,18 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
             required
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Activity Type *
           </label>
           <select
             required
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           >
             {ENGAGEMENT_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
@@ -83,7 +83,7 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Duration (minutes) *
           </label>
           <input
@@ -92,11 +92,11 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
             min="1"
             value={formData.duration}
             onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Number of Attendees *
           </label>
           <input
@@ -105,11 +105,11 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
             min="1"
             value={formData.attendees}
             onChange={(e) => setFormData({ ...formData, attendees: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Conducted By *
           </label>
           <input
@@ -117,40 +117,40 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
             required
             value={formData.conductedBy}
             onChange={(e) => setFormData({ ...formData, conductedBy: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
             placeholder="Name of conductor"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-surface-700 mb-1">
           Topics Covered
         </label>
         <input
           type="text"
           value={formData.topics?.join(', ') || ''}
           onChange={handleTopicsChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           placeholder="Separate topics with commas"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-surface-700 mb-1">
           Findings / Notes
         </label>
         <textarea
           value={formData.findings}
           onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           placeholder="Any findings or observations..."
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-surface-700 mb-1">
           Actions Raised
         </label>
         <input
@@ -158,7 +158,7 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
           min="0"
           value={formData.actionsRaised}
           onChange={(e) => setFormData({ ...formData, actionsRaised: parseInt(e.target.value) || 0 })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
         />
       </div>
 
@@ -166,7 +166,7 @@ const EngagementForm = ({ engagement, projects, onSubmit, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+          className="flex-1 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 font-medium"
         >
           Cancel
         </button>
@@ -222,34 +222,34 @@ const WeeklyTracker = ({ projects, engagements, currentWeekStart }) => {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900">
+    <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+      <div className="p-4 border-b border-surface-200">
+        <h3 className="font-semibold text-surface-900">
           Week {weekNum} ({format(currentWeekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')})
         </h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-surface-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Project</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Inspections</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Toolbox Talks</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Audits</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Trainings</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Score</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase">Project</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Inspections</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Toolbox Talks</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Audits</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Trainings</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Total</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Score</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-surface-200">
             {weeklyData.map((row) => (
-              <tr key={row.project.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.project.name}</td>
-                <td className="px-4 py-3 text-center text-sm text-gray-600">{row.inspections}</td>
-                <td className="px-4 py-3 text-center text-sm text-gray-600">{row.toolboxTalks}</td>
-                <td className="px-4 py-3 text-center text-sm text-gray-600">{row.audits}</td>
-                <td className="px-4 py-3 text-center text-sm text-gray-600">{row.trainings}</td>
-                <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">{row.total}/{row.target}</td>
+              <tr key={row.project.id} className="hover:bg-surface-50">
+                <td className="px-4 py-3 text-sm font-medium text-surface-900">{row.project.name}</td>
+                <td className="px-4 py-3 text-center text-sm text-surface-600">{row.inspections}</td>
+                <td className="px-4 py-3 text-center text-sm text-surface-600">{row.toolboxTalks}</td>
+                <td className="px-4 py-3 text-center text-sm text-surface-600">{row.audits}</td>
+                <td className="px-4 py-3 text-center text-sm text-surface-600">{row.trainings}</td>
+                <td className="px-4 py-3 text-center text-sm font-medium text-surface-900">{row.total}/{row.target}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getScoreColor(row.score)}`}>
                     {row.score}%
@@ -328,7 +328,7 @@ const Engagements = () => {
       header: 'Duration',
       accessor: (row) => row.duration,
       render: (row) => (
-        <div className="flex items-center gap-1 text-sm text-gray-600">
+        <div className="flex items-center gap-1 text-sm text-surface-600">
           <Clock size={14} />
           {row.duration} min
         </div>
@@ -340,7 +340,7 @@ const Engagements = () => {
       header: 'Attendees',
       accessor: (row) => row.attendees,
       render: (row) => (
-        <div className="flex items-center gap-1 text-sm text-gray-600">
+        <div className="flex items-center gap-1 text-sm text-surface-600">
           <Users size={14} />
           {row.attendees}
         </div>
@@ -365,7 +365,7 @@ const Engagements = () => {
               e.stopPropagation()
               handleEdit(row)
             }}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
+            className="p-1.5 text-surface-500 hover:bg-surface-100 rounded-lg"
           >
             <Edit size={16} />
           </button>
@@ -420,8 +420,8 @@ const Engagements = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Engagements</h2>
-          <p className="text-gray-500">Track safety engagement activities</p>
+          <h2 className="text-2xl font-bold text-surface-900">Engagements</h2>
+          <p className="text-surface-500">Track safety engagement activities</p>
         </div>
         <button
           onClick={() => {
@@ -480,7 +480,7 @@ const Engagements = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'list'
                 ? 'bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
             }`}
           >
             List View
@@ -490,7 +490,7 @@ const Engagements = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'weekly'
                 ? 'bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
             }`}
           >
             Weekly Tracker
@@ -501,22 +501,22 @@ const Engagements = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-surface-100 rounded-lg"
             >
               <ChevronLeft size={20} />
             </button>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-surface-700">
               Week {getWeek(currentWeekStart)}, {getYear(currentWeekStart)}
             </span>
             <button
               onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-surface-100 rounded-lg"
             >
               <ChevronRight size={20} />
             </button>
             <button
               onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))}
-              className="ml-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
+              className="ml-2 px-3 py-1 text-sm bg-surface-100 hover:bg-surface-200 rounded-lg"
             >
               Today
             </button>

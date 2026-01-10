@@ -1,8 +1,34 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { getData, saveData, clearAllData } from '../utils/storage'
-import { generateId, recategorizeBlankHazards } from '../utils/calculations'
+import { generateId, recategorizeBlankHazards, fixMiscategorizedMajorHazards } from '../utils/calculations'
 
 const DataContext = createContext()
+
+// Debounce helper for localStorage saves
+const useDebouncedSave = (key, data, isLoading, delay = 500) => {
+  const timeoutRef = useRef(null)
+
+  useEffect(() => {
+    if (isLoading) return
+
+    // Clear any pending save
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    // Schedule new save
+    timeoutRef.current = setTimeout(() => {
+      saveData(key, data)
+    }, delay)
+
+    // Cleanup on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [key, data, isLoading, delay])
+}
 
 export const useData = () => {
   const context = useContext(DataContext)
@@ -25,29 +51,38 @@ export const DataProvider = ({ children }) => {
     loadData()
   }, [])
 
-  // Save data whenever it changes
-  useEffect(() => {
-    if (!isLoading) {
-      saveData('PROJECTS', projects)
-    }
-  }, [projects, isLoading])
-
-  useEffect(() => {
-    if (!isLoading) {
-      saveData('INCIDENTS', incidents)
-    }
-  }, [incidents, isLoading])
+  // Debounced saves - prevents excessive localStorage writes during batch operations
+  useDebouncedSave('PROJECTS', projects, isLoading)
+  useDebouncedSave('INCIDENTS', incidents, isLoading)
 
   const loadData = () => {
     const storedProjects = getData('PROJECTS')
     let storedIncidents = getData('INCIDENTS') || []
 
+    // Ensure storedIncidents is an array (guards against corrupted data)
+    if (!Array.isArray(storedIncidents)) {
+      console.warn('Stored incidents data is not an array, resetting to empty array')
+      storedIncidents = []
+    }
+
     // Auto-fix blank hazard categories on load
-    const hasBlankHazards = storedIncidents.some(
+    const hasBlankHazards = storedIncidents.length > 0 && storedIncidents.some(
       i => !i.location || i.location === 'Not specified' || i.location.trim() === ''
     )
     if (hasBlankHazards && storedIncidents.length > 0) {
       storedIncidents = recategorizeBlankHazards(storedIncidents)
+      saveData('INCIDENTS', storedIncidents)
+    }
+
+    // Fix mis-categorized Major Hazards (e.g., "Energised Systems" wrongly changed to "Work Environment")
+    // This migration runs once to fix records where valid Excel categories were overridden
+    const hasMiscategorizedMajors = storedIncidents.length > 0 && storedIncidents.some(
+      i => i.originalHazardCategory &&
+           i.location === 'Work Environment' &&
+           i.hazardCategorySource === 'auto-classified'
+    )
+    if (hasMiscategorizedMajors) {
+      storedIncidents = fixMiscategorizedMajorHazards(storedIncidents)
       saveData('INCIDENTS', storedIncidents)
     }
 

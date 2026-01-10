@@ -67,7 +67,7 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
               >
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-amber-600" />
-                  <span className="font-medium text-sm text-gray-900">
+                  <span className="font-medium text-sm text-surface-900">
                     Date Parsing Issues ({dateCount})
                   </span>
                 </div>
@@ -79,25 +79,25 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
                   <table className="w-full text-xs">
                     <thead className="bg-amber-50 sticky top-0">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Row</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Original</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Parsed As</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Event ID</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Row</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Original</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Parsed As</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Event ID</th>
                       </tr>
                     </thead>
                     <tbody>
                       {warnings.dateIssues.slice(0, 50).map((issue, idx) => (
                         <tr key={idx} className="border-t border-amber-100">
-                          <td className="p-2 text-gray-700">{issue.row}</td>
+                          <td className="p-2 text-surface-700">{issue.row}</td>
                           <td className="p-2 text-red-600 font-mono">{issue.original}</td>
                           <td className="p-2 text-amber-600 font-mono">{issue.parsedAs}</td>
-                          <td className="p-2 text-gray-500 truncate max-w-[150px]">{issue.eventId}</td>
+                          <td className="p-2 text-surface-500 truncate max-w-[150px]">{issue.eventId}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   {dateCount > 50 && (
-                    <div className="p-2 text-xs text-center text-gray-500 bg-amber-50">
+                    <div className="p-2 text-xs text-center text-surface-500 bg-amber-50">
                       Showing first 50 of {dateCount} issues
                     </div>
                   )}
@@ -115,7 +115,7 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
               >
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-amber-600" />
-                  <span className="font-medium text-sm text-gray-900">
+                  <span className="font-medium text-sm text-surface-900">
                     Auto-Classified Hazards ({hazardCount})
                   </span>
                 </div>
@@ -127,25 +127,25 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
                   <table className="w-full text-xs">
                     <thead className="bg-amber-50 sticky top-0">
                       <tr>
-                        <th className="text-left p-2 font-medium text-gray-600">Row</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Original</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Classified As</th>
-                        <th className="text-left p-2 font-medium text-gray-600">Event ID</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Row</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Original</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Classified As</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Event ID</th>
                       </tr>
                     </thead>
                     <tbody>
                       {warnings.hazardIssues.slice(0, 50).map((issue, idx) => (
                         <tr key={idx} className="border-t border-amber-100">
-                          <td className="p-2 text-gray-700">{issue.row}</td>
-                          <td className="p-2 text-gray-500 italic">{issue.original}</td>
+                          <td className="p-2 text-surface-700">{issue.row}</td>
+                          <td className="p-2 text-surface-500 italic">{issue.original}</td>
                           <td className="p-2 text-blue-600">{issue.autoClassified}</td>
-                          <td className="p-2 text-gray-500 truncate max-w-[150px]">{issue.eventId}</td>
+                          <td className="p-2 text-surface-500 truncate max-w-[150px]">{issue.eventId}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   {hazardCount > 50 && (
-                    <div className="p-2 text-xs text-center text-gray-500 bg-amber-50">
+                    <div className="p-2 text-xs text-center text-surface-500 bg-amber-50">
                       Showing first 50 of {hazardCount} issues
                     </div>
                   )}

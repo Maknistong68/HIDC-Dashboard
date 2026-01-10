@@ -99,7 +99,7 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
             ? 'border-primary-500 bg-primary-50'
             : selectedFile
               ? 'border-green-500 bg-green-50'
-              : 'border-gray-300 hover:border-gray-400'
+              : 'border-surface-200 hover:border-surface-400'
           }
           ${isLoading ? 'opacity-50 pointer-events-none' : ''}
         `}
@@ -109,8 +109,8 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <FileSpreadsheet className="w-8 h-8 text-green-600" />
             </div>
-            <p className="font-medium text-gray-900">{selectedFile.name}</p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="font-medium text-surface-900">{selectedFile.name}</p>
+            <p className="text-sm text-surface-500 mt-1">
               {(selectedFile.size / 1024).toFixed(1)} KB
             </p>
             {!isLoading && (
@@ -125,13 +125,13 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
           </div>
         ) : (
           <>
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Upload className="w-8 h-8 text-gray-400" />
+            <div className="w-16 h-16 bg-surface-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Upload className="w-8 h-8 text-surface-400" />
             </div>
-            <p className="text-lg font-medium text-gray-700">
+            <p className="text-lg font-medium text-surface-700">
               Drag and drop your Excel file here
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-surface-500 mt-1">
               or click to browse
             </p>
             <input
@@ -147,7 +147,7 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl">
             <div className="flex items-center gap-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
-              <span className="text-gray-600">Processing file...</span>
+              <span className="text-surface-600">Processing file...</span>
             </div>
           </div>
         )}
@@ -160,12 +160,12 @@ const FileUpload = ({ onFileSelect, isLoading }) => {
         </div>
       )}
 
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-surface-500">
         <p>Supported formats: .xlsx, .xls (Excel files)</p>
         <p>Maximum file size: 10MB</p>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-gray-400 mt-2">
+      <div className="flex items-center gap-2 text-xs text-surface-400 mt-2">
         <ShieldCheck size={14} className="text-green-500" />
         <span>Your data stays local. No data is collected or sent to any server.</span>
       </div>
