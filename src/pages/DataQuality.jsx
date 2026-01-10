@@ -3,10 +3,12 @@ import {
   BarChart3,
   CheckCircle,
   AlertTriangle,
+  AlertCircle,
   XCircle,
   TrendingUp,
   Users,
   FileText,
+  FileX,
   Calendar,
   Building2,
   Download,
@@ -20,7 +22,9 @@ import {
   Target,
   Zap,
   Type,
-  Copy
+  Copy,
+  AlignLeft,
+  HelpCircle
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import FilterBar from '../components/common/FilterBar'
@@ -992,336 +996,369 @@ const DataQuality = () => {
         </div>
       )}
 
-      {/* SECTION 1C: Duplicate Detection & Spelling Issues */}
+      {/* ROW 1: Duplicates & Spelling (2 columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Duplicate Detection */}
-        <div className="bg-white border border-surface-200 rounded-lg p-4">
+        {/* Duplicates */}
+        <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-              <FileText size={14} />
-              Duplicate Descriptions
-              <InfoTooltip text="Identifies copy-paste descriptions indicating low-quality data entry. Same description used multiple times suggests reporters aren't providing unique observations." />
-            </h3>
-            {duplicates.totalGroups > 0 && (
-              <button
-                onClick={() => setShowDuplicates(!showDuplicates)}
-                className="text-xs text-blue-600 hover:text-blue-800"
-              >
-                {showDuplicates ? 'Hide' : 'View'} Details
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 mb-3">
-            <div className={`text-2xl font-bold ${duplicates.totalGroups > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
-              {duplicates.totalGroups}
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-surface-100 rounded-lg">
+                <FileText size={16} className="text-surface-500" />
+              </div>
+              <span className="text-sm font-semibold text-surface-800">Duplicates</span>
+              <InfoTooltip text="Copy-paste descriptions indicating low-quality data entry" />
             </div>
-            <div className="text-sm text-surface-600">
-              <div>duplicate groups found</div>
-              <div className="text-xs text-surface-400">{duplicates.totalDuplicates} total duplicate entries ({duplicates.duplicateRate}%)</div>
+            <div className="text-right">
+              <div className={`text-3xl font-bold ${duplicates.totalGroups > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {duplicates.totalGroups}
+              </div>
+              <div className="text-xs text-surface-500">groups</div>
             </div>
           </div>
 
-          {showDuplicates && duplicates.duplicateGroups.length > 0 && (
-            <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-surface-200 pt-3">
-              {duplicates.duplicateGroups.slice(0, 10).map((group, idx) => (
-                <div
-                  key={idx}
-                  className="bg-surface-50 rounded p-2 text-xs cursor-pointer hover:bg-surface-100 transition-colors"
-                  onClick={() => handleDuplicateDrillDown(group)}
-                  title="Click to view all records with this description"
-                >
-                  <div className="flex justify-between mb-1">
-                    <span className={`font-medium ${group.isSameReporter ? 'text-red-600' : 'text-yellow-600'}`}>
-                      Used {group.count}x {group.isSameReporter ? '(same reporter)' : `(${group.reporters.length} reporters)`}
-                    </span>
+          {duplicates.totalGroups === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <CheckCircle size={32} className="text-green-500 mx-auto mb-2" />
+                <span className="text-sm text-green-600 font-medium">All Clear</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Summary bar */}
+              <div className="mb-3 p-2 bg-surface-50 rounded-lg">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-surface-600">{duplicates.totalDuplicates} duplicate entries</span>
+                  <span className="font-bold text-surface-700">{duplicates.duplicateRate}%</span>
+                </div>
+                <div className="mt-1 h-1.5 bg-surface-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-full"
+                    style={{ width: `${Math.min(100, duplicates.duplicateRate * 5)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Duplicate items with visual indicators */}
+              <div className="flex-1 space-y-2 overflow-y-auto max-h-36">
+                {duplicates.duplicateGroups.slice(0, showDuplicates ? 10 : 4).map((group, idx) => (
+                  <div
+                    key={idx}
+                    className="group p-2 bg-surface-50 rounded-lg cursor-pointer hover:bg-surface-100 transition-all border border-transparent hover:border-surface-300"
+                    onClick={() => handleDuplicateDrillDown(group)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        group.isSameReporter ? 'bg-red-100 text-red-700' : 'bg-surface-200 text-surface-700'
+                      }`}>
+                        {group.count}x
+                      </div>
+                      {group.isSameReporter && (
+                        <span className="text-[10px] text-red-500 font-medium">same reporter</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-surface-600 truncate group-hover:text-surface-800">
+                      {group.description.slice(0, 50)}...
+                    </p>
                   </div>
-                  <p className="text-surface-600 italic truncate" title={group.description}>
-                    "{group.description}"
-                  </p>
-                </div>
-              ))}
-              {duplicates.duplicateGroups.length > 10 && (
-                <div className="text-xs text-surface-400 text-center">
-                  +{duplicates.duplicateGroups.length - 10} more groups
-                </div>
-              )}
-            </div>
-          )}
+                ))}
+              </div>
 
-          {duplicates.totalGroups === 0 && (
-            <div className="flex items-center gap-2 text-green-600 text-sm">
-              <CheckCircle size={16} />
-              No duplicate descriptions detected
-            </div>
+              {/* Footer */}
+              <div className="mt-3 pt-2 border-t border-surface-200 text-center">
+                {duplicates.duplicateGroups.length > 4 ? (
+                  <button
+                    onClick={() => setShowDuplicates(!showDuplicates)}
+                    className="text-xs text-surface-600 hover:text-surface-800 font-medium"
+                  >
+                    {showDuplicates ? 'Show less' : `+${duplicates.duplicateGroups.length - 4} more groups`}
+                  </button>
+                ) : (
+                  <span className="text-xs text-surface-500">Click any item to view records</span>
+                )}
+              </div>
+            </>
           )}
         </div>
 
         {/* Spelling Issues */}
-        <div className="bg-white border border-surface-200 rounded-lg p-4">
+        <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-              <Type size={14} className="text-orange-500" />
-              Spelling Issues
-              <InfoTooltip text="Uses Typo.js with full English dictionary to detect misspellings. Construction/safety technical terms are whitelisted to avoid false positives." />
-            </h3>
-            {spellCheckerReady && spellingIssues.count > 0 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={copySpellingReport}
-                  className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800"
-                  title="Copy spelling report to clipboard"
-                >
-                  <Copy size={12} />
-                  Copy Report
-                </button>
-                <button
-                  onClick={() => setShowSpellingIssues(!showSpellingIssues)}
-                  className="text-xs text-blue-600 hover:text-blue-800"
-                >
-                  {showSpellingIssues ? 'Hide' : 'View'} Details
-                </button>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-surface-100 rounded-lg">
+                <Type size={16} className="text-surface-500" />
               </div>
-            )}
+              <span className="text-sm font-semibold text-surface-800">Spelling</span>
+              <InfoTooltip text="Misspellings detected using dictionary-based spell checker" />
+            </div>
+            <div className="text-right">
+              {spellCheckerReady ? (
+                <>
+                  <div className={`text-3xl font-bold ${spellingIssues.count > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {spellingIssues.count}
+                  </div>
+                  <div className="text-xs text-surface-500">records</div>
+                </>
+              ) : spellCheckerLoading ? (
+                <div className="animate-spin h-6 w-6 border-2 border-surface-300 border-t-surface-500 rounded-full"></div>
+              ) : (
+                <span className="text-xs text-surface-400">N/A</span>
+              )}
+            </div>
           </div>
 
-          {/* Loading State */}
-          {spellCheckerLoading && (
-            <div className="flex items-center gap-2 text-blue-600 text-sm">
-              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-              Loading spell checker dictionary...
+          {spellCheckerLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-3 border-surface-200 border-t-surface-500 rounded-full mx-auto mb-2"></div>
+                <span className="text-xs text-surface-500">Loading dictionary...</span>
+              </div>
             </div>
-          )}
-
-          {/* Ready State */}
-          {spellCheckerReady && (
+          ) : !spellCheckerReady ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-surface-400">
+                <AlertCircle size={32} className="mx-auto mb-2 opacity-50" />
+                <span className="text-sm">Unavailable</span>
+              </div>
+            </div>
+          ) : spellingIssues.count === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <CheckCircle size={32} className="text-green-500 mx-auto mb-2" />
+                <span className="text-sm text-green-600 font-medium">All Clear</span>
+              </div>
+            </div>
+          ) : (
             <>
-              <div className="flex items-center gap-4 mb-3">
-                <div className={`text-2xl font-bold ${spellingIssues.count > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                  {spellingIssues.count}
-                </div>
-                <div className="text-sm text-surface-600">
-                  <div>records with misspellings</div>
-                  <div className="text-xs text-surface-400">{spellingIssues.percentage}% of total records</div>
-                </div>
+              {/* Summary bar */}
+              <div className="mb-3 p-2 bg-surface-50 rounded-lg flex items-center justify-between">
+                <span className="text-xs text-surface-600">{spellingIssues.percentage}% of records</span>
+                {spellingIssues.count > 0 && (
+                  <button
+                    onClick={copySpellingReport}
+                    className="flex items-center gap-1 text-xs text-surface-600 hover:text-surface-800 font-medium"
+                    title="Copy report"
+                  >
+                    <Copy size={12} />
+                    Copy
+                  </button>
+                )}
               </div>
 
-              {showSpellingIssues && spellingIssues.records.length > 0 && (
-                <div className="space-y-2 max-h-48 overflow-y-auto mt-3 border-t border-surface-200 pt-3">
-                  {spellingIssues.records.slice(0, 10).map((record, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-surface-50 rounded p-2 text-xs cursor-pointer hover:bg-surface-100 transition-colors"
-                      onClick={() => handleSpellingDrillDown(record)}
-                      title="Click to view record details"
-                    >
-                      <div className="flex justify-between mb-1">
-                        <span className="font-medium text-orange-600">
-                          {record.misspellings.map(m => `"${m.misspelled}" → "${m.correction}"`).join(', ')}
-                        </span>
+              {/* Spelling items with visual corrections */}
+              <div className="flex-1 space-y-2 overflow-y-auto max-h-36">
+                {spellingIssues.records.slice(0, showSpellingIssues ? 10 : 4).map((record, idx) => (
+                  <div
+                    key={idx}
+                    className="group p-2 bg-surface-50 rounded-lg cursor-pointer hover:bg-surface-100 transition-all border border-transparent hover:border-surface-300"
+                    onClick={() => handleSpellingDrillDown(record)}
+                  >
+                    {record.misspellings.slice(0, 2).map((m, mIdx) => (
+                      <div key={mIdx} className="flex items-center gap-2 text-xs">
+                        <span className="line-through text-surface-400">{m.misspelled}</span>
+                        <span className="text-surface-400">→</span>
+                        <span className="text-surface-700 font-medium">{m.correction}</span>
                       </div>
-                      <p className="text-surface-600 italic truncate" title={record.description}>
-                        "{record.description}"
-                      </p>
-                    </div>
-                  ))}
-                  {spellingIssues.records.length > 10 && (
-                    <div className="text-xs text-surface-400 text-center">
-                      +{spellingIssues.records.length - 10} more records
-                    </div>
-                  )}
-                </div>
-              )}
+                    ))}
+                    {record.misspellings.length > 2 && (
+                      <span className="text-[10px] text-surface-400">+{record.misspellings.length - 2} more</span>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-              {spellingIssues.count === 0 && (
-                <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle size={16} />
-                  No spelling issues detected
-                </div>
-              )}
+              {/* Footer */}
+              <div className="mt-3 pt-2 border-t border-surface-200 text-center">
+                {spellingIssues.records.length > 4 ? (
+                  <button
+                    onClick={() => setShowSpellingIssues(!showSpellingIssues)}
+                    className="text-xs text-surface-600 hover:text-surface-800 font-medium"
+                  >
+                    {showSpellingIssues ? 'Show less' : `+${spellingIssues.records.length - 4} more records`}
+                  </button>
+                ) : (
+                  <span className="text-xs text-surface-500">Click any item to view record</span>
+                )}
+              </div>
             </>
-          )}
-
-          {/* Error State - spell checker failed to load */}
-          {!spellCheckerLoading && !spellCheckerReady && (
-            <div className="flex items-center gap-2 text-surface-400 text-sm">
-              <AlertTriangle size={16} />
-              Spell checker unavailable
-            </div>
           )}
         </div>
       </div>
 
-      {/* SECTION: Unclassifiable Records - Records Needing Manual Review */}
-      {qualityData.unclassifiableRecords && qualityData.unclassifiableRecords.total > 0 && (
-        <div className="bg-white border border-amber-300 rounded-lg p-4">
+      {/* ROW 2: Needs Review & Description Length (2 columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Needs Review (Unclassifiable Records) */}
+        <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-              <AlertTriangle size={14} className="text-amber-600" />
-              Unclassifiable Records
-              <InfoTooltip text="Records that couldn't be properly classified due to missing/short descriptions, unrecognized categories, or low classification confidence. These require manual review." />
-              <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
-                {qualityData.unclassifiableRecords.total}
-              </span>
-            </h3>
-            <button
-              onClick={() => setShowUnclassifiable(!showUnclassifiable)}
-              className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800"
-            >
-              {showUnclassifiable ? 'Hide' : 'View'} Details
-              {showUnclassifiable ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-          </div>
-
-          {/* Summary Stats */}
-          <div className="grid grid-cols-5 gap-2 mb-3">
-            <div className="bg-amber-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-amber-700">{qualityData.unclassifiableRecords.total}</div>
-              <div className="text-xs text-amber-600">Total</div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-surface-100 rounded-lg">
+                <AlertTriangle size={16} className="text-surface-500" />
+              </div>
+              <span className="text-sm font-semibold text-surface-800">Needs Review</span>
+              <InfoTooltip text="Records that couldn't be properly classified" />
             </div>
-            <div
-              className="bg-surface-50 rounded-lg p-2 text-center cursor-pointer hover:bg-surface-100 transition-colors"
-              onClick={() => handleUnclassifiableDrillDown('noDescription')}
-              title="Click to view records"
-            >
-              <div className="text-lg font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.noDescription.count}</div>
-              <div className="text-xs text-surface-600">No Description</div>
-            </div>
-            <div
-              className="bg-orange-50 rounded-lg p-2 text-center cursor-pointer hover:bg-orange-100 transition-colors"
-              onClick={() => handleUnclassifiableDrillDown('tooShort')}
-              title="Click to view records"
-            >
-              <div className="text-lg font-bold text-orange-700">{qualityData.unclassifiableRecords.byReason.tooShort.count}</div>
-              <div className="text-xs text-orange-600">Too Short</div>
-            </div>
-            <div
-              className="bg-purple-50 rounded-lg p-2 text-center cursor-pointer hover:bg-purple-100 transition-colors"
-              onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
-              title="Click to view records"
-            >
-              <div className="text-lg font-bold text-purple-700">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count}</div>
-              <div className="text-xs text-purple-600">Unrecognized</div>
-            </div>
-            <div
-              className="bg-red-50 rounded-lg p-2 text-center cursor-pointer hover:bg-red-100 transition-colors"
-              onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
-              title="Click to view records"
-            >
-              <div className="text-lg font-bold text-red-700">{qualityData.unclassifiableRecords.byReason.lowConfidence.count}</div>
-              <div className="text-xs text-red-600">Low Confidence</div>
+            <div className="text-right">
+              <div className={`text-3xl font-bold ${
+                qualityData.unclassifiableRecords?.total > 0 ? 'text-red-600' : 'text-green-600'
+              }`}>
+                {qualityData.unclassifiableRecords?.total || 0}
+              </div>
+              <div className="text-xs text-surface-500">records</div>
             </div>
           </div>
 
-          {/* Expanded Details */}
-          {showUnclassifiable && (
-            <div className="space-y-3 mt-3 border-t border-surface-200 pt-3">
-              {/* No Description */}
-              {qualityData.unclassifiableRecords.byReason.noDescription.count > 0 && (
-                <div
-                  className="bg-surface-50 rounded-lg p-3 cursor-pointer hover:bg-surface-100 transition-colors"
-                  onClick={() => handleUnclassifiableDrillDown('noDescription')}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-surface-500"></div>
-                      <span className="text-sm font-medium text-surface-700">No Description</span>
-                    </div>
-                    <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.noDescription.count}</span>
-                  </div>
-                  <p className="text-xs text-surface-500">Records with empty or blank description field - cannot verify classification</p>
-                  <div className="mt-2 h-1.5 bg-surface-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-surface-500 rounded-full"
-                      style={{ width: `${qualityData.unclassifiableRecords.byReason.noDescription.percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-right text-xs text-surface-400 mt-1">{qualityData.unclassifiableRecords.byReason.noDescription.percentage}% of records</div>
-                </div>
-              )}
-
-              {/* Too Short */}
-              {qualityData.unclassifiableRecords.byReason.tooShort.count > 0 && (
-                <div
-                  className="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition-colors"
-                  onClick={() => handleUnclassifiableDrillDown('tooShort')}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                      <span className="text-sm font-medium text-orange-700">Too Short</span>
-                    </div>
-                    <span className="text-sm font-bold text-orange-700">{qualityData.unclassifiableRecords.byReason.tooShort.count}</span>
-                  </div>
-                  <p className="text-xs text-orange-600">Descriptions under 10 characters - not enough context for reliable classification</p>
-                  <div className="mt-2 h-1.5 bg-orange-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-orange-500 rounded-full"
-                      style={{ width: `${qualityData.unclassifiableRecords.byReason.tooShort.percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-right text-xs text-orange-400 mt-1">{qualityData.unclassifiableRecords.byReason.tooShort.percentage}% of records</div>
-                </div>
-              )}
-
-              {/* Unrecognized Category */}
-              {qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count > 0 && (
-                <div
-                  className="bg-purple-50 rounded-lg p-3 cursor-pointer hover:bg-purple-100 transition-colors"
-                  onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span className="text-sm font-medium text-purple-700">Unrecognized Category</span>
-                    </div>
-                    <span className="text-sm font-bold text-purple-700">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count}</span>
-                  </div>
-                  <p className="text-xs text-purple-600">Original Excel category not in approved list - may be misspelled or custom</p>
-                  <div className="mt-2 h-1.5 bg-purple-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-purple-500 rounded-full"
-                      style={{ width: `${qualityData.unclassifiableRecords.byReason.unrecognizedCategory.percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-right text-xs text-purple-400 mt-1">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.percentage}% of records</div>
-                </div>
-              )}
-
-              {/* Low Confidence */}
-              {qualityData.unclassifiableRecords.byReason.lowConfidence.count > 0 && (
-                <div
-                  className="bg-red-50 rounded-lg p-3 cursor-pointer hover:bg-red-100 transition-colors"
-                  onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                      <span className="text-sm font-medium text-red-700">Low Confidence</span>
-                    </div>
-                    <span className="text-sm font-bold text-red-700">{qualityData.unclassifiableRecords.byReason.lowConfidence.count}</span>
-                  </div>
-                  <p className="text-xs text-red-600">Auto-classified with less than 65% confidence - classification may be inaccurate</p>
-                  <div className="mt-2 h-1.5 bg-red-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-red-500 rounded-full"
-                      style={{ width: `${qualityData.unclassifiableRecords.byReason.lowConfidence.percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-right text-xs text-red-400 mt-1">{qualityData.unclassifiableRecords.byReason.lowConfidence.percentage}% of records</div>
-                </div>
-              )}
+          {(!qualityData.unclassifiableRecords || qualityData.unclassifiableRecords.total === 0) ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <CheckCircle size={32} className="text-green-500 mx-auto mb-2" />
+                <span className="text-sm text-green-600 font-medium">All Clear</span>
+              </div>
             </div>
+          ) : (
+            <>
+              {/* Visual breakdown with progress bars */}
+              <div className="flex-1 space-y-3">
+                {/* No Description */}
+                {qualityData.unclassifiableRecords.byReason.noDescription.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('noDescription')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">No Description</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.noDescription.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.noDescription.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Too Short */}
+                {qualityData.unclassifiableRecords.byReason.tooShort.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('tooShort')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Too Short</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.tooShort.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.tooShort.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Unrecognized Category */}
+                {qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Unrecognized</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Low Confidence */}
+                {qualityData.unclassifiableRecords.byReason.lowConfidence.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Low Confidence</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.lowConfidence.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.lowConfidence.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="mt-3 pt-2 border-t border-surface-200 text-center">
+                <span className="text-xs text-surface-500">Click any category to view records</span>
+              </div>
+            </>
           )}
+        </div>
 
-          {/* Summary Message */}
-          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs text-amber-700">
-              {qualityData.unclassifiableRecords.summary.message}
-            </p>
+        {/* Description Length Distribution */}
+        <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-surface-100 rounded-lg">
+                <AlignLeft size={16} className="text-surface-500" />
+              </div>
+              <span className="text-sm font-semibold text-surface-800">Description Quality</span>
+              <InfoTooltip text="Word count distribution. Good descriptions have 16+ words with sufficient detail." />
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-green-600">{description.qualityRate}%</div>
+              <div className="text-xs text-surface-500">quality rate</div>
+            </div>
+          </div>
+
+          {/* Summary stats */}
+          <div className="mb-3 p-2 bg-surface-50 rounded-lg flex items-center justify-between text-xs">
+            <span className="text-surface-600">Avg {description.avgWordCount} words per description</span>
+            <span className="font-bold text-surface-700">{description.distribution.good + description.distribution.excellent} good+</span>
+          </div>
+
+          {/* Distribution bars */}
+          <div className="flex-1 space-y-2">
+            {[
+              { label: '0-5 words', value: description.distribution.veryShort, range: 'veryShort' },
+              { label: '6-15 words', value: description.distribution.short, range: 'short' },
+              { label: '16-30 words', value: description.distribution.good, range: 'good' },
+              { label: '31+ words', value: description.distribution.excellent, range: 'excellent' }
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="group cursor-pointer hover:bg-surface-50 rounded px-2 py-1.5 -mx-2 transition-colors"
+                onClick={() => handleDescriptionDrillDown(item.range, item.label)}
+                title={`Click to view ${item.value} records`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">{item.label}</span>
+                  <span className="text-sm font-bold text-surface-700">{item.value}</span>
+                </div>
+                <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all"
+                    style={{ width: `${Math.max(2, (item.value / filteredIncidents.length) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="mt-3 pt-2 border-t border-surface-200 text-center">
+            <span className="text-xs text-surface-500">Click any bar to view records</span>
           </div>
         </div>
-      )}
+      </div>
 
       {/* SECTION: Potential Misclassifications */}
       {misclassificationData && misclassificationData.totalMisclassified > 0 && (
@@ -1726,130 +1763,8 @@ const DataQuality = () => {
         </div>
       )}
 
-      {/* SECTION 2: Reporter & Contractor Analytics */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Reporter Performance */}
-        <div className="bg-white border border-surface-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-              <Users size={14} />
-              Reporter Performance
-              <InfoTooltip text="Top reporters ranked by observation count. Shows near miss rate and description quality rate. Click any row for detailed analytics." />
-            </h3>
-            <select
-              value={reporterSort}
-              onChange={(e) => setReporterSort(e.target.value)}
-              className="text-xs border border-surface-200 rounded px-2 py-1"
-            >
-              <option value="total">Sort by Total</option>
-              <option value="nearMiss">Sort by Near Miss</option>
-              <option value="quality">Sort by Quality</option>
-            </select>
-          </div>
-          <div className="overflow-auto max-h-64">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-surface-50">
-                <tr>
-                  <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Total</th>
-                  <th className="text-center p-2 font-medium text-surface-600">NM</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Quality</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedReporters.map((reporter, idx) => (
-                  <tr
-                    key={reporter.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                    onClick={() => handleReporterClick(reporter.name)}
-                    title="Click to view detailed analytics"
-                  >
-                    <td className="p-2 truncate max-w-[150px]" title={reporter.name}>
-                      <span className="text-blue-600 hover:underline">{reporter.name}</span>
-                    </td>
-                    <td className="p-2 text-center font-medium">{reporter.total}</td>
-                    <td className="p-2 text-center">
-                      <span className={reporter.nearMiss === 0 ? 'text-red-500' : 'text-green-600'}>
-                        {reporter.nearMiss}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className={parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' : 'text-yellow-600'}>
-                        {reporter.qualityRate}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {reporters.some(r => r.nearMiss === 0 && r.total >= 10) && (
-            <div className="mt-2 text-xs text-yellow-600 flex items-center gap-1">
-              <AlertTriangle size={12} />
-              Some reporters have 0 near misses - training may be needed
-            </div>
-          )}
-        </div>
-
-        {/* Contractor Quality */}
-        <div className="bg-white border border-surface-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-              <Building2 size={14} />
-              Contractor Quality Comparison
-              <InfoTooltip text="Quality metrics by contractor: observation count, quality score, categorization rate, and active days. Click any row to see all their observations." />
-            </h3>
-            <select
-              value={contractorSort}
-              onChange={(e) => setContractorSort(e.target.value)}
-              className="text-xs border border-surface-200 rounded px-2 py-1"
-            >
-              <option value="totalObs">Sort by Total</option>
-              <option value="qualityScore">Sort by Score</option>
-              <option value="coverage">Sort by Coverage</option>
-            </select>
-          </div>
-          <div className="overflow-auto max-h-64">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-surface-50">
-                <tr>
-                  <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Obs</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Score</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedContractors.map((contractor, idx) => (
-                  <tr
-                    key={contractor.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                    onClick={() => handleContractorDrillDown(contractor)}
-                    title="Click to view all observations"
-                  >
-                    <td className="p-2 truncate max-w-[150px]" title={contractor.name}>
-                      <span className="text-blue-600 hover:underline">{contractor.name}</span>
-                    </td>
-                    <td className="p-2 text-center font-medium">{contractor.totalObs}</td>
-                    <td className="p-2 text-center">
-                      <span className={
-                        contractor.qualityScore >= 70 ? 'text-green-600' :
-                        contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }>
-                        {contractor.qualityScore}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center text-surface-600">{contractor.activeDays}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 4: Data Quality Details - Side by Side */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* ROW 3: Categorization & Contractor Quality (2 columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Categorization Before vs After Comparison */}
         <div className="bg-white border border-surface-200 rounded-lg p-4">
         <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-4 flex items-center gap-2">
@@ -1968,40 +1883,208 @@ const DataQuality = () => {
         )}
         </div>
 
-        {/* Description Length Distribution */}
+        {/* Contractor Quality */}
         <div className="bg-white border border-surface-200 rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
-            Description Length Distribution
-            <InfoTooltip text="Word count distribution of observation descriptions. Good descriptions have 16+ words providing sufficient detail. Click bars to see records in each range." />
-          </h3>
-          <div className="space-y-2">
-            {[
-              { label: '0-5 words (Poor)', value: description.distribution.veryShort, color: 'bg-red-500', flagged: true, range: 'veryShort' },
-              { label: '6-15 words', value: description.distribution.short, color: 'bg-yellow-500', range: 'short' },
-              { label: '16-30 words (Good)', value: description.distribution.good, color: 'bg-green-400', range: 'good' },
-              { label: '31+ words (Excellent)', value: description.distribution.excellent, color: 'bg-green-600', range: 'excellent' }
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-surface-50 rounded px-2 py-1 -mx-2 transition-colors"
-                onClick={() => handleDescriptionDrillDown(item.range, item.label)}
-                title={`Click to view ${item.value} records`}
-              >
-                <span className="w-28 text-surface-600">{item.label}</span>
-                <div className="flex-1 h-4 bg-surface-100 rounded overflow-hidden">
-                  <div
-                    className={`h-full ${item.color}`}
-                    style={{ width: `${(item.value / incidents.length) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="w-12 text-right font-medium">{item.value}</span>
-                {item.flagged && item.value > 0 && (
-                  <span className="text-red-500">!</span>
-                )}
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
+              <Building2 size={14} />
+              Contractor Quality
+              <InfoTooltip text="Quality metrics by contractor: observation count, quality score, and active days." />
+            </h3>
+            <select
+              value={contractorSort}
+              onChange={(e) => setContractorSort(e.target.value)}
+              className="text-xs border border-surface-200 rounded px-2 py-1"
+            >
+              <option value="totalObs">Sort by Total</option>
+              <option value="qualityScore">Sort by Score</option>
+              <option value="coverage">Sort by Coverage</option>
+            </select>
+          </div>
+          <div className="overflow-auto max-h-64">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-surface-50">
+                <tr>
+                  <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Obs</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Score</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Days</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedContractors.map((contractor, idx) => (
+                  <tr
+                    key={contractor.name}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                    onClick={() => handleContractorDrillDown(contractor)}
+                    title="Click to view all observations"
+                  >
+                    <td className="p-2 truncate max-w-[150px]" title={contractor.name}>
+                      <span className="text-blue-600 hover:underline">{contractor.name}</span>
+                    </td>
+                    <td className="p-2 text-center font-medium">{contractor.totalObs}</td>
+                    <td className="p-2 text-center">
+                      <span className={
+                        contractor.qualityScore >= 70 ? 'text-green-600' :
+                        contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                      }>
+                        {contractor.qualityScore}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center text-surface-600">{contractor.activeDays}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
+
+      {/* ROW 4: Reporter Performance (Full Width with Flags) */}
+      <div className="bg-white border border-surface-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
+            <Users size={16} />
+            Reporter Performance Analysis
+            <InfoTooltip text="Comprehensive reporter metrics with performance flags. Click any row for detailed analytics." />
+          </h3>
+          <div className="flex items-center gap-3">
+            {/* Performance Flags Summary */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
+                <AlertTriangle size={12} />
+                {reporters.filter(r => r.nearMiss === 0 && r.total >= 5).length} Zero NM
+              </span>
+              <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+                <AlertCircle size={12} />
+                {reporters.filter(r => parseFloat(r.qualityRate) < 50).length} Low Quality
+              </span>
+              <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded">
+                <CheckCircle size={12} />
+                {reporters.filter(r => r.nearMiss > 0 && parseFloat(r.qualityRate) >= 75).length} Top Performers
+              </span>
+            </div>
+            <select
+              value={reporterSort}
+              onChange={(e) => setReporterSort(e.target.value)}
+              className="text-xs border border-surface-200 rounded px-2 py-1"
+            >
+              <option value="total">Sort by Total</option>
+              <option value="nearMiss">Sort by Near Miss</option>
+              <option value="quality">Sort by Quality</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Performance Insights */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="bg-surface-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-surface-800">{reporters.length}</div>
+            <div className="text-xs text-surface-500">Total Reporters</div>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-blue-700">
+              {reporters.filter(r => r.total >= 10).length}
+            </div>
+            <div className="text-xs text-surface-500">Active (10+ obs)</div>
+          </div>
+          <div className="bg-green-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-700">
+              {(reporters.reduce((sum, r) => sum + parseFloat(r.qualityRate), 0) / reporters.length).toFixed(0)}%
+            </div>
+            <div className="text-xs text-surface-500">Avg Quality Rate</div>
+          </div>
+          <div className="bg-amber-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-amber-700">
+              {(reporters.reduce((sum, r) => sum + r.nearMiss, 0) / reporters.length).toFixed(1)}
+            </div>
+            <div className="text-xs text-surface-500">Avg Near Miss/Reporter</div>
+          </div>
+        </div>
+
+        {/* Reporter Table with Flags */}
+        <div className="overflow-auto max-h-80">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-surface-50">
+              <tr>
+                <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
+                <th className="text-center p-2 font-medium text-surface-600">Total</th>
+                <th className="text-center p-2 font-medium text-surface-600">Near Miss</th>
+                <th className="text-center p-2 font-medium text-surface-600">Quality Rate</th>
+                <th className="text-center p-2 font-medium text-surface-600">NM Rate</th>
+                <th className="text-center p-2 font-medium text-surface-600">Flags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedReporters.map((reporter, idx) => {
+                const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
+                const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
+                const lowQuality = parseFloat(reporter.qualityRate) < 50
+                const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
+                return (
+                  <tr
+                    key={reporter.name}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                    onClick={() => handleReporterClick(reporter.name)}
+                    title="Click to view detailed analytics"
+                  >
+                    <td className="p-2">
+                      <span className="text-blue-600 hover:underline font-medium">{reporter.name}</span>
+                    </td>
+                    <td className="p-2 text-center font-bold">{reporter.total}</td>
+                    <td className="p-2 text-center">
+                      <span className={`px-2 py-0.5 rounded ${
+                        reporter.nearMiss === 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      }`}>
+                        {reporter.nearMiss}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className={`font-medium ${
+                        parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
+                        parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {reporter.qualityRate}%
+                      </span>
+                    </td>
+                    <td className="p-2 text-center text-surface-500">{nmRate}%</td>
+                    <td className="p-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {hasZeroNM && (
+                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="No near misses reported - training needed">
+                            0 NM
+                          </span>
+                        )}
+                        {lowQuality && (
+                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]" title="Low description quality">
+                            Low Q
+                          </span>
+                        )}
+                        {topPerformer && (
+                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]" title="Top performer">
+                            Star
+                          </span>
+                        )}
+                        {!hasZeroNM && !lowQuality && !topPerformer && (
+                          <span className="text-surface-300">-</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer with training suggestion */}
+        {reporters.some(r => r.nearMiss === 0 && r.total >= 10) && (
+          <div className="mt-3 pt-3 border-t border-surface-200 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
+            <AlertTriangle size={14} />
+            <span className="font-medium">Training Recommended:</span>
+            <span>{reporters.filter(r => r.nearMiss === 0 && r.total >= 10).length} reporters with 10+ observations have reported 0 near misses - this may indicate a need for hazard recognition training.</span>
+          </div>
+        )}
       </div>
 
       {/* Reporter Deep Dive Modal */}

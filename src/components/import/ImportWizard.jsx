@@ -74,8 +74,9 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
   const processDataWithMappings = useCallback((data, mappings) => {
     try {
       // Transform rows using NEOM column mappings
+      // Pass existing incidents for contractor name normalization
       const { incidents: transformedIncidents, warnings } =
-        transformRows(data.rows, data.headers, mappings, null)
+        transformRows(data.rows, data.headers, mappings, null, incidents)
 
       // Store warnings for later
       setImportWarnings(warnings)
@@ -86,7 +87,7 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
       console.error('Error processing data:', error)
       alert('Error processing data: ' + error.message)
     }
-  }, [])
+  }, [incidents])
 
   // Perform duplicate check
   const performDuplicateCheck = useCallback((incidentsToCheck) => {

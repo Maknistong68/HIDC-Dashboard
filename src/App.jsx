@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
+import InstallPrompt from './components/common/InstallPrompt'
 import Dashboard from './pages/Dashboard'
 import DataQuality from './pages/DataQuality'
 import Settings from './pages/Settings'
@@ -11,6 +12,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Layout>
+        <InstallPrompt />
         <Routes>
           {/* Main 3 tabs */}
           <Route path="/" element={<Dashboard />} />

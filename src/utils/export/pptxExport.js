@@ -42,6 +42,8 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
     { key: 'trendChart', title: 'Observation vs Incident Trend' },
     { key: 'topHazards', title: 'Top Significant Hazards' },
     { key: 'topObservers', title: 'Top Observers' },
+    { key: 'dayOfWeek', title: 'Observations by Day of Week' },
+    { key: 'hourOfDay', title: 'Observations by Hour of Day' },
     { key: 'hazardsHeatmap', title: 'Hazards Heatmap' },
   ]
 

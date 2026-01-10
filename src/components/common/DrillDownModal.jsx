@@ -3,6 +3,7 @@ import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, A
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
+import useResizable from '../../hooks/useResizable.jsx'
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -22,6 +23,19 @@ const DrillDownModal = ({
 }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
 
+  // Resizable functionality
+  const {
+    containerRef,
+    containerStyle,
+    isResizing,
+    ResizeHandles
+  } = useResizable({
+    minWidth: 500,
+    minHeight: 400,
+    maxWidthPercent: 95,
+    maxHeightPercent: 95
+  })
+
   if (!isOpen) return null
 
   const handleBackdropClick = (e) => {
@@ -39,9 +53,15 @@ const DrillDownModal = ({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       {/* Modal Container - Glassmorphism */}
-      <div className="relative w-full max-w-2xl max-h-[80vh] flex flex-col animate-modal-in">
+      <div
+        ref={containerRef}
+        className={`relative w-full max-w-5xl max-h-[90vh] flex flex-col animate-modal-in ${isResizing ? 'select-none' : ''}`}
+        style={containerStyle}
+      >
+        {/* Resize Handles */}
+        <ResizeHandles />
         {/* Glass Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-surface-200/50 bg-white/50">
             <div className="flex items-center justify-between">
@@ -78,7 +98,7 @@ const DrillDownModal = ({
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[60vh]">
+          <div className="p-6 overflow-y-auto flex-1">
             {type === 'monthly' && (
               <MonthlyBreakdown
                 data={data}
@@ -408,6 +428,19 @@ const RecordsTable = ({ data, onViewDetails, breadcrumb = [], title = '' }) => {
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
 
+  // Resizable functionality
+  const {
+    containerRef: detailsContainerRef,
+    containerStyle: detailsContainerStyle,
+    isResizing: isDetailsResizing,
+    ResizeHandles: DetailsResizeHandles
+  } = useResizable({
+    minWidth: 450,
+    minHeight: 350,
+    maxWidthPercent: 90,
+    maxHeightPercent: 90
+  })
+
   if (!record) return null
 
   const handleCopyEventId = () => {
@@ -612,8 +645,13 @@ const RecordDetailsModal = ({ record, onClose }) => {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto animate-modal-in">
-        <div className="bg-white/90 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden">
+      <div
+        ref={detailsContainerRef}
+        className={`relative w-full max-w-3xl max-h-[90vh] animate-modal-in ${isDetailsResizing ? 'select-none' : ''}`}
+        style={detailsContainerStyle}
+      >
+        <DetailsResizeHandles />
+        <div className="bg-white/90 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-surface-200/50 bg-gradient-to-r from-surface-50/80 to-white/80">
             <div className="flex items-center justify-between">
@@ -643,7 +681,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
             {/* Key Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               <DetailField icon={Calendar} label="Date" value={formatDate(record.date)} />

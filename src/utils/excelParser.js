@@ -23,6 +23,97 @@ import {
   mapType,
   mapStatus
 } from './settingsReader'
+import {
+  findSimilarContractors,
+  suggestContractorConsolidations,
+  autoNormalizeContractor,
+  normalizeContractorName
+} from './stringMatching'
+
+// ============================================
+// CONTRACTOR NAME NORMALIZATION
+// ============================================
+
+/**
+ * Analyze contractors in import data and find similar names
+ * Returns normalization suggestions and auto-normalized names
+ */
+export const analyzeContractorNames = (newContractors, existingContractors = []) => {
+  const suggestions = []
+  const normalizations = new Map()
+
+  // Get unique contractors from new data
+  const uniqueNew = [...new Set(newContractors.filter(c => c && c.trim()))]
+
+  // Get unique contractors from existing data
+  const uniqueExisting = [...new Set(existingContractors.filter(c => c && c.trim()))]
+
+  // For each new contractor, check if similar to existing
+  for (const contractor of uniqueNew) {
+    // Skip if empty
+    if (!contractor || !contractor.trim()) continue
+
+    // Find similar contractors in existing data
+    const similarExisting = findSimilarContractors(contractor, uniqueExisting, 0.75)
+
+    if (similarExisting.length > 0) {
+      const best = similarExisting[0]
+      suggestions.push({
+        original: contractor,
+        suggestedMatch: best.name,
+        similarity: best.similarity,
+        method: best.method,
+        source: 'existing'
+      })
+      // Auto-normalize to existing name if high confidence
+      if (best.similarity >= 0.85) {
+        normalizations.set(contractor, best.name)
+      }
+    }
+  }
+
+  // Find consolidation opportunities within new data
+  const withinNewConsolidations = suggestContractorConsolidations(uniqueNew, 0.8)
+
+  for (const group of withinNewConsolidations) {
+    for (const similar of group.similar) {
+      suggestions.push({
+        original: similar.name,
+        suggestedMatch: group.suggestedName,
+        similarity: similar.similarity,
+        method: similar.method,
+        source: 'within_import'
+      })
+      // Auto-normalize to suggested name
+      if (similar.similarity >= 0.85) {
+        normalizations.set(similar.name, group.suggestedName)
+      }
+    }
+  }
+
+  return {
+    suggestions,
+    normalizations,
+    uniqueNew,
+    uniqueExisting
+  }
+}
+
+/**
+ * Get all unique contractor names from incidents
+ */
+export const getExistingContractors = (incidents) => {
+  if (!incidents || !Array.isArray(incidents)) return []
+  return [...new Set(incidents.map(i => i.contractor).filter(c => c && c.trim()))]
+}
+
+/**
+ * Get all unique site names from incidents
+ */
+export const getExistingSites = (incidents) => {
+  if (!incidents || !Array.isArray(incidents)) return []
+  return [...new Set(incidents.map(i => i.site).filter(s => s && s.trim()))]
+}
 
 // ============================================
 // NEOM EXCEL FORMAT - STRICT VALIDATION
@@ -831,18 +922,29 @@ const isPositiveObservation = (type, classification, description) => {
 /**
  * Transform Excel rows to dashboard format
  * Note: Maximum 2000 rows are processed (source system limitation - rows beyond 2000 are typically footer/warnings)
+ *
+ * @param {Array} rows - Excel data rows
+ * @param {Array} headers - Column headers
+ * @param {Object} columnMappings - Column index mappings
+ * @param {string} projectId - Project ID to assign
+ * @param {Array} existingIncidents - Optional existing incidents for contractor normalization
  */
 const MAX_DATA_ROWS = 2000
 
-export const transformRows = (rows, headers, columnMappings, projectId) => {
+export const transformRows = (rows, headers, columnMappings, projectId, existingIncidents = []) => {
   const incidents = []
   const needsMapping = []
   const warnings = {
     dateIssues: [],
     hazardIssues: [],
+    contractorNormalizations: [], // NEW: Track contractor name normalizations
     rowLimitApplied: false,
   }
   const today = format(new Date(), 'yyyy-MM-dd')
+
+  // Get existing contractor names for normalization
+  const existingContractors = getExistingContractors(existingIncidents)
+  const existingSites = getExistingSites(existingIncidents)
 
   // Limit to MAX_DATA_ROWS to exclude footer/warning rows from source system
   const dataRows = rows.slice(0, MAX_DATA_ROWS)
@@ -889,8 +991,52 @@ export const transformRows = (rows, headers, columnMappings, projectId) => {
 
     // Clean and normalize names based on settings
     const reportedBy = cleanName(rawReportedBy, 'reporter') || 'Unknown'
-    const contractor = cleanName(rawContractor, 'contractor')
-    const site = cleanName(rawSite, 'site')
+
+    // Enhanced contractor normalization with fuzzy matching
+    let contractor = cleanName(rawContractor, 'contractor')
+    let contractorWasNormalized = false
+    let originalContractor = contractor
+
+    if (contractor && existingContractors.length > 0) {
+      const normResult = autoNormalizeContractor(contractor, existingContractors, 0.85)
+      if (normResult.wasNormalized && normResult.normalized !== contractor) {
+        originalContractor = contractor
+        contractor = normResult.normalized
+        contractorWasNormalized = true
+        warnings.contractorNormalizations.push({
+          row: index + 2,
+          original: originalContractor,
+          normalized: contractor,
+          similarity: normResult.similarity,
+          method: normResult.method,
+          eventId
+        })
+      }
+    }
+
+    // Enhanced site normalization with fuzzy matching
+    let site = cleanName(rawSite, 'site')
+    let siteWasNormalized = false
+    let originalSite = site
+
+    if (site && existingSites.length > 0) {
+      const normResult = autoNormalizeContractor(site, existingSites, 0.85)
+      if (normResult.wasNormalized && normResult.normalized !== site) {
+        originalSite = site
+        site = normResult.normalized
+        siteWasNormalized = true
+        // Add to contractor normalizations (same structure works for sites)
+        warnings.contractorNormalizations.push({
+          row: index + 2,
+          original: originalSite,
+          normalized: site,
+          similarity: normResult.similarity,
+          method: normResult.method,
+          eventId,
+          fieldType: 'site'
+        })
+      }
+    }
 
     // Apply type mapping from settings
     const type = mapType(rawType) || rawType

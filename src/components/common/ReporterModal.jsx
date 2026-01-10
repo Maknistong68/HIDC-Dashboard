@@ -26,6 +26,7 @@ import {
   LineChart,
   Line
 } from 'recharts'
+import useResizable from '../../hooks/useResizable.jsx'
 
 const COLORS = {
   nearMiss: '#3b82f6',
@@ -44,6 +45,19 @@ const TYPE_LABELS = {
 }
 
 const ReporterModal = ({ isOpen, onClose, data }) => {
+  // Resizable functionality
+  const {
+    containerRef,
+    containerStyle,
+    isResizing,
+    ResizeHandles
+  } = useResizable({
+    minWidth: 600,
+    minHeight: 500,
+    maxWidthPercent: 95,
+    maxHeightPercent: 95
+  })
+
   if (!isOpen || !data) return null
 
   const pieData = [
@@ -86,7 +100,12 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
       />
 
       {/* Modal */}
-      <div className="relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={containerRef}
+        className={`relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isResizing ? 'select-none' : ''}`}
+        style={containerStyle}
+      >
+        <ResizeHandles />
         {/* Header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-surface-200 px-6 py-4 z-10">
           <div className="flex items-center justify-between">

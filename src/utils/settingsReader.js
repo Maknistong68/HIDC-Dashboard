@@ -4,6 +4,14 @@
  */
 
 import { defaultSettings, SETTINGS_STORAGE_KEY, mergeWithDefaults } from './settingsDefaults'
+import {
+  levenshteinSimilarity,
+  soundexMatch,
+  reporterNameSimilarity,
+  enhancedDescriptionSimilarity,
+  contractorSimilarity,
+  normalizeContractorName
+} from './stringMatching'
 
 /**
  * Get current settings from localStorage (merged with defaults)
@@ -306,6 +314,7 @@ export const calculateRecordQuality = (record) => {
 
 /**
  * Check if two records are duplicates based on settings
+ * Enhanced with phonetic matching (Soundex) and Levenshtein distance
  */
 export const checkDuplicate = (newRecord, existingRecord) => {
   const settings = getSettings()
@@ -318,6 +327,7 @@ export const checkDuplicate = (newRecord, existingRecord) => {
   const mustMatch = dupSettings.mustMatch || ['date', 'contractor', 'description']
   const shouldBeSimilar = dupSettings.shouldBeSimilar || ['site', 'reporter']
   const dateTolerance = dupSettings.dateFlexibility || 1
+  const threshold = dupSettings.sensitivity || 0.85
 
   // Field mappings
   const fieldMap = {
@@ -329,29 +339,54 @@ export const checkDuplicate = (newRecord, existingRecord) => {
     type: 'type'
   }
 
+  // Track matching details for debugging
+  const matchDetails = {}
+
   // Check must-match fields
   for (const field of mustMatch) {
     const recordField = fieldMap[field] || field
-    const newVal = (newRecord[recordField] || '').toString().toLowerCase().trim()
-    const existingVal = (existingRecord[recordField] || '').toString().toLowerCase().trim()
+    const newVal = (newRecord[recordField] || '').toString().trim()
+    const existingVal = (existingRecord[recordField] || '').toString().trim()
 
     if (field === 'date') {
       // Date comparison with tolerance
       const daysDiff = Math.abs(dateDiff(newVal, existingVal))
+      matchDetails.date = { daysDiff, tolerance: dateTolerance }
       if (daysDiff > dateTolerance) {
-        return { isDuplicate: false }
+        return { isDuplicate: false, reason: 'date_mismatch', details: matchDetails }
       }
     } else if (field === 'description') {
-      // Description similarity
-      const similarity = calculateSimilarity(newVal, existingVal)
-      const threshold = dupSettings.sensitivity || 0.85
+      // Enhanced description similarity with Levenshtein + Jaccard
+      const similarity = enhancedDescriptionSimilarity(newVal, existingVal)
+      matchDetails.description = { similarity, threshold }
       if (similarity < threshold) {
-        return { isDuplicate: false }
+        return { isDuplicate: false, reason: 'description_mismatch', details: matchDetails }
+      }
+    } else if (field === 'contractor') {
+      // Enhanced contractor matching with normalization and phonetic matching
+      const similarity = contractorSimilarity(newVal, existingVal)
+      matchDetails.contractor = similarity
+      // Use lower threshold for contractor (0.7) since names vary more
+      if (similarity.score < 0.7) {
+        return { isDuplicate: false, reason: 'contractor_mismatch', details: matchDetails }
+      }
+    } else if (field === 'reporter') {
+      // Enhanced reporter name matching with phonetic support
+      const similarity = reporterNameSimilarity(newVal, existingVal)
+      matchDetails.reporter = { similarity }
+      if (similarity < 0.7) {
+        return { isDuplicate: false, reason: 'reporter_mismatch', details: matchDetails }
       }
     } else {
-      // Exact match required
-      if (newVal !== existingVal) {
-        return { isDuplicate: false }
+      // Standard comparison with Levenshtein for typo tolerance
+      const levSim = levenshteinSimilarity(newVal.toLowerCase(), existingVal.toLowerCase())
+      matchDetails[field] = { similarity: levSim }
+      // If not an exact match, check if phonetically similar or high Levenshtein
+      if (newVal.toLowerCase() !== existingVal.toLowerCase() && levSim < 0.8) {
+        // Also try Soundex for single-word fields
+        if (!soundexMatch(newVal, existingVal)) {
+          return { isDuplicate: false, reason: `${field}_mismatch`, details: matchDetails }
+        }
       }
     }
   }
@@ -361,11 +396,23 @@ export const checkDuplicate = (newRecord, existingRecord) => {
 
   for (const field of shouldBeSimilar) {
     const recordField = fieldMap[field] || field
-    const newVal = (newRecord[recordField] || '').toString().toLowerCase().trim()
-    const existingVal = (existingRecord[recordField] || '').toString().toLowerCase().trim()
+    const newVal = (newRecord[recordField] || '').toString().trim()
+    const existingVal = (existingRecord[recordField] || '').toString().trim()
 
     if (newVal && existingVal) {
-      const sim = calculateSimilarity(newVal, existingVal)
+      let sim
+      if (field === 'reporter') {
+        // Use enhanced reporter matching
+        sim = reporterNameSimilarity(newVal, existingVal)
+      } else if (field === 'site' || field === 'contractor') {
+        // Use contractor similarity (works for site names too)
+        const result = contractorSimilarity(newVal, existingVal)
+        sim = result.score
+      } else {
+        // Standard Levenshtein similarity
+        sim = levenshteinSimilarity(newVal.toLowerCase(), existingVal.toLowerCase())
+      }
+      matchDetails[`similar_${field}`] = { similarity: sim }
       similarityScore *= sim
     }
   }
@@ -374,7 +421,8 @@ export const checkDuplicate = (newRecord, existingRecord) => {
     isDuplicate: true,
     similarity: similarityScore,
     action: dupSettings.whenFound?.action || 'flag',
-    keepVersion: dupSettings.whenFound?.keepVersion || 'latest'
+    keepVersion: dupSettings.whenFound?.keepVersion || 'latest',
+    matchDetails
   }
 }
 

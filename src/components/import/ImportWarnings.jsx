@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronUp, X, Calendar, Tag } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, X, Calendar, Tag, Building2 } from 'lucide-react'
 
 const ImportWarnings = ({ warnings, onDismiss }) => {
   const [expanded, setExpanded] = useState(false)
@@ -9,7 +9,8 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
 
   const dateCount = warnings.dateIssues?.length || 0
   const hazardCount = warnings.hazardIssues?.length || 0
-  const totalCount = dateCount + hazardCount
+  const contractorCount = warnings.contractorNormalizations?.length || 0
+  const totalCount = dateCount + hazardCount + contractorCount
 
   if (totalCount === 0) return null
 
@@ -31,6 +32,11 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
             {hazardCount > 0 && (
               <span className="px-2 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
                 {hazardCount} hazard
+              </span>
+            )}
+            {contractorCount > 0 && (
+              <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-xs rounded-full">
+                {contractorCount} normalized
               </span>
             )}
           </div>
@@ -154,8 +160,68 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
             </div>
           )}
 
+          {/* Contractor/Site Normalizations */}
+          {contractorCount > 0 && (
+            <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
+              <button
+                onClick={() => setExpandedSection(expandedSection === 'contractor' ? null : 'contractor')}
+                className="w-full flex items-center justify-between p-3 hover:bg-blue-50"
+              >
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-sm text-surface-900">
+                    Auto-Normalized Names ({contractorCount})
+                  </span>
+                </div>
+                {expandedSection === 'contractor' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+
+              {expandedSection === 'contractor' && (
+                <div className="border-t border-blue-200 max-h-48 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-blue-50 sticky top-0">
+                      <tr>
+                        <th className="text-left p-2 font-medium text-surface-600">Row</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Type</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Original</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Normalized To</th>
+                        <th className="text-left p-2 font-medium text-surface-600">Match</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {warnings.contractorNormalizations.slice(0, 50).map((item, idx) => (
+                        <tr key={idx} className="border-t border-blue-100">
+                          <td className="p-2 text-surface-700">{item.row}</td>
+                          <td className="p-2 text-surface-500">
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${
+                              item.fieldType === 'site' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {item.fieldType === 'site' ? 'Site' : 'Contractor'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-surface-500">{item.original}</td>
+                          <td className="p-2 text-blue-600 font-medium">{item.normalized}</td>
+                          <td className="p-2 text-surface-400">
+                            {Math.round(item.similarity * 100)}%
+                            <span className="ml-1 text-surface-300">({item.method})</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {contractorCount > 50 && (
+                    <div className="p-2 text-xs text-center text-surface-500 bg-blue-50">
+                      Showing first 50 of {contractorCount} normalizations
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="text-xs text-amber-700">
             These records were imported but may need review. Date issues used today's date as fallback.
+            {contractorCount > 0 && ' Contractor/site names were auto-normalized to match existing data.'}
           </p>
         </div>
       )}

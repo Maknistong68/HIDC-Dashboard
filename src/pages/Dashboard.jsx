@@ -113,6 +113,8 @@ const Dashboard = () => {
   const trendChartRef = useRef(null)
   const topHazardsRef = useRef(null)
   const topObserversRef = useRef(null)
+  const dayOfWeekRef = useRef(null)
+  const hourOfDayRef = useRef(null)
   const hazardsHeatmapRef = useRef(null)
 
   // Chart refs object for export
@@ -123,6 +125,8 @@ const Dashboard = () => {
     trendChart: trendChartRef,
     topHazards: topHazardsRef,
     topObservers: topObserversRef,
+    dayOfWeek: dayOfWeekRef,
+    hourOfDay: hourOfDayRef,
     hazardsHeatmap: hazardsHeatmapRef,
   }
 
@@ -899,8 +903,12 @@ const Dashboard = () => {
 
       {/* Observations by Day of Week + Hour of Day */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ObservationsByDayOfWeek incidents={filteredIncidents} />
-        <ObservationsByHourOfDay incidents={filteredIncidents} />
+        <div ref={dayOfWeekRef}>
+          <ObservationsByDayOfWeek incidents={filteredIncidents} />
+        </div>
+        <div ref={hourOfDayRef}>
+          <ObservationsByHourOfDay incidents={filteredIncidents} />
+        </div>
       </div>
 
       {/* Hazards Heatmap - Scrollable (max 12 months visible) */}

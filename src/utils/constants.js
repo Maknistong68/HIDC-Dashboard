@@ -721,28 +721,80 @@ export const CONTEXT_REDIRECTS = {
   'welding machine': 'Hot Work',
 
   // Sharp objects / Impalement → Struck By (primary hazard is impalement injury)
+  // NEOM PHSAS 37.9 Sharp Objects standard
+  'phsas 37.9': 'Struck By',
+  'sharp objects': 'Struck By',
+  '37.9 sharp objects': 'Struck By',
+  // Protruding rebars (various phrasings)
   'protruding rebar': 'Struck By',
   'protruding rebars': 'Struck By',
+  'rebars protruding': 'Struck By',
+  'rebar protruding': 'Struck By',
   'exposed rebar': 'Struck By',
   'exposed rebars': 'Struck By',
+  'rebars exposed': 'Struck By',
+  'rebar exposed': 'Struck By',
+  'unprotected rebar': 'Struck By',
+  'unprotected rebars': 'Struck By',
+  'uncapped rebar': 'Struck By',
+  'uncapped rebars': 'Struck By',
+  'sharp rebar': 'Struck By',
+  'sharp rebars': 'Struck By',
+  'sharp steel rebar': 'Struck By',
+  'sharp steel rebars': 'Struck By',
+  'steel rebar protruding': 'Struck By',
+  'steel rebars protruding': 'Struck By',
+  'extended rebars': 'Struck By',
+  'extending rebars': 'Struck By',
+  // Rebar caps (any mention typically indicates impalement hazard)
+  'rebar cap': 'Struck By',
+  'rebar caps': 'Struck By',
   'rebar without cap': 'Struck By',
+  'rebars without cap': 'Struck By',
   'without rebar cap': 'Struck By',
+  'without rebar caps': 'Struck By',
   'rebar caps missing': 'Struck By',
+  'missing rebar cap': 'Struck By',
+  'no rebar cap': 'Struck By',
+  'no rebar caps': 'Struck By',
+  // Impalement hazard phrases
   'impalement': 'Struck By',
+  'impaled': 'Struck By',
   'impalement hazard': 'Struck By',
   'risk of impalement': 'Struck By',
   'impalement injuries': 'Struck By',
+  'impalement injury': 'Struck By',
+  'struck on these rods': 'Struck By',
+  'struck onto these rebars': 'Struck By',
+  // Sharp steel and objects
   'sharp steel': 'Struck By',
-  'sharp objects': 'Struck By',
+  'sharp object': 'Struck By',
+  'sharp edge': 'Struck By',
+  'sharp edges': 'Struck By',
+  // Nails protruding
   'exposed nails': 'Struck By',
+  'exposed nail': 'Struck By',
   'timber with nails': 'Struck By',
+  'wood with nails': 'Struck By',
+  'plywood with nails': 'Struck By',
+  'planks with nails': 'Struck By',
   'nails protruding': 'Struck By',
+  'nail protruding': 'Struck By',
   'protruding nails': 'Struck By',
+  'protruding nail': 'Struck By',
+  'had exposed nails': 'Struck By',
+  'sheets had exposed nails': 'Struck By',
+  // Falling objects
   'falling object': 'Struck By',
   'falling objects': 'Struck By',
   'object fell': 'Struck By',
+  'objects falling': 'Struck By',
+  'dropped object': 'Struck By',
+  'falling material': 'Struck By',
+  // Tie rods
   'tie rod': 'Struck By',
   'tie rods': 'Struck By',
+  'tie rods used': 'Struck By',
 
   // Environmental contamination → Environmental
   'septic tank': 'Environmental',
@@ -760,18 +812,76 @@ export const CONTEXT_REDIRECTS = {
   'food waste was not removed': 'Site Welfare',
   'food waste was observed': 'Site Welfare',
   'food waste not removed': 'Site Welfare',
+  'food waste': 'Site Welfare',
   'hygiene risk': 'Site Welfare',
   'hygiene concerns': 'Site Welfare',
+  'hygiene issues': 'Site Welfare',
   'pest attraction': 'Site Welfare',
+  'pest risks': 'Site Welfare',
+  'unpleasant odor': 'Site Welfare',
+  'unpleasant odour': 'Site Welfare',
+  // Missing welfare facilities → Site Welfare
+  'toilet not provided': 'Site Welfare',
+  'toilet were not provided': 'Site Welfare',
+  'toilets not provided': 'Site Welfare',
+  'waste bin not provided': 'Site Welfare',
+  'waste bin were not provided': 'Site Welfare',
+  'bulletin board not provided': 'Site Welfare',
+  'bulletin board were not provided': 'Site Welfare',
+  'welfare not provided': 'Site Welfare',
+  'facilities not provided': 'Site Welfare',
+  'sanitation not provided': 'Site Welfare',
+  'waste bin liner': 'Site Welfare',
+  'polythene bag not changed': 'Site Welfare',
+  'polythene bag in the waste bin': 'Site Welfare',
+  'garbage bag was not replaced': 'Site Welfare',
+  'garbage bag not replaced': 'Site Welfare',
+  'waste bin was full': 'Site Welfare',
+  'waste bin full': 'Site Welfare',
+  'bin was overflowing': 'Site Welfare',
+  'bin overflowing': 'Site Welfare',
+  'poor hygiene': 'Site Welfare',
+  // First Aid → Emergency Preparedness
   'first aid box': 'Emergency Preparedness',
   'first aid kit': 'Emergency Preparedness',
+  'first aid box not provided': 'Emergency Preparedness',
+  'first aid not provided': 'Emergency Preparedness',
 
-  // Structural/Support → Temporary Works or Access
+  // Structural/Support → Temporary Works
   'makeshift wooden': 'Temporary Works',
   'makeshift support': 'Temporary Works',
+  'makeshift supports': 'Temporary Works',
+  'makeshift wooden planks': 'Temporary Works',
+  'supported using makeshift': 'Temporary Works',
+  'unstable support': 'Temporary Works',
+  'unstable supports': 'Temporary Works',
+  'pipes elevated': 'Temporary Works',
+  'pipe elevated': 'Temporary Works',
+  'hdpe pipe': 'Temporary Works',
+  'hdpe pipes': 'Temporary Works',
+  'did not comply with the approved': 'Permit and RAMS',
+  'not comply with': 'Permit and RAMS',
+  // Access-related hazards
   'not properly fixed': 'Access',
   'wooden steps': 'Access',
   'steps not properly': 'Access',
+  'steps are not properly': 'Access',
+  'steps used for': 'Access',
+  'wooden walkway': 'Access',
+  'wooden walkways': 'Access',
+  'walkway not provided': 'Access',
+  'walkways not provided': 'Access',
+  'walkways were not provided': 'Access',
+  'planks were not provided': 'Access',
+  'planks not provided': 'Access',
+  'no walkway': 'Access',
+  'no walkways': 'Access',
+  'posing a risk of falls': 'Access',
+  'risk of falls': 'Access',
+  'slip, trip, and fall': 'Slips Trips Falls',
+  'slip, trip and fall': 'Slips Trips Falls',
+  'trip hazard': 'Slips Trips Falls',
+  'tripping hazard': 'Slips Trips Falls',
 
   // Electrical cables → Energized System (not Housekeeping)
   'grounding cables': 'Energized System',
@@ -780,12 +890,20 @@ export const CONTEXT_REDIRECTS = {
 
   // Fire/Chemical hazards → Fire (diesel = fire hazard)
   'drip tray full of diesel': 'Fire',
+  'drip tray was full of diesel': 'Fire',
   'drip tray was full': 'Fire',
+  'dip tray full of diesel': 'Fire',
+  'dip tray was full': 'Fire',
   'full of diesel': 'Fire',
   'diesel spill': 'Fire',
   'diesel overflow': 'Fire',
   'fuel spill': 'Fire',
+  'fire hazards': 'Fire',
+  'fire hazard': 'Fire',
+  'increases the chance of fire': 'Fire',
   'oil spill': 'COSHH',
+  'generator drip tray': 'Fire',
+  'generator dip tray': 'Fire',
 
   // Material storage/stacking → Work Environment (collapse hazard)
   'not properly stacked': 'Work Environment',
@@ -793,11 +911,37 @@ export const CONTEXT_REDIRECTS = {
   'without stoppers': 'Work Environment',
   'prevent rolling': 'Work Environment',
   'risk of collapse': 'Work Environment',
+  'cement bags on ground': 'Housekeeping',
+  'cement bags placed on ground': 'Housekeeping',
+  'placed directly on the ground': 'Housekeeping',
 
-  // Falling objects → Working at Height
-  'falling object hazard': 'Working at Height',
-  'on top of pillars': 'Working at Height',
-  'timber on top': 'Working at Height',
+  // Falling objects from height → Struck By (primary hazard)
+  'falling object hazard': 'Struck By',
+  'on top of pillars': 'Struck By',
+  'on top of the pillars': 'Struck By',
+  'timber on top': 'Struck By',
+  'placed on top of': 'Struck By',
+  'posed a serious falling object': 'Struck By',
+  'falling object hazard': 'Struck By',
+  'risk of injury to workers passing': 'Struck By',
+  'risk of injury to workers below': 'Struck By',
+  'working below': 'Struck By',
+
+  // Security cabin issues → Site Security
+  'security cabin': 'Site Security',
+  'sleeping during duty': 'Site Security',
+  'sleeping purposes during duty': 'Site Security',
+  'used for sleeping': 'Site Security',
+
+  // Scaffolding components scattered → Housekeeping (unless structural)
+  'scaffolding components': 'Housekeeping',
+  'scaffold components': 'Housekeeping',
+  'scaffolding clamps': 'Housekeeping',
+  'scaffold clamps': 'Housekeeping',
+  'scattered on the ground': 'Housekeeping',
+  'found scattered': 'Housekeeping',
+  'lying on the ground': 'Housekeeping',
+  'scattered across': 'Housekeeping',
 }
 
 // Hazard category patterns for auto-classification (30 approved categories)
@@ -884,6 +1028,34 @@ export const HAZARD_PATTERNS = {
     'sds', 'msds', 'material safety', 'chemical storage', 'spill', 'leak',
     'fumes', 'vapour', 'vapor', 'solvent', 'acid', 'alkali', 'paint', 'adhesive',
     'resin', 'epoxy', 'hazmat', 'dangerous goods', 'poison', 'carcinogen'
+  ],
+  'Struck By': [
+    // Protruding rebars and sharp objects
+    'protruding rebar', 'protruding rebars', 'exposed rebar', 'exposed rebars',
+    'rebar cap', 'rebar caps', 'impalement', 'risk of impalement', 'impalement hazard',
+    'sharp rebar', 'sharp rebars', 'sharp steel', 'sharp objects', 'sharp object',
+    'uncapped rebar', 'uncapped rebars', 'unprotected rebar', 'unprotected rebars',
+    // Protruding nails
+    'protruding nail', 'protruding nails', 'exposed nail', 'exposed nails',
+    'timber with nails', 'wood with nails', 'planks with nails',
+    // Tie rods
+    'tie rod', 'tie rods',
+    // Falling objects
+    'falling object', 'falling objects', 'dropped object', 'struck by',
+    'overhead hazard', 'object fell', 'objects falling',
+    // Sharp edges
+    'sharp edge', 'sharp edges', 'cutting hazard', 'laceration',
+    // NEOM Standard
+    'phsas 37.9', 'neom phsas 37.9'
+  ],
+  'Environmental': [
+    'environmental', 'contamination', 'pollution', 'ground contamination',
+    'soil contamination', 'environmental damage', 'septic tank', 'septic overflow',
+    'sewage', 'sewage overflow', 'effluent', 'wastewater', 'waste water'
+  ],
+  'Slips Trips Falls': [
+    'slip', 'trip', 'fall', 'slippery', 'tripping hazard', 'trip hazard',
+    'uneven surface', 'wet floor', 'slipped', 'tripped', 'fell'
   ],
   'Dust Control': [
     'dust', 'silica', 'respirable', 'particulate', 'dust suppression', 'water spray',

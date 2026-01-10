@@ -316,10 +316,15 @@ export const HAZARD_OBJECTS = {
     'flammable liquid', 'flammable', 'combustible', 'inflammable',
     'ignition source', 'heat source', 'hot surface',
     'candle', 'lighter', 'match', 'matches',
-    'fire', 'fire hazard', 'fire risk',
+    'fire', 'fire hazard', 'fire risk', 'fire hazards',
     'oxygen', 'oxidizer', 'oxidizing agent',
     'chemical', 'solvent', 'thinner', 'paint',
-    'electrical fire', 'short circuit'
+    'electrical fire', 'short circuit',
+    // Diesel/fuel spills and drip trays
+    'drip tray full of diesel', 'drip tray was full of diesel', 'drip tray was full',
+    'dip tray full of diesel', 'dip tray was full', 'full of diesel',
+    'diesel spill', 'diesel overflow', 'fuel spill', 'fuel overflow',
+    'generator drip tray', 'generator dip tray', 'increases the chance of fire'
   ],
 
   'Confined Spaces': [
@@ -410,11 +415,16 @@ export const HAZARD_OBJECTS = {
     'formwork', 'shuttering', 'falsework',
     'shoring', 'shores', 'props', 'propping',
     'bracing', 'braces', 'lateral support',
-    'temporary structure', 'temporary support',
+    'temporary structure', 'temporary support', 'temporary supports',
     'hoarding', 'site hoarding', 'fencing',
     'temporary platform', 'temporary access',
     'edge protection', 'temporary guardrail',
-    'access ramp', 'temporary ramp'
+    'access ramp', 'temporary ramp',
+    // Makeshift supports
+    'makeshift wooden', 'makeshift support', 'makeshift supports',
+    'makeshift wooden planks', 'supported using makeshift',
+    'unstable support', 'unstable supports',
+    'pipes elevated', 'pipe elevated', 'hdpe pipe', 'hdpe pipes'
   ],
 
   'Working in Heat': [
@@ -437,24 +447,34 @@ export const HAZARD_OBJECTS = {
   'Struck By': [
     // Protruding rebars and sharp objects (primary hazard = impalement/puncture)
     'protruding rebar', 'protruding rebars', 'exposed rebar', 'exposed rebars',
-    'rebar without cap', 'without rebar cap', 'no rebar cap', 'rebar cap missing',
-    'unprotected rebar', 'uncapped rebar', 'sharp rebar', 'sharp rebars',
-    'steel bar protruding', 'protruding steel', 'exposed steel bar', 'sharp steel',
-    'tie rod', 'tie rods', 'tie rod without', 'extended rebars', 'rebar extending',
-    'impalement', 'impalement hazard', 'risk of impalement', 'impalement risk',
-    'impalement injury', 'puncture hazard', 'puncture risk',
+    'rebars protruding', 'rebar protruding', 'rebars exposed', 'rebar exposed',
+    'rebar without cap', 'rebars without cap', 'without rebar cap', 'without rebar caps',
+    'no rebar cap', 'no rebar caps', 'rebar cap missing', 'rebar caps missing',
+    'unprotected rebar', 'unprotected rebars', 'uncapped rebar', 'uncapped rebars',
+    'sharp rebar', 'sharp rebars', 'sharp steel rebar', 'sharp steel rebars',
+    'steel bar protruding', 'steel rebars protruding', 'protruding steel',
+    'exposed steel bar', 'sharp steel', 'extended rebars', 'extending rebars',
+    'rebar cap', 'rebar caps', 'impalement', 'impaled', 'impalement hazard',
+    'risk of impalement', 'impalement risk', 'impalement injury', 'impalement injuries',
+    'puncture hazard', 'puncture risk', 'struck on these rods', 'struck onto these rebars',
+    // Tie rods
+    'tie rod', 'tie rods', 'tie rod without', 'tie rods used', 'tie rods without',
     // Protruding nails
     'protruding nail', 'protruding nails', 'exposed nail', 'exposed nails',
     'nail protruding', 'nails protruding', 'timber with nails', 'wood with nails',
-    'planks with nails', 'plywood with nails',
+    'planks with nails', 'plywood with nails', 'had exposed nails', 'sheets had exposed nails',
     // Falling objects
     'falling object', 'falling objects', 'dropped object', 'dropped objects',
-    'object falling', 'material falling', 'debris falling', 'falling debris',
-    'falling hazard', 'drop hazard', 'overhead hazard',
+    'object falling', 'objects falling', 'material falling', 'debris falling', 'falling debris',
+    'falling hazard', 'drop hazard', 'overhead hazard', 'falling material',
     'unsecured load', 'unsecured material', 'unstable stack', 'unstable stacking',
-    // Sharp edges
-    'sharp edge', 'sharp edges', 'sharp corner', 'sharp metal', 'sharp object',
-    'cutting hazard', 'laceration hazard', 'cut hazard'
+    'on top of pillars', 'on top of the pillars', 'timber on top', 'placed on top of',
+    'risk of injury to workers passing', 'risk of injury to workers below',
+    // Sharp edges and objects
+    'sharp edge', 'sharp edges', 'sharp corner', 'sharp metal', 'sharp object', 'sharp objects',
+    'cutting hazard', 'laceration hazard', 'cut hazard',
+    // NEOM Standard reference
+    'phsas 37.9', 'neom phsas 37.9', '37.9 sharp objects'
   ],
 
   // Environmental - Contamination, pollution, waste affecting environment
@@ -506,7 +526,18 @@ export const HAZARD_OBJECTS = {
     'breakfast', 'dinner', 'eating area', 'dining', 'food poisoning', 'sick from food',
     // Hygiene
     'hygiene', 'cleanliness', 'hand wash', 'hand washing', 'soap', 'sanitizer', 'sanitiser',
-    'hand sanitizer', 'washing facility', 'shower', 'changing room', 'locker room'
+    'hand sanitizer', 'washing facility', 'shower', 'changing room', 'locker room',
+    // Missing facilities
+    'toilet not provided', 'toilets not provided', 'waste bin not provided', 'bulletin board not provided',
+    'facilities not provided', 'welfare not provided', 'sanitation not provided',
+    // Waste bin issues
+    'waste bin liner', 'polythene bag not changed', 'polythene bag in the waste bin',
+    'garbage bag was not replaced', 'garbage bag not replaced', 'waste bin was full',
+    'waste bin full', 'bin was overflowing', 'bin overflowing', 'poor hygiene',
+    'unpleasant odor', 'unpleasant odour', 'pest attraction', 'pest risks',
+    // Food waste
+    'food waste', 'food waste not removed', 'food waste was not removed', 'food waste was observed',
+    'hygiene risk', 'hygiene concerns', 'hygiene issues'
   ],
 
   'PPE': [
@@ -743,7 +774,13 @@ export const HAZARD_OBJECTS = {
     'access route', 'escape route', 'means of escape', 'exit route',
     'access ladder', 'access stairs', 'access platform', 'access point',
     'restricted access', 'no access', 'access denied', 'access blocked',
-    'entry point', 'exit point', 'ingress', 'means of access'
+    'entry point', 'exit point', 'ingress', 'means of access',
+    // Walkways and steps
+    'wooden steps', 'steps not properly', 'steps are not properly', 'steps used for',
+    'wooden walkway', 'wooden walkways', 'walkway not provided', 'walkways not provided',
+    'walkways were not provided', 'planks were not provided', 'planks not provided',
+    'no walkway', 'no walkways', 'posing a risk of falls', 'risk of falls',
+    'not properly fixed', 'stairs not fixed', 'steps not fixed'
   ],
 
   'BBS': [
