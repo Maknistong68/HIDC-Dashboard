@@ -1,10 +1,21 @@
-import React from 'react'
-import { X, Download, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, Database, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown } from 'lucide-react'
+import React, { useState } from 'react'
+import { X, Download, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { INCIDENT_TYPES, ACTION_STATUSES } from '../../utils/constants'
+import ExportConfirmDialog from './ExportConfirmDialog'
+
+// Disclaimer text helper - includes Event ID for individual reports
+const getDisclaimerText = (eventId) => {
+  if (eventId) {
+    return `Please review this report before sharing. Use Event ID: ${eventId} to verify against source records.`
+  }
+  return 'Please review this report before sharing.'
+}
 
 const ReportModal = ({ record, onClose }) => {
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
+
   if (!record) return null
 
   const typeInfo = INCIDENT_TYPES.find(t => t.value === record.type)
@@ -18,6 +29,7 @@ const ReportModal = ({ record, onClose }) => {
     })
 
     const pageWidth = 210
+    const pageHeight = 297
     const margin = 15
     const contentWidth = pageWidth - margin * 2
     let y = margin
@@ -29,14 +41,18 @@ const ReportModal = ({ record, onClose }) => {
       return startY + lines.length * lineHeight
     }
 
-    // Header
+    // Top accent line
+    pdf.setFillColor(59, 130, 246)
+    pdf.rect(0, 0, pageWidth, 2.5, 'F')
+
+    // Header background
     pdf.setFillColor(249, 250, 251)
-    pdf.rect(0, 0, pageWidth, 25, 'F')
+    pdf.rect(0, 2.5, pageWidth, 22, 'F')
 
     pdf.setFontSize(16)
     pdf.setFont('helvetica', 'bold')
     pdf.setTextColor(31, 41, 55)
-    pdf.text('OBSERVATION REPORT', margin, 12)
+    pdf.text('EVENT REPORT', margin, 14)
 
     // Type badge
     pdf.setFontSize(9)
@@ -45,14 +61,14 @@ const ReportModal = ({ record, onClose }) => {
     pdf.setTextColor(typeInfo?.color ? parseInt(typeInfo.color.slice(1, 3), 16) : 0,
                      typeInfo?.color ? parseInt(typeInfo.color.slice(3, 5), 16) : 0,
                      typeInfo?.color ? parseInt(typeInfo.color.slice(5, 7), 16) : 0)
-    pdf.text(typeLabel, margin, 20)
+    pdf.text(typeLabel.toUpperCase(), margin, 21)
 
     // Date on right
     pdf.setFont('helvetica', 'normal')
     pdf.setTextColor(107, 114, 128)
-    pdf.text(formatDate(record.date), pageWidth - margin, 20, { align: 'right' })
+    pdf.text(formatDate(record.date), pageWidth - margin, 21, { align: 'right' })
 
-    y = 28
+    y = 30
 
     // Contractor/Site subheader (centered) if available
     if (record.contractor || record.site) {
@@ -63,22 +79,24 @@ const ReportModal = ({ record, onClose }) => {
       if (record.contractor) subParts.push(record.contractor)
       if (record.site) subParts.push(record.site)
       pdf.text(subParts.join(' - '), pageWidth / 2, y, { align: 'center' })
-      y = 38
+      y = 40
     } else {
-      y = 35
+      y = 37
     }
 
     // Divider line
     pdf.setDrawColor(229, 231, 235)
-    pdf.setLineWidth(0.5)
+    pdf.setLineWidth(0.3)
     pdf.line(margin, y - 5, pageWidth - margin, y - 5)
 
-    // Details Section
+    // Details Section with background
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
     pdf.setFontSize(11)
     pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(55, 65, 81)
-    pdf.text('DETAILS', margin, y)
-    y += 8
+    pdf.setTextColor(31, 41, 55)
+    pdf.text('DETAILS', margin + 2, y + 3)
+    y += 10
 
     // Details grid (2 columns)
     const col1X = margin
@@ -149,11 +167,13 @@ const ReportModal = ({ record, onClose }) => {
     pdf.line(margin, y - 3, pageWidth - margin, y - 3)
 
     // Description Section
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
     pdf.setFontSize(11)
     pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(55, 65, 81)
-    pdf.text('DESCRIPTION', margin, y)
-    y += 6
+    pdf.setTextColor(31, 41, 55)
+    pdf.text('DESCRIPTION', margin + 2, y + 3)
+    y += 10
 
     pdf.setFontSize(10)
     pdf.setFont('helvetica', 'normal')
@@ -162,16 +182,18 @@ const ReportModal = ({ record, onClose }) => {
     y = addWrappedText(description, margin, y, contentWidth, 5)
     y += 8
 
-    // Additional Info (if any) - excluding root cause
+    // Additional Info (if any)
     if (record.bodyPart || record.correctiveAction) {
       pdf.setDrawColor(229, 231, 235)
       pdf.line(margin, y - 3, pageWidth - margin, y - 3)
 
+      pdf.setFillColor(249, 250, 251)
+      pdf.rect(margin, y - 2, contentWidth, 7, 'F')
       pdf.setFontSize(11)
       pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(55, 65, 81)
-      pdf.text('ADDITIONAL INFORMATION', margin, y)
-      y += 6
+      pdf.setTextColor(31, 41, 55)
+      pdf.text('ADDITIONAL INFORMATION', margin + 2, y + 3)
+      y += 10
 
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
@@ -202,11 +224,13 @@ const ReportModal = ({ record, onClose }) => {
       pdf.setDrawColor(229, 231, 235)
       pdf.line(margin, y - 3, pageWidth - margin, y - 3)
 
+      pdf.setFillColor(249, 250, 251)
+      pdf.rect(margin, y - 2, contentWidth, 7, 'F')
       pdf.setFontSize(11)
       pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(55, 65, 81)
-      pdf.text('ACTION HISTORY', margin, y)
-      y += 6
+      pdf.setTextColor(31, 41, 55)
+      pdf.text('ACTION HISTORY', margin + 2, y + 3)
+      y += 10
 
       pdf.setFontSize(9)
       record.history.forEach(item => {
@@ -220,24 +244,51 @@ const ReportModal = ({ record, onClose }) => {
       })
     }
 
-    // Footer
-    const footerY = 280
+    // Footer with disclaimer
+    const footerY = pageHeight - 28
+
+    // Separator line
     pdf.setDrawColor(229, 231, 235)
+    pdf.setLineWidth(0.3)
     pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
 
+    // Disclaimer text with Event ID
+    pdf.setFontSize(7)
+    pdf.setFont('helvetica', 'italic')
+    pdf.setTextColor(107, 114, 128)
+    const disclaimerText = getDisclaimerText(record.externalId)
+    const disclaimerLines = pdf.splitTextToSize(disclaimerText, contentWidth)
+    pdf.text(disclaimerLines, margin, footerY)
+
+    // Bottom footer bar
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(0, pageHeight - 12, pageWidth, 12, 'F')
+
+    // Reference ID (prominent)
+    if (record.externalId) {
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(59, 130, 246)
+      pdf.text(`Reference ID: ${record.externalId}`, margin, pageHeight - 5)
+    }
+
+    // Branding and date
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     pdf.setTextColor(156, 163, 175)
-    pdf.text('HSE Safety Dashboard', margin, footerY)
-    pdf.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - margin, footerY, { align: 'right' })
-
-    if (record.externalId) {
-      pdf.text(`Reference ID: ${record.externalId}`, margin, footerY + 4)
-    }
+    pdf.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - margin, pageHeight - 5, { align: 'right' })
 
     // Save PDF
-    const filename = `Observation-Report-${record.date || 'unknown'}.pdf`
+    const filename = `Event-Report-${record.date || 'unknown'}.pdf`
     pdf.save(filename)
+  }
+
+  const handleExportClick = () => {
+    setShowExportConfirm(true)
+  }
+
+  const handleConfirmExport = () => {
+    handleDownloadPDF()
   }
 
   const formatDate = (dateStr) => {
@@ -261,188 +312,199 @@ const ReportModal = ({ record, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      />
+    <>
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          onClick={onClose}
+        />
 
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white shadow-xl w-full max-w-2xl transform transition-all">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-surface-200 bg-surface-50">
-            <div className="flex items-center gap-3">
-              <span
-                className="px-3 py-1 text-xs font-semibold"
-                style={{
-                  backgroundColor: typeInfo?.color + '20',
-                  color: typeInfo?.color,
-                }}
-              >
-                {typeInfo?.label || record.type}
-              </span>
-              <span className="text-sm text-surface-500">
-                {formatDate(record.date)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                title="Download PDF"
-              >
-                <Download size={14} />
-                Download PDF
-              </button>
-              <button
-                onClick={onClose}
-                className="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-4 max-h-[70vh] overflow-y-auto">
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  <Calendar size={12} />
-                  Date
-                </div>
-                <div className="text-sm text-surface-900">{formatDate(record.date)}</div>
+        {/* Modal */}
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="relative bg-white shadow-xl w-full max-w-2xl transform transition-all rounded-lg overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-surface-200 bg-surface-50">
+              <div className="flex items-center gap-3">
+                <span
+                  className="px-3 py-1 text-xs font-semibold rounded"
+                  style={{
+                    backgroundColor: typeInfo?.color + '20',
+                    color: typeInfo?.color,
+                  }}
+                >
+                  {typeInfo?.label || record.type}
+                </span>
+                <span className="text-sm text-surface-500">
+                  {formatDate(record.date)}
+                </span>
               </div>
-
-              <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  <Building2 size={12} />
-                  Contractor
-                </div>
-                <div className="text-sm text-surface-900">{record.contractor || '-'}</div>
-              </div>
-
-              <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  <MapPin size={12} />
-                  Site
-                </div>
-                <div className="text-sm text-surface-900">{record.site || '-'}</div>
-              </div>
-
-              <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  <AlertCircle size={12} />
-                  Hazard Category
-                </div>
-                <div className="text-sm text-surface-900">{record.location || '-'}</div>
-              </div>
-
-              <div className="field">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  <User size={12} />
-                  Reported By
-                </div>
-                <div className="text-sm text-surface-900">{record.reportedBy || '-'}</div>
-              </div>
-
-              <div className="field">
-                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  Action Status
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <StatusIcon status={record.actionStatus} />
-                  <span
-                    className="px-2 py-0.5 text-xs font-medium"
-                    style={{
-                      backgroundColor: statusInfo?.color + '20',
-                      color: statusInfo?.color,
-                    }}
-                  >
-                    {statusInfo?.label || record.actionStatus || 'Open'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="field">
-                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                  Approval Status
-                </div>
-                <div className="text-sm text-surface-900">{record.approvalStatus || '-'}</div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportClick}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  title="Download PDF"
+                >
+                  <Download size={14} />
+                  Download PDF
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </div>
 
-            {/* Description */}
-            <div className="mb-4">
-              <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
-                Description
-              </div>
-              <div className="bg-surface-50 p-3 border border-surface-200 text-sm text-surface-700 whitespace-pre-wrap leading-relaxed">
-                {record.description || 'No description provided.'}
-              </div>
-            </div>
+            {/* Content */}
+            <div className="p-4 max-h-[70vh] overflow-y-auto">
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <Calendar size={12} />
+                    Date
+                  </div>
+                  <div className="text-sm text-surface-900">{formatDate(record.date)}</div>
+                </div>
 
-            {/* Additional Fields (if any) - excluding root cause */}
-            {(record.bodyPart || record.correctiveAction) && (
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <Building2 size={12} />
+                    Contractor
+                  </div>
+                  <div className="text-sm text-surface-900">{record.contractor || '-'}</div>
+                </div>
+
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <MapPin size={12} />
+                    Site
+                  </div>
+                  <div className="text-sm text-surface-900">{record.site || '-'}</div>
+                </div>
+
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <AlertCircle size={12} />
+                    Hazard Category
+                  </div>
+                  <div className="text-sm text-surface-900">{record.location || '-'}</div>
+                </div>
+
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <User size={12} />
+                    Reported By
+                  </div>
+                  <div className="text-sm text-surface-900">{record.reportedBy || '-'}</div>
+                </div>
+
+                <div className="field">
+                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    Action Status
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <StatusIcon status={record.actionStatus} />
+                    <span
+                      className="px-2 py-0.5 text-xs font-medium rounded"
+                      style={{
+                        backgroundColor: statusInfo?.color + '20',
+                        color: statusInfo?.color,
+                      }}
+                    >
+                      {statusInfo?.label || record.actionStatus || 'Open'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    Approval Status
+                  </div>
+                  <div className="text-sm text-surface-900">{record.approvalStatus || '-'}</div>
+                </div>
+              </div>
+
+              {/* Description */}
               <div className="mb-4">
                 <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
-                  Additional Information
+                  Description
                 </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {record.bodyPart && (
-                    <div>
-                      <span className="text-xs font-medium text-surface-500">Body Part Affected: </span>
-                      <span className="text-sm text-surface-900">{record.bodyPart}</span>
-                    </div>
-                  )}
-                  {record.correctiveAction && (
-                    <div>
-                      <span className="text-xs font-medium text-surface-500">Corrective Action: </span>
-                      <span className="text-sm text-surface-900">{record.correctiveAction}</span>
-                    </div>
-                  )}
+                <div className="bg-surface-50 p-3 border border-surface-200 rounded text-sm text-surface-700 whitespace-pre-wrap leading-relaxed">
+                  {record.description || 'No description provided.'}
                 </div>
               </div>
-            )}
 
-            {/* Data Quality Section */}
-            <DataQualitySection record={record} />
-
-            {/* History/Timeline (if available) */}
-            {record.history && record.history.length > 0 && (
-              <div>
-                <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
-                  Action History
-                </div>
-                <div className="space-y-2">
-                  {record.history.map((item, index) => (
-                    <div key={index} className="flex gap-3 text-sm">
-                      <div className="text-xs text-surface-400 w-24 flex-shrink-0">
-                        {item.date}
+              {/* Additional Fields (if any) */}
+              {(record.bodyPart || record.correctiveAction) && (
+                <div className="mb-4">
+                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
+                    Additional Information
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {record.bodyPart && (
+                      <div>
+                        <span className="text-xs font-medium text-surface-500">Body Part Affected: </span>
+                        <span className="text-sm text-surface-900">{record.bodyPart}</span>
                       </div>
-                      <div className="flex-1">
-                        <span className="font-medium text-surface-700">{item.action}</span>
-                        {item.by && <span className="text-surface-500"> by {item.by}</span>}
+                    )}
+                    {record.correctiveAction && (
+                      <div>
+                        <span className="text-xs font-medium text-surface-500">Corrective Action: </span>
+                        <span className="text-sm text-surface-900">{record.correctiveAction}</span>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Reference ID */}
-            {record.externalId && (
-              <div className="mt-4 pt-3 border-t border-surface-200">
-                <span className="text-xs text-surface-400">Reference ID: {record.externalId}</span>
-              </div>
-            )}
+              {/* Data Quality Section */}
+              <DataQualitySection record={record} />
+
+              {/* History/Timeline (if available) */}
+              {record.history && record.history.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
+                    Action History
+                  </div>
+                  <div className="space-y-2">
+                    {record.history.map((item, index) => (
+                      <div key={index} className="flex gap-3 text-sm">
+                        <div className="text-xs text-surface-400 w-24 flex-shrink-0">
+                          {item.date}
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-medium text-surface-700">{item.action}</span>
+                          {item.by && <span className="text-surface-500"> by {item.by}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reference ID */}
+              {record.externalId && (
+                <div className="mt-4 pt-3 border-t border-surface-200">
+                  <span className="text-xs text-surface-400">Reference ID: </span>
+                  <span className="text-xs font-mono text-blue-600">{record.externalId}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Export Confirmation Dialog */}
+      <ExportConfirmDialog
+        isOpen={showExportConfirm}
+        onClose={() => setShowExportConfirm(false)}
+        onConfirm={handleConfirmExport}
+        exportType="Report"
+      />
+    </>
   )
 }
 
@@ -502,7 +564,7 @@ const DataQualitySection = ({ record }) => {
       {/* Compact Header - Click to expand */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between px-2 py-1.5 text-xs transition-colors ${badge.bg} hover:opacity-80`}
+        className={`w-full flex items-center justify-between px-2 py-1.5 text-xs transition-colors rounded ${badge.bg} hover:opacity-80`}
       >
         <div className="flex items-center gap-2">
           <BadgeIcon size={12} className={badge.color} />
@@ -520,7 +582,7 @@ const DataQualitySection = ({ record }) => {
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-1 p-2 bg-surface-50 border border-surface-200 text-xs space-y-1">
+        <div className="mt-1 p-2 bg-surface-50 border border-surface-200 rounded text-xs space-y-1">
           {record.dataQualityIssue && (
             <p className="text-surface-600">{record.dataQualityIssue}</p>
           )}

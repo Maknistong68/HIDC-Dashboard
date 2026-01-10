@@ -4,6 +4,15 @@ import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
 import useResizable from '../../hooks/useResizable.jsx'
+import ExportConfirmDialog from './ExportConfirmDialog'
+
+// Disclaimer text helper - includes Event ID for individual reports
+const getDisclaimerText = (eventId) => {
+  if (eventId) {
+    return `Please review this report before sharing. Use Event ID: ${eventId} to verify against source records.`
+  }
+  return 'Please review this report before sharing.'
+}
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -320,13 +329,11 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
 /**
  * Records Table View
  */
-const RecordsTable = ({ data, onViewDetails, breadcrumb = [], title = '' }) => {
-  const [copied, setCopied] = useState(false)
-
+const RecordsTable = ({ data, onViewDetails }) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-surface-500">
-        No observations found
+        No events found
       </div>
     )
   }
@@ -342,39 +349,8 @@ const RecordsTable = ({ data, onViewDetails, breadcrumb = [], title = '' }) => {
     }
   }
 
-  // Export data for analysis - formats records for Claude to analyze
-  const handleCopyForAnalysis = () => {
-    const exportData = data.slice(0, 50).map((record, idx) => {
-      // Calculate confidence for each record
-      const analysis = analyzeObservation(record.description, record.originalHazardCategory || record.location)
-      return `${idx + 1}. [${analysis.confidence}%] ${record.location || 'Unknown'}\n   "${record.description || 'No description'}"`
-    }).join('\n\n')
-
-    // Use the actual title/breadcrumb instead of hardcoded label
-    const contextLabel = breadcrumb.length > 0 ? breadcrumb.join(' > ') : title
-    const header = `=== ${contextLabel.toUpperCase()} (${Math.min(50, data.length)} of ${data.length}) ===\nFormat: [Confidence%] Category\n"Description"\n\n`
-
-    navigator.clipboard.writeText(header + exportData)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 3000)
-  }
-
   return (
     <div className="space-y-2">
-      {/* Copy for Analysis Button */}
-      <div className="flex justify-end mb-3">
-        <button
-          onClick={handleCopyForAnalysis}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-            copied
-              ? 'bg-green-100 text-green-700 border border-green-300'
-              : 'bg-purple-100 text-purple-700 border border-purple-300 hover:bg-purple-200'
-          }`}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied! Paste to Claude' : `Copy ${Math.min(50, data.length)} for Analysis`}
-        </button>
-      </div>
       {data.map((record, idx) => (
         <div
           key={record.externalId || idx}
@@ -427,6 +403,7 @@ const RecordsTable = ({ data, onViewDetails, breadcrumb = [], title = '' }) => {
  */
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
 
   // Resizable functionality
   const {
@@ -473,6 +450,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
   const handleDownloadPDF = () => {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const pageWidth = 210
+    const pageHeight = 297
     const margin = 15
     const contentWidth = pageWidth - margin * 2
     let y = margin
@@ -483,22 +461,27 @@ const RecordDetailsModal = ({ record, onClose }) => {
       return startY + lines.length * lineHeight
     }
 
-    // Header
+    // Top accent line
+    pdf.setFillColor(59, 130, 246)
+    pdf.rect(0, 0, pageWidth, 2.5, 'F')
+
+    // Header background
     pdf.setFillColor(249, 250, 251)
-    pdf.rect(0, 0, pageWidth, 25, 'F')
+    pdf.rect(0, 2.5, pageWidth, 22, 'F')
+
     pdf.setFontSize(16)
     pdf.setFont('helvetica', 'bold')
     pdf.setTextColor(31, 41, 55)
-    pdf.text('OBSERVATION REPORT', margin, 12)
+    pdf.text('EVENT REPORT', margin, 14)
     pdf.setFontSize(9)
     pdf.setTextColor(107, 114, 128)
-    pdf.text(formatDate(record.date), pageWidth - margin, 12, { align: 'right' })
+    pdf.text(formatDate(record.date), pageWidth - margin, 14, { align: 'right' })
 
     // Type badge
     pdf.setFont('helvetica', 'bold')
     pdf.setTextColor(59, 130, 246)
-    pdf.text((record.type || 'observation').toUpperCase(), margin, 20)
-    y = 28
+    pdf.text((record.type || 'observation').toUpperCase(), margin, 21)
+    y = 30
 
     // Contractor/Site subheader
     if (record.contractor || record.site) {
@@ -507,22 +490,24 @@ const RecordDetailsModal = ({ record, onClose }) => {
       pdf.setTextColor(55, 65, 81)
       const subParts = [record.contractor, record.site].filter(Boolean)
       pdf.text(subParts.join(' - '), pageWidth / 2, y, { align: 'center' })
-      y = 38
+      y = 40
     } else {
-      y = 35
+      y = 37
     }
 
     // Divider
     pdf.setDrawColor(229, 231, 235)
-    pdf.setLineWidth(0.5)
+    pdf.setLineWidth(0.3)
     pdf.line(margin, y - 5, pageWidth - margin, y - 5)
 
-    // Details Section
+    // Details Section with background
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
     pdf.setFontSize(11)
     pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(55, 65, 81)
-    pdf.text('DETAILS', margin, y)
-    y += 8
+    pdf.setTextColor(31, 41, 55)
+    pdf.text('DETAILS', margin + 2, y + 3)
+    y += 10
 
     const col1X = margin
     const col2X = margin + contentWidth / 2 + 5
@@ -575,12 +560,15 @@ const RecordDetailsModal = ({ record, onClose }) => {
     pdf.setDrawColor(229, 231, 235)
     pdf.line(margin, y - 3, pageWidth - margin, y - 3)
 
-    // Description
+    // Description Section with background
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
     pdf.setFontSize(11)
     pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(55, 65, 81)
-    pdf.text('DESCRIPTION', margin, y)
-    y += 6
+    pdf.setTextColor(31, 41, 55)
+    pdf.text('DESCRIPTION', margin + 2, y + 3)
+    y += 10
+
     pdf.setFontSize(10)
     pdf.setFont('helvetica', 'normal')
     pdf.setTextColor(55, 65, 81)
@@ -591,11 +579,15 @@ const RecordDetailsModal = ({ record, onClose }) => {
     if (record.bodyPart || record.correctiveAction) {
       pdf.setDrawColor(229, 231, 235)
       pdf.line(margin, y - 3, pageWidth - margin, y - 3)
+
+      pdf.setFillColor(249, 250, 251)
+      pdf.rect(margin, y - 2, contentWidth, 7, 'F')
       pdf.setFontSize(11)
       pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(55, 65, 81)
-      pdf.text('ADDITIONAL INFORMATION', margin, y)
-      y += 6
+      pdf.setTextColor(31, 41, 55)
+      pdf.text('ADDITIONAL INFORMATION', margin + 2, y + 3)
+      y += 10
+
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
 
@@ -618,19 +610,51 @@ const RecordDetailsModal = ({ record, onClose }) => {
       }
     }
 
-    // Footer
-    const footerY = 280
+    // Footer with disclaimer
+    const footerY = pageHeight - 28
+
+    // Separator line
     pdf.setDrawColor(229, 231, 235)
+    pdf.setLineWidth(0.3)
     pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
-    pdf.setFontSize(8)
-    pdf.setTextColor(156, 163, 175)
-    pdf.text('HIDC Dashboard Export', margin, footerY)
-    pdf.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - margin, footerY, { align: 'right' })
+
+    // Disclaimer text with Event ID
+    pdf.setFontSize(7)
+    pdf.setFont('helvetica', 'italic')
+    pdf.setTextColor(107, 114, 128)
+    const disclaimerText = getDisclaimerText(record.externalId)
+    const disclaimerLines = pdf.splitTextToSize(disclaimerText, contentWidth)
+    pdf.text(disclaimerLines, margin, footerY)
+
+    // Bottom footer bar
+    pdf.setFillColor(249, 250, 251)
+    pdf.rect(0, pageHeight - 12, pageWidth, 12, 'F')
+
+    // Reference ID (prominent)
     if (record.externalId) {
-      pdf.text(`Reference: ${record.externalId}`, margin, footerY + 4)
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(59, 130, 246)
+      pdf.text(`Reference ID: ${record.externalId}`, margin, pageHeight - 5)
     }
 
-    pdf.save(`Observation-${record.date || 'report'}.pdf`)
+    // Branding and date
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(156, 163, 175)
+    pdf.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - margin, pageHeight - 5, { align: 'right' })
+
+    pdf.save(`Event-Report-${record.date || 'report'}.pdf`)
+  }
+
+  // Handle export button click - show confirmation first
+  const handleExportClick = () => {
+    setShowExportConfirm(true)
+  }
+
+  // Handle confirmed export
+  const handleConfirmExport = () => {
+    handleDownloadPDF()
   }
 
   const statusInfo = getStatusInfo(record.actionStatus)
@@ -663,7 +687,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleDownloadPDF}
+                  onClick={handleExportClick}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                   title="Download PDF"
                 >
@@ -768,6 +792,14 @@ const RecordDetailsModal = ({ record, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Export Confirmation Dialog */}
+      <ExportConfirmDialog
+        isOpen={showExportConfirm}
+        onClose={() => setShowExportConfirm(false)}
+        onConfirm={handleConfirmExport}
+        exportType="Report"
+      />
     </div>
   )
 }

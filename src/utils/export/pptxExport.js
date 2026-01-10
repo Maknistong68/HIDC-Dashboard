@@ -2,8 +2,12 @@ import PptxGenJS from 'pptxgenjs'
 import { format } from 'date-fns'
 import { captureAllCharts } from './captureCharts'
 
+// Disclaimer text for main report
+const DISCLAIMER_TEXT = 'Please review all data in this report before sharing.'
+
 /**
  * Generates a PowerPoint presentation with one slide per chart
+ * Includes professional layout and disclaimer
  */
 export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProgress) => {
   onProgress?.('Initializing PowerPoint...')
@@ -24,7 +28,10 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
   // Title slide
   addTitleSlide(pptx, filterInfo)
 
-  // Summary slide (after title slide)
+  // Disclaimer slide (after title)
+  addDisclaimerSlide(pptx)
+
+  // Summary slide (after disclaimer)
   if (incidents && incidents.length > 0) {
     onProgress?.('Adding slide: Summary...')
     addSummarySlide(pptx, incidents)
@@ -38,12 +45,12 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
 
   // Other chart slides
   const chartOrder = [
-    { key: 'pyramid', title: 'Observation Categories' },
-    { key: 'trendChart', title: 'Observation vs Incident Trend' },
+    { key: 'pyramid', title: 'Event Categories' },
+    { key: 'trendChart', title: 'Event Trend' },
     { key: 'topHazards', title: 'Top Significant Hazards' },
     { key: 'topObservers', title: 'Top Observers' },
-    { key: 'dayOfWeek', title: 'Observations by Day of Week' },
-    { key: 'hourOfDay', title: 'Observations by Hour of Day' },
+    { key: 'dayOfWeek', title: 'Events by Day of Week' },
+    { key: 'hourOfDay', title: 'Events by Hour of Day' },
     { key: 'hazardsHeatmap', title: 'Hazards Heatmap' },
   ]
 
@@ -65,36 +72,48 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
 }
 
 /**
- * Add title slide with filter information
+ * Add title slide with filter information - Professional design
  */
 const addTitleSlide = (pptx, filterInfo) => {
   const slide = pptx.addSlide()
 
   slide.background = { color: 'FFFFFF' }
 
+  // Top accent bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.15,
+    fill: { color: '3B82F6' },
+  })
+
+  // Main title
   slide.addText('HIDC Report', {
     x: 0.5,
-    y: 2,
+    y: 1.8,
     w: '90%',
     h: 0.8,
-    fontSize: 36,
+    fontSize: 40,
     bold: true,
     color: '1f2937',
     align: 'center',
     fontFace: 'Arial',
   })
 
+  // Subtitle
   slide.addText('Hazard Identification and Data Control', {
     x: 0.5,
-    y: 2.6,
+    y: 2.5,
     w: '90%',
     h: 0.5,
-    fontSize: 18,
+    fontSize: 20,
     color: '6b7280',
     align: 'center',
     fontFace: 'Arial',
   })
 
+  // Build filter info text
   const filterParts = []
   if (filterInfo.company) filterParts.push(`Company: ${filterInfo.company}`)
   if (filterInfo.contractor) filterParts.push(`Contractor: ${filterInfo.contractor}`)
@@ -106,35 +125,126 @@ const addTitleSlide = (pptx, filterInfo) => {
     ? filterParts.join('  |  ')
     : 'All Data (No Filters Applied)'
 
+  // Filter info box
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 1.5,
+    y: 3.2,
+    w: 7,
+    h: 0.6,
+    fill: { color: 'f9fafb' },
+    line: { color: 'e5e7eb', pt: 1 },
+  })
+
   slide.addText(filterText, {
-    x: 0.5,
-    y: 3.3,
-    w: '90%',
-    h: 0.5,
-    fontSize: 14,
+    x: 1.5,
+    y: 3.2,
+    w: 7,
+    h: 0.6,
+    fontSize: 12,
     color: '6b7280',
     align: 'center',
     fontFace: 'Arial',
+    valign: 'middle',
   })
 
+  // Generation date
   slide.addText(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, {
     x: 0.5,
-    y: 3.9,
+    y: 4.0,
     w: '90%',
     h: 0.4,
-    fontSize: 12,
+    fontSize: 11,
     color: '9ca3af',
     align: 'center',
     fontFace: 'Arial',
   })
 
+  // Decorative line
   slide.addShape(pptx.ShapeType.rect, {
-    x: 3,
-    y: 4.6,
-    w: 4,
+    x: 3.5,
+    y: 4.5,
+    w: 3,
     h: 0.02,
     fill: { color: 'e5e7eb' },
   })
+}
+
+/**
+ * Add disclaimer slide
+ */
+const addDisclaimerSlide = (pptx) => {
+  const slide = pptx.addSlide()
+  slide.background = { color: 'FFFFFF' }
+
+  // Top accent bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.15,
+    fill: { color: '3B82F6' },
+  })
+
+  // Warning icon placeholder (amber box)
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 4.25,
+    y: 1.5,
+    w: 1.5,
+    h: 1.5,
+    fill: { color: 'fef3c7' },
+    line: { color: 'f59e0b', pt: 2 },
+  })
+
+  slide.addText('!', {
+    x: 4.25,
+    y: 1.5,
+    w: 1.5,
+    h: 1.5,
+    fontSize: 48,
+    bold: true,
+    color: 'f59e0b',
+    align: 'center',
+    valign: 'middle',
+    fontFace: 'Arial',
+  })
+
+  // Title
+  slide.addText('Before Sharing', {
+    x: 0.5,
+    y: 3.2,
+    w: '90%',
+    h: 0.6,
+    fontSize: 28,
+    bold: true,
+    color: '1f2937',
+    align: 'center',
+    fontFace: 'Arial',
+  })
+
+  // Disclaimer text box
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 2,
+    y: 3.9,
+    w: 6,
+    h: 0.8,
+    fill: { color: 'eff6ff' },
+    line: { color: '3b82f6', pt: 1 },
+  })
+
+  slide.addText(DISCLAIMER_TEXT, {
+    x: 2.2,
+    y: 4.0,
+    w: 5.6,
+    h: 0.6,
+    fontSize: 14,
+    color: '1e40af',
+    align: 'center',
+    fontFace: 'Arial',
+    valign: 'middle',
+  })
+
+  // Footer
+  addSlideFooter(slide, pptx)
 }
 
 /**
@@ -169,7 +279,7 @@ const calculateSummary = (incidents) => {
 }
 
 /**
- * Add summary slide with contractor/site breakdown tables
+ * Add summary slide with contractor/site breakdown tables - Professional design
  */
 const addSummarySlide = (pptx, incidents) => {
   if (!incidents || incidents.length === 0) return
@@ -177,10 +287,19 @@ const addSummarySlide = (pptx, incidents) => {
   const slide = pptx.addSlide()
   slide.background = { color: 'FFFFFF' }
 
+  // Top accent bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.15,
+    fill: { color: '3B82F6' },
+  })
+
   // Slide title
   slide.addText('Summary', {
     x: 0.5,
-    y: 0.2,
+    y: 0.3,
     w: '90%',
     h: 0.5,
     fontSize: 24,
@@ -191,15 +310,27 @@ const addSummarySlide = (pptx, incidents) => {
 
   const summary = calculateSummary(incidents)
 
-  // Total observations count
-  slide.addText(`Total Observations: ${incidents.length}`, {
-    x: 0.5,
-    y: 0.7,
-    w: '90%',
-    h: 0.3,
-    fontSize: 14,
-    color: '6b7280',
+  // Total observations highlight box
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 3,
+    y: 0.85,
+    w: 4,
+    h: 0.5,
+    fill: { color: 'eff6ff' },
+    line: { color: '3b82f6', pt: 1 },
+  })
+
+  slide.addText(`Total Events: ${incidents.length.toLocaleString()}`, {
+    x: 3,
+    y: 0.85,
+    w: 4,
+    h: 0.5,
+    fontSize: 16,
+    bold: true,
+    color: '1d4ed8',
     fontFace: 'Arial',
+    align: 'center',
+    valign: 'middle',
   })
 
   // Only show tables if there's meaningful data
@@ -212,10 +343,10 @@ const addSummarySlide = (pptx, incidents) => {
   if (hasContractors) {
     slide.addText('By Contractor', {
       x: 0.5,
-      y: 1.1,
+      y: 1.5,
       w: 4.5,
       h: 0.3,
-      fontSize: 12,
+      fontSize: 14,
       bold: true,
       color: '1f2937',
       fontFace: 'Arial',
@@ -223,10 +354,10 @@ const addSummarySlide = (pptx, incidents) => {
 
     const contractorTableData = [
       [
-        { text: 'Contractor', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Total', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Open', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Closed', options: { bold: true, fill: 'f3f4f6' } }
+        { text: 'Contractor', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Total', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Open', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Closed', options: { bold: true, fill: 'f3f4f6', color: '374151' } }
       ],
       ...summary.byContractor.slice(0, 8).map(([name, data]) => [
         { text: name.length > 25 ? name.substring(0, 25) + '...' : name },
@@ -238,7 +369,7 @@ const addSummarySlide = (pptx, incidents) => {
 
     slide.addTable(contractorTableData, {
       x: 0.5,
-      y: 1.4,
+      y: 1.85,
       w: 4.3,
       fontSize: 9,
       fontFace: 'Arial',
@@ -251,10 +382,10 @@ const addSummarySlide = (pptx, incidents) => {
   if (hasSites) {
     slide.addText('By Site', {
       x: 5.2,
-      y: 1.1,
+      y: 1.5,
       w: 4.5,
       h: 0.3,
-      fontSize: 12,
+      fontSize: 14,
       bold: true,
       color: '1f2937',
       fontFace: 'Arial',
@@ -262,10 +393,10 @@ const addSummarySlide = (pptx, incidents) => {
 
     const siteTableData = [
       [
-        { text: 'Site', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Total', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Open', options: { bold: true, fill: 'f3f4f6' } },
-        { text: 'Closed', options: { bold: true, fill: 'f3f4f6' } }
+        { text: 'Site', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Total', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Open', options: { bold: true, fill: 'f3f4f6', color: '374151' } },
+        { text: 'Closed', options: { bold: true, fill: 'f3f4f6', color: '374151' } }
       ],
       ...summary.bySite.slice(0, 8).map(([name, data]) => [
         { text: name.length > 25 ? name.substring(0, 25) + '...' : name },
@@ -277,7 +408,7 @@ const addSummarySlide = (pptx, incidents) => {
 
     slide.addTable(siteTableData, {
       x: 5.2,
-      y: 1.4,
+      y: 1.85,
       w: 4.3,
       fontSize: 9,
       fontFace: 'Arial',
@@ -287,29 +418,30 @@ const addSummarySlide = (pptx, incidents) => {
   }
 
   // Footer
-  slide.addText('HIDC - Hazard Identification and Data Control', {
-    x: 0.5,
-    y: 5.2,
-    w: 4,
-    h: 0.3,
-    fontSize: 8,
-    color: '9ca3af',
-    fontFace: 'Arial',
-  })
+  addSlideFooter(slide, pptx)
 }
 
 /**
- * Add combined KPI slide with both KPI rows stacked vertically
+ * Add combined KPI slide with both KPI rows stacked vertically - Professional design
  */
 const addCombinedKPISlide = (pptx, kpiCards1Image, kpiCards2Image) => {
   const slide = pptx.addSlide()
 
   slide.background = { color: 'FFFFFF' }
 
+  // Top accent bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.15,
+    fill: { color: '3B82F6' },
+  })
+
   // Slide title
   slide.addText('Key Performance Indicators', {
     x: 0.5,
-    y: 0.2,
+    y: 0.3,
     w: '90%',
     h: 0.5,
     fontSize: 24,
@@ -323,7 +455,7 @@ const addCombinedKPISlide = (pptx, kpiCards1Image, kpiCards2Image) => {
     slide.addImage({
       data: kpiCards1Image,
       x: 0.3,
-      y: 0.8,
+      y: 0.9,
       w: 9.4,
       h: 2.0,
       sizing: {
@@ -351,56 +483,90 @@ const addCombinedKPISlide = (pptx, kpiCards1Image, kpiCards2Image) => {
   }
 
   // Footer
-  slide.addText('HIDC - Hazard Identification and Data Control', {
-    x: 0.5,
-    y: 5.2,
-    w: 4,
-    h: 0.3,
-    fontSize: 8,
-    color: '9ca3af',
-    fontFace: 'Arial',
-  })
+  addSlideFooter(slide, pptx)
 }
 
 /**
- * Add a chart slide with title and centered image
+ * Add a chart slide with title and centered image - Professional design
  */
 const addChartSlide = (pptx, imageDataUrl, title) => {
   const slide = pptx.addSlide()
 
   slide.background = { color: 'FFFFFF' }
 
+  // Top accent bar
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.15,
+    fill: { color: '3B82F6' },
+  })
+
+  // Slide title
   slide.addText(title, {
     x: 0.5,
     y: 0.3,
     w: '90%',
-    h: 0.6,
+    h: 0.5,
     fontSize: 24,
     bold: true,
     color: '1f2937',
     fontFace: 'Arial',
   })
 
+  // Chart image
   slide.addImage({
     data: imageDataUrl,
     x: 0.3,
-    y: 1,
+    y: 0.9,
     w: 9.4,
-    h: 4.3,
+    h: 4.1,
     sizing: {
       type: 'contain',
       w: 9.4,
-      h: 4.3,
+      h: 4.1,
     },
   })
 
+  // Footer
+  addSlideFooter(slide, pptx)
+}
+
+/**
+ * Add consistent footer to all slides
+ */
+const addSlideFooter = (slide, pptx) => {
+  // Bottom bar background
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 5.1,
+    w: '100%',
+    h: 0.4,
+    fill: { color: 'f9fafb' },
+  })
+
+  // Branding
   slide.addText('HIDC - Hazard Identification and Data Control', {
     x: 0.5,
-    y: 5.2,
-    w: 4,
+    y: 5.15,
+    w: 5,
     h: 0.3,
     fontSize: 8,
     color: '9ca3af',
     fontFace: 'Arial',
+  })
+
+  // Review reminder
+  slide.addText('Review data before sharing', {
+    x: 5.5,
+    y: 5.15,
+    w: 4,
+    h: 0.3,
+    fontSize: 7,
+    italic: true,
+    color: 'b0b0b0',
+    fontFace: 'Arial',
+    align: 'right',
   })
 }
