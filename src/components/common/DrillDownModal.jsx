@@ -37,7 +37,8 @@ const DrillDownModal = ({
     containerRef,
     containerStyle,
     isResizing,
-    ResizeHandles
+    ResizeHandles,
+    isMobile
   } = useResizable({
     minWidth: 500,
     minHeight: 400,
@@ -55,40 +56,57 @@ const DrillDownModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center ${isMobile ? 'p-0' : 'p-4'}`}
       onClick={handleBackdropClick}
     >
       {/* Backdrop with blur */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-      {/* Modal Container - Glassmorphism */}
+      {/* Modal Container - Full screen on mobile, glassmorphism on desktop */}
       <div
         ref={containerRef}
-        className={`relative w-full max-w-5xl max-h-[90vh] flex flex-col animate-modal-in ${isResizing ? 'select-none' : ''}`}
-        style={containerStyle}
+        className={`
+          relative w-full flex flex-col
+          ${isMobile
+            ? 'h-full max-h-full animate-slide-up'
+            : 'max-w-5xl max-h-[90vh] animate-modal-in'
+          }
+          ${isResizing ? 'select-none' : ''}
+        `}
+        style={isMobile ? {} : containerStyle}
       >
-        {/* Resize Handles */}
+        {/* Resize Handles - Only on desktop */}
         <ResizeHandles />
+
         {/* Glass Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-surface-200/50 bg-white/50">
+        <div className={`
+          bg-white/95 sm:bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden h-full flex flex-col
+          ${isMobile ? 'border-0 rounded-none' : 'border rounded-2xl'}
+        `}>
+          {/* Header - Larger touch targets on mobile */}
+          <div className={`
+            border-b border-surface-200/50 bg-white/50 safe-area-top
+            ${isMobile ? 'px-4 py-3' : 'px-6 py-4'}
+          `}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 {canGoBack && (
                   <button
                     onClick={onBack}
-                    className="p-1.5 rounded-lg hover:bg-surface-100/80 text-surface-500 hover:text-surface-700 transition-colors"
+                    className="p-2 sm:p-1.5 rounded-lg hover:bg-surface-100/80 active:bg-surface-200/80 text-surface-500 hover:text-surface-700 transition-colors flex-shrink-0"
+                    aria-label="Go back"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={isMobile ? 24 : 20} />
                   </button>
                 )}
-                <div>
-                  <h3 className="text-lg font-semibold text-surface-900">{title}</h3>
+                <div className="min-w-0 flex-1">
+                  <h3 className={`font-semibold text-surface-900 truncate ${isMobile ? 'text-base' : 'text-lg'}`}>
+                    {title}
+                  </h3>
                   {breadcrumb.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-surface-500 mt-0.5">
+                    <div className="flex items-center gap-1 text-xs text-surface-500 mt-0.5 overflow-x-auto scrollbar-hide">
                       {breadcrumb.map((item, idx) => (
-                        <span key={idx} className="flex items-center gap-1">
+                        <span key={idx} className="flex items-center gap-1 whitespace-nowrap">
                           {idx > 0 && <ChevronRight size={12} />}
                           {item}
                         </span>
@@ -99,19 +117,24 @@ const DrillDownModal = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl hover:bg-surface-100/80 text-surface-400 hover:text-surface-600 transition-colors"
+                className={`
+                  rounded-xl hover:bg-surface-100/80 active:bg-surface-200/80 text-surface-400 hover:text-surface-600 transition-colors flex-shrink-0
+                  ${isMobile ? 'p-3 -mr-1' : 'p-2'}
+                `}
+                aria-label="Close modal"
               >
-                <X size={20} />
+                <X size={isMobile ? 24 : 20} />
               </button>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6 overflow-y-auto flex-1">
+          {/* Content - Responsive padding */}
+          <div className={`overflow-y-auto flex-1 touch-scroll ${isMobile ? 'p-4' : 'p-6'}`}>
             {type === 'monthly' && (
               <MonthlyBreakdown
                 data={data}
                 onSelect={onDrillDown}
+                isMobile={isMobile}
               />
             )}
 
@@ -119,6 +142,7 @@ const DrillDownModal = ({
               <MonthlyQualityBreakdown
                 data={data}
                 onViewObservations={() => onDrillDown && onDrillDown(data.observations)}
+                isMobile={isMobile}
               />
             )}
 
@@ -128,15 +152,19 @@ const DrillDownModal = ({
                 onViewDetails={setSelectedRecord}
                 breadcrumb={breadcrumb}
                 title={title}
+                isMobile={isMobile}
               />
             )}
           </div>
 
-          {/* Footer hint */}
-          <div className="px-6 py-3 border-t border-surface-200/50 bg-white/30">
-            <p className="text-xs text-surface-400 text-center">
-              {type === 'monthly' ? 'Click a period to view observations' :
-               type === 'monthly-breakdown' ? 'Click metrics to see contributing observations' :
+          {/* Footer hint - Safe area for mobile */}
+          <div className={`
+            border-t border-surface-200/50 bg-white/30 safe-area-bottom
+            ${isMobile ? 'px-4 py-2' : 'px-6 py-3'}
+          `}>
+            <p className={`text-surface-400 text-center ${isMobile ? 'text-xs' : 'text-xs'}`}>
+              {type === 'monthly' ? (isMobile ? 'Tap a period to view' : 'Click a period to view observations') :
+               type === 'monthly-breakdown' ? (isMobile ? 'Tap metrics to see observations' : 'Click metrics to see contributing observations') :
                `${data.length} observation${data.length !== 1 ? 's' : ''} found`}
             </p>
           </div>
@@ -165,6 +193,23 @@ const DrillDownModal = ({
         .animate-modal-in {
           animation: modal-in 0.2s ease-out forwards;
         }
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
+        .touch-scroll {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
       `}</style>
     </div>
   )
@@ -173,7 +218,7 @@ const DrillDownModal = ({
 /**
  * Monthly Breakdown View
  */
-const MonthlyBreakdown = ({ data, onSelect }) => {
+const MonthlyBreakdown = ({ data, onSelect, isMobile = false }) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-surface-500">
@@ -185,26 +230,34 @@ const MonthlyBreakdown = ({ data, onSelect }) => {
   const maxCount = Math.max(...data.map(d => d.count))
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${isMobile ? 'space-y-1' : ''}`}>
       {data.map((item, idx) => (
         <div
           key={item.period || idx}
           onClick={() => onSelect(item)}
-          className="group flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-all duration-200 border border-transparent hover:border-surface-200/50"
+          className={`
+            group flex items-center gap-3 sm:gap-4 rounded-xl cursor-pointer
+            hover:bg-white/60 active:bg-white/80 transition-all duration-200
+            border border-transparent hover:border-surface-200/50 active:border-surface-300/50
+            ${isMobile ? 'p-3 min-h-[56px]' : 'p-3'}
+          `}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onSelect(item)}
         >
-          <div className="w-20 text-sm font-medium text-surface-700">
+          <div className={`font-medium text-surface-700 flex-shrink-0 ${isMobile ? 'w-16 text-sm' : 'w-20 text-sm'}`}>
             {item.label}
           </div>
-          <div className="flex-1 h-8 bg-surface-100/80 rounded-lg overflow-hidden">
+          <div className={`flex-1 bg-surface-100/80 rounded-lg overflow-hidden ${isMobile ? 'h-6' : 'h-8'}`}>
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-500 group-hover:from-blue-600 group-hover:to-blue-700"
+              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-500 group-hover:from-blue-600 group-hover:to-blue-700 group-active:from-blue-700 group-active:to-blue-800"
               style={{ width: `${(item.count / maxCount) * 100}%` }}
             />
           </div>
-          <div className="w-12 text-right">
-            <span className="text-lg font-bold text-surface-900">{item.count}</span>
+          <div className="w-10 sm:w-12 text-right flex-shrink-0">
+            <span className={`font-bold text-surface-900 ${isMobile ? 'text-base' : 'text-lg'}`}>{item.count}</span>
           </div>
-          <ChevronRight size={16} className="text-surface-400 group-hover:text-surface-600 transition-colors" />
+          <ChevronRight size={isMobile ? 20 : 16} className="text-surface-400 group-hover:text-surface-600 group-active:text-surface-700 transition-colors flex-shrink-0" />
         </div>
       ))}
     </div>
@@ -215,7 +268,7 @@ const MonthlyBreakdown = ({ data, onSelect }) => {
  * Monthly Quality Breakdown View
  * Shows detailed metric breakdown with formulas for a specific month
  */
-const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
+const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false }) => {
   if (!data) {
     return (
       <div className="text-center py-12 text-surface-500">
@@ -329,7 +382,7 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations }) => {
 /**
  * Records Table View
  */
-const RecordsTable = ({ data, onViewDetails }) => {
+const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-surface-500">
@@ -350,46 +403,60 @@ const RecordsTable = ({ data, onViewDetails }) => {
   }
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${isMobile ? 'space-y-3' : ''}`}>
       {data.map((record, idx) => (
         <div
           key={record.externalId || idx}
-          className="group p-4 rounded-xl bg-white/60 border border-surface-200/50 hover:bg-white/80 hover:border-surface-300/50 transition-all duration-200"
+          className={`
+            group rounded-xl bg-white/60 border border-surface-200/50
+            hover:bg-white/80 active:bg-white/90 hover:border-surface-300/50 active:border-surface-400/50
+            transition-all duration-200
+            ${isMobile ? 'p-3' : 'p-4'}
+          `}
         >
-          <div className="flex items-start justify-between gap-4">
+          {/* Mobile: Stack layout, Desktop: Side by side */}
+          <div className={`${isMobile ? 'space-y-3' : 'flex items-start justify-between gap-4'}`}>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-surface-900">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className={`font-medium text-surface-900 ${isMobile ? 'text-sm' : 'text-sm'}`}>
                   {record.date}
                 </span>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(record.actionStatus)}`}>
                   {record.actionStatus || 'open'}
                 </span>
               </div>
-              <p className="text-sm text-surface-600 line-clamp-2">
+              <p className={`text-surface-600 line-clamp-2 ${isMobile ? 'text-sm leading-relaxed' : 'text-sm'}`}>
                 {record.description || 'No description'}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-surface-500">
+              <div className={`flex items-center gap-3 sm:gap-4 mt-2 text-xs text-surface-500 flex-wrap`}>
                 {record.contractor && (
                   <span className="flex items-center gap-1">
                     <Building2 size={12} />
-                    {record.contractor}
+                    <span className="truncate max-w-[120px]">{record.contractor}</span>
                   </span>
                 )}
                 {record.site && (
                   <span className="flex items-center gap-1">
                     <MapPin size={12} />
-                    {record.site}
+                    <span className="truncate max-w-[100px]">{record.site}</span>
                   </span>
                 )}
               </div>
             </div>
+            {/* View button - Full width on mobile for better touch target */}
             <button
               onClick={() => onViewDetails(record)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              className={`
+                flex items-center justify-center gap-1.5 font-medium text-blue-600
+                hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
+                ${isMobile
+                  ? 'w-full h-11 text-sm bg-blue-50 mt-1'
+                  : 'px-3 py-1.5 text-sm'
+                }
+              `}
             >
-              <Eye size={14} />
-              View
+              <Eye size={isMobile ? 18 : 14} />
+              View Details
             </button>
           </div>
         </div>
@@ -410,7 +477,8 @@ const RecordDetailsModal = ({ record, onClose }) => {
     containerRef: detailsContainerRef,
     containerStyle: detailsContainerStyle,
     isResizing: isDetailsResizing,
-    ResizeHandles: DetailsResizeHandles
+    ResizeHandles: DetailsResizeHandles,
+    isMobile
   } = useResizable({
     minWidth: 450,
     minHeight: 350,
@@ -662,52 +730,74 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className={`fixed inset-0 z-[60] flex items-center justify-center ${isMobile ? 'p-0' : 'p-4'}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Darker backdrop for nested modal */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
-      {/* Modal */}
+      {/* Modal - Full screen on mobile */}
       <div
         ref={detailsContainerRef}
-        className={`relative w-full max-w-3xl max-h-[90vh] animate-modal-in ${isDetailsResizing ? 'select-none' : ''}`}
-        style={detailsContainerStyle}
+        className={`
+          relative w-full flex flex-col
+          ${isMobile
+            ? 'h-full max-h-full animate-slide-up'
+            : 'max-w-3xl max-h-[90vh] animate-modal-in'
+          }
+          ${isDetailsResizing ? 'select-none' : ''}
+        `}
+        style={isMobile ? {} : detailsContainerStyle}
       >
         <DetailsResizeHandles />
-        <div className="bg-white/90 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-surface-200/50 bg-gradient-to-r from-surface-50/80 to-white/80">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
+        <div className={`
+          bg-white/95 sm:bg-white/90 backdrop-blur-2xl border-white/30 shadow-2xl overflow-hidden h-full flex flex-col
+          ${isMobile ? 'border-0 rounded-none' : 'border rounded-2xl'}
+        `}>
+          {/* Header - Larger touch targets on mobile */}
+          <div className={`
+            border-b border-surface-200/50 bg-gradient-to-r from-surface-50/80 to-white/80 safe-area-top
+            ${isMobile ? 'px-4 py-3' : 'px-6 py-4'}
+          `}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 flex-wrap">
+                <span className={`px-2 sm:px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 ${isMobile ? 'order-1' : ''}`}>
                   {record.type?.toUpperCase() || 'OBSERVATION'}
                 </span>
-                <span className="text-sm text-surface-500">{formatDate(record.date)}</span>
+                <span className={`text-surface-500 ${isMobile ? 'text-xs order-2' : 'text-sm'}`}>{formatDate(record.date)}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 <button
                   onClick={handleExportClick}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className={`
+                    flex items-center gap-1.5 font-medium text-white bg-blue-600
+                    hover:bg-blue-700 active:bg-blue-800 rounded-lg transition-colors
+                    ${isMobile ? 'px-3 h-10 text-sm' : 'px-3 py-1.5 text-sm'}
+                  `}
                   title="Download PDF"
                 >
-                  <Download size={14} />
-                  PDF
+                  <Download size={isMobile ? 18 : 14} />
+                  <span className={isMobile ? 'hidden xs:inline' : ''}>PDF</span>
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl hover:bg-surface-100/80 text-surface-400 hover:text-surface-600 transition-colors"
+                  className={`
+                    rounded-xl hover:bg-surface-100/80 active:bg-surface-200/80
+                    text-surface-400 hover:text-surface-600 transition-colors
+                    ${isMobile ? 'p-3 -mr-1' : 'p-2'}
+                  `}
+                  aria-label="Close modal"
                 >
-                  <X size={20} />
+                  <X size={isMobile ? 24 : 20} />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-            {/* Key Details Grid */}
-            <div className="grid grid-cols-2 gap-4">
+          {/* Content - Responsive padding */}
+          <div className={`space-y-4 sm:space-y-6 flex-1 overflow-y-auto touch-scroll ${isMobile ? 'p-4' : 'p-6'}`}>
+            {/* Key Details Grid - 1 column on mobile, 2 on desktop */}
+            <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <DetailField icon={Calendar} label="Date" value={formatDate(record.date)} />
               <DetailField icon={Building2} label="Contractor" value={record.contractor} />
               <DetailField icon={MapPin} label="Site" value={record.site} />

@@ -1,15 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import useIsMobile from './useIsMobile'
 
 /**
  * useResizable - Hook for making modal/container resizable by dragging edges
+ * Mobile-optimized: Disables resize handles on mobile devices
  *
  * @param {Object} options
- * @param {number} options.minWidth - Minimum width in pixels (default: 400)
- * @param {number} options.minHeight - Minimum height in pixels (default: 300)
+ * @param {number} options.minWidth - Minimum width in pixels (default: 400, responsive on mobile)
+ * @param {number} options.minHeight - Minimum height in pixels (default: 300, responsive on mobile)
  * @param {number} options.maxWidthPercent - Max width as % of viewport (default: 95)
  * @param {number} options.maxHeightPercent - Max height as % of viewport (default: 95)
  * @param {number} options.initialWidth - Initial width (null = use CSS default)
  * @param {number} options.initialHeight - Initial height (null = use CSS default)
+ * @param {boolean} options.disableOnMobile - Disable resizing on mobile (default: true)
  */
 const useResizable = ({
   minWidth = 400,
@@ -17,8 +20,11 @@ const useResizable = ({
   maxWidthPercent = 95,
   maxHeightPercent = 95,
   initialWidth = null,
-  initialHeight = null
+  initialHeight = null,
+  disableOnMobile = true
 } = {}) => {
+  const isMobile = useIsMobile(640)
+
   const [dimensions, setDimensions] = useState({
     width: initialWidth,
     height: initialHeight
@@ -33,25 +39,66 @@ const useResizable = ({
   })
   const containerRef = useRef(null)
 
+  // Calculate responsive min dimensions based on viewport
+  const getResponsiveMinDimensions = useCallback(() => {
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // On mobile, use nearly full viewport
+    if (viewportWidth < 640) {
+      return {
+        minWidth: Math.min(viewportWidth - 32, 320), // 16px padding each side
+        minHeight: Math.min(viewportHeight - 100, 400)
+      }
+    }
+
+    // On tablet, slightly constrained
+    if (viewportWidth < 1024) {
+      return {
+        minWidth: Math.min(viewportWidth - 64, minWidth),
+        minHeight: Math.min(viewportHeight - 128, minHeight)
+      }
+    }
+
+    // Desktop: use provided values
+    return { minWidth, minHeight }
+  }, [minWidth, minHeight])
+
   // Get max dimensions based on viewport
   const getMaxDimensions = useCallback(() => {
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // On mobile, allow nearly full viewport
+    if (viewportWidth < 640) {
+      return {
+        maxWidth: viewportWidth,
+        maxHeight: viewportHeight
+      }
+    }
+
     return {
-      maxWidth: Math.floor(window.innerWidth * (maxWidthPercent / 100)),
-      maxHeight: Math.floor(window.innerHeight * (maxHeightPercent / 100))
+      maxWidth: Math.floor(viewportWidth * (maxWidthPercent / 100)),
+      maxHeight: Math.floor(viewportHeight * (maxHeightPercent / 100))
     }
   }, [maxWidthPercent, maxHeightPercent])
 
   // Clamp dimensions within constraints
   const clampDimensions = useCallback((width, height) => {
     const { maxWidth, maxHeight } = getMaxDimensions()
+    const { minWidth: respMinWidth, minHeight: respMinHeight } = getResponsiveMinDimensions()
+
     return {
-      width: width ? Math.max(minWidth, Math.min(width, maxWidth)) : null,
-      height: height ? Math.max(minHeight, Math.min(height, maxHeight)) : null
+      width: width ? Math.max(respMinWidth, Math.min(width, maxWidth)) : null,
+      height: height ? Math.max(respMinHeight, Math.min(height, maxHeight)) : null
     }
-  }, [minWidth, minHeight, getMaxDimensions])
+  }, [getMaxDimensions, getResponsiveMinDimensions])
 
   // Start resize
   const handleResizeStart = useCallback((e, direction) => {
+    // Disable resize on mobile if option is set
+    if (disableOnMobile && isMobile) return
+
     e.preventDefault()
     e.stopPropagation()
 
@@ -73,7 +120,7 @@ const useResizable = ({
     setIsResizing(true)
     document.body.style.cursor = getCursorStyle(direction)
     document.body.style.userSelect = 'none'
-  }, [dimensions])
+  }, [dimensions, disableOnMobile, isMobile])
 
   // Handle resize move
   const handleResizeMove = useCallback((e) => {
@@ -148,53 +195,68 @@ const useResizable = ({
     return cursors[direction] || 'default'
   }
 
-  // Generate resize handles JSX
-  const ResizeHandles = useCallback(() => (
-    <>
-      {/* Right edge */}
-      <div
-        className="absolute top-0 right-0 w-2 h-full cursor-ew-resize hover:bg-blue-500/20 transition-colors z-10"
-        onMouseDown={(e) => handleResizeStart(e, 'e')}
-        onTouchStart={(e) => handleResizeStart(e, 'e')}
-      />
-      {/* Bottom edge */}
-      <div
-        className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize hover:bg-blue-500/20 transition-colors z-10"
-        onMouseDown={(e) => handleResizeStart(e, 's')}
-        onTouchStart={(e) => handleResizeStart(e, 's')}
-      />
-      {/* Left edge */}
-      <div
-        className="absolute top-0 left-0 w-2 h-full cursor-ew-resize hover:bg-blue-500/20 transition-colors z-10"
-        onMouseDown={(e) => handleResizeStart(e, 'w')}
-        onTouchStart={(e) => handleResizeStart(e, 'w')}
-      />
-      {/* Bottom-right corner */}
-      <div
-        className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-20 group"
-        onMouseDown={(e) => handleResizeStart(e, 'se')}
-        onTouchStart={(e) => handleResizeStart(e, 'se')}
-      >
-        <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-surface-400 group-hover:border-blue-500 transition-colors" />
-      </div>
-      {/* Bottom-left corner */}
-      <div
-        className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-20 group"
-        onMouseDown={(e) => handleResizeStart(e, 'sw')}
-        onTouchStart={(e) => handleResizeStart(e, 'sw')}
-      >
-        <div className="absolute bottom-1 left-1 w-2 h-2 border-l-2 border-b-2 border-surface-400 group-hover:border-blue-500 transition-colors" />
-      </div>
-    </>
-  ), [handleResizeStart])
+  // Generate resize handles JSX - hidden on mobile
+  const ResizeHandles = useCallback(() => {
+    // Don't render handles on mobile
+    if (disableOnMobile && isMobile) return null
 
-  // Container style to apply
-  const containerStyle = dimensions.width || dimensions.height ? {
-    width: dimensions.width ? `${dimensions.width}px` : undefined,
-    height: dimensions.height ? `${dimensions.height}px` : undefined,
-    maxWidth: dimensions.width ? 'none' : undefined,
-    maxHeight: dimensions.height ? 'none' : undefined
-  } : {}
+    return (
+      <>
+        {/* Right edge */}
+        <div
+          className="absolute top-0 right-0 w-3 h-full cursor-ew-resize hover:bg-blue-500/20 transition-colors z-10"
+          onMouseDown={(e) => handleResizeStart(e, 'e')}
+          onTouchStart={(e) => handleResizeStart(e, 'e')}
+        />
+        {/* Bottom edge */}
+        <div
+          className="absolute bottom-0 left-0 w-full h-3 cursor-ns-resize hover:bg-blue-500/20 transition-colors z-10"
+          onMouseDown={(e) => handleResizeStart(e, 's')}
+          onTouchStart={(e) => handleResizeStart(e, 's')}
+        />
+        {/* Left edge */}
+        <div
+          className="absolute top-0 left-0 w-3 h-full cursor-ew-resize hover:bg-blue-500/20 transition-colors z-10"
+          onMouseDown={(e) => handleResizeStart(e, 'w')}
+          onTouchStart={(e) => handleResizeStart(e, 'w')}
+        />
+        {/* Bottom-right corner */}
+        <div
+          className="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize z-20 group"
+          onMouseDown={(e) => handleResizeStart(e, 'se')}
+          onTouchStart={(e) => handleResizeStart(e, 'se')}
+        >
+          <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-r-2 border-b-2 border-surface-400 group-hover:border-blue-500 transition-colors" />
+        </div>
+        {/* Bottom-left corner */}
+        <div
+          className="absolute bottom-0 left-0 w-5 h-5 cursor-nesw-resize z-20 group"
+          onMouseDown={(e) => handleResizeStart(e, 'sw')}
+          onTouchStart={(e) => handleResizeStart(e, 'sw')}
+        >
+          <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-l-2 border-b-2 border-surface-400 group-hover:border-blue-500 transition-colors" />
+        </div>
+      </>
+    )
+  }, [handleResizeStart, disableOnMobile, isMobile])
+
+  // Container style to apply - responsive for mobile
+  const containerStyle = (() => {
+    // On mobile, don't apply custom dimensions
+    if (isMobile) {
+      return {}
+    }
+
+    if (dimensions.width || dimensions.height) {
+      return {
+        width: dimensions.width ? `${dimensions.width}px` : undefined,
+        height: dimensions.height ? `${dimensions.height}px` : undefined,
+        maxWidth: dimensions.width ? 'none' : undefined,
+        maxHeight: dimensions.height ? 'none' : undefined
+      }
+    }
+    return {}
+  })()
 
   // Reset dimensions
   const resetDimensions = useCallback(() => {
@@ -209,7 +271,8 @@ const useResizable = ({
     containerStyle,
     ResizeHandles,
     resetDimensions,
-    clampDimensions
+    clampDimensions,
+    isMobile
   }
 }
 

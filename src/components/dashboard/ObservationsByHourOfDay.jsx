@@ -94,9 +94,9 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
         </Card.Title>
       </Card.Header>
 
-      {/* Chart - flex-1 to fill available space */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 flex items-end relative">
+      {/* Chart - flex-1 to fill available space, min-height for mobile */}
+      <div className="flex-1 flex flex-col" style={{ minHeight: '120px' }}>
+        <div className="flex-1 flex items-end relative" style={{ minHeight: '80px' }}>
           {/* Y-axis labels */}
           <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-surface-400 pr-1 w-6">
             <span>{maxCount}</span>

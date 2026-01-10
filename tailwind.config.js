@@ -5,6 +5,15 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    // Custom breakpoints for better mobile control
+    screens: {
+      'xs': '375px',   // Small phones (iPhone SE, etc.)
+      'sm': '640px',   // Large phones / small tablets
+      'md': '768px',   // Tablets (iPad mini)
+      'lg': '1024px',  // Small laptops (iPad Pro)
+      'xl': '1280px',  // Desktops
+      '2xl': '1536px', // Large desktops
+    },
     extend: {
       colors: {
         // Primary brand colors
@@ -75,9 +84,18 @@ export default {
       // Consistent spacing
       spacing: {
         '4.5': '1.125rem',
+        '11': '2.75rem',    // 44px - minimum touch target
         '13': '3.25rem',
         '15': '3.75rem',
         '18': '4.5rem',
+        'touch': '2.75rem', // 44px alias for touch targets
+      },
+      // Minimum width/height for touch targets
+      minWidth: {
+        'touch': '2.75rem', // 44px
+      },
+      minHeight: {
+        'touch': '2.75rem', // 44px
       },
       // Typography
       fontSize: {

@@ -390,6 +390,52 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* ========================================
+   EXPORT MODE - Force Desktop Layout for A3 PDF
+   ======================================== */
+
+/* When export-mode class is on html element, force desktop layouts */
+
+/* Hide mobile views during export */
+.export-mode [data-mobile-view] {
+  display: none !important;
+}
+
+/* Show desktop views during export */
+.export-mode [data-desktop-view] {
+  display: block !important;
+}
+
+/* Force FilterBar filters to be visible and expanded */
+.export-mode [data-filters] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  flex-direction: row !important;
+}
+
+/* Ensure charts render at full size */
+.export-mode .recharts-wrapper {
+  min-width: 100% !important;
+}
+
+/* Hide mobile navigation during export */
+.export-mode [data-mobile-nav] {
+  display: none !important;
+}
+
+/* Override Tailwind responsive classes during export */
+.export-mode .sm\:hidden {
+  display: none !important;
+}
+
+.export-mode .hidden.sm\:block {
+  display: block !important;
+}
+
+.export-mode .sm\:block {
+  display: block !important;
+}
+
+/* ========================================
    RESPONSIVE UTILITIES
    ======================================== */
 
@@ -527,4 +573,251 @@ input[type="checkbox"]:focus-visible {
 .no-select {
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* ========================================
+   MOBILE TOUCH OPTIMIZATIONS
+   ======================================== */
+
+/* Disable tap highlight on iOS/Android */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch action for interactive elements */
+button,
+a,
+[role="button"],
+.touch-target {
+  touch-action: manipulation;
+}
+
+/* Active states for touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  button:active:not(:disabled),
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+  }
+}
+
+/* Smooth touch scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Minimum touch target size utility */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ========================================
+   RESPONSIVE TYPOGRAPHY
+   ======================================== */
+
+@media (max-width: 640px) {
+  /* Increase base font size on mobile for readability */
+  .badge {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .tooltip-content {
+    font-size: 14px;
+    max-width: calc(100vw - 32px);
+    padding: 10px 14px;
+  }
+}
+
+/* ========================================
+   MOBILE MODAL UTILITIES
+   ======================================== */
+
+/* Full screen modal on mobile */
+@media (max-width: 640px) {
+  .modal-mobile-full {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}
+
+/* Bottom sheet modal pattern */
+.modal-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: auto;
+  max-height: 85vh;
+  border-radius: 16px 16px 0 0;
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   SAFE AREA UTILITIES (Notched devices)
+   ======================================== */
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ========================================
+   MOBILE NAVIGATION UTILITIES
+   ======================================== */
+
+/* Slide in from left animation */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out forwards;
+}
+
+/* Slide out to left */
+@keyframes slide-out-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-slide-out-left {
+  animation: slide-out-left 0.3s ease-out forwards;
+}
+
+/* Fade in overlay */
+@keyframes fade-in-overlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-overlay {
+  animation: fade-in-overlay 0.2s ease-out forwards;
+}
+
+/* ========================================
+   MOBILE TABLE UTILITIES
+   ======================================== */
+
+/* Scroll indicator for horizontal scroll */
+.scroll-indicator-right {
+  position: relative;
+}
+
+.scroll-indicator-right::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to left, white, transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Sticky column for mobile tables */
+.sticky-col-first {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: inherit;
+}
+
+/* ========================================
+   MOBILE FORM UTILITIES
+   ======================================== */
+
+@media (max-width: 640px) {
+  /* Larger form inputs on mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Larger checkboxes on mobile */
+  input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+  }
+
+  input[type="checkbox"]:checked::after {
+    left: 7px;
+    top: 3px;
+    width: 6px;
+    height: 10px;
+  }
+}
+
+/* ========================================
+   MOBILE CHART UTILITIES
+   ======================================== */
+
+/* Touch-friendly chart cells */
+@media (max-width: 640px) {
+  .chart-cell-mobile {
+    min-width: 16px;
+    min-height: 16px;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION PREFERENCE
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

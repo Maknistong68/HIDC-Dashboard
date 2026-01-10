@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
   CheckCircle,
@@ -89,16 +90,37 @@ const getStatusIcon = (status) => {
   }
 }
 
-// Info Tooltip Component - Shows explanation on hover
-const InfoTooltip = ({ text }) => (
-  <div className="group relative inline-flex items-center ml-1.5">
-    <Info size={14} className="text-surface-400 cursor-help hover:text-surface-600 transition-colors" />
-    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
-      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
-      <span className="relative">{text}</span>
+// Info Tooltip Component - Shows explanation on hover/tap
+const InfoTooltip = ({ text }) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className="relative inline-flex items-center ml-1.5">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen(!isOpen)
+        }}
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        className="text-surface-400 cursor-help hover:text-surface-600 transition-colors p-1 -m-1"
+        aria-label="More information"
+      >
+        <Info size={14} />
+      </button>
+      {isOpen && (
+        <div
+          className="absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
+          <span className="relative">{text}</span>
+        </div>
+      )}
     </div>
-  </div>
-)
+  )
+}
 
 // Quality Score Gauge component
 const QualityScoreGauge = ({ score }) => {
@@ -173,6 +195,7 @@ const KPIMiniCard = ({ title, value, unit, status, icon: Icon, subtitle, onClick
 
 const DataQuality = () => {
   const { incidents, isLoading, importWarnings } = useData()
+  const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
   const [expandedSection, setExpandedSection] = useState(null)
   const [reporterSort, setReporterSort] = useState('total')
   const [contractorSort, setContractorSort] = useState('totalObs')
@@ -827,10 +850,10 @@ const DataQuality = () => {
   const COLORS = ['#22c55e', '#94a3b8', '#f97316']
 
   return (
-    <div className="space-y-4">
-      {/* Filters Row - same layout as Dashboard */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
+    <div className="space-y-4 safe-area-bottom pb-4">
+      {/* Filters Row - responsive layout */}
+      <div className={isMobile ? 'space-y-3' : 'flex items-center gap-2'}>
+        <div className={isMobile ? '' : 'flex-1'}>
           <FilterBar
             filters={filterConfig}
             activeFilters={filters}
@@ -839,27 +862,34 @@ const DataQuality = () => {
           />
         </div>
 
-        {/* This Month Button */}
-        <button
-          onClick={handleThisMonthToggle}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-            thisMonthActive
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
-          }`}
-        >
-          <Calendar size={16} />
-          This Month
-        </button>
+        {/* Action Buttons - side by side on mobile */}
+        <div className={isMobile ? 'flex items-center gap-2' : 'flex items-center gap-2'}>
+          {/* This Month Button */}
+          <button
+            onClick={handleThisMonthToggle}
+            className={`flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              isMobile ? 'flex-1 h-11 px-3' : 'px-3 py-2'
+            } ${
+              thisMonthActive
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
+            }`}
+          >
+            <Calendar size={isMobile ? 18 : 16} />
+            {isMobile ? 'Month' : 'This Month'}
+          </button>
 
-        {/* Import Button */}
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
-        >
-          <Upload size={16} />
-          Import Data
-        </button>
+          {/* Import Button */}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className={`flex items-center justify-center gap-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap ${
+              isMobile ? 'flex-1 h-11 px-3' : 'px-3 py-2'
+            }`}
+          >
+            <Upload size={isMobile ? 18 : 16} />
+            Import
+          </button>
+        </div>
       </div>
 
       {/* Quick Import Modal */}
@@ -878,14 +908,20 @@ const DataQuality = () => {
           <span className="text-xs text-surface-400">{filteredIncidents.length} of {incidents.length} observations</span>
         </div>
 
-        <div className="grid grid-cols-6 gap-4">
+        <div className={isMobile ? 'space-y-4' : 'grid grid-cols-6 gap-4'}>
           {/* Quality Score Gauge */}
-          <div className="col-span-1 flex items-center justify-center border-r border-surface-200">
+          <div className={isMobile
+            ? 'flex justify-center py-2'
+            : 'col-span-1 flex items-center justify-center border-r border-surface-200'
+          }>
             <QualityScoreGauge score={quality.score} />
           </div>
 
-          {/* KPI Cards */}
-          <div className="col-span-5 grid grid-cols-6 gap-2">
+          {/* KPI Cards - 2 cols on mobile, 6 on desktop */}
+          <div className={isMobile
+            ? 'grid grid-cols-2 gap-2'
+            : 'col-span-5 grid grid-cols-6 gap-2'
+          }>
             <KPIMiniCard
               title="Categorization"
               value={categorization.properRate}
@@ -969,26 +1005,26 @@ const DataQuality = () => {
             Quality Score Trend (Last 12 Months)
             <InfoTooltip text="Monthly trend of overall data quality score. Click on any point to see that month's observations." />
           </h3>
-          <div className="h-40">
+          <div className={isMobile ? 'h-32' : 'h-40'}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} onClick={(data) => data?.activePayload?.[0]?.payload && handleTrendDrillDown(data.activePayload[0].payload)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: isMobile ? 9 : 11 }} width={isMobile ? 25 : 30} />
                 <Tooltip
                   contentStyle={{ fontSize: 12 }}
                   formatter={(value) => [`${value}%`, 'Quality Score']}
-                  labelFormatter={(label) => `${label} (click for details)`}
+                  labelFormatter={(label) => `${label} (tap for details)`}
                 />
-                <ReferenceLine y={75} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} label={{ value: '75% target', position: 'right', fontSize: 10, fill: '#3b82f6' }} />
+                <ReferenceLine y={75} stroke="#3b82f6" strokeDasharray="5 5" strokeWidth={1} label={isMobile ? null : { value: '75% target', position: 'right', fontSize: 10, fill: '#3b82f6' }} />
                 <Line
                   type="monotone"
                   dataKey="qualityScore"
                   name="Quality Score"
                   stroke="#3b82f6"
                   strokeWidth={2}
-                  dot={{ r: 4, style: { cursor: 'pointer' } }}
-                  activeDot={{ r: 6, style: { cursor: 'pointer' } }}
+                  dot={{ r: isMobile ? 5 : 4, style: { cursor: 'pointer' } }}
+                  activeDot={{ r: isMobile ? 7 : 6, style: { cursor: 'pointer' } }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -1375,33 +1411,35 @@ const DataQuality = () => {
             </h3>
             <button
               onClick={() => setShowMisclassification(!showMisclassification)}
-              className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800"
+              className={`flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 transition-colors ${
+                isMobile ? 'h-11 px-3 bg-orange-50 rounded-lg active:bg-orange-100' : ''
+              }`}
             >
               {showMisclassification ? 'Hide' : 'View'} Details
-              {showMisclassification ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {showMisclassification ? <ChevronUp size={isMobile ? 18 : 16} /> : <ChevronDown size={isMobile ? 18 : 16} />}
             </button>
           </div>
 
           {/* Summary Stats Row - always visible */}
-          <div className="grid grid-cols-5 gap-3 mb-3">
+          <div className={`grid gap-3 mb-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-5'}`}>
             <div className="bg-orange-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-orange-700">{misclassificationData.totalMisclassified}</div>
+              <div className={`font-bold text-orange-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.totalMisclassified}</div>
               <div className="text-xs text-surface-500">Total Found</div>
             </div>
             <div className="bg-orange-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-orange-700">{misclassificationData.percentageOfTotal}%</div>
+              <div className={`font-bold text-orange-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.percentageOfTotal}%</div>
               <div className="text-xs text-surface-500">% of Records</div>
             </div>
             <div className="bg-red-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-red-700">{misclassificationData.summary.majorHazardMismatches}</div>
+              <div className={`font-bold text-red-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.summary.majorHazardMismatches}</div>
               <div className="text-xs text-surface-500">Major Hazard</div>
             </div>
             <div className="bg-green-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-green-700">{misclassificationData.summary.highConfidence}</div>
+              <div className={`font-bold text-green-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.summary.highConfidence}</div>
               <div className="text-xs text-surface-500">High Confidence</div>
             </div>
-            <div className="bg-yellow-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-yellow-700">{misclassificationData.summary.mediumConfidence}</div>
+            <div className={`bg-yellow-50 rounded-lg p-2 text-center ${isMobile ? 'col-span-2' : ''}`}>
+              <div className={`font-bold text-yellow-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.summary.mediumConfidence}</div>
               <div className="text-xs text-surface-500">Medium Confidence</div>
             </div>
           </div>
@@ -1592,33 +1630,35 @@ const DataQuality = () => {
             </h3>
             <button
               onClick={() => setShowClassificationReview(!showClassificationReview)}
-              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+              className={`flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors ${
+                isMobile ? 'h-11 px-3 bg-blue-50 rounded-lg active:bg-blue-100' : ''
+              }`}
             >
               {showClassificationReview ? 'Hide' : 'View'} Details
-              {showClassificationReview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {showClassificationReview ? <ChevronUp size={isMobile ? 18 : 16} /> : <ChevronDown size={isMobile ? 18 : 16} />}
             </button>
           </div>
 
           {/* Summary Stats Row - always visible */}
-          <div className="grid grid-cols-5 gap-3 mb-3">
+          <div className={`grid gap-3 mb-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-5'}`}>
             <div className="bg-blue-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-blue-700">{classificationReviewData.totalAutoClassified}</div>
+              <div className={`font-bold text-blue-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{classificationReviewData.totalAutoClassified}</div>
               <div className="text-xs text-surface-500">Auto-Classified</div>
             </div>
             <div className="bg-blue-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-blue-700">{classificationReviewData.percentageOfImport}%</div>
+              <div className={`font-bold text-blue-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{classificationReviewData.percentageOfImport}%</div>
               <div className="text-xs text-surface-500">% of Import</div>
             </div>
             <div className="bg-surface-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-surface-700">{classificationReviewData.summary.fromBlank}</div>
+              <div className={`font-bold text-surface-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{classificationReviewData.summary.fromBlank}</div>
               <div className="text-xs text-surface-500">From Blank</div>
             </div>
             <div className="bg-surface-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-surface-700">{classificationReviewData.summary.fromOther}</div>
+              <div className={`font-bold text-surface-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{classificationReviewData.summary.fromOther}</div>
               <div className="text-xs text-surface-500">From Other</div>
             </div>
-            <div className="bg-green-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-green-700">{classificationReviewData.summary.highConfidence}</div>
+            <div className={`bg-green-50 rounded-lg p-2 text-center ${isMobile ? 'col-span-2' : ''}`}>
+              <div className={`font-bold text-green-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{classificationReviewData.summary.highConfidence}</div>
               <div className="text-xs text-surface-500">High Confidence</div>
             </div>
           </div>
@@ -1772,12 +1812,12 @@ const DataQuality = () => {
           <InfoTooltip text="Compare how observations were categorized in Excel (before) vs current state (after auto-classification). Shows the improvement from auto-classification." />
         </h3>
 
-        <div className="grid grid-cols-2 gap-8">
+        <div className={isMobile ? 'space-y-4' : 'grid grid-cols-2 gap-8'}>
           {/* BEFORE - From Excel */}
           <div>
             <div className="text-center text-xs font-medium text-surface-500 mb-2 uppercase">Before (From Excel)</div>
-            <div className="flex items-center gap-4">
-              <div className="w-28 h-28">
+            <div className={`flex items-center ${isMobile ? 'justify-center gap-6' : 'gap-4'}`}>
+              <div className={isMobile ? 'w-20 h-20' : 'w-28 h-28'}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -1788,8 +1828,8 @@ const DataQuality = () => {
                       ]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={20}
-                      outerRadius={40}
+                      innerRadius={isMobile ? 14 : 20}
+                      outerRadius={isMobile ? 30 : 40}
                       dataKey="value"
                       onClick={(data) => {
                         const records = filteredIncidents.filter(inc => {
@@ -1830,8 +1870,8 @@ const DataQuality = () => {
           {/* AFTER - Current State */}
           <div>
             <div className="text-center text-xs font-medium text-surface-500 mb-2 uppercase">After (Current)</div>
-            <div className="flex items-center gap-4">
-              <div className="w-28 h-28">
+            <div className={`flex items-center ${isMobile ? 'justify-center gap-6' : 'gap-4'}`}>
+              <div className={isMobile ? 'w-20 h-20' : 'w-28 h-28'}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -1842,8 +1882,8 @@ const DataQuality = () => {
                       ]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={20}
-                      outerRadius={40}
+                      innerRadius={isMobile ? 14 : 20}
+                      outerRadius={isMobile ? 30 : 40}
                       dataKey="value"
                       onClick={(data) => handleCategorizationDrillDown(data.name, data.value)}
                       style={{ cursor: 'pointer' }}
@@ -1901,181 +1941,263 @@ const DataQuality = () => {
               <option value="coverage">Sort by Coverage</option>
             </select>
           </div>
-          <div className="overflow-auto max-h-64">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-surface-50">
-                <tr>
-                  <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Obs</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Score</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedContractors.map((contractor, idx) => (
-                  <tr
-                    key={contractor.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                    onClick={() => handleContractorDrillDown(contractor)}
-                    title="Click to view all observations"
-                  >
-                    <td className="p-2 truncate max-w-[150px]" title={contractor.name}>
-                      <span className="text-blue-600 hover:underline">{contractor.name}</span>
-                    </td>
-                    <td className="p-2 text-center font-medium">{contractor.totalObs}</td>
-                    <td className="p-2 text-center">
-                      <span className={
-                        contractor.qualityScore >= 70 ? 'text-green-600' :
-                        contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }>
-                        {contractor.qualityScore}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center text-surface-600">{contractor.activeDays}</td>
+          {isMobile ? (
+            /* Mobile Card View */
+            <div className="space-y-2 max-h-64 overflow-auto">
+              {sortedContractors.map((contractor) => (
+                <div
+                  key={contractor.name}
+                  onClick={() => handleContractorDrillDown(contractor)}
+                  className="p-3 bg-surface-50 rounded-lg cursor-pointer active:bg-surface-100 transition-colors"
+                >
+                  <div className="font-medium text-blue-600 mb-1 truncate">{contractor.name}</div>
+                  <div className="flex items-center gap-4 text-xs text-surface-500">
+                    <span><strong>{contractor.totalObs}</strong> obs</span>
+                    <span className={
+                      contractor.qualityScore >= 70 ? 'text-green-600' :
+                      contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    }>
+                      Score: <strong>{contractor.qualityScore}</strong>
+                    </span>
+                    <span>{contractor.activeDays} days</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Desktop Table View */
+            <div className="overflow-auto max-h-64">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-surface-50">
+                  <tr>
+                    <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
+                    <th className="text-center p-2 font-medium text-surface-600">Obs</th>
+                    <th className="text-center p-2 font-medium text-surface-600">Score</th>
+                    <th className="text-center p-2 font-medium text-surface-600">Days</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {sortedContractors.map((contractor, idx) => (
+                    <tr
+                      key={contractor.name}
+                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                      onClick={() => handleContractorDrillDown(contractor)}
+                      title="Click to view all observations"
+                    >
+                      <td className="p-2 truncate max-w-[150px]" title={contractor.name}>
+                        <span className="text-blue-600 hover:underline">{contractor.name}</span>
+                      </td>
+                      <td className="p-2 text-center font-medium">{contractor.totalObs}</td>
+                      <td className="p-2 text-center">
+                        <span className={
+                          contractor.qualityScore >= 70 ? 'text-green-600' :
+                          contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }>
+                          {contractor.qualityScore}
+                        </span>
+                      </td>
+                      <td className="p-2 text-center text-surface-600">{contractor.activeDays}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ROW 4: Reporter Performance (Full Width with Flags) */}
       <div className="bg-white border border-surface-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
-            <Users size={16} />
-            Reporter Performance Analysis
-            <InfoTooltip text="Comprehensive reporter metrics with performance flags. Click any row for detailed analytics." />
-          </h3>
-          <div className="flex items-center gap-3">
+        <div className={isMobile ? 'space-y-3 mb-4' : 'flex items-center justify-between mb-4'}>
+          <div className="flex items-center justify-between">
+            <h3 className={`font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              <Users size={16} />
+              Reporter Performance
+              <InfoTooltip text="Comprehensive reporter metrics with performance flags. Click any row for detailed analytics." />
+            </h3>
+            {isMobile && (
+              <select
+                value={reporterSort}
+                onChange={(e) => setReporterSort(e.target.value)}
+                className="text-xs border border-surface-200 rounded px-2 py-1 h-9"
+              >
+                <option value="total">By Total</option>
+                <option value="nearMiss">By Near Miss</option>
+                <option value="quality">By Quality</option>
+              </select>
+            )}
+          </div>
+          <div className={isMobile ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
             {/* Performance Flags Summary */}
-            <div className="flex items-center gap-2 text-xs">
+            <div className={`flex items-center gap-2 text-xs ${isMobile ? 'flex-wrap' : ''}`}>
               <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
                 <AlertTriangle size={12} />
-                {reporters.filter(r => r.nearMiss === 0 && r.total >= 5).length} Zero NM
+                {reporters.filter(r => r.nearMiss === 0 && r.total >= 5).length} {isMobile ? 'NM' : 'Zero NM'}
               </span>
               <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
                 <AlertCircle size={12} />
-                {reporters.filter(r => parseFloat(r.qualityRate) < 50).length} Low Quality
+                {reporters.filter(r => parseFloat(r.qualityRate) < 50).length} {isMobile ? 'Low' : 'Low Quality'}
               </span>
               <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded">
                 <CheckCircle size={12} />
-                {reporters.filter(r => r.nearMiss > 0 && parseFloat(r.qualityRate) >= 75).length} Top Performers
+                {reporters.filter(r => r.nearMiss > 0 && parseFloat(r.qualityRate) >= 75).length} {isMobile ? 'Top' : 'Top Performers'}
               </span>
             </div>
-            <select
-              value={reporterSort}
-              onChange={(e) => setReporterSort(e.target.value)}
-              className="text-xs border border-surface-200 rounded px-2 py-1"
-            >
-              <option value="total">Sort by Total</option>
-              <option value="nearMiss">Sort by Near Miss</option>
-              <option value="quality">Sort by Quality</option>
-            </select>
+            {!isMobile && (
+              <select
+                value={reporterSort}
+                onChange={(e) => setReporterSort(e.target.value)}
+                className="text-xs border border-surface-200 rounded px-2 py-1"
+              >
+                <option value="total">Sort by Total</option>
+                <option value="nearMiss">Sort by Near Miss</option>
+                <option value="quality">Sort by Quality</option>
+              </select>
+            )}
           </div>
         </div>
 
         {/* Performance Insights */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className={`grid gap-3 mb-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
           <div className="bg-surface-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-surface-800">{reporters.length}</div>
+            <div className={`font-bold text-surface-800 ${isMobile ? 'text-xl' : 'text-2xl'}`}>{reporters.length}</div>
             <div className="text-xs text-surface-500">Total Reporters</div>
           </div>
           <div className="bg-blue-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-blue-700">
+            <div className={`font-bold text-blue-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
               {reporters.filter(r => r.total >= 10).length}
             </div>
             <div className="text-xs text-surface-500">Active (10+ obs)</div>
           </div>
           <div className="bg-green-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-green-700">
+            <div className={`font-bold text-green-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
               {(reporters.reduce((sum, r) => sum + parseFloat(r.qualityRate), 0) / reporters.length).toFixed(0)}%
             </div>
             <div className="text-xs text-surface-500">Avg Quality Rate</div>
           </div>
           <div className="bg-amber-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-amber-700">
+            <div className={`font-bold text-amber-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
               {(reporters.reduce((sum, r) => sum + r.nearMiss, 0) / reporters.length).toFixed(1)}
             </div>
-            <div className="text-xs text-surface-500">Avg Near Miss/Reporter</div>
+            <div className="text-xs text-surface-500">Avg NM/Reporter</div>
           </div>
         </div>
 
         {/* Reporter Table with Flags */}
-        <div className="overflow-auto max-h-80">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-surface-50">
-              <tr>
-                <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
-                <th className="text-center p-2 font-medium text-surface-600">Total</th>
-                <th className="text-center p-2 font-medium text-surface-600">Near Miss</th>
-                <th className="text-center p-2 font-medium text-surface-600">Quality Rate</th>
-                <th className="text-center p-2 font-medium text-surface-600">NM Rate</th>
-                <th className="text-center p-2 font-medium text-surface-600">Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedReporters.map((reporter, idx) => {
-                const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
-                const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
-                const lowQuality = parseFloat(reporter.qualityRate) < 50
-                const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
-                return (
-                  <tr
-                    key={reporter.name}
-                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                    onClick={() => handleReporterClick(reporter.name)}
-                    title="Click to view detailed analytics"
-                  >
-                    <td className="p-2">
-                      <span className="text-blue-600 hover:underline font-medium">{reporter.name}</span>
-                    </td>
-                    <td className="p-2 text-center font-bold">{reporter.total}</td>
-                    <td className="p-2 text-center">
-                      <span className={`px-2 py-0.5 rounded ${
-                        reporter.nearMiss === 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {reporter.nearMiss}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className={`font-medium ${
-                        parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
-                        parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {reporter.qualityRate}%
-                      </span>
-                    </td>
-                    <td className="p-2 text-center text-surface-500">{nmRate}%</td>
-                    <td className="p-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {hasZeroNM && (
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="No near misses reported - training needed">
-                            0 NM
-                          </span>
-                        )}
-                        {lowQuality && (
-                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]" title="Low description quality">
-                            Low Q
-                          </span>
-                        )}
-                        {topPerformer && (
-                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]" title="Top performer">
-                            Star
-                          </span>
-                        )}
-                        {!hasZeroNM && !lowQuality && !topPerformer && (
-                          <span className="text-surface-300">-</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        {isMobile ? (
+          /* Mobile Card View */
+          <div className="space-y-2 max-h-80 overflow-auto">
+            {sortedReporters.map((reporter) => {
+              const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
+              const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
+              const lowQuality = parseFloat(reporter.qualityRate) < 50
+              const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
+              return (
+                <div
+                  key={reporter.name}
+                  onClick={() => handleReporterClick(reporter.name)}
+                  className="p-3 bg-surface-50 rounded-lg cursor-pointer active:bg-surface-100 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-blue-600 truncate flex-1">{reporter.name}</span>
+                    <div className="flex gap-1 ml-2">
+                      {hasZeroNM && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">0 NM</span>}
+                      {lowQuality && <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]">Low Q</span>}
+                      {topPerformer && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">Star</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-surface-500">
+                    <span><strong>{reporter.total}</strong> total</span>
+                    <span className={reporter.nearMiss === 0 ? 'text-red-600' : 'text-green-600'}>
+                      <strong>{reporter.nearMiss}</strong> NM
+                    </span>
+                    <span className={
+                      parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
+                      parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    }>
+                      <strong>{reporter.qualityRate}%</strong> quality
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Desktop Table View */
+          <div className="overflow-auto max-h-80">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-surface-50">
+                <tr>
+                  <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Total</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Near Miss</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Quality Rate</th>
+                  <th className="text-center p-2 font-medium text-surface-600">NM Rate</th>
+                  <th className="text-center p-2 font-medium text-surface-600">Flags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedReporters.map((reporter, idx) => {
+                  const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
+                  const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
+                  const lowQuality = parseFloat(reporter.qualityRate) < 50
+                  const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
+                  return (
+                    <tr
+                      key={reporter.name}
+                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
+                      onClick={() => handleReporterClick(reporter.name)}
+                      title="Click to view detailed analytics"
+                    >
+                      <td className="p-2">
+                        <span className="text-blue-600 hover:underline font-medium">{reporter.name}</span>
+                      </td>
+                      <td className="p-2 text-center font-bold">{reporter.total}</td>
+                      <td className="p-2 text-center">
+                        <span className={`px-2 py-0.5 rounded ${
+                          reporter.nearMiss === 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {reporter.nearMiss}
+                        </span>
+                      </td>
+                      <td className="p-2 text-center">
+                        <span className={`font-medium ${
+                          parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
+                          parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {reporter.qualityRate}%
+                        </span>
+                      </td>
+                      <td className="p-2 text-center text-surface-500">{nmRate}%</td>
+                      <td className="p-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {hasZeroNM && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="No near misses reported - training needed">
+                              0 NM
+                            </span>
+                          )}
+                          {lowQuality && (
+                            <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]" title="Low description quality">
+                              Low Q
+                            </span>
+                          )}
+                          {topPerformer && (
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]" title="Top performer">
+                              Star
+                            </span>
+                          )}
+                          {!hasZeroNM && !lowQuality && !topPerformer && (
+                            <span className="text-surface-300">-</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Footer with training suggestion */}
         {reporters.some(r => r.nearMiss === 0 && r.total >= 10) && (

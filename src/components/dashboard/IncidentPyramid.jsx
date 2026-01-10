@@ -169,17 +169,19 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
                   relative flex items-center justify-between
                   transition-all duration-200 ease-out
                   hover:ring-2 hover:ring-surface-400 hover:ring-offset-2
+                  active:ring-2 active:ring-surface-500 active:ring-offset-2
+                  active:scale-[0.99]
                   focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-                  rounded-sm overflow-hidden
+                  rounded-sm overflow-hidden touch-target
                 `}
                 style={{
                   width: `${widthPercent}%`,
-                  minHeight: '48px',
+                  minHeight: '52px', // Slightly larger for touch
                   backgroundColor: showOpenClosed ? '#f1f5f9' : level.bgColor,
                   borderLeft: `4px solid ${level.color}`,
                 }}
                 onClick={() => handleTypeClick(level.key)}
-                aria-label={`${level.label}: ${total || count} observations. Click to view details.`}
+                aria-label={`${level.label}: ${total || count} observations. Tap to view details.`}
               >
                 {/* Open/Closed bars */}
                 {showOpenClosed && total > 0 && (
@@ -228,7 +230,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
       </div>
 
       <p className="text-xs text-surface-400 text-center mt-3">
-        Click any level to drill down
+        Tap any level to drill down
       </p>
 
       {/* Drill-Down Modal */}

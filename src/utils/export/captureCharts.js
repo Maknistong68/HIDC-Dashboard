@@ -18,6 +18,9 @@ export const captureElement = async (element, options = {}) => {
   `
   document.head.appendChild(style)
 
+  // Add export-mode class to force desktop layout during capture
+  document.documentElement.classList.add('export-mode')
+
   try {
     const dataUrl = await toPng(element, {
       quality: 1,
@@ -35,7 +38,8 @@ export const captureElement = async (element, options = {}) => {
     console.error('Error capturing element:', error)
     throw error
   } finally {
-    // Remove the style to restore scrollbars
+    // Remove export-mode class and scrollbar style
+    document.documentElement.classList.remove('export-mode')
     style.remove()
   }
 }

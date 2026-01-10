@@ -305,7 +305,23 @@ export const HAZARD_OBJECTS = {
     // Aerial work platforms
     'manlift', 'man lift', 'aerial lift', 'basket', 'lift basket',
     'operating the manlift', 'operator', 'standing on the side',
-    'electrical water pump', 'water pump', 'pump near water'
+    'electrical water pump', 'water pump', 'pump near water',
+    // Pneumatic Equipment (mechanical hazards)
+    'pneumatic', 'pneumatic tool', 'pneumatic tools', 'pneumatic drill',
+    'pneumatic hammer', 'jack hammer', 'jackhammer', 'air hammer',
+    'pneumatic nailer', 'nail gun', 'air compressor', 'compressed air',
+    'air hose', 'air line', 'pneumatic system', 'pneumatic equipment',
+    'breaker', 'pneumatic breaker', 'chipping hammer',
+    // Hydraulic Equipment (mechanical hazards)
+    'hydraulic', 'hydraulic system', 'hydraulic line', 'hydraulic hose',
+    'hydraulic press', 'hydraulic jack', 'hydraulic cylinder',
+    'hydraulic pump', 'hydraulic fluid', 'hydraulic oil',
+    'hydraulic test', 'hydraulic testing', 'hydraulic pressure',
+    'hydraulic failure', 'hydraulic leak', 'burst hose', 'hose burst',
+    // Pressure Testing
+    'pressure test', 'pressure testing', 'hydrostatic test',
+    'hydro test', 'hydrotest', 'pressure gauge',
+    'pressure relief', 'over pressure', 'pressure buildup', 'high pressure'
   ],
 
   'Fire': [
@@ -324,7 +340,18 @@ export const HAZARD_OBJECTS = {
     'drip tray full of diesel', 'drip tray was full of diesel', 'drip tray was full',
     'dip tray full of diesel', 'dip tray was full', 'full of diesel',
     'diesel spill', 'diesel overflow', 'fuel spill', 'fuel overflow',
-    'generator drip tray', 'generator dip tray', 'increases the chance of fire'
+    'generator drip tray', 'generator dip tray', 'increases the chance of fire',
+    // Compressed Gas Hazards
+    'gas cylinder', 'gas cylinders', 'cylinder', 'compressed gas',
+    'oxygen cylinder', 'acetylene cylinder', 'nitrogen cylinder',
+    'argon cylinder', 'co2 cylinder', 'propane cylinder', 'lpg cylinder',
+    'gas regulator', 'pressure regulator', 'cylinder valve',
+    'gas hose', 'flashback arrestor', 'gas manifold',
+    'cylinder storage', 'cylinder secured', 'unsecured cylinder',
+    'cylinder cap', 'cylinder chain', 'cylinder trolley',
+    'cylinder leak', 'gas leak', 'gas release',
+    'cylinder transport', 'cylinder handling', 'gas storage',
+    'pressure vessel', 'air receiver', 'receiver tank'
   ],
 
   'Confined Spaces': [
@@ -371,7 +398,24 @@ export const HAZARD_OBJECTS = {
     'spreader bar', 'equalizer beam',
     'eye bolt', 'lifting eye', 'pad eye',
     'swivel', 'turnbuckle',
-    'exclusion zone', 'exclusion zones', 'lifting zone', 'drop zone'
+    'exclusion zone', 'exclusion zones', 'lifting zone', 'drop zone',
+    // Extended lifting/rigging terms
+    'tagline', 'tag line', 'control line', 'guide rope',
+    'snatch block', 'pulley block', 'sheave',
+    'load cell', 'dynamometer', 'load indicator',
+    'lifting clamp', 'plate clamp', 'beam clamp', 'pipe clamp',
+    'magnetic lifter', 'lifting magnet', 'magnet lift',
+    'vacuum lifter', 'suction lifter', 'vacuum pad',
+    'lifting lug', 'd-ring', 'lift point',
+    'choker hitch', 'basket hitch', 'vertical hitch',
+    'banksman', 'rigger', 'slinger', 'signalman', 'signal person',
+    'load chart', 'lift plan', 'rigging plan', 'method statement',
+    'proof load', 'test certificate', 'thorough examination',
+    'synthetic sling', 'endless sling', 'round sling',
+    'anchor shackle', 'screw pin shackle', 'bolt type shackle',
+    'come along', 'lever hoist', 'pull lift',
+    'gantry crane', 'overhead crane', 'jib crane', 'davit',
+    'safe working load', 'working load limit', 'swl', 'wll'
   ],
 
   'Working on or Near Water': [
@@ -473,6 +517,18 @@ export const HAZARD_OBJECTS = {
     // Sharp edges and objects
     'sharp edge', 'sharp edges', 'sharp corner', 'sharp metal', 'sharp object', 'sharp objects',
     'cutting hazard', 'laceration hazard', 'cut hazard',
+    // Extended physical hazards
+    'physical hazard', 'physical hazards', 'sharp object hazard',
+    'jagged edge', 'burr', 'metal burr', 'rough edge', 'ragged edge',
+    'projecting', 'projection', 'protrusion', 'protrusions',
+    'extended rebar', 'extended steel', 'steel projection',
+    'tie rod exposed', 'tie rods exposed', 'exposed tie rod', 'exposed tie rods',
+    'formwork tie', 'form work tie', 'she bolt', 'she bolts',
+    'anchor bolt exposed', 'bolt protruding', 'bolt exposed', 'bolts protruding',
+    'wire protruding', 'wires protruding', 'metal protruding',
+    'spikes', 'spikes protruding', 'metal spikes', 'steel spikes',
+    // Wooden hazards with nails
+    'wooden cover with nails', 'plywood sheets with nails', 'sheets had exposed',
     // NEOM Standard reference
     'phsas 37.9', 'neom phsas 37.9', '37.9 sharp objects'
   ],
@@ -1235,14 +1291,19 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'bin overflowing', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'waste management' },
   { pattern: 'overflowing', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'waste issue' },
   { pattern: 'stacked improperly', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'storage issue' },
-  { pattern: 'protruding nail', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'hazard' },
-  { pattern: 'protruding nails', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'hazard' },
+  { pattern: 'protruding nail', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement/puncture hazard' },
+  { pattern: 'protruding nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement/puncture hazard' },
 
   // Access patterns
   { pattern: 'obstructed access', wrongCategory: null, correctCategory: 'Access', reason: 'access issue' },
   { pattern: 'blocked access', wrongCategory: null, correctCategory: 'Access', reason: 'access issue' },
   { pattern: 'safe access', wrongCategory: null, correctCategory: 'Access', reason: 'access requirement' },
   { pattern: 'obstructed by', wrongCategory: null, correctCategory: 'Access', reason: 'access issue' },
+  { pattern: 'no planks', wrongCategory: null, correctCategory: 'Access', reason: 'safe movement/walkway missing' },
+  { pattern: 'planks have been provided', wrongCategory: null, correctCategory: 'Access', reason: 'walkway provided' },
+  { pattern: 'safe movement', wrongCategory: null, correctCategory: 'Access', reason: 'access requirement' },
+  { pattern: 'walkway access', wrongCategory: null, correctCategory: 'Access', reason: 'access issue' },
+  { pattern: 'access area', wrongCategory: null, correctCategory: 'Access', reason: 'access issue' },
 
   // Security patterns
   { pattern: 'security gate', wrongCategory: null, correctCategory: 'Site Security', reason: 'security' },
@@ -1263,6 +1324,9 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'signage not', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage issue' },
   { pattern: 'sign not installed', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage missing' },
   { pattern: 'suitable signage', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage requirement' },
+  { pattern: 'no awareness signage', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage missing' },
+  { pattern: 'awareness signage', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage required' },
+  { pattern: 'warning signage', wrongCategory: null, correctCategory: 'Safety Sign', reason: 'signage requirement' },
 
   // Equipment and tools specific
   { pattern: 'rotating part', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'machine guarding' },
@@ -1303,27 +1367,34 @@ export const DISAMBIGUATION_RULES = [
   // NEW DISAMBIGUATION RULES (from low confidence analysis)
   // ============================================================================
 
-  // Rebar and steel protection patterns
-  { pattern: 'rebar cap', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'sharp object protection' },
-  { pattern: 'rebar caps', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'sharp object protection' },
-  { pattern: 'protruding rebar', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'exposed rebar', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'protruding rebars', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'without rebar cap', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'missing protection' },
-  { pattern: 'no rebar caps', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'missing protection' },
-  { pattern: 'steel bar without', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'missing cap' },
-  { pattern: 'sharp steel', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'impalement hazard', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'safety cap', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'protection' },
-  { pattern: 'wooden coverings', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'protection' },
-  { pattern: 'tie rod', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'sharp object' },
+  // Rebar and steel protection patterns - PHYSICAL HAZARDS → Struck By
+  { pattern: 'rebar cap', wrongCategory: null, correctCategory: 'Struck By', reason: 'sharp object protection' },
+  { pattern: 'rebar caps', wrongCategory: null, correctCategory: 'Struck By', reason: 'sharp object protection' },
+  { pattern: 'protruding rebar', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'exposed rebar', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'protruding rebars', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'without rebar cap', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'no rebar caps', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'steel bar without', wrongCategory: null, correctCategory: 'Struck By', reason: 'impalement hazard' },
+  { pattern: 'sharp steel', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'impalement hazard', wrongCategory: null, correctCategory: 'Struck By', reason: 'physical hazard' },
+  { pattern: 'impalement', wrongCategory: null, correctCategory: 'Struck By', reason: 'physical hazard' },
+  { pattern: 'risk of impalement', wrongCategory: null, correctCategory: 'Struck By', reason: 'physical hazard' },
+  { pattern: 'safety cap', wrongCategory: null, correctCategory: 'Struck By', reason: 'rebar protection' },
+  { pattern: 'wooden coverings', wrongCategory: null, correctCategory: 'Struck By', reason: 'rebar protection' },
+  { pattern: 'tie rod', wrongCategory: null, correctCategory: 'Struck By', reason: 'sharp object' },
+  { pattern: 'tie rods', wrongCategory: null, correctCategory: 'Struck By', reason: 'sharp object' },
+  { pattern: 'exposed tie rod', wrongCategory: null, correctCategory: 'Struck By', reason: 'sharp object' },
 
-  // Wood and timber patterns
+  // Wood and timber patterns (with exposed nails → Struck By, plain wood → Housekeeping)
   { pattern: 'wood timbers', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material hazard' },
   { pattern: 'wooden planks', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material' },
-  { pattern: 'nails not removed', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'cleanup required' },
+  { pattern: 'nails not removed', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
   { pattern: 'unwanted wood', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'cleanup required' },
-  { pattern: 'timber with nails', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
+  { pattern: 'timber with nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'timber with exposed', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'exposed nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'plywood with nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
 
   // Cement and materials patterns
   { pattern: 'cement bags', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material storage' },
@@ -1393,9 +1464,8 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'overloaded socket', wrongCategory: null, correctCategory: 'Energized System', reason: 'electrical hazard' },
   { pattern: 'daisy chain', wrongCategory: null, correctCategory: 'Energized System', reason: 'electrical hazard' },
 
-  // Exposed nails patterns (keep in Housekeeping)
-  { pattern: 'exposed nails', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
-  { pattern: 'timber with exposed', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'sharp object hazard' },
+  // Exposed nails patterns → Struck By (physical hazard)
+  // Note: Already defined above in rebar section
 
   // Falling object patterns (Working at Height - objects from elevation)
   { pattern: 'falling object hazard', wrongCategory: null, correctCategory: 'Working at Height', reason: 'dropped object from height' },
@@ -1408,9 +1478,9 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'lifting activity', wrongCategory: null, correctCategory: 'Lifting', reason: 'lifting operation' },
 
   // Slip trip fall patterns (Housekeeping)
-  { pattern: 'slip, trip, and fall', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'walking surface hazard' },
-  { pattern: 'slip trip fall', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'walking surface hazard' },
-  { pattern: 'spikes protruding', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'puncture hazard' },
+  { pattern: 'slip, trip, and fall', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'walking surface hazard' },
+  { pattern: 'slip trip fall', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'walking surface hazard' },
+  { pattern: 'spikes protruding', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
 
   // Emergency contact patterns
   { pattern: 'emergency contact number', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'emergency information' },
@@ -1422,7 +1492,119 @@ export const DISAMBIGUATION_RULES = [
 
   // Pressure washer / equipment inspection
   { pattern: 'pressure washer', wrongCategory: null, correctCategory: 'Tools', reason: 'equipment' },
-  { pattern: 'has not been inspected', wrongCategory: null, correctCategory: 'Tools', reason: 'inspection issue' }
+  { pattern: 'has not been inspected', wrongCategory: null, correctCategory: 'Tools', reason: 'inspection issue' },
+
+  // Environmental hazards (sewage, contamination, spills)
+  { pattern: 'sewage tank is full', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental/hygiene hazard' },
+  { pattern: 'sewage tank full', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental/hygiene hazard' },
+  { pattern: 'septic tank is full', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental/hygiene hazard' },
+  { pattern: 'septic tank full', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental/hygiene hazard' },
+  { pattern: 'septic tank is overflowing', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental contamination' },
+  { pattern: 'septic tank overflowing', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental contamination' },
+  { pattern: 'septic tank was found full', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental contamination' },
+  { pattern: 'toilet sewage tank', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental/hygiene hazard' },
+  { pattern: 'sewage overflow', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental contamination' },
+  { pattern: 'septic overflow', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental contamination' },
+  { pattern: 'environmental hazard', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental issue' },
+  { pattern: 'environmental contamination', wrongCategory: null, correctCategory: 'Environmental', reason: 'contamination' },
+  { pattern: 'environmental risk', wrongCategory: null, correctCategory: 'Environmental', reason: 'environmental issue' },
+  { pattern: 'hygiene hazard', wrongCategory: null, correctCategory: 'Environmental', reason: 'hygiene/environmental' },
+  { pattern: 'hygiene risk', wrongCategory: null, correctCategory: 'Environmental', reason: 'hygiene/environmental' },
+  { pattern: 'oil spillage', wrongCategory: null, correctCategory: 'Environmental', reason: 'spill/contamination' },
+  { pattern: 'oil spill', wrongCategory: null, correctCategory: 'Environmental', reason: 'spill/contamination' },
+  { pattern: 'minor oil leakage', wrongCategory: null, correctCategory: 'Environmental', reason: 'spill/contamination' },
+  { pattern: 'oil leakage', wrongCategory: null, correctCategory: 'Environmental', reason: 'spill/contamination' },
+
+  // Temporary Works hazards (makeshift, collapse risk)
+  { pattern: 'makeshift scaffold', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'temporary structure' },
+  { pattern: 'makeshift rack', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'temporary structure' },
+  { pattern: 'risk of collapse', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+  { pattern: 'high risk of collapse', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+  { pattern: 'unstable and overloaded', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+  { pattern: 'overloaded makeshift', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+  { pattern: 'unstable rack', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+  { pattern: 'unstable storage', wrongCategory: null, correctCategory: 'Temporary Works', reason: 'structural hazard' },
+
+  // Fire hazards (fuel, flammable materials)
+  { pattern: 'drip tray full', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'drip tray full of diesel', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'drip tray full of oil', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'drip tray overflow', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'chance of fire', wrongCategory: null, correctCategory: 'Fire', reason: 'fire risk' },
+  { pattern: 'fire hazard', wrongCategory: null, correctCategory: 'Fire', reason: 'fire risk' },
+  { pattern: 'fire hazards', wrongCategory: null, correctCategory: 'Fire', reason: 'fire risk' },
+  { pattern: 'fire risk', wrongCategory: null, correctCategory: 'Fire', reason: 'fire risk' },
+  { pattern: 'diesel storage', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable storage' },
+  { pattern: 'fuel storage', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable storage' },
+  { pattern: 'flammable liquid', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable material' },
+  { pattern: 'flammable material', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable material' },
+  { pattern: 'accumulated diesel', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'diesel leak', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+  { pattern: 'fuel leak', wrongCategory: null, correctCategory: 'Fire', reason: 'flammable liquid hazard' },
+
+  // Emergency Preparedness (first aid, welfare facilities)
+  { pattern: 'first aid box not provided', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'missing emergency equipment' },
+  { pattern: 'first aid not provided', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'missing emergency equipment' },
+  { pattern: 'no first aid', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'missing emergency equipment' },
+  { pattern: 'first aid box not available', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'missing emergency equipment' },
+  { pattern: 'first aid box missing', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'missing emergency equipment' },
+  { pattern: 'toilet not provided', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare facility' },
+  { pattern: 'no toilet provided', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare facility' },
+  { pattern: 'toilet not available', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare facility' },
+  { pattern: 'welfare facility', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare/hygiene' },
+  { pattern: 'welfare facilities', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare/hygiene' },
+  { pattern: 'drinking water not provided', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare facility' },
+  { pattern: 'no drinking water', wrongCategory: null, correctCategory: 'Emergency Preparedness', reason: 'welfare facility' },
+
+  // Slips Trips Falls hazards
+  { pattern: 'risk of falls', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'fall hazard' },
+  { pattern: 'risk of fall', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'fall hazard' },
+  { pattern: 'risk of slipping', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'slip hazard' },
+  { pattern: 'risk of tripping', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'trip hazard' },
+  { pattern: 'not properly fixed', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'unstable surface' },
+  { pattern: 'not properly secured', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'unstable surface' },
+  { pattern: 'wooden steps', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'walking surface' },
+  { pattern: 'stairs not', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'stairway hazard' },
+  { pattern: 'steps not', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'stairway hazard' },
+  { pattern: 'uneven surface', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'trip hazard' },
+  { pattern: 'slippery surface', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'slip hazard' },
+  { pattern: 'wet floor', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'slip hazard' },
+  { pattern: 'floor hazard', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'walking surface hazard' },
+  { pattern: 'floor not level', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'trip hazard' },
+  { pattern: 'loose flooring', wrongCategory: null, correctCategory: 'Slips Trips Falls', reason: 'trip hazard' },
+
+  // Access hazards (obstructed pathways, egress)
+  { pattern: 'across access pathway', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed pathway' },
+  { pattern: 'blocking access', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed access' },
+  { pattern: 'obstructed pathway', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed pathway' },
+  { pattern: 'obstructed access', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed access' },
+  { pattern: 'obstructed egress', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed egress' },
+  { pattern: 'egress pathway', wrongCategory: null, correctCategory: 'Access', reason: 'egress route' },
+  { pattern: 'egress route', wrongCategory: null, correctCategory: 'Access', reason: 'egress route' },
+  { pattern: 'emergency exit blocked', wrongCategory: null, correctCategory: 'Access', reason: 'blocked egress' },
+  { pattern: 'exit blocked', wrongCategory: null, correctCategory: 'Access', reason: 'blocked egress' },
+  { pattern: 'pathway blocked', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed pathway' },
+  { pattern: 'access blocked', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed access' },
+  { pattern: 'obstructing clear movement', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed movement' },
+  { pattern: 'clear movement', wrongCategory: null, correctCategory: 'Access', reason: 'movement obstruction' },
+  { pattern: 'safe movement', wrongCategory: null, correctCategory: 'Access', reason: 'movement/access issue' },
+  { pattern: 'no proper access', wrongCategory: null, correctCategory: 'Access', reason: 'inadequate access' },
+  { pattern: 'adequate access', wrongCategory: null, correctCategory: 'Access', reason: 'access assessment' },
+  { pattern: 'access issue', wrongCategory: null, correctCategory: 'Access', reason: 'access hazard' },
+  { pattern: 'walkway obstructed', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed walkway' },
+  { pattern: 'walkway blocked', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed walkway' },
+  { pattern: 'steel rebars across', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed pathway' },
+  { pattern: 'materials across pathway', wrongCategory: null, correctCategory: 'Access', reason: 'obstructed pathway' },
+
+  // Protruding nails variations (Struck By - physical hazard)
+  { pattern: 'protruding nail', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'protruding nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'nails protruding', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'nail protruding', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'sharp nail', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'sharp nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'rusty nail', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' },
+  { pattern: 'rusty nails', wrongCategory: null, correctCategory: 'Struck By', reason: 'puncture hazard' }
 ]
 
 // ============================================================================
@@ -1590,3 +1772,188 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'Environmental',
   'Slips Trips Falls'
 ]
+
+// ============================================================================
+// SECTION H: HSE ABBREVIATIONS EXPANSION
+// Maps common HSE abbreviations to their full forms for better classification
+// ============================================================================
+
+export const HSE_ABBREVIATIONS = {
+  // Working at Height
+  'wah': 'working at height',
+  'wah violation': 'working at height violation',
+  'wah issue': 'working at height issue',
+
+  // Permits & Procedures
+  'ptw': 'permit to work',
+  'loto': 'lockout tagout',
+  'lototo': 'lockout tagout tryout',
+  'jsa': 'job safety analysis',
+  'jha': 'job hazard analysis',
+  'tbt': 'toolbox talk',
+  'swms': 'safe work method statement',
+  'rams': 'risk assessment method statement',
+  'ssow': 'safe system of work',
+  'flra': 'field level risk assessment',
+  'lmra': 'last minute risk assessment',
+  'moc': 'management of change',
+  'hazop': 'hazard and operability study',
+  'hra': 'health risk assessment',
+  'tra': 'task risk assessment',
+  'sta': 'safe task analysis',
+
+  // Equipment Load Limits
+  'swl': 'safe working load',
+  'wll': 'working load limit',
+  'mbl': 'minimum breaking load',
+  'bwl': 'basic working load',
+
+  // Mobile Equipment
+  'mewp': 'mobile elevated work platform',
+  'ewp': 'elevated work platform',
+  'spmt': 'self propelled modular transporter',
+  'adt': 'articulated dump truck',
+  'rtg': 'rubber tyred gantry',
+
+  // Incident Types
+  'lti': 'lost time injury',
+  'mti': 'medical treatment injury',
+  'fac': 'first aid case',
+  'rwc': 'restricted work case',
+  'hpi': 'high potential incident',
+  'hipo': 'high potential incident',
+  'ncr': 'non conformance report',
+  'nmiss': 'near miss',
+
+  // Electrical Safety
+  'gfci': 'ground fault circuit interrupter',
+  'rcd': 'residual current device',
+  'elcb': 'earth leakage circuit breaker',
+  'mcb': 'miniature circuit breaker',
+  'mccb': 'molded case circuit breaker',
+
+  // Operations
+  'simops': 'simultaneous operations',
+  'sop': 'standard operating procedure',
+  'erp': 'emergency response plan',
+  'eap': 'emergency action plan',
+  'iipp': 'injury illness prevention program',
+
+  // Standards & Regulations
+  'osha': 'occupational safety health administration',
+  'ansi': 'american national standards institute',
+  'nfpa': 'national fire protection association',
+  'nebosh': 'national examination board occupational safety health',
+  'iosh': 'institution of occupational safety health',
+
+  // PPE Related
+  'ppe': 'personal protective equipment',
+  'rpe': 'respiratory protective equipment',
+  'frc': 'flame resistant clothing',
+  'scba': 'self contained breathing apparatus',
+  'ffs': 'full face shield',
+
+  // Confined Space
+  'cse': 'confined space entry',
+  'cs': 'confined space',
+  'csep': 'confined space entry permit',
+
+  // Lifting Operations
+  'loler': 'lifting operations lifting equipment regulations',
+  'leea': 'lifting equipment engineers association',
+  'cpcs': 'construction plant competence scheme',
+  'npors': 'national plant operators registration scheme',
+
+  // Behavior Based Safety
+  'bbs': 'behavior based safety',
+  'dddm': 'data driven decision making',
+  'kpi': 'key performance indicator',
+  'lagging': 'lagging indicator',
+  'leading': 'leading indicator'
+}
+
+// ============================================================================
+// SECTION I: EQUIPMENT SYNONYM FAMILIES
+// Groups equivalent equipment terms for consistent classification
+// ============================================================================
+
+export const EQUIPMENT_SYNONYMS = {
+  // Working at Height Equipment Family
+  'boom_lift': ['boom lift', 'cherry picker', 'mewp', 'aerial lift', 'man lift', 'personnel lift', 'jlg', 'genie lift', 'articulating boom', 'telescopic boom', 'knuckle boom'],
+  'scissor_lift': ['scissor lift', 'scissor platform', 'elevated platform', 'slab scissor', 'rough terrain scissor'],
+  'scaffold': ['scaffold', 'scaffolding', 'scaffolds', 'staging', 'work platform', 'tube and fitting', 'system scaffold', 'ringlock', 'cuplock', 'kwikstage'],
+  'rope_access': ['rope access', 'abseil', 'rappel', 'industrial climbing', 'irata', 'sprat', 'rope work'],
+  'ladder': ['ladder', 'step ladder', 'extension ladder', 'a-frame ladder', 'platform ladder', 'podium ladder', 'cage ladder', 'fixed ladder'],
+
+  // Mobile Plant Family
+  'excavator': ['excavator', 'backhoe', 'digger', 'trackhoe', 'hydraulic excavator', 'mini excavator', 'micro excavator', 'tracked excavator', 'wheeled excavator', '360 excavator'],
+  'loader': ['loader', 'bobcat', 'skid steer', 'skid loader', 'compact loader', 'wheel loader', 'front loader', 'pay loader', 'end loader', 'front end loader'],
+  'dozer': ['dozer', 'bulldozer', 'crawler dozer', 'track dozer', 'd6', 'd8', 'd9', 'blade'],
+  'dump_truck': ['dump truck', 'dumper', 'tipper', 'adt', 'articulated dump truck', 'haul truck', 'off highway truck', 'rock truck', 'rigid dump'],
+  'crane': ['crane', 'mobile crane', 'tower crane', 'crawler crane', 'rough terrain crane', 'all terrain crane', 'pick and carry', 'truck crane', 'hydraulic crane', 'lattice boom crane'],
+  'forklift': ['forklift', 'fork lift', 'lift truck', 'reach truck', 'counterbalance', 'telehandler', 'telescopic handler', 'zoom boom', 'reach stacker'],
+  'roller': ['roller', 'compactor', 'road roller', 'vibratory roller', 'smooth drum', 'padfoot roller', 'sheepsfoot', 'tandem roller', 'combination roller'],
+  'grader': ['grader', 'motor grader', 'road grader', 'blade grader', 'maintainer'],
+  'paver': ['paver', 'asphalt paver', 'finisher', 'paving machine', 'track paver', 'wheeled paver'],
+  'piling_rig': ['piling rig', 'pile driver', 'bore pile rig', 'cfa rig', 'rotary rig', 'driven pile rig', 'vibro hammer'],
+  'concrete_pump': ['concrete pump', 'boom pump', 'line pump', 'placing boom', 'stationary pump', 'trailer pump'],
+
+  // Lifting Equipment Family
+  'sling': ['sling', 'webbing sling', 'chain sling', 'wire rope sling', 'synthetic sling', 'endless sling', 'round sling', 'polyester sling', 'nylon sling'],
+  'rigging': ['rigging', 'rigging gear', 'lifting gear', 'lifting tackle', 'below the hook', 'rigging hardware'],
+  'shackle': ['shackle', 'shackles', 'bow shackle', 'd shackle', 'anchor shackle', 'screw pin shackle', 'safety shackle'],
+  'hoist': ['hoist', 'chain block', 'lever block', 'come along', 'manual hoist', 'electric hoist', 'air hoist', 'pull lift'],
+
+  // Hot Work Equipment Family
+  'welder': ['welder', 'welding machine', 'arc welder', 'mig welder', 'tig welder', 'stick welder', 'smaw', 'fcaw', 'gmaw', 'gtaw'],
+  'grinder': ['grinder', 'angle grinder', 'disc grinder', 'bench grinder', 'die grinder', 'straight grinder', 'pneumatic grinder'],
+  'cutting': ['cutting torch', 'oxy torch', 'plasma cutter', 'gas cutter', 'thermal lance', 'oxy acetylene', 'oxy fuel'],
+  'saw': ['circular saw', 'reciprocating saw', 'chop saw', 'cut off saw', 'band saw', 'skill saw', 'demolition saw'],
+
+  // Electrical Equipment Family
+  'panel': ['electrical panel', 'distribution board', 'switchboard', 'panel board', 'mcc', 'motor control center', 'db', 'switch gear'],
+  'generator': ['generator', 'genset', 'power generator', 'diesel generator', 'portable generator', 'standby generator']
+}
+
+// ============================================================================
+// SECTION J: CATEGORY MAPPING FOR EQUIPMENT FAMILIES
+// Maps equipment family keys to their hazard categories
+// ============================================================================
+
+export const EQUIPMENT_TO_CATEGORY = {
+  // Working at Height
+  'boom_lift': 'Working at Height',
+  'scissor_lift': 'Working at Height',
+  'scaffold': 'Working at Height',
+  'rope_access': 'Working at Height',
+  'ladder': 'Working at Height',
+
+  // Mobile Plant & Equipment
+  'excavator': 'Mobile Plant & Equipment',
+  'loader': 'Mobile Plant & Equipment',
+  'dozer': 'Mobile Plant & Equipment',
+  'dump_truck': 'Mobile Plant & Equipment',
+  'forklift': 'Mobile Plant & Equipment',
+  'roller': 'Mobile Plant & Equipment',
+  'grader': 'Mobile Plant & Equipment',
+  'paver': 'Mobile Plant & Equipment',
+  'piling_rig': 'Mobile Plant & Equipment',
+  'concrete_pump': 'Mobile Plant & Equipment',
+
+  // Lifting
+  'crane': 'Lifting',
+  'sling': 'Lifting',
+  'rigging': 'Lifting',
+  'shackle': 'Lifting',
+  'hoist': 'Lifting',
+
+  // Hot Work
+  'welder': 'Hot Work',
+  'grinder': 'Hot Work',
+  'cutting': 'Hot Work',
+  'saw': 'Hot Work',
+
+  // Energized System
+  'panel': 'Energized System',
+  'generator': 'Energized System'
+}

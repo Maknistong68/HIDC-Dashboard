@@ -68,9 +68,10 @@ const KPICard = ({
   return (
     <div
       className={`
-        group bg-white border border-surface-200 rounded-lg p-4
+        group bg-white border border-surface-200 rounded-lg p-3 sm:p-4
         transition-all duration-300 ease-out
         hover:shadow-medium hover:border-surface-300
+        active:shadow-soft active:scale-[0.99]
         ${onClick ? 'cursor-pointer' : ''}
         ${colors.glow}
         ${className}
@@ -82,14 +83,14 @@ const KPICard = ({
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          {/* Title with tooltip */}
-          <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide flex items-center">
+          {/* Title with tooltip - Responsive text size */}
+          <p className="text-xs sm:text-xs font-semibold text-surface-500 uppercase tracking-wide flex items-center gap-0.5">
             <span className="truncate">{title}</span>
             {info && <InfoTooltip text={info} />}
           </p>
 
-          {/* Value with animation */}
-          <p className="text-2xl font-bold text-surface-800 mt-1 tabular-nums">
+          {/* Value with animation - Responsive size */}
+          <p className="text-xl sm:text-2xl font-bold text-surface-800 mt-1 tabular-nums">
             {animate && isNumeric ? (
               <>
                 {valuePrefix}
