@@ -11,7 +11,7 @@ export const INCIDENT_TYPES = [
   { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#0891b2' },
 ]
 
-// 26 Approved Hazard Categories (True hazards only - root causes/controls removed)
+// 29 Approved Hazard Categories (Hazards + Controls that need tracking)
 export const HAZARD_CATEGORIES = [
   // === 15 MAJOR HAZARDS ===
   'Confined Spaces',
@@ -29,7 +29,7 @@ export const HAZARD_CATEGORIES = [
   'Working in Heat',
   'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
   'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
-  // === 11 SUB-SIGNIFICANT HAZARDS ===
+  // === 14 SUB-SIGNIFICANT HAZARDS + CONTROLS ===
   'COSHH',
   'Respiratory Hazard',        // Dust, silica, fumes, particles, airborne
   'Housekeeping',
@@ -41,6 +41,9 @@ export const HAZARD_CATEGORIES = [
   'Work Environment',
   'Environmental',
   'Slip and Trip',             // Slip/trip hazards (falls → Working at Height)
+  'Safety Supervision',        // No safety officer, lack of supervision
+  'Training and Competency',   // No training, no induction, not competent
+  'Permit and RAMS',           // No permit, no RAMS, documentation missing
 ]
 
 // 15 Major (Significant) Hazards - HIGHEST PRIORITY in classification
@@ -63,8 +66,7 @@ export const MAJOR_HAZARDS = [
   'Driving',
 ]
 
-// 11 Sub-Significant Hazards - LOWER PRIORITY in classification
-// Root causes/controls removed: PPE, Training, Supervision, Permits, BBS, Signs, Emergency Prep, Barricades
+// 14 Sub-Significant Hazards - LOWER PRIORITY in classification
 export const SUB_SIGNIFICANT_HAZARDS = [
   'COSHH',
   'Respiratory Hazard',        // Dust, silica, fumes, particles
@@ -76,8 +78,139 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'Environmental',
   'Tools',
   'Access',
-  'Work Environment',
+  'Safety Supervision',        // No safety officer, lack of supervision
+  'Training and Competency',   // No training, no induction, not competent
+  'Permit and RAMS',           // No permit, no RAMS, documentation missing
+  'Work Environment',          // LAST - catch-all bucket
 ]
+
+// =============================================================================
+// CRITICAL_HAZARD_KEYWORDS - ALWAYS win over location/context words
+// These are checked FIRST and override any other classification
+// Organized by PRIORITY (higher priority categories listed first)
+// =============================================================================
+export const CRITICAL_HAZARD_KEYWORDS = {
+  // PRIORITY 1: Life-threatening hazards
+  'Fire': [
+    'petrol stored', 'petrol kept', 'petrol found', 'petrol in',
+    'diesel stored', 'diesel kept', 'diesel found', 'diesel in open',
+    'gasoline stored', 'gasoline kept', 'fuel stored improperly',
+    'flammable liquid', 'flammable material stored', 'flammable gas',
+    'fire hazard', 'ignition source', 'spark hazard', 'combustible',
+    'lpg cylinder', 'gas cylinder stored', 'naked flame',
+  ],
+  'Energized System': [
+    'live wire', 'live cable', 'exposed wire', 'exposed cable',
+    'electrocution', 'electric shock', 'electrical hazard',
+    'energized equipment', 'energized system', 'unprotected electrical',
+    'damaged cable', 'frayed wire', 'no lockout', 'no loto',
+  ],
+  'Confined Spaces': [
+    'confined space entry', 'entered confined', 'working in confined',
+    'manhole entry', 'tank entry', 'vessel entry', 'pit entry',
+    'confined space without', 'confined space permit',
+  ],
+  'Working at Height': [
+    'fall from', 'fell from', 'falling from', 'fallen from',
+    'working at height', 'work at height', 'roof work', 'rooftop',
+    'scaffold', 'scaffolding', 'ladder', 'elevated platform',
+    'unprotected edge', 'leading edge', 'fall protection', 'harness',
+    'guardrail missing', 'no guardrail', 'open edge',
+    'expired scaffolding tag', 'scaffold tag expired',
+  ],
+  'Breaking Ground & Excavation': [
+    'excavation', 'excavating', 'trench', 'trenching',
+    'digging', 'ground breaking', 'underground', 'buried cable',
+    'buried pipe', 'utility strike', 'open pit', 'deep excavation',
+    'shoring', 'benching', 'sloping', 'cave-in', 'collapse of excavation',
+  ],
+  'Lifting': [
+    'crane', 'lifting operation', 'rigging', 'sling', 'shackle',
+    'lift plan', 'lifting gear', 'load chart', 'outrigger',
+    'banksman', 'slinger', 'signaller', 'hoisting',
+    'suspended load', 'lifting accessory', 'lifting equipment',
+  ],
+  'Mobile Plant & Equipment': [
+    'excavator', 'forklift', 'loader', 'bulldozer', 'grader',
+    'roller', 'compactor', 'dump truck', 'tipper', 'concrete mixer',
+    'telehandler', 'backhoe', 'plant operator', 'heavy equipment',
+    'mobile plant', 'moving machinery', 'reversing vehicle',
+    'banksman not', 'no banksman', 'spotter not', 'no spotter',
+  ],
+
+  // PRIORITY 2: Chemical/Health hazards
+  'COSHH': [
+    'chemical', 'hazardous substance', 'toxic', 'corrosive',
+    'msds', 'sds', 'material safety data sheet', 'coshh assessment',
+    'chemical handling', 'chemical storage', 'chemical spill',
+    'hazardous material', 'dangerous goods', 'carcinogen',
+    'without msds', 'no msds', 'msds not available', 'msds missing',
+  ],
+  'Environmental': [
+    'contamination of soil', 'soil contamination', 'ground contamination',
+    'oil spill', 'fuel spill', 'chemical spill', 'pollution',
+    'environmental damage', 'waste disposal', 'illegal dumping',
+    'water contamination', 'groundwater', 'environmental incident',
+  ],
+
+  // PRIORITY 3: Traffic/Driving
+  'Traffic Management': [
+    'traffic sign', 'traffic signage', 'traffic cone', 'traffic barrier',
+    'haul road', 'speed limit', 'overspeeding', 'traffic control',
+    'pedestrian crossing', 'traffic marshal', 'traffic management plan',
+    'vehicle access', 'traffic awareness',
+  ],
+  'Driving': [
+    'driver', 'driving without', 'seatbelt not worn', 'no seatbelt',
+    'speeding', 'reckless driving', 'distracted driving',
+    'driver fatigue', 'driver competency', 'driving license',
+    'vehicle inspection', 'pre-trip inspection',
+  ],
+
+  // PRIORITY 4: Permit/Documentation (IMPORTANT - catches RAMS issues)
+  'Permit and RAMS': [
+    'no permit', 'permit not', 'without permit', 'permit expired',
+    'no rams', 'rams not', 'without rams', 'rams missing',
+    'no msra', 'msra not', 'msra missing', 'no method statement',
+    'risk assessment missing', 'no risk assessment', 'ptw not',
+    'permit to work not', 'work without permit', 'no approved',
+    'documentation missing', 'no documentation', 'not documented',
+  ],
+
+  // PRIORITY 5: Supervision (catches "no safety officer" issues)
+  'Safety Supervision': [
+    'no safety officer', 'safety officer not present', 'safety officer absent',
+    'safety officer was not', 'without safety officer', 'lack of supervision',
+    'no supervision', 'unsupervised', 'supervisor not present',
+    'supervisor absent', 'no supervisor', 'lack of safety coverage',
+    'safety coverage', 'not supervised', 'absence of safety',
+  ],
+
+  // PRIORITY 6: Training
+  'Training and Competency': [
+    'not trained', 'no training', 'untrained', 'incompetent',
+    'not competent', 'no competency', 'training expired',
+    'no induction', 'induction not completed', 'not inducted',
+    'certification expired', 'no certification', 'not certified',
+    'toolbox talk not', 'no toolbox talk', 'briefing not done',
+    'pre-activity briefing', 'without briefing',
+  ],
+}
+
+// Function to check CRITICAL_HAZARD_KEYWORDS (used in categorizeHazard)
+export const checkCriticalKeywords = (text) => {
+  const lowerText = text.toLowerCase()
+
+  // Check each category in priority order
+  for (const [category, keywords] of Object.entries(CRITICAL_HAZARD_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (lowerText.includes(keyword.toLowerCase())) {
+        return category
+      }
+    }
+  }
+  return null
+}
 
 // HAZARD_EXCLUSIONS - Terms that should EXCLUDE a category from matching
 // These prevent misclassification when text contains misleading keywords
@@ -1486,7 +1619,7 @@ export const CATEGORY_PRIORITY = [
   'Temporary Works',              // 14 - Structural collapse
   'Working in Heat',              // 15 - Heat stress/burn risk
 
-  // === 11 SUB-SIGNIFICANT HAZARDS - Checked After Major ===
+  // === 14 SUB-SIGNIFICANT HAZARDS + CONTROLS - Checked After Major ===
   'COSHH',                        // 16 - Chemical exposure
   'Respiratory Hazard',           // 17 - Respiratory hazard (dust, silica, fumes)
   'Traffic Management',           // 18 - Site traffic
@@ -1497,7 +1630,10 @@ export const CATEGORY_PRIORITY = [
   'Environmental',                // 23 - Environmental contamination
   'Tools',                        // 24 - Tool hazards
   'Access',                       // 25 - Access/egress hazards
-  'Work Environment',             // 26 - Most generic (default fallback)
+  'Safety Supervision',           // 26 - No safety officer, lack of supervision
+  'Training and Competency',      // 27 - No training, not competent
+  'Permit and RAMS',              // 28 - No permit, RAMS missing
+  'Work Environment',             // 29 - Most generic (default fallback - LAST)
 ]
 
 // Engagement Types

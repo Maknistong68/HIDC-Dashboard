@@ -7,7 +7,8 @@ import {
   CATEGORY_PRIORITY,
   HAZARD_EXCLUSIONS,
   CONTEXT_REDIRECTS,
-  MAJOR_HAZARDS
+  MAJOR_HAZARDS,
+  checkCriticalKeywords
 } from './constants'
 import { analyzeObservation } from './contextClassifier'
 import {
@@ -548,6 +549,40 @@ const descriptionSupportsCategory = (text, category) => {
 export { descriptionSupportsCategory }
 
 /**
+ * Strip reference text from observation - only keep the MAIN observation
+ * Removes text after "Ref:", "Reference:", "NEOM-", "REF:", etc.
+ * This prevents keywords in policy quotes from affecting classification
+ */
+const stripReferenceText = (text) => {
+  if (!text) return ''
+
+  // Common reference markers
+  const refMarkers = [
+    /\bref:\s*/gi,
+    /\breference:\s*/gi,
+    /\bneom[\s-]+(phsas|hsas|nev)/gi,
+    /\bsuggested ideas?\s*:/gi,
+    /\bsuggestion:\s*/gi,
+    /\bnote:\s*/gi,
+    /\baction required:\s*/gi,
+  ]
+
+  let mainText = text.toLowerCase()
+
+  // Find the earliest reference marker and cut there
+  let earliestCut = mainText.length
+  for (const marker of refMarkers) {
+    const match = mainText.match(marker)
+    if (match && match.index < earliestCut) {
+      earliestCut = match.index
+    }
+  }
+
+  // Return only the main observation text (before references)
+  return mainText.substring(0, earliestCut).trim()
+}
+
+/**
  * Check for context redirects - terms that should redirect to a different category
  * Returns the redirect category if found, null otherwise
  */
@@ -805,19 +840,32 @@ export const categorizeHazard = (description, existingCategory = '') => {
   const catSettings = getCategorizationSettings()
   const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
 
+  // Strip reference text (after "Ref:", "Reference:", "NEOM-", etc.) - only classify MAIN observation
+  const mainText = stripReferenceText(text)
+
   // DEBUG: Check for misclassification issues
-  const isDebugTarget = text.includes('safety shoes') || text.includes('toilet') || text.includes('welfare') || text.includes('nurse') || text.includes('ambulance')
+  const isDebugTarget = mainText.includes('safety officer') || mainText.includes('scaffold') || mainText.includes('excavat') || mainText.includes('msds') || mainText.includes('chemical')
   if (isDebugTarget) {
-    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 60), existingCategory })
+    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 80), mainText: mainText?.substring(0, 80) })
   }
 
   // ============================================
-  // STEP 1: Check CONTEXT_REDIRECTS FIRST (HIGHEST PRIORITY)
-  // MOVED TO TOP: This must run before any other classification
+  // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
+  // These ALWAYS win over location/context words
+  // Checks for life-threatening hazards, chemicals, supervision issues, permits
+  // ============================================
+  const criticalCategory = checkCriticalKeywords(mainText)
+  if (criticalCategory) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 0 CRITICAL_KEYWORD hit:', criticalCategory)
+    return criticalCategory
+  }
+
+  // ============================================
+  // STEP 1: Check CONTEXT_REDIRECTS (HIGH PRIORITY)
   // Handles misleading terms like "line of fire", "fire extinguisher", etc.
   // ============================================
   if (catSettings.rules?.useSmartCorrections !== false) {
-    const redirectCategory = checkContextRedirects(text)
+    const redirectCategory = checkContextRedirects(mainText)
     if (redirectCategory) {
       if (isDebugTarget) console.log('[DEBUG] STEP 1 CONTEXT_REDIRECT hit:', redirectCategory)
       return redirectCategory // Immediate return - no further checking
