@@ -167,51 +167,203 @@ export const CONSEQUENCE_INDICATORS = [
 // ============================================================================
 // SECTION E2: ACTOR/PERSON INDICATORS (WHO was involved)
 // Nouns that represent people involved in the observation
+// Including common misspellings
 // ============================================================================
 
 export const ACTOR_INDICATORS = {
-  // Workers by role
+  // Generic workers (lower confidence - 0.6)
   workers: [
-    'worker', 'workers', 'laborer', 'laborers', 'labourer', 'labourers',
-    'employee', 'employees', 'staff', 'personnel', 'crew', 'team',
-    'person', 'persons', 'individual', 'individuals', 'man', 'men',
+    'worker', 'workers', 'workar', 'workars', 'woker', 'wokers',
+    'laborer', 'laborers', 'labourer', 'labourers', 'laborer', 'labourr',
+    'employee', 'employees', 'employe', 'employes', 'emplyee',
+    'staff', 'personnel', 'personel', 'personell',
+    'crew', 'team', 'person', 'persons', 'individual', 'individuals',
+    'man', 'men', 'helper', 'helpers', 'helpar',
   ],
 
-  // Operators and drivers
+  // Operators and drivers (higher confidence for Mobile Plant - 0.85)
   operators: [
-    'operator', 'operators', 'driver', 'drivers', 'plant operator',
-    'machine operator', 'equipment operator', 'crane operator',
-    'forklift operator', 'excavator operator', 'loader operator',
+    'operator', 'operators', 'operater', 'operaters', 'opreator', 'oprator',
+    'driver', 'drivers', 'diver', 'drivar',
+    'plant operator', 'machine operator', 'equipment operator',
+    'crane operator', 'crain operator', 'cran operator',
+    'forklift operator', 'forklift operater', 'forklift driver',
+    'excavator operator', 'excevator operator', 'excavater operator',
+    'loader operator', 'loder operator', 'wheel loader operator',
+    'backhoe operator', 'jcb operator', 'dozer operator', 'bulldozer operator',
+    'dump truck driver', 'dumptruck driver', 'tipper driver',
+    'telehandler operator', 'boom lift operator', 'scissor lift operator',
   ],
 
-  // Skilled trades
+  // Lifting specialists (highest confidence for Lifting - 0.95)
+  lifting: [
+    'rigger', 'riggers', 'rigar', 'rigars', 'rigging',
+    'signalman', 'signalmen', 'signal man', 'signal men', 'signelman', 'signalsman',
+    'signaller', 'signallers', 'signaler', 'signalers',
+    'banksman', 'banksmen', 'banks man', 'banks men', 'banksmann',
+    'slinger', 'slingers', 'slingar', 'slingman', 'slingmen', 'sling man',
+    'appointed person', 'ap', 'lifting supervisor', 'lift supervisor',
+    'crane banksman', 'crane signalman', 'lifting ap',
+  ],
+
+  // Height work specialists (highest confidence for Working at Height - 0.95)
+  height: [
+    'scaffolder', 'scaffolders', 'scaffoldar', 'scaffoldars', 'scafoldar',
+    'scaffold erector', 'scaffold erecter', 'scaffolding erector',
+    'roofer', 'roofers', 'roofar', 'roof worker',
+    'steeplejack', 'steeple jack',
+    'rope access', 'rope access technician', 'irata',
+    'abseiler', 'abseilers', 'absailer',
+  ],
+
+  // Hot work specialists (highest confidence for Hot Work - 0.95)
+  hotwork: [
+    'welder', 'welders', 'weldar', 'weldars', 'weldor',
+    'fitter', 'fitters', 'fittar', 'fittars', 'pipe fitter', 'pipefitter',
+    'fabricator', 'fabricators', 'fabricater',
+    'burner', 'burners', 'gas cutter', 'flame cutter',
+    'brazier', 'solderer', 'soldarar',
+    'grinder', 'grinders', 'grindar',
+    'boilermaker', 'boilermakers', 'boiler maker',
+  ],
+
+  // Electrical specialists (highest confidence for Energized System - 0.95)
+  electrical: [
+    'electrician', 'electricians', 'electrican', 'electricans', 'electritian',
+    'electrical technician', 'electrical tech', 'sparky', 'sparkies',
+    'linesman', 'linesmen', 'lineman', 'linemen',
+    'cable jointer', 'cable jointer', 'jointer',
+    'instrument technician', 'instrumentation tech',
+    'control technician', 'panel technician',
+  ],
+
+  // Excavation specialists (higher confidence for Breaking Ground - 0.9)
+  excavation: [
+    'excavator driver', 'excavator operator',
+    'piling operator', 'piling rig operator', 'piler',
+    'driller', 'drillers', 'drilling operator',
+    'trencher', 'trencher operator',
+    'ground worker', 'groundworker', 'ground workers',
+  ],
+
+  // Confined space specialists (higher confidence for Confined Spaces - 0.9)
+  confined: [
+    'confined space entrant', 'entrant', 'entrants',
+    'standby', 'standby man', 'standby person', 'hole watch',
+    'top man', 'topman', 'attendant', 'attendants',
+    'rescue team', 'rescue standby',
+  ],
+
+  // Other skilled trades
   trades: [
-    'welder', 'welders', 'electrician', 'electricians', 'plumber', 'plumbers',
-    'carpenter', 'carpenters', 'mason', 'masons', 'painter', 'painters',
-    'rigger', 'riggers', 'scaffolder', 'scaffolders', 'fitter', 'fitters',
-    'mechanic', 'mechanics', 'technician', 'technicians',
+    'plumber', 'plumbers', 'plumbar', 'plumbars',
+    'carpenter', 'carpenters', 'carpentar', 'carpentars', 'chippy', 'chippies',
+    'mason', 'masons', 'brick layer', 'bricklayer', 'bricklayers',
+    'painter', 'painters', 'paintar', 'paintars',
+    'mechanic', 'mechanics', 'mechanik', 'mechaniks',
+    'technician', 'technicians', 'technicion', 'technicien',
+    'tiler', 'tilers', 'tilar',
+    'plasterer', 'plasterers', 'plasterar',
+    'glazier', 'glaziers', 'glaziar',
+    'insulator', 'insulators', 'lagging man',
+    'steel fixer', 'steelfixer', 'steel fixers', 'rebar man',
   ],
 
   // Supervisors and management
   supervisors: [
-    'supervisor', 'supervisors', 'foreman', 'foremen', 'manager', 'managers',
-    'engineer', 'engineers', 'superintendent', 'charge hand', 'gang leader',
-    'team leader', 'site manager', 'project manager', 'safety officer',
+    'supervisor', 'supervisors', 'supervisar', 'supervisars', 'superviser',
+    'foreman', 'foremen', 'forman', 'foramen', 'chargehand', 'charge hand',
+    'manager', 'managers', 'managar', 'site manager', 'project manager',
+    'engineer', 'engineers', 'enginear', 'site engineer', 'safety engineer',
+    'superintendent', 'superintendant', 'super',
+    'gang leader', 'gangleader', 'team leader', 'teamleader',
+    'safety officer', 'hse officer', 'safety man', 'safety supervisor',
+    'permit holder', 'permit issuer', 'area authority',
   ],
 
   // Contractors
   contractors: [
-    'contractor', 'contractors', 'subcontractor', 'subcontractors',
-    'sub-contractor', 'sub-contractors', 'vendor', 'vendors',
-    'supplier', 'suppliers', 'third party', 'third-party',
+    'contractor', 'contractors', 'contractar', 'contractars', 'contracter',
+    'subcontractor', 'subcontractors', 'sub-contractor', 'sub contractor',
+    'vendor', 'vendors', 'vendar',
+    'supplier', 'suppliers', 'suppliar',
+    'third party', 'third-party', '3rd party',
   ],
 
   // Visitors and others
   others: [
-    'visitor', 'visitors', 'guest', 'guests', 'inspector', 'inspectors',
-    'auditor', 'auditors', 'client', 'clients', 'pedestrian', 'pedestrians',
-    'bystander', 'bystanders', 'passer-by', 'passerby',
+    'visitor', 'visitors', 'visiter', 'visiters',
+    'guest', 'guests',
+    'inspector', 'inspectors', 'inspecter', 'inspecters',
+    'auditor', 'auditors', 'auditar',
+    'client', 'clients',
+    'pedestrian', 'pedestrians', 'pedestrean',
+    'bystander', 'bystanders',
+    'passer-by', 'passerby', 'passer by',
+    'trainee', 'trainees', 'apprentice', 'apprentices',
   ],
+}
+
+// Actor to hazard confidence mapping
+// Specialized roles get higher confidence for their related hazards
+export const ACTOR_HAZARD_CONFIDENCE = {
+  // Lifting roles → Lifting hazard (highest)
+  'rigger': { hazard: 'Lifting', confidence: 0.95 },
+  'riggers': { hazard: 'Lifting', confidence: 0.95 },
+  'signalman': { hazard: 'Lifting', confidence: 0.95 },
+  'signalmen': { hazard: 'Lifting', confidence: 0.95 },
+  'signal man': { hazard: 'Lifting', confidence: 0.95 },
+  'banksman': { hazard: 'Lifting', confidence: 0.95 },
+  'banksmen': { hazard: 'Lifting', confidence: 0.95 },
+  'slinger': { hazard: 'Lifting', confidence: 0.95 },
+  'slingers': { hazard: 'Lifting', confidence: 0.95 },
+  'slingman': { hazard: 'Lifting', confidence: 0.95 },
+  'appointed person': { hazard: 'Lifting', confidence: 0.95 },
+  'ap': { hazard: 'Lifting', confidence: 0.9 },
+  'crane operator': { hazard: 'Lifting', confidence: 0.9 },
+
+  // Height roles → Working at Height (highest)
+  'scaffolder': { hazard: 'Working at Height', confidence: 0.95 },
+  'scaffolders': { hazard: 'Working at Height', confidence: 0.95 },
+  'roofer': { hazard: 'Working at Height', confidence: 0.95 },
+  'roofers': { hazard: 'Working at Height', confidence: 0.95 },
+  'rope access': { hazard: 'Working at Height', confidence: 0.95 },
+
+  // Hot work roles → Hot Work (highest)
+  'welder': { hazard: 'Hot Work', confidence: 0.95 },
+  'welders': { hazard: 'Hot Work', confidence: 0.95 },
+  'fitter': { hazard: 'Hot Work', confidence: 0.85 },
+  'fitters': { hazard: 'Hot Work', confidence: 0.85 },
+  'grinder': { hazard: 'Hot Work', confidence: 0.9 },
+  'grinders': { hazard: 'Hot Work', confidence: 0.9 },
+
+  // Electrical roles → Energized System (highest)
+  'electrician': { hazard: 'Energized System', confidence: 0.95 },
+  'electricians': { hazard: 'Energized System', confidence: 0.95 },
+  'linesman': { hazard: 'Energized System', confidence: 0.95 },
+  'lineman': { hazard: 'Energized System', confidence: 0.95 },
+
+  // Mobile plant roles → Mobile Plant & Equipment
+  'forklift operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
+  'excavator operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
+  'crane operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.85 },
+  'loader operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
+  'dump truck driver': { hazard: 'Mobile Plant & Equipment', confidence: 0.9 },
+  'operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.7 },
+  'driver': { hazard: 'Driving', confidence: 0.7 },
+
+  // Confined space roles
+  'confined space entrant': { hazard: 'Confined Spaces', confidence: 0.95 },
+  'entrant': { hazard: 'Confined Spaces', confidence: 0.85 },
+  'standby': { hazard: 'Confined Spaces', confidence: 0.85 },
+  'hole watch': { hazard: 'Confined Spaces', confidence: 0.9 },
+
+  // Generic worker - lower confidence (context needed)
+  'worker': { hazard: null, confidence: 0.5 },
+  'workers': { hazard: null, confidence: 0.5 },
+  'laborer': { hazard: null, confidence: 0.5 },
+  'employee': { hazard: null, confidence: 0.5 },
+  'person': { hazard: null, confidence: 0.4 },
 }
 
 // Flatten all actors into single array for quick lookup
@@ -220,43 +372,234 @@ export const ALL_ACTORS = Object.values(ACTOR_INDICATORS).flat()
 // ============================================================================
 // SECTION E3: OBJECT/NOUN INDICATORS (WHAT was involved)
 // Physical objects/equipment involved in the observation
+// Including misspellings and hazard associations
 // ============================================================================
 
 export const OBJECT_INDICATORS = {
-  // Equipment and machinery
+  // Equipment and machinery (Mobile Plant & Equipment)
   equipment: [
-    'equipment', 'machinery', 'machine', 'plant', 'tool', 'tools',
-    'vehicle', 'crane', 'forklift', 'excavator', 'loader', 'truck',
-    'scaffold', 'scaffolding', 'ladder', 'platform', 'lift',
+    'equipment', 'equipement', 'equpment', 'equipments',
+    'machinery', 'machinry', 'machine', 'machines', 'machinary',
+    'plant', 'plants',
+    'vehicle', 'vehicles', 'vehical', 'vehicals',
+    'crane', 'cranes', 'crain', 'crains', 'tower crane', 'mobile crane',
+    'forklift', 'forklifts', 'fork lift', 'fork lifts', 'foklift',
+    'excavator', 'excavators', 'excevator', 'excevators', 'excavater',
+    'loader', 'loaders', 'loder', 'loders', 'wheel loader', 'front loader',
+    'backhoe', 'backhoes', 'back hoe', 'jcb',
+    'truck', 'trucks', 'lorry', 'lorries', 'tipper', 'tippers', 'dump truck',
+    'bulldozer', 'bulldozers', 'dozer', 'dozers',
+    'compactor', 'compactors', 'roller', 'rollers',
+    'telehandler', 'telehandlers', 'tele handler', 'manitou',
+    'boom lift', 'boomlift', 'cherry picker', 'mewp', 'ewp',
+    'scissor lift', 'scissorlift', 'scissor lifts',
+    'pallet jack', 'pallet truck', 'hand pallet',
   ],
 
-  // Materials
+  // Lifting equipment
+  lifting: [
+    'crane', 'cranes', 'crain', 'tower crane', 'mobile crane', 'gantry crane',
+    'hoist', 'hoists', 'chain hoist', 'electric hoist',
+    'sling', 'slings', 'web sling', 'chain sling', 'wire sling',
+    'shackle', 'shackles', 'shakle', 'shakles',
+    'hook', 'hooks', 'crane hook', 'lifting hook',
+    'spreader beam', 'spreader bar', 'lifting beam',
+    'load', 'loads', 'suspended load', 'lifted load',
+    'rigging', 'rigging gear', 'lifting gear', 'lifting equipment',
+    'tagline', 'tag line', 'tag lines', 'guide rope',
+  ],
+
+  // Height work equipment
+  height: [
+    'scaffold', 'scaffolds', 'scaffolding', 'scaffoldings', 'scafold', 'scafolding',
+    'ladder', 'ladders', 'ladar', 'ladars', 'step ladder', 'extension ladder',
+    'platform', 'platforms', 'work platform', 'working platform',
+    'guardrail', 'guardrails', 'guard rail', 'guard rails', 'gaurd rail',
+    'handrail', 'handrails', 'hand rail', 'hand rails',
+    'toe board', 'toeboard', 'toe boards', 'toeboards', 'kickboard',
+    'safety net', 'safety nets', 'catch net',
+    'harness', 'harnesses', 'harnes', 'full body harness', 'safety harness',
+    'lanyard', 'lanyards', 'lanard', 'shock absorber',
+    'anchor', 'anchors', 'anchor point', 'anchorage',
+    'lifeline', 'lifelines', 'life line', 'static line', 'horizontal lifeline',
+    'roof', 'roofs', 'rooftop', 'roof top',
+    'edge', 'edges', 'leading edge', 'unprotected edge',
+    'opening', 'openings', 'floor opening', 'wall opening',
+  ],
+
+  // Hot work equipment
+  hotwork: [
+    'welding machine', 'welder', 'welding', 'welding set',
+    'grinder', 'grinders', 'angle grinder', 'grinding machine',
+    'cutting torch', 'oxy torch', 'gas torch', 'acetylene torch',
+    'cylinder', 'cylinders', 'gas cylinder', 'oxygen cylinder', 'acetylene cylinder',
+    'flashback arrestor', 'flash back arrestor', 'flashback',
+    'regulator', 'regulators', 'gas regulator',
+    'welding shield', 'welding mask', 'face shield',
+    'fire blanket', 'fire blankets', 'welding blanket',
+    'spark', 'sparks', 'hot work', 'hotwork',
+  ],
+
+  // Electrical equipment
+  electrical: [
+    'panel', 'panels', 'electrical panel', 'distribution panel', 'db',
+    'cable', 'cables', 'wire', 'wires', 'electrical cable', 'power cable',
+    'extension', 'extensions', 'extension cord', 'extension lead',
+    'socket', 'sockets', 'outlet', 'outlets', 'power point',
+    'switch', 'switches', 'isolator', 'isolators', 'breaker', 'breakers',
+    'transformer', 'transformers', 'generator', 'generators', 'genset',
+    'motor', 'motors', 'electric motor',
+    'light', 'lights', 'lighting', 'lamp', 'lamps', 'flood light',
+    'live', 'live wire', 'live cable', 'energized', 'energised',
+  ],
+
+  // Excavation/ground work
+  excavation: [
+    'trench', 'trenches', 'tranch', 'tranches',
+    'excavation', 'excavations', 'excevation', 'dig', 'digs',
+    'pit', 'pits', 'hole', 'holes',
+    'shoring', 'shorings', 'trench box', 'trench shield',
+    'spoil', 'spoils', 'spoil pile', 'excavated material',
+    'edge protection', 'trench edge', 'excavation edge',
+    'benching', 'battering', 'slope', 'slopes',
+  ],
+
+  // Materials (Physical Hazard related)
   materials: [
-    'material', 'materials', 'load', 'cargo', 'object', 'objects',
-    'rebar', 'steel', 'concrete', 'timber', 'wood', 'pipe', 'pipes',
-    'cable', 'cables', 'wire', 'wires', 'panel', 'sheet',
+    'material', 'materials', 'materiel', 'materiels',
+    'load', 'loads', 'cargo', 'cargos',
+    'object', 'objects', 'item', 'items',
+    'rebar', 'rebars', 're-bar', 'reinforcement', 'reinforcing bar', 'steel bar',
+    'steel', 'steels', 'structural steel', 'steel beam',
+    'concrete', 'concreet', 'cement', 'ciment',
+    'timber', 'timbers', 'timbar', 'wood', 'woods', 'wooden', 'plywood',
+    'pipe', 'pipes', 'piping', 'pipeline',
+    'sheet', 'sheets', 'metal sheet', 'sheet metal',
+    'nail', 'nails', 'screw', 'screws', 'bolt', 'bolts',
+    'glass', 'glazing',
+    'debris', 'rubble', 'waste',
   ],
 
   // Structures
   structures: [
-    'structure', 'building', 'wall', 'floor', 'roof', 'ceiling',
-    'foundation', 'column', 'beam', 'slab', 'formwork', 'shoring',
-    'trench', 'excavation', 'pit', 'hole', 'opening',
+    'structure', 'structures', 'structur',
+    'building', 'buildings', 'bulding', 'buldings',
+    'wall', 'walls', 'concrete wall', 'block wall',
+    'floor', 'floors', 'slab', 'slabs', 'concrete slab',
+    'roof', 'roofs', 'roofing',
+    'ceiling', 'ceilings',
+    'foundation', 'foundations', 'footing', 'footings',
+    'column', 'columns', 'collum', 'collums', 'pillar', 'pillars',
+    'beam', 'beams', 'girder', 'girders',
+    'formwork', 'formworks', 'form work', 'shuttering',
+    'falsework', 'false work',
+    'temporary structure', 'temp structure',
   ],
 
   // Safety items
   safety: [
-    'barricade', 'barrier', 'guardrail', 'handrail', 'sign', 'signage',
-    'ppe', 'helmet', 'harness', 'gloves', 'vest', 'boots',
-    'fire extinguisher', 'first aid', 'emergency',
+    'barricade', 'barricades', 'baricade', 'baricades', 'barricad',
+    'barrier', 'barriers', 'barier', 'bariers',
+    'fence', 'fences', 'fencing', 'hoarding',
+    'cone', 'cones', 'traffic cone', 'safety cone',
+    'sign', 'signs', 'signage', 'signages', 'warning sign', 'safety sign',
+    'ppe', 'helmet', 'helmets', 'hard hat', 'hard hats', 'hardhat',
+    'gloves', 'glove', 'safety gloves',
+    'vest', 'vests', 'hi-vis', 'hi vis', 'high vis', 'high visibility',
+    'boots', 'boot', 'safety boots', 'safety shoes',
+    'goggles', 'goggle', 'safety glasses', 'eye protection',
+    'ear plug', 'ear plugs', 'earplugs', 'ear muff', 'ear muffs',
+    'respirator', 'respirators', 'mask', 'masks', 'dust mask', 'n95',
+    'fire extinguisher', 'fire extinguishers', 'extinguisher', 'extingusher',
+    'first aid', 'first aid kit', 'first aid box', 'firstaid',
   ],
 
-  // Facilities
-  facilities: [
-    'facility', 'facilities', 'toilet', 'restroom', 'welfare',
-    'canteen', 'office', 'storage', 'warehouse', 'workshop',
-    'camp', 'accommodation', 'dormitory',
+  // Confined space items
+  confined: [
+    'manhole', 'manholes', 'man hole',
+    'tank', 'tanks', 'storage tank', 'water tank',
+    'vessel', 'vessels', 'pressure vessel',
+    'chamber', 'chambers', 'sump', 'sumps',
+    'culvert', 'culverts',
+    'duct', 'ducts', 'air duct',
+    'sewer', 'sewers', 'sewerage',
+    'gas detector', 'gas monitor', 'four gas', '4 gas',
+    'ventilation', 'ventilator', 'blower', 'fan',
+    'tripod', 'tripods', 'rescue tripod', 'davit',
   ],
+
+  // Facilities (Worker Welfare related)
+  facilities: [
+    'facility', 'facilities', 'facilty', 'facillity',
+    'toilet', 'toilets', 'tolet', 'tolets', 'restroom', 'washroom', 'latrine',
+    'welfare', 'welfare facility', 'welfare facilities',
+    'canteen', 'canteens', 'mess', 'mess hall', 'dining',
+    'office', 'offices', 'site office',
+    'storage', 'storages', 'store', 'stores', 'warehouse',
+    'workshop', 'workshops', 'work shop',
+    'camp', 'camps', 'labor camp', 'labour camp', 'worker camp',
+    'accommodation', 'accommodations', 'accomodation', 'dorm', 'dormitory',
+    'drinking water', 'potable water', 'water cooler', 'water dispenser',
+    'rest area', 'rest shelter', 'shade', 'shade area',
+    'prayer room', 'changing room', 'locker room',
+  ],
+}
+
+// Object to hazard confidence mapping
+export const OBJECT_HAZARD_CONFIDENCE = {
+  // Lifting equipment → Lifting
+  'crane': { hazard: 'Lifting', confidence: 0.9 },
+  'hoist': { hazard: 'Lifting', confidence: 0.9 },
+  'sling': { hazard: 'Lifting', confidence: 0.95 },
+  'shackle': { hazard: 'Lifting', confidence: 0.9 },
+  'rigging': { hazard: 'Lifting', confidence: 0.95 },
+  'suspended load': { hazard: 'Lifting', confidence: 0.95 },
+
+  // Height equipment → Working at Height
+  'scaffold': { hazard: 'Working at Height', confidence: 0.9 },
+  'scaffolding': { hazard: 'Working at Height', confidence: 0.9 },
+  'ladder': { hazard: 'Working at Height', confidence: 0.85 },
+  'harness': { hazard: 'Working at Height', confidence: 0.95 },
+  'lanyard': { hazard: 'Working at Height', confidence: 0.95 },
+  'lifeline': { hazard: 'Working at Height', confidence: 0.95 },
+  'guardrail': { hazard: 'Working at Height', confidence: 0.85 },
+
+  // Electrical → Energized System
+  'electrical panel': { hazard: 'Energized System', confidence: 0.95 },
+  'live wire': { hazard: 'Energized System', confidence: 0.95 },
+  'energized': { hazard: 'Energized System', confidence: 0.95 },
+  'generator': { hazard: 'Energized System', confidence: 0.8 },
+
+  // Hot work equipment → Hot Work
+  'welding': { hazard: 'Hot Work', confidence: 0.95 },
+  'grinder': { hazard: 'Hot Work', confidence: 0.9 },
+  'cutting torch': { hazard: 'Hot Work', confidence: 0.95 },
+  'gas cylinder': { hazard: 'Hot Work', confidence: 0.85 },
+
+  // Excavation → Breaking Ground
+  'trench': { hazard: 'Breaking Ground & Excavation', confidence: 0.95 },
+  'excavation': { hazard: 'Breaking Ground & Excavation', confidence: 0.95 },
+  'shoring': { hazard: 'Breaking Ground & Excavation', confidence: 0.95 },
+
+  // Confined space → Confined Spaces
+  'manhole': { hazard: 'Confined Spaces', confidence: 0.9 },
+  'tank': { hazard: 'Confined Spaces', confidence: 0.7 },
+  'gas detector': { hazard: 'Confined Spaces', confidence: 0.9 },
+
+  // Sharp objects → Physical Hazard
+  'rebar': { hazard: 'Physical Hazard', confidence: 0.85 },
+  'nail': { hazard: 'Physical Hazard', confidence: 0.8 },
+  'sharp': { hazard: 'Physical Hazard', confidence: 0.85 },
+
+  // Mobile plant
+  'forklift': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
+  'excavator': { hazard: 'Mobile Plant & Equipment', confidence: 0.9 },
+
+  // Welfare
+  'toilet': { hazard: 'Worker Welfare', confidence: 0.9 },
+  'welfare': { hazard: 'Worker Welfare', confidence: 0.95 },
+  'drinking water': { hazard: 'Worker Welfare', confidence: 0.95 },
+  'canteen': { hazard: 'Worker Welfare', confidence: 0.9 },
 }
 
 // Flatten all objects into single array
@@ -330,18 +673,36 @@ export const isLocationPreposition = (word) => {
 
 /**
  * Extract actor (person/role) from text
- * Returns the actor and their category
+ * Returns the actor, their category, and hazard confidence boost
  */
 export const extractActor = (text) => {
   if (!text) return null
   const lowerText = text.toLowerCase()
 
+  // Check longer phrases first (e.g., "crane operator" before "operator")
+  const allActors = []
   for (const [type, actors] of Object.entries(ACTOR_INDICATORS)) {
     for (const actor of actors) {
-      // Match whole word only
-      const regex = new RegExp(`\\b${actor}\\b`, 'i')
-      if (regex.test(lowerText)) {
-        return { actor, type, position: lowerText.indexOf(actor) }
+      allActors.push({ actor, type })
+    }
+  }
+  // Sort by length descending to match longer phrases first
+  allActors.sort((a, b) => b.actor.length - a.actor.length)
+
+  for (const { actor, type } of allActors) {
+    // Escape special regex characters
+    const escapedActor = actor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`\\b${escapedActor}\\b`, 'i')
+    if (regex.test(lowerText)) {
+      // Get hazard confidence from mapping
+      const hazardInfo = ACTOR_HAZARD_CONFIDENCE[actor.toLowerCase()] || { hazard: null, confidence: 0.6 }
+      return {
+        actor,
+        type,
+        position: lowerText.indexOf(actor.toLowerCase()),
+        suggestedHazard: hazardInfo.hazard,
+        hazardConfidence: hazardInfo.confidence,
+        isSpecialist: hazardInfo.confidence >= 0.85, // High-confidence specialist role
       }
     }
   }
@@ -350,22 +711,253 @@ export const extractActor = (text) => {
 
 /**
  * Extract object (equipment/material) from text
- * Returns the object and its category
+ * Returns the object, its category, and hazard confidence boost
  */
 export const extractObject = (text) => {
   if (!text) return null
   const lowerText = text.toLowerCase()
 
+  // Check longer phrases first
+  const allObjects = []
   for (const [type, objects] of Object.entries(OBJECT_INDICATORS)) {
     for (const obj of objects) {
-      // Match whole word only
-      const regex = new RegExp(`\\b${obj}\\b`, 'i')
-      if (regex.test(lowerText)) {
-        return { object: obj, type, position: lowerText.indexOf(obj) }
+      allObjects.push({ object: obj, type })
+    }
+  }
+  // Sort by length descending
+  allObjects.sort((a, b) => b.object.length - a.object.length)
+
+  for (const { object: obj, type } of allObjects) {
+    const escapedObj = obj.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`\\b${escapedObj}\\b`, 'i')
+    if (regex.test(lowerText)) {
+      // Get hazard confidence from mapping
+      const hazardInfo = OBJECT_HAZARD_CONFIDENCE[obj.toLowerCase()] || { hazard: null, confidence: 0.7 }
+      return {
+        object: obj,
+        type,
+        position: lowerText.indexOf(obj.toLowerCase()),
+        suggestedHazard: hazardInfo.hazard,
+        hazardConfidence: hazardInfo.confidence,
       }
     }
   }
   return null
+}
+
+// ============================================================================
+// SECTION G3: LOCATION EXTRACTION WITH PREPOSITIONS
+// ============================================================================
+
+/**
+ * Location prepositions and their semantic meaning
+ */
+export const LOCATION_PREPOSITIONS = {
+  // Position prepositions
+  'at': { type: 'position', weight: 0.4 },
+  'on': { type: 'surface', weight: 0.4 },
+  'in': { type: 'inside', weight: 0.4 },
+  'inside': { type: 'inside', weight: 0.4 },
+  'within': { type: 'inside', weight: 0.4 },
+  'near': { type: 'proximity', weight: 0.35 },
+  'nearby': { type: 'proximity', weight: 0.35 },
+  'close to': { type: 'proximity', weight: 0.35 },
+  'next to': { type: 'proximity', weight: 0.35 },
+  'beside': { type: 'proximity', weight: 0.35 },
+  'adjacent to': { type: 'proximity', weight: 0.35 },
+  'around': { type: 'proximity', weight: 0.3 },
+
+  // Vertical position (important for height hazards)
+  'above': { type: 'above', weight: 0.5, heightRelated: true },
+  'over': { type: 'above', weight: 0.5, heightRelated: true },
+  'below': { type: 'below', weight: 0.5, heightRelated: true },
+  'under': { type: 'below', weight: 0.4, heightRelated: true },
+  'beneath': { type: 'below', weight: 0.4, heightRelated: true },
+  'underneath': { type: 'below', weight: 0.4, heightRelated: true },
+
+  // Relative position
+  'between': { type: 'between', weight: 0.45 },
+  'among': { type: 'among', weight: 0.4 },
+  'behind': { type: 'behind', weight: 0.35 },
+  'in front of': { type: 'front', weight: 0.35 },
+}
+
+/**
+ * Extract location from text with preposition analysis
+ */
+export const extractLocation = (text) => {
+  if (!text) return null
+  const lowerText = text.toLowerCase()
+
+  // Sort prepositions by length (longest first) to match "close to" before "to"
+  const prepEntries = Object.entries(LOCATION_PREPOSITIONS).sort((a, b) => b[0].length - a[0].length)
+
+  for (const [prep, info] of prepEntries) {
+    const prepRegex = new RegExp(`\\b${prep}\\s+(?:the\\s+)?(.+?)(?:\\s*$|\\s+(?:due|because|caused|resulting|without|with|during))`, 'i')
+    const match = lowerText.match(prepRegex)
+    if (match) {
+      const locationText = match[1].trim()
+      // Don't return very short locations or stop words
+      if (locationText.length > 2 && !isStopWord(locationText)) {
+        return {
+          location: locationText,
+          preposition: prep,
+          type: info.type,
+          weight: info.weight,
+          heightRelated: info.heightRelated || false,
+          fullPhrase: `${prep} ${locationText}`,
+        }
+      }
+    }
+  }
+  return null
+}
+
+// ============================================================================
+// SECTION G4: AMBIGUITY DETECTION
+// Words that could mean different things depending on context
+// ============================================================================
+
+export const AMBIGUOUS_WORDS = {
+  // "Fall" - could be Working at Height or Slip and Trip
+  'fall': {
+    contexts: [
+      { pattern: /fall\s+from|fell\s+from|fall\s+off|fell\s+off|falling\s+from/, hazard: 'Working at Height', confidence: 0.95 },
+      { pattern: /fall\s+into|fell\s+into/, hazard: 'Confined Spaces', confidence: 0.7 },
+      { pattern: /slip.*fall|trip.*fall|fall.*slip|fall.*trip/, hazard: 'Slip and Trip', confidence: 0.85 },
+      { pattern: /same\s+level|ground\s+level|floor/, hazard: 'Slip and Trip', confidence: 0.8 },
+    ],
+    default: { hazard: 'Working at Height', confidence: 0.7 }
+  },
+
+  // "Fire" - could be actual fire hazard or fire-fighting equipment
+  'fire': {
+    contexts: [
+      { pattern: /fire\s+extinguisher|fire\s+ext|extinguisher/, hazard: 'Fire', confidence: 0.8 },
+      { pattern: /fire\s+drill|fire\s+alarm|fire\s+exit|fire\s+escape/, hazard: 'Fire', confidence: 0.75 },
+      { pattern: /on\s+fire|caught\s+fire|fire\s+broke|fire\s+started/, hazard: 'Fire', confidence: 0.95 },
+      { pattern: /hot\s+work|welding|cutting|grinding/, hazard: 'Hot Work', confidence: 0.85 },
+    ],
+    default: { hazard: 'Fire', confidence: 0.7 }
+  },
+
+  // "Water" - could be Working on/Near Water or Worker Welfare
+  'water': {
+    contexts: [
+      { pattern: /drinking\s+water|potable\s+water|water\s+cooler|water\s+dispenser/, hazard: 'Worker Welfare', confidence: 0.95 },
+      { pattern: /water\s+tank|water\s+storage/, hazard: 'Worker Welfare', confidence: 0.8 },
+      { pattern: /near\s+water|over\s+water|on\s+water|in\s+water|into\s+water/, hazard: 'Working on or Near Water', confidence: 0.9 },
+      { pattern: /drown|drowning|life\s+jacket|life\s+vest/, hazard: 'Working on or Near Water', confidence: 0.95 },
+      { pattern: /water\s+spill|wet\s+floor|water\s+on\s+floor/, hazard: 'Slip and Trip', confidence: 0.85 },
+    ],
+    default: { hazard: 'Working on or Near Water', confidence: 0.6 }
+  },
+
+  // "Dust" - usually Respiratory Hazard
+  'dust': {
+    contexts: [
+      { pattern: /silica|crystalline/, hazard: 'Respiratory Hazard', confidence: 0.95 },
+      { pattern: /dust\s+control|dust\s+suppression|water\s+spray/, hazard: 'Respiratory Hazard', confidence: 0.9 },
+      { pattern: /inhal|breath|lung|respiratory/, hazard: 'Respiratory Hazard', confidence: 0.95 },
+    ],
+    default: { hazard: 'Respiratory Hazard', confidence: 0.85 }
+  },
+
+  // "Pit" - could be Confined Space or Breaking Ground
+  'pit': {
+    contexts: [
+      { pattern: /confined|entry|enter|entrant/, hazard: 'Confined Spaces', confidence: 0.9 },
+      { pattern: /open\s+pit|pit\s+open|unprotected\s+pit/, hazard: 'Breaking Ground & Excavation', confidence: 0.9 },
+      { pattern: /inspection\s+pit|service\s+pit/, hazard: 'Confined Spaces', confidence: 0.8 },
+      { pattern: /fall.*pit|pit.*fall/, hazard: 'Breaking Ground & Excavation', confidence: 0.85 },
+    ],
+    default: { hazard: 'Breaking Ground & Excavation', confidence: 0.7 }
+  },
+
+  // "Tank" - could be Confined Space or storage
+  'tank': {
+    contexts: [
+      { pattern: /confined|entry|enter|entrant|inside\s+tank/, hazard: 'Confined Spaces', confidence: 0.95 },
+      { pattern: /water\s+tank|storage\s+tank|fuel\s+tank/, hazard: 'Work Environment', confidence: 0.6 },
+      { pattern: /cleaning.*tank|tank.*cleaning/, hazard: 'Confined Spaces', confidence: 0.9 },
+    ],
+    default: { hazard: 'Confined Spaces', confidence: 0.7 }
+  },
+
+  // "Heat" - could be Working in Heat or Hot Work
+  'heat': {
+    contexts: [
+      { pattern: /hot\s+work|welding|cutting|grinding|burning/, hazard: 'Hot Work', confidence: 0.9 },
+      { pattern: /heat\s+stress|heat\s+stroke|working\s+in\s+heat|hot\s+weather/, hazard: 'Working in Heat', confidence: 0.95 },
+      { pattern: /heat\s+exposure|high\s+temperature|extreme\s+heat/, hazard: 'Working in Heat', confidence: 0.9 },
+    ],
+    default: { hazard: 'Working in Heat', confidence: 0.7 }
+  },
+
+  // "Crane" - could be Lifting or Mobile Plant
+  'crane': {
+    contexts: [
+      { pattern: /lift|lifting|hoist|sling|rigging|load/, hazard: 'Lifting', confidence: 0.9 },
+      { pattern: /crane\s+operator|operating\s+crane|crane\s+operation/, hazard: 'Mobile Plant & Equipment', confidence: 0.85 },
+      { pattern: /struck|collision|swing/, hazard: 'Mobile Plant & Equipment', confidence: 0.85 },
+    ],
+    default: { hazard: 'Lifting', confidence: 0.75 }
+  },
+
+  // "Scaffold" - could be Working at Height or Temporary Works
+  'scaffold': {
+    contexts: [
+      { pattern: /fall|fell|height|working\s+on|access/, hazard: 'Working at Height', confidence: 0.9 },
+      { pattern: /erect|dismantle|install|modify|alter/, hazard: 'Temporary Works', confidence: 0.85 },
+      { pattern: /collapse|unstable|unsafe/, hazard: 'Temporary Works', confidence: 0.9 },
+      { pattern: /tag|inspection|green\s+tag|red\s+tag/, hazard: 'Temporary Works', confidence: 0.8 },
+    ],
+    default: { hazard: 'Working at Height', confidence: 0.8 }
+  },
+
+  // "Excavation" - usually Breaking Ground, but could be others
+  'excavation': {
+    contexts: [
+      { pattern: /collapse|cave|caving/, hazard: 'Breaking Ground & Excavation', confidence: 0.95 },
+      { pattern: /edge|fall|fell/, hazard: 'Breaking Ground & Excavation', confidence: 0.9 },
+      { pattern: /confined|entry|enter/, hazard: 'Confined Spaces', confidence: 0.8 },
+      { pattern: /shoring|support|protection/, hazard: 'Breaking Ground & Excavation', confidence: 0.95 },
+    ],
+    default: { hazard: 'Breaking Ground & Excavation', confidence: 0.9 }
+  },
+}
+
+/**
+ * Resolve ambiguous word based on context
+ */
+export const resolveAmbiguity = (text, word) => {
+  if (!text || !word) return null
+  const lowerText = text.toLowerCase()
+  const ambiguityInfo = AMBIGUOUS_WORDS[word.toLowerCase()]
+
+  if (!ambiguityInfo) return null
+
+  // Check each context pattern
+  for (const context of ambiguityInfo.contexts) {
+    if (context.pattern.test(lowerText)) {
+      return {
+        word,
+        hazard: context.hazard,
+        confidence: context.confidence,
+        resolved: true,
+        matchedPattern: context.pattern.toString(),
+      }
+    }
+  }
+
+  // Return default if no specific context matched
+  return {
+    word,
+    hazard: ambiguityInfo.default.hazard,
+    confidence: ambiguityInfo.default.confidence,
+    resolved: false,
+    reason: 'Using default - no specific context found',
+  }
 }
 
 /**
@@ -440,14 +1032,22 @@ export const parseSentence = (text) => {
     keywords: [],
     mainSubject: null,      // The primary problem/hazard
     location: null,         // Where it occurred
+    locationInfo: null,     // Detailed location info (preposition, type)
     cause: null,            // Root cause (if identified)
     consequence: null,      // Outcome (if identified)
     deviation: null,        // What went wrong
     actor: null,            // WHO was involved (person/role)
     actorType: null,        // Category of actor (worker, operator, supervisor, etc.)
+    actorIsSpecialist: false, // Is the actor a specialist role?
+    actorSuggestedHazard: null, // Hazard suggested by actor role
+    actorHazardConfidence: 0, // Confidence from actor role
     object: null,           // WHAT was involved (equipment/material)
     objectType: null,       // Category of object
+    objectSuggestedHazard: null, // Hazard suggested by object
+    objectHazardConfidence: 0, // Confidence from object
     action: null,           // WHAT happened (verb/action)
+    actionType: null,       // Type of action (incident, condition, work, observation)
+    ambiguities: [],        // Ambiguous words and their resolutions
     confidence: 0,          // Overall parsing confidence
     pattern: null,          // Which pattern matched
   }
@@ -457,7 +1057,19 @@ export const parseSentence = (text) => {
   if (actorInfo) {
     result.actor = actorInfo.actor
     result.actorType = actorInfo.type
-    result.keywords.push({ text: actorInfo.actor, role: 'ACTOR', weight: 0.6 })
+    result.actorIsSpecialist = actorInfo.isSpecialist || false
+    result.actorSuggestedHazard = actorInfo.suggestedHazard
+    result.actorHazardConfidence = actorInfo.hazardConfidence || 0.6
+
+    // Specialist roles get higher keyword weight
+    const actorWeight = actorInfo.isSpecialist ? 0.85 : 0.6
+    result.keywords.push({
+      text: actorInfo.actor,
+      role: 'ACTOR',
+      weight: actorWeight,
+      suggestedHazard: actorInfo.suggestedHazard,
+      isSpecialist: actorInfo.isSpecialist
+    })
   }
 
   // Step 0b: Extract object (WHAT) - physical item involved
@@ -465,7 +1077,15 @@ export const parseSentence = (text) => {
   if (objectInfo) {
     result.object = objectInfo.object
     result.objectType = objectInfo.type
-    result.keywords.push({ text: objectInfo.object, role: 'OBJECT', weight: 0.7 })
+    result.objectSuggestedHazard = objectInfo.suggestedHazard
+    result.objectHazardConfidence = objectInfo.hazardConfidence || 0.7
+
+    result.keywords.push({
+      text: objectInfo.object,
+      role: 'OBJECT',
+      weight: objectInfo.hazardConfidence || 0.7,
+      suggestedHazard: objectInfo.suggestedHazard
+    })
   }
 
   // Step 0c: Extract action (WHAT HAPPENED) - verb/action
@@ -474,6 +1094,26 @@ export const parseSentence = (text) => {
     result.action = actionInfo.action
     result.actionType = actionInfo.type
     result.keywords.push({ text: actionInfo.action, role: 'ACTION', weight: 0.5 })
+  }
+
+  // Step 0d: Extract location with preposition analysis
+  const locationInfo = extractLocation(normalizedText)
+  if (locationInfo) {
+    result.locationInfo = locationInfo
+    // Don't overwrite if already set by pattern matching
+    if (!result.location) {
+      result.location = locationInfo.location
+    }
+  }
+
+  // Step 0e: Check for ambiguous words and resolve them
+  for (const ambiguousWord of Object.keys(AMBIGUOUS_WORDS)) {
+    if (normalizedText.includes(ambiguousWord)) {
+      const resolution = resolveAmbiguity(normalizedText, ambiguousWord)
+      if (resolution) {
+        result.ambiguities.push(resolution)
+      }
+    }
   }
 
   // Step 1: Try to match sentence patterns
