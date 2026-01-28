@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, Sparkles, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, Sparkles, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
+import { parseSentence, filterNoiseWords } from '../../utils/sentenceParser'
 import useResizable from '../../hooks/useResizable.jsx'
 import ExportConfirmDialog from './ExportConfirmDialog'
 
@@ -857,6 +858,9 @@ const RecordDetailsModal = ({ record, onClose }) => {
             {/* Context Analysis Section - Classification Reasoning */}
             <ContextAnalysisSection record={record} />
 
+            {/* Parsing Analysis Section - WHO/WHAT/WHERE breakdown */}
+            <ParsingAnalysisSection record={record} />
+
             {/* Reference ID with Copy Button */}
             {record.externalId && (
               <div className="pt-4 border-t border-surface-200/50">
@@ -1113,6 +1117,199 @@ const ContextAnalysisSection = ({ record }) => {
               />
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Parsing Analysis Section - Shows sentence parsing breakdown
+ * WHO/WHAT/WHERE/ISSUE + main keyword extraction with copy functionality
+ */
+const ParsingAnalysisSection = ({ record }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+  const [copiedField, setCopiedField] = React.useState(null)
+
+  // Parse the description on-the-fly
+  const parsing = React.useMemo(() => {
+    if (!record?.description) return null
+    try {
+      return parseSentence(record.description)
+    } catch {
+      return null
+    }
+  }, [record?.description])
+
+  if (!parsing) return null
+
+  const handleCopy = async (text, field) => {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const handleCopyAll = async () => {
+    const summary = parsing.summary || {}
+    const lines = [
+      `Description: ${record.description}`,
+      ``,
+      `--- Parsing Results ---`,
+      `WHO: ${summary.who || '-'}`,
+      `WHAT: ${summary.what || '-'}`,
+      `WHERE: ${summary.where || '-'}`,
+      `ISSUE: ${summary.issue || '-'}`,
+      `Main Keyword: ${parsing.mainKeyword || '-'} ${parsing.mainKeywordIsSignal ? '(signal word)' : ''}`,
+      ``,
+      `Filtered Keywords: ${(parsing.filteredKeywords || []).join(', ') || '-'}`,
+      `Suggested Category: ${record.location || '-'}`,
+    ]
+    await navigator.clipboard.writeText(lines.join('\n'))
+    setCopiedField('all')
+    setTimeout(() => setCopiedField(null), 2000)
+  }
+
+  const summary = parsing.summary || {}
+
+  const SummaryField = ({ icon: Icon, label, value, fieldKey, color = 'text-surface-600' }) => (
+    <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-100/50 transition-colors group">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon size={12} className={color} />
+        <span className="text-xs font-medium text-surface-500 w-12">{label}:</span>
+        <span className="text-xs text-surface-800 truncate">{value || '-'}</span>
+      </div>
+      {value && (
+        <button
+          onClick={() => handleCopy(value, fieldKey)}
+          className={`p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
+            copiedField === fieldKey
+              ? 'text-green-600 bg-green-50'
+              : 'text-surface-400 hover:text-blue-600 hover:bg-blue-50'
+          }`}
+          title="Copy"
+        >
+          {copiedField === fieldKey ? <Check size={10} /> : <Copy size={10} />}
+        </button>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="pt-3 border-t border-surface-200/50">
+      {/* Compact Header - Click to expand */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors bg-purple-50 hover:bg-purple-100/80"
+      >
+        <div className="flex items-center gap-2">
+          <FileText size={12} className="text-purple-600" />
+          <span className="font-medium text-purple-700">Sentence Parsing</span>
+          {parsing.mainKeyword && (
+            <>
+              <span className="text-surface-400">•</span>
+              <span className="font-medium text-purple-600">
+                "{parsing.mainKeyword}"
+                {parsing.mainKeywordIsSignal && (
+                  <span className="text-purple-400 ml-1">(signal)</span>
+                )}
+              </span>
+            </>
+          )}
+        </div>
+        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="mt-2 p-3 bg-surface-50/80 rounded-lg text-xs space-y-3">
+          {/* Copy All Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleCopyAll}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                copiedField === 'all'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
+            >
+              {copiedField === 'all' ? <Check size={12} /> : <ClipboardCopy size={12} />}
+              {copiedField === 'all' ? 'Copied!' : 'Copy All'}
+            </button>
+          </div>
+
+          {/* Summary Fields */}
+          <div className="space-y-0.5 bg-white/60 rounded-lg py-1">
+            <SummaryField icon={Users} label="WHO" value={summary.who} fieldKey="who" color="text-blue-500" />
+            <SummaryField icon={Target} label="WHAT" value={summary.what} fieldKey="what" color="text-orange-500" />
+            <SummaryField icon={MapPinned} label="WHERE" value={summary.where} fieldKey="where" color="text-green-500" />
+            <SummaryField icon={AlertTriangle} label="ISSUE" value={summary.issue} fieldKey="issue" color="text-red-500" />
+          </div>
+
+          {/* Main Keyword */}
+          {parsing.mainKeyword && (
+            <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg border border-purple-200/50">
+              <Tag size={12} className="text-purple-600" />
+              <span className="text-surface-500">Main Keyword:</span>
+              <span className="font-bold text-purple-700">{parsing.mainKeyword}</span>
+              {parsing.mainKeywordIsSignal && (
+                <span className="px-1.5 py-0.5 bg-purple-200 text-purple-800 rounded text-[10px] font-medium">
+                  SIGNAL
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Filtered Keywords */}
+          {parsing.filteredKeywords && parsing.filteredKeywords.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-surface-500">
+                <MessageSquare size={11} />
+                <span>Filtered Keywords (noise removed):</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {parsing.filteredKeywords.slice(0, 15).map((word, idx) => (
+                  <span
+                    key={idx}
+                    className={`px-1.5 py-0.5 rounded text-[10px] ${
+                      word === parsing.mainKeyword
+                        ? 'bg-purple-200 text-purple-800 font-bold'
+                        : 'bg-surface-100 text-surface-600'
+                    }`}
+                  >
+                    {word}
+                  </span>
+                ))}
+                {parsing.filteredKeywords.length > 15 && (
+                  <span className="text-surface-400 text-[10px]">
+                    +{parsing.filteredKeywords.length - 15} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Ambiguity Resolutions */}
+          {parsing.ambiguityResolutions && parsing.ambiguityResolutions.length > 0 && (
+            <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/50">
+              <div className="flex items-center gap-1.5 text-amber-700 mb-1">
+                <HelpCircle size={11} />
+                <span className="font-medium">Ambiguity Resolved:</span>
+              </div>
+              <div className="space-y-1">
+                {parsing.ambiguityResolutions.map((res, idx) => (
+                  <p key={idx} className="text-amber-800 text-[10px]">
+                    "{res.word}" → <span className="font-medium">{res.context}</span>
+                    {res.reason && <span className="text-amber-600"> ({res.reason})</span>}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
