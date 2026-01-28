@@ -805,8 +805,27 @@ export const categorizeHazard = (description, existingCategory = '') => {
   const catSettings = getCategorizationSettings()
   const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
 
+  // DEBUG: Check for water misclassification
+  const isDebugTarget = text.includes('safety shoes') || text.includes('toilet')
+  if (isDebugTarget) {
+    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 50), existingCategory })
+  }
+
   // ============================================
-  // STEP 0: Context-Aware Analysis (Complementary Engine)
+  // STEP 1: Check CONTEXT_REDIRECTS FIRST (HIGHEST PRIORITY)
+  // MOVED TO TOP: This must run before any other classification
+  // Handles misleading terms like "line of fire", "fire extinguisher", etc.
+  // ============================================
+  if (catSettings.rules?.useSmartCorrections !== false) {
+    const redirectCategory = checkContextRedirects(text)
+    if (redirectCategory) {
+      if (isDebugTarget) console.log('[DEBUG] STEP 1 CONTEXT_REDIRECT hit:', redirectCategory)
+      return redirectCategory // Immediate return - no further checking
+    }
+  }
+
+  // ============================================
+  // STEP 2: Context-Aware Analysis (Complementary Engine)
   // Uses Hazard Object → Action → Potential Outcome reasoning
   // Only overrides when confidence meets settings threshold or disambiguation rule matches
   // ============================================
@@ -814,11 +833,12 @@ export const categorizeHazard = (description, existingCategory = '') => {
 
   // If context engine found a disambiguation rule or meets confidence threshold, use it
   if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 2 analyzeObservation hit:', contextResult.category)
     return contextResult.category
   }
 
   // ============================================
-  // STEP 0.5: SENTENCE-AWARE PARSING (NEW)
+  // STEP 3: SENTENCE-AWARE PARSING
   // Analyzes grammatical structure to identify:
   // - WHO (actor), WHAT (object), WHERE (location), WHY (cause)
   // - Assigns weights based on grammatical role (subject > object > location)
@@ -829,19 +849,8 @@ export const categorizeHazard = (description, existingCategory = '') => {
   if (sentenceResult.category && sentenceResult.confidence >= 0.7 && sentenceResult.isMainSubject) {
     // Verify the category is valid and not excluded
     if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category)) {
+      if (isDebugTarget) console.log('[DEBUG] STEP 3 sentenceAwareness hit:', sentenceResult.category)
       return sentenceResult.category
-    }
-  }
-
-  // ============================================
-  // STEP 1: Check CONTEXT_REDIRECTS first (HIGHEST PRIORITY)
-  // This handles misleading terms like "line of fire", "fire extinguisher", etc.
-  // Only applies if useSmartCorrections is enabled in settings
-  // ============================================
-  if (catSettings.rules?.useSmartCorrections !== false) {
-    const redirectCategory = checkContextRedirects(text)
-    if (redirectCategory) {
-      return redirectCategory // Immediate return - no further checking
     }
   }
 
