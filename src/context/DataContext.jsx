@@ -86,6 +86,18 @@ export const DataProvider = ({ children }) => {
       saveData('INCIDENTS', storedIncidents)
     }
 
+    // MIGRATION v2: Force recategorize ALL records to apply latest classification rules
+    // This fixes records where Excel category was wrong (e.g., PPE issues marked as "Working on or Near Water")
+    const migrationKey = 'MIGRATION_RECATEGORIZE_V2_COMPLETE'
+    const migrationComplete = localStorage.getItem(migrationKey)
+    if (!migrationComplete && storedIncidents.length > 0) {
+      console.log('[Migration] Recategorizing all records with latest classification rules...')
+      storedIncidents = recategorizeBlankHazards(storedIncidents)
+      saveData('INCIDENTS', storedIncidents)
+      localStorage.setItem(migrationKey, 'true')
+      console.log('[Migration] Recategorization complete')
+    }
+
     setProjects(storedProjects || [])
     setIncidents(storedIncidents)
     setIsLoading(false)
