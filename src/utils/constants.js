@@ -135,10 +135,18 @@ export const HAZARD_EXCLUSIONS = {
     'pits without', 'pit observed', 'pits observed'
   ],
   'Working on or Near Water': [
+    // Welfare-related water (drinking, amenities)
     'water cooler', 'drinking water', 'water bottle', 'water down',
     'water resistant', 'waterproof', 'water supply', 'water tank',
     'water pipe', 'water main', 'potable water', 'water storage',
-    'water treatment', 'waste water', 'wastewater', 'water test'
+    'water treatment', 'waste water', 'wastewater', 'water test',
+    // Additional welfare exclusions
+    'water dispenser', 'water station', 'water jug', 'water container',
+    'filtered water', 'clean water', 'safe water', 'hot water', 'cold water',
+    'washing water', 'hand washing', 'sanitary water', 'hygiene water',
+    'water shortage', 'water issue', 'water problem', 'water complaint',
+    'water not available', 'water not provided', 'no drinking water',
+    'water for drinking', 'supply of water', 'lack of water'
   ],
   'Working in Heat': [
     'heat treatment', 'heat exchanger', 'heat insulation', 'heat shield',
@@ -1292,7 +1300,11 @@ export const HAZARD_PHRASES = {
   ],
   'Worker Welfare': [
     'welfare facilities', 'drinking water', 'toilet facilities', 'rest area',
-    'first aid room', 'welfare provision'
+    'first aid room', 'welfare provision', 'potable water', 'water cooler',
+    'water dispenser', 'water station', 'water not available', 'water not provided',
+    'no drinking water', 'clean water', 'water shortage', 'hand washing',
+    'sanitary water', 'water bottle', 'water jug', 'filtered water',
+    'hot water', 'cold water', 'washing water', 'hygiene water'
   ],
   'Respiratory Hazard': [
     'dust control', 'dust suppression', 'silica dust', 'respirable dust',
@@ -1308,7 +1320,12 @@ export const HAZARD_PHRASES = {
   ],
   'Working on or Near Water': [
     'working on water', 'working near water', 'over water', 'near water', 'water hazard',
-    'drowning risk', 'life jacket', 'water rescue', 'man overboard', 'fall into water'
+    'drowning risk', 'life jacket', 'water rescue', 'man overboard', 'fall into water',
+    'near river', 'near sea', 'near lake', 'near pond', 'near canal', 'offshore work',
+    'marine work', 'barge work', 'dock work', 'waterfront work', 'pier work', 'jetty work',
+    'flood risk', 'water body', 'open water', 'deep water', 'submerged', 'submersion',
+    'life vest', 'life buoy', 'flotation device', 'buoyancy aid', 'rescue boat',
+    'fell into water', 'in water', 'into water', 'beside water', 'water edge'
   ],
   'Physical Hazard': [
     'struck by', 'hit by', 'falling object', 'dropped object',
