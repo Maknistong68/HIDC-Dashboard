@@ -805,10 +805,10 @@ export const categorizeHazard = (description, existingCategory = '') => {
   const catSettings = getCategorizationSettings()
   const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
 
-  // DEBUG: Check for water misclassification
-  const isDebugTarget = text.includes('safety shoes') || text.includes('toilet')
+  // DEBUG: Check for misclassification issues
+  const isDebugTarget = text.includes('safety shoes') || text.includes('toilet') || text.includes('welfare') || text.includes('nurse') || text.includes('ambulance')
   if (isDebugTarget) {
-    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 50), existingCategory })
+    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 60), existingCategory })
   }
 
   // ============================================

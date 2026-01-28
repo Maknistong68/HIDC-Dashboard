@@ -86,17 +86,17 @@ export const DataProvider = ({ children }) => {
       saveData('INCIDENTS', storedIncidents)
     }
 
-    // MIGRATION v3: Force recategorize ALL records with CONTEXT_REDIRECTS priority fix
-    // This fixes records where Excel category was wrong (e.g., PPE issues marked as "Working on or Near Water")
-    // v3: CONTEXT_REDIRECTS now checked FIRST before any other classification
-    const migrationKey = 'MIGRATION_RECATEGORIZE_V3_REDIRECTS_FIRST'
+    // MIGRATION v4: Force recategorize ALL records with expanded redirects
+    // Fixes: PPE→Work Environment, Toilets→Worker Welfare, No welfare→Worker Welfare
+    // v4: Added 'no welfare' patterns and Hot Work exclusions for welfare
+    const migrationKey = 'MIGRATION_RECATEGORIZE_V4_WELFARE_FIX'
     const migrationComplete = localStorage.getItem(migrationKey)
     if (!migrationComplete && storedIncidents.length > 0) {
-      console.log('[Migration v3] Recategorizing all records with CONTEXT_REDIRECTS priority...')
+      console.log('[Migration v4] Recategorizing all records with expanded welfare redirects...')
       storedIncidents = recategorizeBlankHazards(storedIncidents)
       saveData('INCIDENTS', storedIncidents)
       localStorage.setItem(migrationKey, 'true')
-      console.log('[Migration v3] Recategorization complete')
+      console.log('[Migration v4] Recategorization complete')
     }
 
     setProjects(storedProjects || [])

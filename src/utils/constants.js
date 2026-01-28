@@ -94,7 +94,10 @@ export const HAZARD_EXCLUSIONS = {
   'Hot Work': [
     'hot spot', 'hot surface', 'hot pipe', 'hot equipment', 'hot tap',
     'heat stroke', 'heat exhaustion', 'hot weather', 'hotline', 'hot day',
-    'hot conditions', 'hot work permit', 'hot cell', 'hot zone'
+    'hot conditions', 'hot work permit', 'hot cell', 'hot zone',
+    // Exclude welfare-related observations in hot work area
+    'no welfare', 'welfare facility', 'welfare not', 'lack of welfare',
+    'missing welfare', 'welfare issue', 'welfare problem'
   ],
   'Lifting': [
     'forklift', 'pallet jack', 'shoplifting', 'morale lifting',
@@ -870,6 +873,18 @@ export const CONTEXT_REDIRECTS = {
   'unpleasant odor': 'Worker Welfare',
   'unpleasant odour': 'Worker Welfare',
   // Missing welfare facilities → Site Welfare
+  'no welfare': 'Worker Welfare',
+  'no welfare on': 'Worker Welfare',
+  'no welfare in': 'Worker Welfare',
+  'no welfare at': 'Worker Welfare',
+  'welfare on the': 'Worker Welfare',
+  'welfare in the': 'Worker Welfare',
+  'welfare at the': 'Worker Welfare',
+  'lack of welfare': 'Worker Welfare',
+  'missing welfare': 'Worker Welfare',
+  'welfare issue': 'Worker Welfare',
+  'welfare problem': 'Worker Welfare',
+  'welfare facilities not': 'Worker Welfare',
   'toilet not provided': 'Worker Welfare',
   'toilet were not provided': 'Worker Welfare',
   'toilets not provided': 'Worker Welfare',
