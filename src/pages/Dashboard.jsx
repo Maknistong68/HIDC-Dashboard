@@ -799,63 +799,62 @@ const Dashboard = () => {
             {/* Results */}
             {testResult && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
-                {/* Suggested Category */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-surface-500">Suggested Category:</span>
-                  <span className="px-2 py-1 bg-purple-600 text-white text-sm font-semibold rounded">
-                    {testResult.suggestedCategory}
-                  </span>
-                  {testResult.parsed?.confidence && (
-                    <span className="text-xs text-surface-500">
-                      ({Math.round(testResult.parsed.confidence * 100)}% confidence)
+                {/* Suggested Category + Main Keyword */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-surface-500">Category:</span>
+                    <span className="px-2 py-1 bg-purple-600 text-white text-sm font-semibold rounded">
+                      {testResult.suggestedCategory}
                     </span>
-                  )}
-                </div>
-
-                {/* Parsed Components */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  {testResult.parsed?.mainSubject && (
-                    <div className="bg-white p-2 rounded border">
-                      <span className="font-medium text-blue-600">WHAT:</span>
-                      <span className="ml-1 text-surface-700">{testResult.parsed.mainSubject}</span>
-                    </div>
-                  )}
-                  {testResult.parsed?.location && (
-                    <div className="bg-white p-2 rounded border">
-                      <span className="font-medium text-green-600">WHERE:</span>
-                      <span className="ml-1 text-surface-700">{testResult.parsed.location}</span>
-                    </div>
-                  )}
-                  {testResult.parsed?.actor && (
-                    <div className="bg-white p-2 rounded border">
-                      <span className="font-medium text-orange-600">WHO:</span>
-                      <span className="ml-1 text-surface-700">{testResult.parsed.actor}</span>
-                    </div>
-                  )}
-                  {testResult.parsed?.deviation && (
-                    <div className="bg-white p-2 rounded border">
-                      <span className="font-medium text-red-600">ISSUE:</span>
-                      <span className="ml-1 text-surface-700">{testResult.parsed.deviation}</span>
+                  </div>
+                  {testResult.parsed?.mainKeyword && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-surface-500">Main Keyword:</span>
+                      <span className={`px-2 py-1 text-sm font-semibold rounded ${
+                        testResult.parsed.mainKeywordIsSignal
+                          ? 'bg-green-600 text-white'
+                          : 'bg-surface-600 text-white'
+                      }`}>
+                        {testResult.parsed.mainKeyword}
+                        {testResult.parsed.mainKeywordIsSignal && ' ✓'}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                {/* Keywords Detected */}
-                {testResult.parsed?.keywords?.length > 0 && (
+                {/* Summary: WHO / WHAT / WHERE / ISSUE */}
+                {testResult.parsed?.summary && (
+                  <div className="bg-white p-2 rounded border">
+                    <span className="text-xs font-semibold text-surface-600 block mb-1">Summary (for Root Cause Analysis):</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <span className="font-medium text-orange-600">WHO:</span>
+                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.who || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-600">WHAT:</span>
+                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.what || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-green-600">WHERE:</span>
+                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.where || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-red-600">ISSUE:</span>
+                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.issue || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filtered Keywords (noise removed) */}
+                {testResult.parsed?.filteredKeywords?.length > 0 && (
                   <div>
-                    <span className="text-xs font-medium text-surface-500">Keywords Detected:</span>
+                    <span className="text-xs font-medium text-surface-500">Signal Words (noise filtered):</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {testResult.parsed.keywords.slice(0, 10).map((kw, i) => (
-                        <span
-                          key={i}
-                          className={`px-2 py-0.5 text-xs rounded ${
-                            kw.role === 'SUBJECT' ? 'bg-blue-100 text-blue-700' :
-                            kw.role === 'LOCATION' ? 'bg-green-100 text-green-700' :
-                            kw.role === 'ACTOR' ? 'bg-orange-100 text-orange-700' :
-                            'bg-surface-100 text-surface-600'
-                          }`}
-                        >
-                          {kw.text} <span className="opacity-60">({kw.role})</span>
+                      {testResult.parsed.filteredKeywords.slice(0, 15).map((word, i) => (
+                        <span key={i} className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">
+                          {word}
                         </span>
                       ))}
                     </div>
@@ -877,11 +876,11 @@ const Dashboard = () => {
                 )}
 
                 {/* Specialist Detection */}
-                {testResult.parsed?.specialistMatch && (
+                {testResult.parsed?.actorIsSpecialist && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-surface-500">Specialist Detected:</span>
                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-medium">
-                      {testResult.parsed.specialistMatch.role} → {testResult.parsed.specialistMatch.hazard}
+                      {testResult.parsed.actor} → {testResult.parsed.actorSuggestedHazard}
                     </span>
                   </div>
                 )}

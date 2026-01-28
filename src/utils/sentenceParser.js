@@ -12,6 +12,129 @@
  */
 
 // ============================================================================
+// SECTION A0: NOISE WORDS - Words that don't contribute to hazard classification
+// Filter these out to focus on the MAIN hazard-indicating keywords
+// ============================================================================
+
+export const NOISE_WORDS = new Set([
+  // Articles
+  'the', 'a', 'an',
+
+  // Common prepositions (when standalone)
+  'in', 'on', 'at', 'by', 'for', 'with', 'to', 'from', 'of', 'into', 'onto',
+  'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under',
+
+  // Conjunctions
+  'and', 'or', 'but', 'nor', 'yet', 'so', 'because', 'although', 'while', 'if',
+
+  // Generic verbs (observation context)
+  'was', 'were', 'is', 'are', 'been', 'being', 'be', 'have', 'has', 'had',
+  'observed', 'found', 'noticed', 'seen', 'identified', 'discovered', 'noted',
+  'reported', 'detected', 'spotted', 'witnessed', 'conducted', 'performed',
+
+  // Time/context fillers
+  'during', 'while', 'when', 'after', 'before', 'upon', 'following',
+  'today', 'yesterday', 'morning', 'afternoon', 'evening', 'inspection',
+
+  // Quantity words
+  'some', 'many', 'several', 'few', 'multiple', 'various', 'all', 'any',
+  'one', 'two', 'three', 'first', 'second', 'third',
+
+  // Generic adjectives
+  'proper', 'improper', 'appropriate', 'inappropriate', 'good', 'bad',
+  'correct', 'incorrect', 'adequate', 'inadequate', 'sufficient', 'insufficient',
+
+  // Filler words
+  'that', 'this', 'these', 'those', 'it', 'its', 'their', 'there', 'here',
+  'which', 'who', 'whom', 'whose', 'what', 'where', 'how', 'why',
+
+  // Common HSE observation fillers
+  'site', 'area', 'location', 'place', 'zone', 'section', 'part',
+  'worker', 'workers', 'personnel', 'staff', 'employee', 'employees',
+  'work', 'working', 'task', 'activity', 'operation', 'job',
+  'safety', 'hazard', 'risk', 'issue', 'problem', 'concern',
+  'observed', 'observation', 'inspection', 'audit', 'check',
+  'not', 'no', 'without', 'lacking', 'missing', // Keep these for pattern matching but filter in keyword extraction
+])
+
+// Words that ARE significant for classification (not noise)
+export const SIGNAL_WORDS = new Set([
+  // Equipment/structures (hazard indicators)
+  'scaffold', 'scaffolding', 'ladder', 'crane', 'forklift', 'excavator',
+  'excavation', 'trench', 'pit', 'tank', 'vessel', 'pipe', 'cable', 'wire',
+  'harness', 'lanyard', 'helmet', 'gloves', 'goggles', 'respirator',
+  'guardrail', 'barricade', 'barrier', 'fence', 'cover', 'guard',
+  'fire', 'chemical', 'electrical', 'gas', 'fuel', 'oil',
+  'water', 'river', 'sea', 'lake', 'flood',
+  'vehicle', 'truck', 'car', 'bus', 'trailer',
+  'toilet', 'welfare', 'canteen', 'shelter', 'accommodation',
+
+  // Conditions (hazard indicators)
+  'exposed', 'unguarded', 'unprotected', 'damaged', 'broken', 'defective',
+  'missing', 'absent', 'removed', 'open', 'uncovered', 'unsecured',
+  'wet', 'slippery', 'unstable', 'loose', 'corroded', 'rusted',
+  'live', 'energized', 'hot', 'cold', 'dusty', 'noisy',
+
+  // Actions (incident indicators)
+  'fell', 'fall', 'falling', 'dropped', 'struck', 'hit', 'caught',
+  'slipped', 'tripped', 'collapsed', 'failed', 'leaked', 'spilled',
+  'crushed', 'pinched', 'cut', 'burned', 'electrocuted',
+
+  // PPE items
+  'ppe', 'shoes', 'boots', 'vest', 'jacket', 'glasses', 'mask',
+  'ear', 'protection', 'equipment',
+
+  // Hazard types
+  'height', 'confined', 'lifting', 'welding', 'cutting', 'grinding',
+  'driving', 'loading', 'unloading', 'digging', 'drilling',
+])
+
+/**
+ * Filter noise words from text, keeping only signal words
+ * Returns array of significant keywords
+ */
+export const filterNoiseWords = (text) => {
+  if (!text) return []
+
+  const words = text.toLowerCase()
+    .replace(/[^\w\s-]/g, ' ')  // Remove punctuation except hyphens
+    .split(/\s+/)
+    .filter(w => w.length > 2)  // Remove very short words
+    .filter(w => !NOISE_WORDS.has(w))  // Remove noise
+
+  return words
+}
+
+/**
+ * Extract the MAIN hazard keyword from text
+ * Prioritizes signal words over other words
+ */
+export const extractMainKeyword = (text) => {
+  if (!text) return null
+
+  const words = text.toLowerCase()
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+
+  // First, look for signal words
+  for (const word of words) {
+    if (SIGNAL_WORDS.has(word)) {
+      return { keyword: word, isSignal: true }
+    }
+  }
+
+  // If no signal word, return first non-noise word
+  for (const word of words) {
+    if (!NOISE_WORDS.has(word)) {
+      return { keyword: word, isSignal: false }
+    }
+  }
+
+  return null
+}
+
+// ============================================================================
 // SECTION A: GRAMMATICAL ROLE WEIGHTS
 // Higher weight = more likely to be the MAIN hazard
 // ============================================================================
@@ -1053,12 +1176,15 @@ export const parseSentence = (text) => {
     original: text,
     normalized: normalizedText,
     keywords: [],
+    filteredKeywords: [],   // Non-noise keywords only
     mainSubject: null,      // The primary problem/hazard
-    location: null,         // Where it occurred
+    mainKeyword: null,      // The main hazard-indicating keyword
+    mainKeywordIsSignal: false, // Is main keyword a known signal word?
+    location: null,         // WHERE it occurred
     locationInfo: null,     // Detailed location info (preposition, type)
     cause: null,            // Root cause (if identified)
     consequence: null,      // Outcome (if identified)
-    deviation: null,        // What went wrong
+    deviation: null,        // What went wrong (ISSUE)
     actor: null,            // WHO was involved (person/role)
     actorType: null,        // Category of actor (worker, operator, supervisor, etc.)
     actorIsSpecialist: false, // Is the actor a specialist role?
@@ -1073,6 +1199,7 @@ export const parseSentence = (text) => {
     ambiguities: [],        // Ambiguous words and their resolutions
     confidence: 0,          // Overall parsing confidence
     pattern: null,          // Which pattern matched
+    summary: null,          // WHO/WHAT/WHERE summary for root cause
   }
 
   // Step 0: Extract actor (WHO) - do this first as it helps with context
@@ -1211,6 +1338,25 @@ export const parseSentence = (text) => {
         break
       }
     }
+  }
+
+  // Step 4: Extract main keyword and filter noise
+  const filteredWords = filterNoiseWords(normalizedText)
+  result.filteredKeywords = filteredWords  // Non-noise words only
+
+  const mainKw = extractMainKeyword(normalizedText)
+  if (mainKw) {
+    result.mainKeyword = mainKw.keyword
+    result.mainKeywordIsSignal = mainKw.isSignal
+  }
+
+  // Step 5: Summarize WHO/WHAT/WHERE for root cause analysis
+  result.summary = {
+    who: result.actor || null,
+    what: result.mainSubject || result.object || result.mainKeyword || null,
+    where: result.location || null,
+    issue: result.deviation || result.mainSubject || null,
+    mainKeyword: result.mainKeyword || null,
   }
 
   return result
