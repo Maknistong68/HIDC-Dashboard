@@ -14,7 +14,7 @@ function App() {
       <Layout>
         <InstallPrompt />
         <Routes>
-          {/* Main 3 tabs */}
+          {/* Main tabs */}
           <Route path="/" element={<Dashboard />} />
           <Route path="/data-control" element={<DataQuality />} />
           <Route path="/settings" element={<Settings />} />
