@@ -11,8 +11,9 @@ export const INCIDENT_TYPES = [
   { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#0891b2' },
 ]
 
-// 30 Approved Hazard Categories (Fixed - No "Others" allowed)
+// 26 Approved Hazard Categories (True hazards only - root causes/controls removed)
 export const HAZARD_CATEGORIES = [
+  // === 15 MAJOR HAZARDS ===
   'Confined Spaces',
   'Energized System',
   'Mobile Plant & Equipment',
@@ -26,29 +27,24 @@ export const HAZARD_CATEGORIES = [
   'Driving',
   'Working at Height',
   'Working in Heat',
-  'Barricades',
+  'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
+  'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
+  // === 11 SUB-SIGNIFICANT HAZARDS ===
   'COSHH',
-  'Dust Control',
-  'BBS',
+  'Respiratory Hazard',        // Dust, silica, fumes, particles, airborne
   'Housekeeping',
-  'PPE',
-  'Safety Sign',
   'Site Security',
   'Access',
-  'Site Welfare',
-  'Safety Supervision',
+  'Worker Welfare',            // Welfare facilities, camps, accommodation
   'Tools',
   'Traffic Management',
   'Work Environment',
-  'Permit and RAMS',
-  'Training and Competency',
-  'Emergency Preparedness',
-  'Struck By',
   'Environmental',
-  'Slips Trips Falls',
+  'Slip and Trip',             // Slip/trip hazards (falls → Working at Height)
 ]
 
-// 13 Major (Significant) Hazards - HIGHEST PRIORITY in classification
+// 15 Major (Significant) Hazards - HIGHEST PRIORITY in classification
+// Physical Hazard and Mechanical Hazard added (OSHA Fatal Four)
 export const MAJOR_HAZARDS = [
   'Breaking Ground & Excavation',
   'Confined Spaces',
@@ -57,6 +53,8 @@ export const MAJOR_HAZARDS = [
   'Hot Work',
   'Lifting',
   'Mobile Plant & Equipment',
+  'Physical Hazard',           // NEW - struck-by is OSHA Fatal Four
+  'Mechanical Hazard',         // NEW - caught-in is OSHA Fatal Four
   'Temporary Works',
   'Working in Heat',
   'Working at Height',
@@ -65,28 +63,20 @@ export const MAJOR_HAZARDS = [
   'Driving',
 ]
 
-// 20 Sub-Significant Hazards - LOWER PRIORITY in classification
+// 11 Sub-Significant Hazards - LOWER PRIORITY in classification
+// Root causes/controls removed: PPE, Training, Supervision, Permits, BBS, Signs, Emergency Prep, Barricades
 export const SUB_SIGNIFICANT_HAZARDS = [
-  'Traffic Management',
-  'Tools',
-  'Training and Competency',
-  'Safety Sign',
-  'PPE',
-  'Permit and RAMS',
-  'Work Environment',
-  'Emergency Preparedness',
-  'Dust Control',
-  'Access',
-  'Barricades',
   'COSHH',
-  'BBS',
-  'Housekeeping',
+  'Respiratory Hazard',        // Dust, silica, fumes, particles
+  'Traffic Management',
   'Site Security',
-  'Site Welfare',
-  'Safety Supervision',
-  'Struck By',
+  'Housekeeping',
+  'Slip and Trip',             // Slip/trip hazards (falls → Working at Height)
+  'Worker Welfare',            // Welfare facilities, camps, accommodation
   'Environmental',
-  'Slips Trips Falls',
+  'Tools',
+  'Access',
+  'Work Environment',
 ]
 
 // HAZARD_EXCLUSIONS - Terms that should EXCLUDE a category from matching
@@ -159,13 +149,24 @@ export const HAZARD_EXCLUSIONS = {
     'food poison', 'food poisoning', 'food storage', 'food stored', 'food safety',
     'food contamination', 'spoiled food', 'expired food', 'rotten food'
   ],
-  'Safety Supervision': [
+  'Work Environment': [
     // Exclude "inspection" when it's just context for WHEN something was observed
     'during the inspection', 'during inspection', 'observed during inspection',
     'found during inspection', 'noted during inspection', 'seen during inspection',
     'inspection revealed', 'inspection found', 'inspection showed',
     'on-site inspection', 'site inspection found', 'waste was observed',
     'was observed on-site', 'was observed on site', 'observed on-site'
+  ],
+  'Mechanical Hazard': [
+    // Exclude vehicle-related terms → Mobile Plant & Equipment
+    'vehicle', 'forklift', 'excavator', 'crane', 'loader', 'bulldozer',
+    'dump truck', 'mobile plant', 'heavy equipment'
+  ],
+  'Slip and Trip': [
+    // Exclude fall-from-height contexts → Working at Height
+    'fall from height', 'fell from', 'fall off', 'fell off', 'fallen from',
+    'fall from scaffold', 'fall from ladder', 'fall from roof',
+    'fall from platform', 'fall through opening'
   ]
 }
 
@@ -187,13 +188,13 @@ export const CONTEXT_REDIRECTS = {
   'fire station': 'Fire',
   'fire muster': 'Fire',
   'fire assembly': 'Fire',
-  'fire warden': 'Safety Supervision',
-  'fire watch': 'Safety Supervision',
-  'fire marshal': 'Safety Supervision',
-  'fire safety officer': 'Safety Supervision',
+  'fire warden': 'Fire',
+  'fire watch': 'Fire',
+  'fire marshal': 'Fire',
+  'fire safety officer': 'Fire',
   'fire door': 'Access',
-  'fire prevention': 'Training and Competency',
-  'fire risk assessment': 'Permit and RAMS',
+  'fire prevention': 'Fire',
+  'fire risk assessment': 'Fire',
   'line of fire': 'Mobile Plant & Equipment',
   'crossfire': 'Mobile Plant & Equipment',
 
@@ -243,11 +244,11 @@ export const CONTEXT_REDIRECTS = {
   'overhead crane': 'Lifting',
 
   // Water equipment terms → Correct category
-  'drinking water': 'Site Welfare',
-  'water cooler': 'Site Welfare',
-  'potable water': 'Site Welfare',
-  'water supply': 'Site Welfare',
-  'water bottle': 'Site Welfare',
+  'drinking water': 'Worker Welfare',
+  'water cooler': 'Worker Welfare',
+  'potable water': 'Worker Welfare',
+  'water supply': 'Worker Welfare',
+  'water bottle': 'Worker Welfare',
 
   // Electrical grounding → Correct category
   'grounding': 'Energized System',
@@ -265,42 +266,42 @@ export const CONTEXT_REDIRECTS = {
   'cutting tool': 'Tools',
   'grinding tool': 'Tools',
 
-  // PPE-specific terms
-  'hard hat': 'PPE',
-  'safety glasses': 'PPE',
-  'safety boots': 'PPE',
-  'hi-vis': 'PPE',
-  'high visibility': 'PPE',
-  'safety harness': 'PPE',
-  'fall harness': 'PPE',
+  // PPE-specific terms → Route to actual hazard or Work Environment
+  'hard hat': 'Work Environment',
+  'safety glasses': 'Work Environment',
+  'safety boots': 'Work Environment',
+  'hi-vis': 'Work Environment',
+  'high visibility': 'Work Environment',
+  'safety harness': 'Working at Height',
+  'fall harness': 'Working at Height',
 
   // Signage/Traffic - prevent "fall" matching Working at Height
   'traffic signage': 'Traffic Management',
   'traffic sign': 'Traffic Management',
   'haul road': 'Traffic Management',
-  'fallen sign': 'Safety Sign',
-  'fallen signage': 'Safety Sign',
-  'sign fell': 'Safety Sign',
-  'signage fell': 'Safety Sign',
+  'fallen sign': 'Work Environment',
+  'fallen signage': 'Work Environment',
+  'sign fell': 'Work Environment',
+  'signage fell': 'Work Environment',
   'blown over': 'Work Environment',
-  'fallen barrier': 'Barricades',
-  'fallen barricade': 'Barricades',
+  'fallen barrier': 'Access',
+  'fallen barricade': 'Access',
   'fallen cone': 'Traffic Management',
-  'fallen fence': 'Barricades',
+  'fallen fence': 'Access',
 
   // Food/Hygiene - prevent "poison" matching COSHH
-  'food storage': 'Site Welfare',
-  'food stored': 'Site Welfare',
-  'food poison': 'Site Welfare',
-  'food poisoning': 'Site Welfare',
-  'food safety': 'Site Welfare',
-  'food contamination': 'Site Welfare',
-  'spoiled food': 'Site Welfare',
-  'expired food': 'Site Welfare',
-  'canteen': 'Site Welfare',
-  'kitchen': 'Site Welfare',
-  'mess hall': 'Site Welfare',
-  'eating area': 'Site Welfare',
+  'food storage': 'Worker Welfare',
+  'food stored': 'Worker Welfare',
+  'food poison': 'Worker Welfare',
+  'food poisoning': 'Worker Welfare',
+  'food safety': 'Worker Welfare',
+  'food contamination': 'Worker Welfare',
+  'spoiled food': 'Worker Welfare',
+  'expired food': 'Worker Welfare',
+  'canteen': 'Worker Welfare',
+  'kitchen': 'Worker Welfare',
+  'mess hall': 'Worker Welfare',
+  'eating area': 'Worker Welfare',
 
   // Waste/Debris - prevent "inspection" matching Safety Supervision
   'concrete waste': 'Housekeeping',
@@ -317,67 +318,67 @@ export const CONTEXT_REDIRECTS = {
   'leftover material': 'Housekeeping',
   'material waste': 'Housekeeping',
 
-  // Open pits/holes - prevent "pit" matching Confined Spaces
-  'open pit': 'Barricades',
-  'open pits': 'Barricades',
-  'without barricad': 'Barricades',
-  'without proper barricad': 'Barricades',
-  'no barricad': 'Barricades',
-  'missing barricad': 'Barricades',
-  'unbarricaded': 'Barricades',
-  'open hole': 'Barricades',
-  'open holes': 'Barricades',
-  'unprotected opening': 'Barricades',
-  'unprotected edge': 'Barricades',
-  'posing a fall hazard': 'Barricades',
+  // Open pits/holes - route to actual hazard
+  'open pit': 'Breaking Ground & Excavation',
+  'open pits': 'Breaking Ground & Excavation',
+  'without barricad': 'Breaking Ground & Excavation',
+  'without proper barricad': 'Breaking Ground & Excavation',
+  'no barricad': 'Breaking Ground & Excavation',
+  'missing barricad': 'Breaking Ground & Excavation',
+  'unbarricaded': 'Breaking Ground & Excavation',
+  'open hole': 'Breaking Ground & Excavation',
+  'open holes': 'Breaking Ground & Excavation',
+  'unprotected opening': 'Working at Height',
+  'unprotected edge': 'Working at Height',
+  'posing a fall hazard': 'Working at Height',
 
   // Description prefixes (common in Enablon data)
-  'welfare facility:': 'Site Welfare',
-  'welfare facility observed': 'Site Welfare',
+  'welfare facility:': 'Worker Welfare',
+  'welfare facility observed': 'Worker Welfare',
   'confined space:': 'Confined Spaces',
   'work environment:': 'Work Environment',
   'work enironment:': 'Work Environment',
   'work enironment;': 'Work Environment',
   'equipment:': 'Mobile Plant & Equipment',
-  'ppe:': 'PPE',
+  'ppe:': 'Work Environment',
   'housekeeping:': 'Housekeeping',
   'housekeeping;': 'Housekeeping',
   'access:': 'Access',
   'fire:': 'Fire',
   'fire protection:': 'Fire',
   'electrical:': 'Energized System',
-  'barricades:': 'Barricades',
-  'safety signs:': 'Safety Sign',
-  'safety sign:': 'Safety Sign',
+  'barricades:': 'Access',
+  'safety signs:': 'Work Environment',
+  'safety sign:': 'Work Environment',
   'hotwork:': 'Hot Work',
   'hotwork;': 'Hot Work',
   'hot work:': 'Hot Work',
   'hot work;': 'Hot Work',
 
   // Toilet/Hygiene keywords → Site Welfare
-  'toilet flush': 'Site Welfare',
-  'toilet not working': 'Site Welfare',
-  'toilet checklist': 'Site Welfare',
-  'toilets not clean': 'Site Welfare',
-  'toilet is not clean': 'Site Welfare',
-  'toilets are being cleaned': 'Site Welfare',
-  'toilet cleaning': 'Site Welfare',
-  'toilets are cleaned': 'Site Welfare',
-  'clean and hygienic': 'Site Welfare',
-  'hygienic environment': 'Site Welfare',
-  'cleanliness standards': 'Site Welfare',
-  'sanitation supplies': 'Site Welfare',
-  'hygiene issues': 'Site Welfare',
-  'welfare facility': 'Site Welfare',
-  'rest shelter': 'Site Welfare',
+  'toilet flush': 'Worker Welfare',
+  'toilet not working': 'Worker Welfare',
+  'toilet checklist': 'Worker Welfare',
+  'toilets not clean': 'Worker Welfare',
+  'toilet is not clean': 'Worker Welfare',
+  'toilets are being cleaned': 'Worker Welfare',
+  'toilet cleaning': 'Worker Welfare',
+  'toilets are cleaned': 'Worker Welfare',
+  'clean and hygienic': 'Worker Welfare',
+  'hygienic environment': 'Worker Welfare',
+  'cleanliness standards': 'Worker Welfare',
+  'sanitation supplies': 'Worker Welfare',
+  'hygiene issues': 'Worker Welfare',
+  'welfare facility': 'Worker Welfare',
+  'rest shelter': 'Worker Welfare',
 
-  // First Aid → Emergency Preparedness
-  'first aid box': 'Emergency Preparedness',
-  'first aid kit': 'Emergency Preparedness',
-  'first aid room': 'Emergency Preparedness',
-  'emergency exit': 'Emergency Preparedness',
-  'assembly point': 'Emergency Preparedness',
-  'muster point': 'Emergency Preparedness',
+  // First Aid → Worker Welfare, Emergency exits → Fire
+  'first aid box': 'Worker Welfare',
+  'first aid kit': 'Worker Welfare',
+  'first aid room': 'Worker Welfare',
+  'emergency exit': 'Fire',
+  'assembly point': 'Fire',
+  'muster point': 'Fire',
 
   // Electrical exposure → Energized System
   'electric motor': 'Energized System',
@@ -422,19 +423,19 @@ export const CONTEXT_REDIRECTS = {
   'general waste': 'Housekeeping',
 
   // Bulletin board/signage → Safety Sign
-  'bulletin board': 'Safety Sign',
-  'bulletien board': 'Safety Sign',
-  'hsse board': 'Safety Sign',
-  'hsse bulletin': 'Safety Sign',
-  'notice board': 'Safety Sign',
-  'missing sign': 'Safety Sign',
-  'no signage': 'Safety Sign',
-  'lacks signage': 'Safety Sign',
-  'without signage': 'Safety Sign',
-  'signage missing': 'Safety Sign',
-  'signage is missing': 'Safety Sign',
-  'awareness signage': 'Safety Sign',
-  'missing awareness': 'Safety Sign',
+  'bulletin board': 'Work Environment',
+  'bulletien board': 'Work Environment',
+  'hsse board': 'Work Environment',
+  'hsse bulletin': 'Work Environment',
+  'notice board': 'Work Environment',
+  'missing sign': 'Work Environment',
+  'no signage': 'Work Environment',
+  'lacks signage': 'Work Environment',
+  'without signage': 'Work Environment',
+  'signage missing': 'Work Environment',
+  'signage is missing': 'Work Environment',
+  'awareness signage': 'Work Environment',
+  'missing awareness': 'Work Environment',
 
   // Welding equipment → Hot Work (not just Tools)
   'welding machine': 'Hot Work',
@@ -457,10 +458,10 @@ export const CONTEXT_REDIRECTS = {
   'floor is open': 'Access',
 
   // Water cooler/igloo → Site Welfare (not Water hazard)
-  'water cooler': 'Site Welfare',
-  'igloo cooler': 'Site Welfare',
-  'water station': 'Site Welfare',
-  'drinking bottle': 'Site Welfare',
+  'water cooler': 'Worker Welfare',
+  'igloo cooler': 'Worker Welfare',
+  'water station': 'Worker Welfare',
+  'drinking bottle': 'Worker Welfare',
 
   // Fire point/extinguisher → Fire
   'fire point': 'Fire',
@@ -492,7 +493,7 @@ export const CONTEXT_REDIRECTS = {
   'materials not properly stored': 'Housekeeping',
   'material not properly stored': 'Housekeeping',
   'not properly stored': 'Housekeeping',
-  'lacked proper barricad': 'Barricades',
+  'lacked proper barricad': 'Breaking Ground & Excavation',
 
   // Concrete mixer → Mobile Plant & Equipment
   'concrete mixer': 'Mobile Plant & Equipment',
@@ -506,15 +507,15 @@ export const CONTEXT_REDIRECTS = {
   'repaired using plastic tape': 'Energized System',
   'repaired using tape': 'Energized System',
 
-  // Deep excavation → Breaking Ground & Excavation or Barricades
+  // Deep excavation → Breaking Ground & Excavation
   'deep open excavation': 'Breaking Ground & Excavation',
   'deep excavation': 'Breaking Ground & Excavation',
   'open excavation': 'Breaking Ground & Excavation',
-  'excavation unprotected': 'Barricades',
-  'excavation not properly barricaded': 'Barricades',
-  'not properly barricaded': 'Barricades',
-  'no exclusion zone': 'Barricades',
-  'no exlusion zone': 'Barricades',
+  'excavation unprotected': 'Breaking Ground & Excavation',
+  'excavation not properly barricaded': 'Breaking Ground & Excavation',
+  'not properly barricaded': 'Breaking Ground & Excavation',
+  'no exclusion zone': 'Breaking Ground & Excavation',
+  'no exlusion zone': 'Breaking Ground & Excavation',
 
   // Garbage/waste → Housekeeping
   'garbage accumulated': 'Housekeeping',
@@ -528,13 +529,13 @@ export const CONTEXT_REDIRECTS = {
   'without handrail': 'Access',
 
   // Drinking water → Site Welfare
-  'drinking water station': 'Site Welfare',
-  'water station need': 'Site Welfare',
+  'drinking water station': 'Worker Welfare',
+  'water station need': 'Worker Welfare',
 
   // Dust generation → Dust Control
-  'dust is being generated': 'Dust Control',
-  'dust being generated': 'Dust Control',
-  'generating dust': 'Dust Control',
+  'dust is being generated': 'Respiratory Hazard',
+  'dust being generated': 'Respiratory Hazard',
+  'generating dust': 'Respiratory Hazard',
 
   // Fire blanket → Hot Work
   'fire blanket': 'Hot Work',
@@ -563,13 +564,13 @@ export const CONTEXT_REDIRECTS = {
   'concrete-contaminat': 'Housekeeping',
 
   // Toilet variations (typos) → Site Welfare
-  'toiltes': 'Site Welfare',
-  'toilets was not cleaned': 'Site Welfare',
-  'toilet was not cleaned': 'Site Welfare',
+  'toiltes': 'Worker Welfare',
+  'toilets was not cleaned': 'Worker Welfare',
+  'toilet was not cleaned': 'Worker Welfare',
 
   // Spill kit → Emergency Preparedness
-  'spill kit': 'Emergency Preparedness',
-  'spill response': 'Emergency Preparedness',
+  'spill kit': 'COSHH',
+  'spill response': 'COSHH',
 
   // Unsafe bucket access → Working at Height
   'bucket to access': 'Working at Height',
@@ -577,11 +578,11 @@ export const CONTEXT_REDIRECTS = {
   'improvised ladder': 'Working at Height',
   'elevated work area': 'Working at Height',
 
-  // Excavation edge → Barricades
-  'excavation edge': 'Barricades',
-  'edge was not protected': 'Barricades',
-  'not protected by hard barrier': 'Barricades',
-  'not protected by barrier': 'Barricades',
+  // Excavation edge → Breaking Ground & Excavation
+  'excavation edge': 'Breaking Ground & Excavation',
+  'edge was not protected': 'Breaking Ground & Excavation',
+  'not protected by hard barrier': 'Breaking Ground & Excavation',
+  'not protected by barrier': 'Breaking Ground & Excavation',
 
   // Trailer/Driver → Driving (prevent misclassification)
   'trailer driver': 'Driving',
@@ -595,15 +596,15 @@ export const CONTEXT_REDIRECTS = {
   'ladder not stored': 'Housekeeping',
   'storing ladder': 'Housekeeping',
 
-  // Harness storage/inspection → PPE (not Working at Height)
-  'harness stored': 'PPE',
-  'harness on rack': 'PPE',
-  'harness inspection': 'PPE',
-  'harness storage': 'PPE',
-  'body harness inspection': 'PPE',
-  'harness not inspected': 'PPE',
-  'expired harness': 'PPE',
-  'damaged harness': 'PPE',
+  // Harness storage/inspection → Working at Height (harness relates to height work)
+  'harness stored': 'Working at Height',
+  'harness on rack': 'Working at Height',
+  'harness inspection': 'Working at Height',
+  'harness storage': 'Working at Height',
+  'body harness inspection': 'Working at Height',
+  'harness not inspected': 'Working at Height',
+  'expired harness': 'Working at Height',
+  'damaged harness': 'Working at Height',
 
   // Generator → Energized System
   'generator running': 'Energized System',
@@ -623,24 +624,24 @@ export const CONTEXT_REDIRECTS = {
   'scaffold parts stored': 'Housekeeping',
   'scaffold components lying': 'Housekeeping',
 
-  // Safety equipment inspection → PPE
-  'ppe inspection': 'PPE',
-  'helmet inspection': 'PPE',
-  'gloves inspection': 'PPE',
-  'safety glasses inspection': 'PPE',
+  // Safety equipment inspection → Work Environment
+  'ppe inspection': 'Work Environment',
+  'helmet inspection': 'Work Environment',
+  'gloves inspection': 'Work Environment',
+  'safety glasses inspection': 'Work Environment',
 
   // Site Welfare patterns (override inspection context)
-  'toilet was not': 'Site Welfare',
-  'toilet not cleaned': 'Site Welfare',
-  'toilets not cleaned': 'Site Welfare',
-  'no water available': 'Site Welfare',
-  'water not available': 'Site Welfare',
-  'water was not available': 'Site Welfare',
-  'drinking water container': 'Site Welfare',
-  'water color': 'Site Welfare',
-  'water cooler': 'Site Welfare',
-  'smoking tray': 'Site Welfare',
-  'smoking shelter': 'Site Welfare',
+  'toilet was not': 'Worker Welfare',
+  'toilet not cleaned': 'Worker Welfare',
+  'toilets not cleaned': 'Worker Welfare',
+  'no water available': 'Worker Welfare',
+  'water not available': 'Worker Welfare',
+  'water was not available': 'Worker Welfare',
+  'drinking water container': 'Worker Welfare',
+  'water color': 'Worker Welfare',
+  'water cooler': 'Worker Welfare',
+  'smoking tray': 'Worker Welfare',
+  'smoking shelter': 'Worker Welfare',
 
   // Housekeeping patterns (override inspection context)
   'housekeeping was not': 'Housekeeping',
@@ -657,9 +658,9 @@ export const CONTEXT_REDIRECTS = {
   'found scattered': 'Housekeeping',
 
   // Dust Control (override inspection context)
-  'dust was observed': 'Dust Control',
-  'dust accumulating': 'Dust Control',
-  'dust observed': 'Dust Control',
+  'dust was observed': 'Respiratory Hazard',
+  'dust accumulating': 'Respiratory Hazard',
+  'dust observed': 'Respiratory Hazard',
 
   // Confined Spaces (override inspection context)
   'gas test': 'Confined Spaces',
@@ -672,17 +673,17 @@ export const CONTEXT_REDIRECTS = {
   'trench was left': 'Breaking Ground & Excavation',
   'excavation walls': 'Breaking Ground & Excavation',
 
-  // Barricades (override inspection context)
-  'excavation left open': 'Barricades',
-  'without any physical barriers': 'Barricades',
-  'without barriers': 'Barricades',
-  'no barriers': 'Barricades',
-  'no barricades': 'Barricades',
-  'jersey barriers': 'Barricades',
-  'left open without': 'Barricades',
-  'unprotected edges': 'Barricades',
-  'edges of a deep': 'Barricades',
-  'trench edges': 'Barricades',
+  // Excavation protection → Breaking Ground & Excavation
+  'excavation left open': 'Breaking Ground & Excavation',
+  'without any physical barriers': 'Breaking Ground & Excavation',
+  'without barriers': 'Breaking Ground & Excavation',
+  'no barriers': 'Breaking Ground & Excavation',
+  'no barricades': 'Breaking Ground & Excavation',
+  'jersey barriers': 'Traffic Management',
+  'left open without': 'Breaking Ground & Excavation',
+  'unprotected edges': 'Working at Height',
+  'edges of a deep': 'Breaking Ground & Excavation',
+  'trench edges': 'Breaking Ground & Excavation',
 
   // Mobile Plant & Equipment (override inspection context)
   'excavator documents': 'Mobile Plant & Equipment',
@@ -720,81 +721,81 @@ export const CONTEXT_REDIRECTS = {
   'welding activities': 'Hot Work',
   'welding machine': 'Hot Work',
 
-  // Sharp objects / Impalement → Struck By (primary hazard is impalement injury)
+  // Sharp objects / Impalement → Physical Hazard (primary hazard is impalement injury)
   // NEOM PHSAS 37.9 Sharp Objects standard
-  'phsas 37.9': 'Struck By',
-  'sharp objects': 'Struck By',
-  '37.9 sharp objects': 'Struck By',
+  'phsas 37.9': 'Physical Hazard',
+  'sharp objects': 'Physical Hazard',
+  '37.9 sharp objects': 'Physical Hazard',
   // Protruding rebars (various phrasings)
-  'protruding rebar': 'Struck By',
-  'protruding rebars': 'Struck By',
-  'rebars protruding': 'Struck By',
-  'rebar protruding': 'Struck By',
-  'exposed rebar': 'Struck By',
-  'exposed rebars': 'Struck By',
-  'rebars exposed': 'Struck By',
-  'rebar exposed': 'Struck By',
-  'unprotected rebar': 'Struck By',
-  'unprotected rebars': 'Struck By',
-  'uncapped rebar': 'Struck By',
-  'uncapped rebars': 'Struck By',
-  'sharp rebar': 'Struck By',
-  'sharp rebars': 'Struck By',
-  'sharp steel rebar': 'Struck By',
-  'sharp steel rebars': 'Struck By',
-  'steel rebar protruding': 'Struck By',
-  'steel rebars protruding': 'Struck By',
-  'extended rebars': 'Struck By',
-  'extending rebars': 'Struck By',
+  'protruding rebar': 'Physical Hazard',
+  'protruding rebars': 'Physical Hazard',
+  'rebars protruding': 'Physical Hazard',
+  'rebar protruding': 'Physical Hazard',
+  'exposed rebar': 'Physical Hazard',
+  'exposed rebars': 'Physical Hazard',
+  'rebars exposed': 'Physical Hazard',
+  'rebar exposed': 'Physical Hazard',
+  'unprotected rebar': 'Physical Hazard',
+  'unprotected rebars': 'Physical Hazard',
+  'uncapped rebar': 'Physical Hazard',
+  'uncapped rebars': 'Physical Hazard',
+  'sharp rebar': 'Physical Hazard',
+  'sharp rebars': 'Physical Hazard',
+  'sharp steel rebar': 'Physical Hazard',
+  'sharp steel rebars': 'Physical Hazard',
+  'steel rebar protruding': 'Physical Hazard',
+  'steel rebars protruding': 'Physical Hazard',
+  'extended rebars': 'Physical Hazard',
+  'extending rebars': 'Physical Hazard',
   // Rebar caps (any mention typically indicates impalement hazard)
-  'rebar cap': 'Struck By',
-  'rebar caps': 'Struck By',
-  'rebar without cap': 'Struck By',
-  'rebars without cap': 'Struck By',
-  'without rebar cap': 'Struck By',
-  'without rebar caps': 'Struck By',
-  'rebar caps missing': 'Struck By',
-  'missing rebar cap': 'Struck By',
-  'no rebar cap': 'Struck By',
-  'no rebar caps': 'Struck By',
+  'rebar cap': 'Physical Hazard',
+  'rebar caps': 'Physical Hazard',
+  'rebar without cap': 'Physical Hazard',
+  'rebars without cap': 'Physical Hazard',
+  'without rebar cap': 'Physical Hazard',
+  'without rebar caps': 'Physical Hazard',
+  'rebar caps missing': 'Physical Hazard',
+  'missing rebar cap': 'Physical Hazard',
+  'no rebar cap': 'Physical Hazard',
+  'no rebar caps': 'Physical Hazard',
   // Impalement hazard phrases
-  'impalement': 'Struck By',
-  'impaled': 'Struck By',
-  'impalement hazard': 'Struck By',
-  'risk of impalement': 'Struck By',
-  'impalement injuries': 'Struck By',
-  'impalement injury': 'Struck By',
-  'struck on these rods': 'Struck By',
-  'struck onto these rebars': 'Struck By',
+  'impalement': 'Physical Hazard',
+  'impaled': 'Physical Hazard',
+  'impalement hazard': 'Physical Hazard',
+  'risk of impalement': 'Physical Hazard',
+  'impalement injuries': 'Physical Hazard',
+  'impalement injury': 'Physical Hazard',
+  'struck on these rods': 'Physical Hazard',
+  'struck onto these rebars': 'Physical Hazard',
   // Sharp steel and objects
-  'sharp steel': 'Struck By',
-  'sharp object': 'Struck By',
-  'sharp edge': 'Struck By',
-  'sharp edges': 'Struck By',
+  'sharp steel': 'Physical Hazard',
+  'sharp object': 'Physical Hazard',
+  'sharp edge': 'Physical Hazard',
+  'sharp edges': 'Physical Hazard',
   // Nails protruding
-  'exposed nails': 'Struck By',
-  'exposed nail': 'Struck By',
-  'timber with nails': 'Struck By',
-  'wood with nails': 'Struck By',
-  'plywood with nails': 'Struck By',
-  'planks with nails': 'Struck By',
-  'nails protruding': 'Struck By',
-  'nail protruding': 'Struck By',
-  'protruding nails': 'Struck By',
-  'protruding nail': 'Struck By',
-  'had exposed nails': 'Struck By',
-  'sheets had exposed nails': 'Struck By',
+  'exposed nails': 'Physical Hazard',
+  'exposed nail': 'Physical Hazard',
+  'timber with nails': 'Physical Hazard',
+  'wood with nails': 'Physical Hazard',
+  'plywood with nails': 'Physical Hazard',
+  'planks with nails': 'Physical Hazard',
+  'nails protruding': 'Physical Hazard',
+  'nail protruding': 'Physical Hazard',
+  'protruding nails': 'Physical Hazard',
+  'protruding nail': 'Physical Hazard',
+  'had exposed nails': 'Physical Hazard',
+  'sheets had exposed nails': 'Physical Hazard',
   // Falling objects
-  'falling object': 'Struck By',
-  'falling objects': 'Struck By',
-  'object fell': 'Struck By',
-  'objects falling': 'Struck By',
-  'dropped object': 'Struck By',
-  'falling material': 'Struck By',
+  'falling object': 'Physical Hazard',
+  'falling objects': 'Physical Hazard',
+  'object fell': 'Physical Hazard',
+  'objects falling': 'Physical Hazard',
+  'dropped object': 'Physical Hazard',
+  'falling material': 'Physical Hazard',
   // Tie rods
-  'tie rod': 'Struck By',
-  'tie rods': 'Struck By',
-  'tie rods used': 'Struck By',
+  'tie rod': 'Physical Hazard',
+  'tie rods': 'Physical Hazard',
+  'tie rods used': 'Physical Hazard',
 
   // Environmental contamination → Environmental
   'septic tank': 'Environmental',
@@ -809,43 +810,43 @@ export const CONTEXT_REDIRECTS = {
   'waste on soil': 'Environmental',
 
   // Food waste/hygiene → Site Welfare (still appropriate)
-  'food waste was not removed': 'Site Welfare',
-  'food waste was observed': 'Site Welfare',
-  'food waste not removed': 'Site Welfare',
-  'food waste': 'Site Welfare',
-  'hygiene risk': 'Site Welfare',
-  'hygiene concerns': 'Site Welfare',
-  'hygiene issues': 'Site Welfare',
-  'pest attraction': 'Site Welfare',
-  'pest risks': 'Site Welfare',
-  'unpleasant odor': 'Site Welfare',
-  'unpleasant odour': 'Site Welfare',
+  'food waste was not removed': 'Worker Welfare',
+  'food waste was observed': 'Worker Welfare',
+  'food waste not removed': 'Worker Welfare',
+  'food waste': 'Worker Welfare',
+  'hygiene risk': 'Worker Welfare',
+  'hygiene concerns': 'Worker Welfare',
+  'hygiene issues': 'Worker Welfare',
+  'pest attraction': 'Worker Welfare',
+  'pest risks': 'Worker Welfare',
+  'unpleasant odor': 'Worker Welfare',
+  'unpleasant odour': 'Worker Welfare',
   // Missing welfare facilities → Site Welfare
-  'toilet not provided': 'Site Welfare',
-  'toilet were not provided': 'Site Welfare',
-  'toilets not provided': 'Site Welfare',
-  'waste bin not provided': 'Site Welfare',
-  'waste bin were not provided': 'Site Welfare',
-  'bulletin board not provided': 'Site Welfare',
-  'bulletin board were not provided': 'Site Welfare',
-  'welfare not provided': 'Site Welfare',
-  'facilities not provided': 'Site Welfare',
-  'sanitation not provided': 'Site Welfare',
-  'waste bin liner': 'Site Welfare',
-  'polythene bag not changed': 'Site Welfare',
-  'polythene bag in the waste bin': 'Site Welfare',
-  'garbage bag was not replaced': 'Site Welfare',
-  'garbage bag not replaced': 'Site Welfare',
-  'waste bin was full': 'Site Welfare',
-  'waste bin full': 'Site Welfare',
-  'bin was overflowing': 'Site Welfare',
-  'bin overflowing': 'Site Welfare',
-  'poor hygiene': 'Site Welfare',
-  // First Aid → Emergency Preparedness
-  'first aid box': 'Emergency Preparedness',
-  'first aid kit': 'Emergency Preparedness',
-  'first aid box not provided': 'Emergency Preparedness',
-  'first aid not provided': 'Emergency Preparedness',
+  'toilet not provided': 'Worker Welfare',
+  'toilet were not provided': 'Worker Welfare',
+  'toilets not provided': 'Worker Welfare',
+  'waste bin not provided': 'Worker Welfare',
+  'waste bin were not provided': 'Worker Welfare',
+  'bulletin board not provided': 'Worker Welfare',
+  'bulletin board were not provided': 'Worker Welfare',
+  'welfare not provided': 'Worker Welfare',
+  'facilities not provided': 'Worker Welfare',
+  'sanitation not provided': 'Worker Welfare',
+  'waste bin liner': 'Worker Welfare',
+  'polythene bag not changed': 'Worker Welfare',
+  'polythene bag in the waste bin': 'Worker Welfare',
+  'garbage bag was not replaced': 'Worker Welfare',
+  'garbage bag not replaced': 'Worker Welfare',
+  'waste bin was full': 'Worker Welfare',
+  'waste bin full': 'Worker Welfare',
+  'bin was overflowing': 'Worker Welfare',
+  'bin overflowing': 'Worker Welfare',
+  'poor hygiene': 'Worker Welfare',
+  // First Aid → Worker Welfare
+  'first aid box': 'Worker Welfare',
+  'first aid kit': 'Worker Welfare',
+  'first aid box not provided': 'Worker Welfare',
+  'first aid not provided': 'Worker Welfare',
 
   // Structural/Support → Temporary Works
   'makeshift wooden': 'Temporary Works',
@@ -878,10 +879,10 @@ export const CONTEXT_REDIRECTS = {
   'no walkways': 'Access',
   'posing a risk of falls': 'Access',
   'risk of falls': 'Access',
-  'slip, trip, and fall': 'Slips Trips Falls',
-  'slip, trip and fall': 'Slips Trips Falls',
-  'trip hazard': 'Slips Trips Falls',
-  'tripping hazard': 'Slips Trips Falls',
+  'slip, trip, and fall': 'Slip and Trip',
+  'slip, trip and fall': 'Slip and Trip',
+  'trip hazard': 'Slip and Trip',
+  'tripping hazard': 'Slip and Trip',
 
   // Electrical cables → Energized System (not Housekeeping)
   'grounding cables': 'Energized System',
@@ -915,23 +916,53 @@ export const CONTEXT_REDIRECTS = {
   'cement bags placed on ground': 'Housekeeping',
   'placed directly on the ground': 'Housekeeping',
 
-  // Falling objects from height → Struck By (primary hazard)
-  'falling object hazard': 'Struck By',
-  'on top of pillars': 'Struck By',
-  'on top of the pillars': 'Struck By',
-  'timber on top': 'Struck By',
-  'placed on top of': 'Struck By',
-  'posed a serious falling object': 'Struck By',
-  'falling object hazard': 'Struck By',
-  'risk of injury to workers passing': 'Struck By',
-  'risk of injury to workers below': 'Struck By',
-  'working below': 'Struck By',
+  // Falling objects from height → Physical Hazard (primary hazard)
+  'falling object hazard': 'Physical Hazard',
+  'on top of pillars': 'Physical Hazard',
+  'on top of the pillars': 'Physical Hazard',
+  'timber on top': 'Physical Hazard',
+  'placed on top of': 'Physical Hazard',
+  'posed a serious falling object': 'Physical Hazard',
+  'falling object hazard': 'Physical Hazard',
+  'risk of injury to workers passing': 'Physical Hazard',
+  'risk of injury to workers below': 'Physical Hazard',
+  'working below': 'Physical Hazard',
 
   // Security cabin issues → Site Security
   'security cabin': 'Site Security',
   'sleeping during duty': 'Site Security',
   'sleeping purposes during duty': 'Site Security',
   'used for sleeping': 'Site Security',
+
+  // Mechanical Hazard - caught-in/between, crushing, pinch points (NEW)
+  'caught in': 'Mechanical Hazard',
+  'caught-in': 'Mechanical Hazard',
+  'caught between': 'Mechanical Hazard',
+  'caught-between': 'Mechanical Hazard',
+  'caught in between': 'Mechanical Hazard',
+  'pinch point': 'Mechanical Hazard',
+  'pinch points': 'Mechanical Hazard',
+  'nip point': 'Mechanical Hazard',
+  'shear point': 'Mechanical Hazard',
+  'crushing hazard': 'Mechanical Hazard',
+  'crush hazard': 'Mechanical Hazard',
+  'moving parts': 'Mechanical Hazard',
+  'rotating parts': 'Mechanical Hazard',
+  'rotating equipment': 'Mechanical Hazard',
+  'entanglement': 'Mechanical Hazard',
+  'entangled': 'Mechanical Hazard',
+  'unguarded machinery': 'Mechanical Hazard',
+  'machine guard': 'Mechanical Hazard',
+  'missing guard': 'Mechanical Hazard',
+  'no guard': 'Mechanical Hazard',
+  'amputation': 'Mechanical Hazard',
+  'amputated': 'Mechanical Hazard',
+  'conveyor belt': 'Mechanical Hazard',
+  'roller mechanism': 'Mechanical Hazard',
+  'gear mechanism': 'Mechanical Hazard',
+  'pulley system': 'Mechanical Hazard',
+  'belt drive': 'Mechanical Hazard',
+  'shaft exposed': 'Mechanical Hazard',
 
   // Scaffolding components scattered → Housekeeping (unless structural)
   'scaffolding components': 'Housekeeping',
@@ -1018,18 +1049,15 @@ export const HAZARD_PATTERNS = {
     'scaffolding access', 'ladder climbing', 'roofing work', 'structural steel',
     'formwork deck', 'elevated walkway', 'aerial work', 'skylight', 'fragile roof'
   ],
-  'Barricades': [
-    'barricade', 'barrier', 'fencing', 'exclusion zone', 'safety fence', 'tape',
-    'warning tape', 'red zone', 'keep out', 'restricted area', 'demarcation',
-    'perimeter', 'safety barrier', 'guard rail', 'bollard', 'delineator'
-  ],
   'COSHH': [
     'coshh', 'chemical', 'hazardous substance', 'toxic', 'corrosive', 'irritant',
     'sds', 'msds', 'material safety', 'chemical storage', 'spill', 'leak',
     'fumes', 'vapour', 'vapor', 'solvent', 'acid', 'alkali', 'paint', 'adhesive',
     'resin', 'epoxy', 'hazmat', 'dangerous goods', 'poison', 'carcinogen'
   ],
-  'Struck By': [
+  'Physical Hazard': [
+    // Struck-by hazards (OSHA Fatal Four)
+    'struck by', 'struck-by', 'hit by', 'hit by object',
     // Protruding rebars and sharp objects
     'protruding rebar', 'protruding rebars', 'exposed rebar', 'exposed rebars',
     'rebar cap', 'rebar caps', 'impalement', 'risk of impalement', 'impalement hazard',
@@ -1037,35 +1065,76 @@ export const HAZARD_PATTERNS = {
     'uncapped rebar', 'uncapped rebars', 'unprotected rebar', 'unprotected rebars',
     // Protruding nails
     'protruding nail', 'protruding nails', 'exposed nail', 'exposed nails',
-    'timber with nails', 'wood with nails', 'planks with nails',
+    'timber with nails', 'wood with nails', 'planks with nails', 'plywood with nails',
     // Tie rods
     'tie rod', 'tie rods',
     // Falling objects
-    'falling object', 'falling objects', 'dropped object', 'struck by',
-    'overhead hazard', 'object fell', 'objects falling',
+    'falling object', 'falling objects', 'dropped object', 'dropped objects',
+    'overhead hazard', 'object fell', 'objects falling', 'flying debris', 'projectile',
     // Sharp edges
-    'sharp edge', 'sharp edges', 'cutting hazard', 'laceration',
+    'sharp edge', 'sharp edges', 'cutting hazard', 'laceration', 'puncture',
     // NEOM Standard
     'phsas 37.9', 'neom phsas 37.9'
+  ],
+  'Mechanical Hazard': [
+    // Caught-in/between hazards (OSHA Fatal Four)
+    'caught in', 'caught-in', 'caught between', 'caught-between', 'caught in between',
+    // Pinch/nip points
+    'pinch point', 'pinch points', 'nip point', 'nip points', 'shear point', 'shear points',
+    // Crushing hazards
+    'crushing', 'crushed', 'crush hazard', 'crushing hazard',
+    // Moving/rotating parts
+    'moving parts', 'rotating parts', 'rotating equipment', 'rotating machinery',
+    // Entanglement
+    'entanglement', 'entangled', 'entangle',
+    // Machinery and equipment
+    'conveyor', 'conveyor belt', 'roller', 'gear', 'gears', 'pulley', 'pulleys',
+    'belt', 'shaft', 'chain drive', 'belt drive',
+    // Guards and protection
+    'unguarded machinery', 'machine guard', 'missing guard', 'no guard', 'guard removed',
+    // Severe outcomes
+    'amputation', 'amputated', 'severed',
+    // General mechanical terms
+    'mechanical hazard', 'machinery hazard'
   ],
   'Environmental': [
     'environmental', 'contamination', 'pollution', 'ground contamination',
     'soil contamination', 'environmental damage', 'septic tank', 'septic overflow',
     'sewage', 'sewage overflow', 'effluent', 'wastewater', 'waste water'
   ],
-  'Slips Trips Falls': [
-    'slip', 'trip', 'fall', 'slippery', 'tripping hazard', 'trip hazard',
-    'uneven surface', 'wet floor', 'slipped', 'tripped', 'fell'
+  'Slip and Trip': [
+    // Slip hazards (same level)
+    'slip', 'slipped', 'slippery', 'slippery floor', 'slippery surface',
+    // Trip hazards (same level)
+    'trip', 'tripped', 'tripping hazard', 'trip hazard',
+    // Surface conditions
+    'uneven surface', 'uneven ground', 'uneven floor',
+    'wet floor', 'wet surface', 'water on floor',
+    'loose cable', 'cable across', 'cables on floor',
+    'pothole', 'hole in ground', 'obstacle', 'obstruction'
+    // NOTE: 'fall', 'fell', 'fall from' moved to Working at Height
   ],
-  'Dust Control': [
-    'dust', 'silica', 'respirable', 'particulate', 'dust suppression', 'water spray',
-    'dust mask', 'respiratory', 'rpf', 'dust extraction', 'vacuum', 'wet cutting',
-    'airborne', 'inhalation', 'lung', 'pneumoconiosis', 'asbestosis', 'asbestos'
-  ],
-  'BBS': [
-    'bbs', 'behavior', 'behaviour', 'behavioral', 'safe behavior', 'unsafe behavior',
-    'safety observation', 'peer observation', 'safety conversation', 'safety interaction',
-    'near miss', 'close call', 'near-miss', 'good catch', 'stop work', 'intervention'
+  'Respiratory Hazard': [
+    // Dust hazards
+    'dust', 'dusty', 'dust control', 'dust suppression',
+    // Silica
+    'silica', 'silicosis', 'crystalline silica',
+    // Fumes and particles
+    'fumes', 'welding fumes', 'metal fumes', 'smoke', 'welding smoke',
+    'particles', 'particulates', 'particulate', 'airborne particles', 'airborne',
+    // Inhalation hazards
+    'inhalation', 'inhalation hazard', 'respiratory', 'respiratory hazard', 'breathing',
+    // Ventilation
+    'ventilation', 'poor ventilation', 'no ventilation',
+    'air quality', 'poor air quality',
+    // Specific materials
+    'asbestos', 'fiber', 'fibres', 'asbestosis', 'pneumoconiosis',
+    // Dust types
+    'concrete dust', 'cement dust', 'wood dust', 'grinding dust', 'cutting dust',
+    'sanding', 'sanding dust', 'mist', 'spray', 'aerosol',
+    // Protection
+    'dust mask', 'respirator', 'rpf', 'dust extraction', 'vacuum', 'wet cutting',
+    'respirable', 'water spray', 'lung'
   ],
   'Housekeeping': [
     'housekeeping', 'clutter', 'debris', 'clean', 'tidy', 'storage', 'obstruction',
@@ -1078,23 +1147,6 @@ export const HAZARD_PATTERNS = {
     'accumulation', 'accumulated', 'piled up', 'lying around', 'dumped', 'abandoned',
     'unused material', 'excess material', 'material stacking', 'material storage'
   ],
-  'PPE': [
-    'ppe', 'personal protective', 'helmet', 'hard hat', 'safety glasses', 'goggles',
-    'gloves', 'safety boots', 'steel toe', 'hi-vis', 'high visibility', 'vest',
-    'ear protection', 'ear plugs', 'ear muffs', 'face shield', 'respirator',
-    'mask', 'coverall', 'protective clothing', 'safety equipment', 'fall protection',
-    'safety shoe', 'safety boot', 'safety helmet', 'bump cap', 'n95', 'dust mask',
-    'half mask', 'full face mask', 'scba', 'safety harness', 'body harness',
-    'reflective vest', 'safety vest', 'work glove', 'leather glove', 'nitrile glove',
-    'cut resistant', 'impact glove', 'chemical glove', 'hearing protection',
-    'safety lanyard', 'chin strap', 'safety gear', 'protective gear', 'safety wear',
-    'eye protection', 'hand protection', 'foot protection', 'head protection'
-  ],
-  'Safety Sign': [
-    'safety sign', 'signage', 'warning sign', 'caution sign', 'danger sign',
-    'prohibition sign', 'mandatory sign', 'emergency sign', 'exit sign', 'no entry',
-    'restricted', 'label', 'marking', 'notice', 'instruction', 'information sign'
-  ],
   'Site Security': [
     'site security', 'security', 'access control', 'gate', 'guard', 'trespassing',
     'unauthorized', 'unauthorised', 'intruder', 'theft', 'vandalism', 'fencing',
@@ -1105,18 +1157,29 @@ export const HAZARD_PATTERNS = {
     'ladder access', 'ramp', 'doorway', 'corridor', 'passage', 'route', 'accessway',
     'means of access', 'safe access', 'blocked access', 'slip', 'trip', 'uneven surface'
   ],
-  'Site Welfare': [
-    'welfare', 'toilet', 'washroom', 'restroom', 'drinking water', 'canteen',
-    'rest area', 'break room', 'first aid', 'medical', 'shelter', 'changing room',
-    'locker', 'sanitation', 'hygiene', 'hand washing', 'accommodation', 'camp'
-  ],
-  'Safety Supervision': [
-    'supervision', 'supervisor', 'competent person', 'safety officer', 'hse',
-    'safety manager', 'site manager', 'foreman', 'charge hand', 'oversight',
-    'monitoring', 'leadership', 'management', 'accountability', 'safety meeting',
-    'unsupervised', 'no supervision', 'lack of supervision', 'without supervision'
-    // NOTE: Removed 'inspection', 'audit', 'toolbox talk', 'briefing', 'induction'
-    // These are either too generic or belong to Training and Competency
+  'Worker Welfare': [
+    // Core welfare terms
+    'welfare', 'welfare facility', 'welfare facilities',
+    // Camps and accommodation
+    'camp', 'camps', 'labor camp', 'labour camp', 'worker camp',
+    'accommodation', 'worker accommodation', 'staff accommodation',
+    'dormitory', 'dorm', 'living quarters',
+    // Toilet and sanitation
+    'toilet', 'toilets', 'washroom', 'restroom', 'bathroom', 'latrine',
+    'sanitation', 'portable toilet', 'urinal',
+    // Food facilities
+    'canteen', 'mess hall', 'dining facility', 'kitchen', 'cafeteria',
+    // Drinking water
+    'drinking water', 'potable water', 'water station', 'water cooler',
+    // Rest areas
+    'rest area', 'break room', 'shade area', 'resting place', 'shelter',
+    // Medical facilities
+    'first aid room', 'medical facility', 'clinic',
+    // Changing facilities
+    'changing room', 'locker room', 'locker',
+    // Other welfare
+    'prayer room', 'worship area', 'recreation', 'recreational facility',
+    'hand washing', 'hygiene'
   ],
   'Tools': [
     'tool', 'hand tool', 'power tool', 'equipment', 'wrench', 'hammer', 'screwdriver',
@@ -1140,24 +1203,6 @@ export const HAZARD_PATTERNS = {
     'cold stress', 'lighting', 'illumination', 'noise', 'vibration', 'ergonomic',
     'ventilation', 'air quality', 'humidity', 'wind', 'rain', 'storm', 'condition',
     'climate', 'comfort', 'fatigue', 'shift work', 'working hours'
-  ],
-  'Permit and RAMS': [
-    'permit', 'ptw', 'permit to work', 'rams', 'risk assessment', 'method statement',
-    'safe system', 'swms', 'jsea', 'jsa', 'job safety', 'task risk', 'procedure',
-    'work instruction', 'sop', 'safe operating', 'control measure', 'mitigation',
-    'authorization', 'authorisation', 'approval', 'sign off'
-  ],
-  'Training and Competency': [
-    'training', 'competency', 'competence', 'certification', 'certificate', 'license',
-    'licence', 'qualification', 'skilled', 'unskilled', 'untrained', 'inexperienced',
-    'induction', 'orientation', 'refresher', 'course', 'awareness', 'education',
-    'assessment', 'test', 'evaluation', 'capability'
-  ],
-  'Emergency Preparedness': [
-    'emergency', 'evacuation', 'drill', 'assembly point', 'muster', 'rescue',
-    'first aid', 'ambulance', 'hospital', 'injury', 'incident', 'alarm', 'siren',
-    'emergency response', 'erp', 'contingency', 'crisis', 'disaster', 'spill response',
-    'fire drill', 'emergency exit', 'escape route'
   ],
   'Working in Heat': [
     'working in heat', 'heat', 'hot surface', 'burn hazard', 'thermal', 'steam',
@@ -1209,22 +1254,6 @@ export const HAZARD_PHRASES = {
     'mobile plant', 'heavy equipment', 'plant operation', 'equipment operation',
     'machinery operation', 'plant movement'
   ],
-  'PPE': [
-    'no helmet', 'no harness', 'no gloves', 'no goggles', 'no safety glasses',
-    'missing ppe', 'without ppe', 'ppe not worn', 'not wearing ppe', 'improper ppe',
-    'ppe violation', 'no hard hat', 'no safety boots', 'no hi-vis', 'no vest',
-    'removed helmet', 'removed harness', 'ppe compliance'
-  ],
-  'Safety Supervision': [
-    'toolbox talk', 'safety briefing', 'safety meeting', 'safety induction',
-    'site induction', 'safety inspection', 'safety audit', 'safety walkthrough',
-    'supervisor present', 'lack of supervision', 'no supervision'
-  ],
-  'Emergency Preparedness': [
-    'fire extinguisher', 'first aid kit', 'emergency drill', 'evacuation route',
-    'emergency exit', 'assembly point', 'muster point', 'emergency response',
-    'fire drill', 'evacuation drill', 'rescue plan', 'emergency plan'
-  ],
   'Fire': [
     'fire hazard', 'fire risk', 'fire prevention', 'fire safety', 'fire watch',
     'fire alarm', 'fire fighting', 'fire break out', 'open flame'
@@ -1240,18 +1269,6 @@ export const HAZARD_PHRASES = {
   'Traffic Management': [
     'traffic management', 'traffic control', 'pedestrian segregation', 'vehicle segregation',
     'traffic plan', 'site traffic', 'vehicle movement'
-  ],
-  'Permit and RAMS': [
-    'permit to work', 'work permit', 'risk assessment', 'method statement',
-    'safe system of work', 'job safety analysis', 'task risk assessment'
-  ],
-  'Training and Competency': [
-    'not trained', 'untrained worker', 'lack of training', 'competency assessment',
-    'training required', 'no certification', 'expired certification'
-  ],
-  'Barricades': [
-    'no barricade', 'missing barrier', 'inadequate fencing', 'exclusion zone',
-    'restricted area', 'safety barrier'
   ],
   'Housekeeping': [
     'poor housekeeping', 'site housekeeping', 'housekeeping issue', 'material storage',
@@ -1273,21 +1290,17 @@ export const HAZARD_PHRASES = {
     'site security', 'access control', 'unauthorized access', 'security breach',
     'perimeter security'
   ],
-  'Site Welfare': [
+  'Worker Welfare': [
     'welfare facilities', 'drinking water', 'toilet facilities', 'rest area',
     'first aid room', 'welfare provision'
   ],
-  'Dust Control': [
+  'Respiratory Hazard': [
     'dust control', 'dust suppression', 'silica dust', 'respirable dust',
     'dust exposure', 'airborne dust'
   ],
   'Working on or Near Live Roads': [
     'live road', 'live traffic', 'road work', 'near traffic', 'highway work',
     'public highway'
-  ],
-  'BBS': [
-    'safe behavior', 'unsafe behavior', 'behavioral safety', 'safety observation',
-    'peer observation', 'stop work authority', 'good catch'
   ],
   'Working in Heat': [
     'hot surface', 'burn hazard', 'thermal hazard', 'heat exposure', 'steam hazard',
@@ -1297,15 +1310,26 @@ export const HAZARD_PHRASES = {
     'working on water', 'working near water', 'over water', 'near water', 'water hazard',
     'drowning risk', 'life jacket', 'water rescue', 'man overboard', 'fall into water'
   ],
-  'Safety Sign': [
-    'safety signage', 'warning sign', 'missing sign', 'safety sign', 'no signage'
+  'Physical Hazard': [
+    'struck by', 'hit by', 'falling object', 'dropped object',
+    'sharp object', 'protruding rebar', 'exposed rebar', 'impalement hazard',
+    'flying debris', 'projectile', 'sharp edge', 'laceration hazard'
+  ],
+  'Mechanical Hazard': [
+    'caught in', 'caught between', 'pinch point', 'nip point',
+    'crushing hazard', 'moving parts', 'rotating parts', 'entanglement',
+    'unguarded machinery', 'machine guard', 'amputation hazard'
+  ],
+  'Slip and Trip': [
+    'slip hazard', 'trip hazard', 'slippery floor', 'slippery surface',
+    'tripping hazard', 'uneven surface', 'wet floor', 'obstacle'
   ],
 }
 
 // Category priority order - MAJOR HAZARDS FIRST, then Sub-Significant
 // When checking single keywords, categories are checked in this order
 export const CATEGORY_PRIORITY = [
-  // === 13 MAJOR (SIGNIFICANT) HAZARDS - Checked First ===
+  // === 15 MAJOR (SIGNIFICANT) HAZARDS - Checked First ===
   'Confined Spaces',              // 1 - IDLH environment
   'Energized System',             // 2 - Electrocution risk
   'Working at Height',            // 3 - Fatal fall risk
@@ -1313,31 +1337,27 @@ export const CATEGORY_PRIORITY = [
   'Lifting',                      // 5 - Suspended load risk
   'Breaking Ground & Excavation', // 6 - Cave-in risk
   'Fire',                         // 7 - Fire risk
-  'Mobile Plant & Equipment',     // 8 - Struck-by risk
-  'Working on or Near Live Roads', // 9 - Traffic risk
-  'Working on or Near Water',     // 10 - Drowning risk
-  'Driving',                      // 11 - Vehicle incident
-  'Temporary Works',              // 12 - Structural collapse
-  'Working in Heat',              // 13 - Heat stress/burn risk
+  'Mobile Plant & Equipment',     // 8 - Plant strike risk
+  'Physical Hazard',              // 9 - Struck-by risk (OSHA Fatal Four)
+  'Mechanical Hazard',            // 10 - Caught-in risk (OSHA Fatal Four)
+  'Working on or Near Live Roads', // 11 - Traffic risk
+  'Working on or Near Water',     // 12 - Drowning risk
+  'Driving',                      // 13 - Vehicle incident
+  'Temporary Works',              // 14 - Structural collapse
+  'Working in Heat',              // 15 - Heat stress/burn risk
 
-  // === 17 SUB-SIGNIFICANT HAZARDS - Checked After Major ===
-  'COSHH',                        // 14 - Chemical exposure
-  'Dust Control',                 // 15 - Respiratory hazard
-  'Traffic Management',           // 16 - Site traffic
-  'Barricades',                   // 17 - Exclusion zone
-  'PPE',                          // 18 - Personal protection
-  'Tools',                        // 19 - Hand/power tools
-  'Safety Sign',                  // 20 - Signage
-  'Site Security',                // 21 - Access control
-  'Site Welfare',                 // 22 - Welfare facilities
-  'Safety Supervision',           // 23 - Supervision
-  'Training and Competency',      // 24 - Competency
-  'Emergency Preparedness',       // 25 - Emergency response
-  'Permit and RAMS',              // 26 - Permits
-  'BBS',                          // 27 - Behavioral
-  'Housekeeping',                 // 28 - Housekeeping
-  'Access',                       // 29 - Access/egress
-  'Work Environment',             // 30 - Most generic (default fallback)
+  // === 11 SUB-SIGNIFICANT HAZARDS - Checked After Major ===
+  'COSHH',                        // 16 - Chemical exposure
+  'Respiratory Hazard',           // 17 - Respiratory hazard (dust, silica, fumes)
+  'Traffic Management',           // 18 - Site traffic
+  'Site Security',                // 19 - Security hazards
+  'Housekeeping',                 // 20 - Housekeeping hazards
+  'Slip and Trip',                // 21 - Slip/trip hazards (same level)
+  'Worker Welfare',               // 22 - Welfare facilities, camps
+  'Environmental',                // 23 - Environmental contamination
+  'Tools',                        // 24 - Tool hazards
+  'Access',                       // 25 - Access/egress hazards
+  'Work Environment',             // 26 - Most generic (default fallback)
 ]
 
 // Engagement Types
@@ -1521,4 +1541,46 @@ export const SPELL_CHECK_WHITELIST = [
   'threw', 'through',
   'week', 'weak',
   'which', 'witch',
+]
+
+// Comprehensive foul/inappropriate words list (case-insensitive matching)
+// Used by data quality auditing to flag unprofessional language in observation descriptions
+export const FOUL_WORDS_LIST = [
+  // Mild workplace-inappropriate
+  'damn', 'dammit', 'damned', 'hell', 'crap', 'crappy', 'stupid', 'idiot', 'idiotic',
+  'dumb', 'dumbass', 'fool', 'foolish', 'moron', 'moronic', 'jerk',
+  // Strong profanity
+  'shit', 'shitty', 'bullshit', 'fuck', 'fucking', 'fucked', 'fucker', 'motherfucker',
+  'ass', 'asshole', 'bastard', 'bitch', 'bitchy', 'piss', 'pissed', 'pissing',
+  'dick', 'dickhead', 'cock', 'cunt', 'whore', 'slut',
+  // Slurs and discriminatory terms
+  'retard', 'retarded', 'spastic', 'spaz', 'tard',
+  // Aggressive/threatening language (context-dependent but flagged for review)
+  'kill', 'murder', 'die', 'hate',
+  // Common typo/evasion variations
+  'fuk', 'fck', 'fcking', 'sht', 'azz', 'btch', 'fking', 'effing', 'wtf', 'stfu',
+  // Additional inappropriate terms
+  'screw', 'screwed', 'suck', 'sucks', 'sucked', 'sucker', 'loser', 'useless',
+  'incompetent', 'worthless', 'pathetic', 'disgusting', 'gross',
+]
+
+// Vague hazard terms that need specifics - flag when used alone without detail
+// These indicate lazy or low-quality observation descriptions
+export const VAGUE_HAZARD_TERMS = [
+  { term: 'unsafe', requires: 'specific unsafe condition or behavior' },
+  { term: 'risk', requires: 'what the specific risk is' },
+  { term: 'danger', requires: 'what the specific danger is' },
+  { term: 'dangerous', requires: 'what makes it dangerous' },
+  { term: 'hazard', requires: 'type of hazard' },
+  { term: 'hazardous', requires: 'what makes it hazardous' },
+  { term: 'issue', requires: 'specific issue description' },
+  { term: 'problem', requires: 'specific problem' },
+  { term: 'concern', requires: 'specific concern' },
+  { term: 'bad', requires: 'what specifically is bad' },
+  { term: 'wrong', requires: 'what specifically is wrong' },
+  { term: 'poor', requires: 'what specifically is poor' },
+  { term: 'not good', requires: 'what specifically is not good' },
+  { term: 'not safe', requires: 'what specifically is not safe' },
+  { term: 'needs attention', requires: 'what specific attention is needed' },
+  { term: 'needs improvement', requires: 'what specific improvement is needed' },
 ]

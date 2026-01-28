@@ -4,7 +4,7 @@
  */
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays } from 'date-fns'
-import { CONTEXT_REDIRECTS, HAZARD_PHRASES, HAZARD_PATTERNS, MAJOR_HAZARDS } from './constants'
+import { CONTEXT_REDIRECTS, HAZARD_PHRASES, HAZARD_PATTERNS, MAJOR_HAZARDS, FOUL_WORDS_LIST, VAGUE_HAZARD_TERMS } from './constants'
 import { analyzeObservation } from './contextClassifier'
 import { categorizeHazard } from './excelParser'
 import { getSettings } from './settingsReader'
@@ -17,7 +17,10 @@ export const extractHour = (eventTime, dateStr) => {
   if (eventTime && typeof eventTime === 'string') {
     const timeMatch = eventTime.match(/^(\d{1,2}):(\d{2})/)
     if (timeMatch) {
-      return parseInt(timeMatch[1], 10)
+      const hour = parseInt(timeMatch[1], 10)
+      if (hour >= 0 && hour < 24) {
+        return hour
+      }
     }
   }
 
@@ -25,7 +28,10 @@ export const extractHour = (eventTime, dateStr) => {
   if (dateStr) {
     const timeMatch = String(dateStr).match(/(\d{1,2}):(\d{2})/)
     if (timeMatch) {
-      return parseInt(timeMatch[1], 10)
+      const hour = parseInt(timeMatch[1], 10)
+      if (hour >= 0 && hour < 24) {
+        return hour
+      }
     }
   }
 
@@ -1129,7 +1135,8 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
   const qualityCount = wordCounts.filter(wc => wc > 15).length
   const qualityRate = total > 0 ? ((qualityCount / total) * 100).toFixed(1) : '0.0'
   const maxWordCount = Math.max(...wordCounts, 0)
-  const minWordCount = Math.min(...wordCounts.filter(w => w > 0), 0)
+  const filteredCounts = wordCounts.filter(w => w > 0)
+  const minWordCount = filteredCounts.length > 0 ? Math.min(...filteredCounts) : 0
 
   // Flagged (poor quality) descriptions
   const flaggedRecords = reporterIncidents
@@ -1603,15 +1610,18 @@ export const getUnclassifiableRecords = (incidents) => {
   // Track unique records (for total count - avoid double counting)
   const allUnclassifiable = new Set()
 
-  // Approved categories that normalize correctly
+  // Approved categories that normalize correctly (26 hazard categories)
   const approvedCategories = [
-    'Working at Height', 'Lifting', 'Confined Spaces', 'Energized System',
-    'Fire', 'Hot Work', 'Mobile Plant & Equipment', 'Breaking Ground & Excavation',
-    'Temporary Works', 'Working in Heat', 'Working on or Near Live Roads',
-    'Working on or Near Water', 'Driving', 'PPE', 'Housekeeping', 'Work Environment',
-    'Noise', 'Dust', 'Hazardous Substances', 'Manual Handling', 'Struck By',
-    'Slips Trips Falls', 'Tools & Equipment', 'Workplace Transport',
-    'Fatigue', 'Environmental', 'Ergonomics'
+    // 15 Major Hazards
+    'Confined Spaces', 'Energized System', 'Mobile Plant & Equipment',
+    'Breaking Ground & Excavation', 'Fire', 'Hot Work', 'Lifting',
+    'Temporary Works', 'Working on or Near Live Roads', 'Working on or Near Water',
+    'Driving', 'Working at Height', 'Working in Heat',
+    'Physical Hazard', 'Mechanical Hazard',
+    // 11 Sub-significant Hazards
+    'COSHH', 'Respiratory Hazard', 'Housekeeping', 'Site Security',
+    'Access', 'Worker Welfare', 'Tools', 'Traffic Management',
+    'Work Environment', 'Environmental', 'Slip and Trip'
   ]
 
   // Generic/blank values that indicate classification issues
@@ -1766,6 +1776,163 @@ export const getUnclassifiableRecords = (incidents) => {
       message: total > 0
         ? `${total} records (${((total / totalIncidents) * 100).toFixed(1)}%) require manual review`
         : 'All records properly classified'
+    }
+  }
+}
+
+/**
+ * Detect foul/inappropriate words in observation descriptions
+ * Uses word boundary matching to avoid false positives (e.g., "class" matching "ass")
+ */
+export const detectFoulWords = (incidents) => {
+  if (!incidents || incidents.length === 0) {
+    return {
+      count: 0,
+      records: [],
+      percentage: '0.0',
+      status: 'good'
+    }
+  }
+
+  const flaggedRecords = []
+
+  incidents.forEach(incident => {
+    const description = incident.description || ''
+    if (!description.trim()) return
+
+    const descriptionLower = description.toLowerCase()
+    const foundWords = []
+
+    // Check each foul word using word boundary matching
+    FOUL_WORDS_LIST.forEach(word => {
+      // Create regex with word boundaries to avoid partial matches
+      // e.g., "ass" should not match "class", "assessment", "pass"
+      const regex = new RegExp(`\\b${word}\\b`, 'gi')
+      if (regex.test(descriptionLower)) {
+        foundWords.push(word)
+      }
+    })
+
+    if (foundWords.length > 0) {
+      flaggedRecords.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description,
+        descriptionSnippet: description.substring(0, 80) + (description.length > 80 ? '...' : ''),
+        flaggedWords: [...new Set(foundWords)], // Remove duplicates
+        wordCount: foundWords.length,
+        severity: foundWords.length >= 3 ? 'high' : foundWords.length >= 2 ? 'medium' : 'low',
+        incident
+      })
+    }
+  })
+
+  return {
+    count: flaggedRecords.length,
+    records: flaggedRecords.sort((a, b) => b.wordCount - a.wordCount),
+    percentage: incidents.length > 0
+      ? ((flaggedRecords.length / incidents.length) * 100).toFixed(1)
+      : '0.0',
+    status: flaggedRecords.length === 0 ? 'good' : 'poor',
+    summary: {
+      highSeverity: flaggedRecords.filter(r => r.severity === 'high').length,
+      mediumSeverity: flaggedRecords.filter(r => r.severity === 'medium').length,
+      lowSeverity: flaggedRecords.filter(r => r.severity === 'low').length
+    }
+  }
+}
+
+/**
+ * Detect vague hazard descriptions that lack specificity
+ * Flags descriptions that use generic terms without providing detail
+ * A description is considered vague if:
+ * - Contains a vague term AND is short (≤15 words), OR
+ * - Contains a vague term in the first 5 words (as the primary descriptor)
+ */
+export const detectVagueHazards = (incidents) => {
+  if (!incidents || incidents.length === 0) {
+    return {
+      count: 0,
+      records: [],
+      percentage: '0.0',
+      status: 'good'
+    }
+  }
+
+  const flaggedRecords = []
+
+  incidents.forEach(incident => {
+    const description = incident.description || ''
+    if (!description.trim()) return
+
+    const descriptionLower = description.toLowerCase()
+    const words = description.trim().split(/\s+/).filter(w => w.length > 0)
+    const wordCount = words.length
+    const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
+
+    const foundTerms = []
+
+    // Check each vague term
+    VAGUE_HAZARD_TERMS.forEach(({ term, requires }) => {
+      const regex = new RegExp(`\\b${term}\\b`, 'gi')
+
+      if (regex.test(descriptionLower)) {
+        // Flag if:
+        // 1. Description is short (≤15 words) - not enough detail, OR
+        // 2. Vague term appears in first 5 words (primary descriptor)
+        const isInFirstFive = new RegExp(`\\b${term}\\b`, 'gi').test(firstFiveWords)
+        const isShortDescription = wordCount <= 15
+
+        if (isShortDescription || isInFirstFive) {
+          foundTerms.push({ term, requires, isInFirstFive })
+        }
+      }
+    })
+
+    if (foundTerms.length > 0) {
+      flaggedRecords.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description,
+        descriptionSnippet: description.substring(0, 80) + (description.length > 80 ? '...' : ''),
+        vagueTerms: foundTerms,
+        wordCount: wordCount,
+        reason: wordCount <= 15
+          ? `Short description (${wordCount} words) with vague term "${foundTerms[0].term}"`
+          : `Vague term "${foundTerms[0].term}" used as primary descriptor`,
+        improvement: foundTerms[0].requires,
+        incident
+      })
+    }
+  })
+
+  return {
+    count: flaggedRecords.length,
+    records: flaggedRecords.sort((a, b) => a.wordCount - b.wordCount), // Shortest first
+    percentage: incidents.length > 0
+      ? ((flaggedRecords.length / incidents.length) * 100).toFixed(1)
+      : '0.0',
+    status: flaggedRecords.length === 0 ? 'good' : 'warning',
+    summary: {
+      shortDescriptions: flaggedRecords.filter(r => r.wordCount <= 15).length,
+      primaryDescriptor: flaggedRecords.filter(r => r.wordCount > 15).length,
+      topVagueTerms: Object.entries(
+        flaggedRecords.reduce((acc, r) => {
+          r.vagueTerms.forEach(({ term }) => {
+            acc[term] = (acc[term] || 0) + 1
+          })
+          return acc
+        }, {})
+      )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([term, count]) => ({ term, count }))
     }
   }
 }

@@ -411,14 +411,16 @@ const mapOutcomeToCategory = (outcome, objects) => {
 
 const determineSubHazard = (text, primaryCategory) => {
   // Look for sub-significant indicators that aren't the primary category
+  // Note: PPE, Barricades, Safety Sign, Training, Emergency Preparedness are controls, not hazards
+  // They are now mapped to actual hazards
   const subIndicators = {
-    'PPE': ['ppe', 'helmet', 'gloves', 'safety glasses', 'hard hat', 'hi-vis', 'harness'],
+    'Work Environment': ['ppe', 'helmet', 'gloves', 'safety glasses', 'hard hat', 'hi-vis', 'sign', 'signage', 'warning sign', 'notice', 'training', 'competent', 'certified', 'qualified'],
+    'Working at Height': ['harness', 'fall protection'],
     'Housekeeping': ['housekeeping', 'tidy', 'clean', 'mess', 'clutter', 'debris'],
-    'Barricades': ['barricade', 'barrier', 'fencing', 'delineator', 'cone'],
-    'Safety Sign': ['sign', 'signage', 'warning sign', 'notice'],
+    'Access': ['barricade', 'barrier', 'fencing', 'delineator', 'cone'],
     'Traffic Management': ['traffic', 'vehicle movement', 'pedestrian'],
-    'Training and Competency': ['training', 'competent', 'certified', 'qualified'],
-    'Emergency Preparedness': ['emergency', 'evacuation', 'first aid', 'fire extinguisher']
+    'Fire': ['emergency', 'evacuation', 'fire extinguisher', 'assembly point'],
+    'Worker Welfare': ['first aid', 'first aider']
   }
 
   for (const [subHazard, keywords] of Object.entries(subIndicators)) {

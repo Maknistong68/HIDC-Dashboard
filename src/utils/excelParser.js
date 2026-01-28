@@ -11,6 +11,12 @@ import {
 } from './constants'
 import { analyzeObservation } from './contextClassifier'
 import {
+  parseSentence,
+  extractWeightedKeywords,
+  analyzeForRootCause,
+  GRAMMATICAL_WEIGHTS
+} from './sentenceParser'
+import {
   getSettings,
   cleanText,
   cleanName,
@@ -378,44 +384,19 @@ export const normalizeHazardCategory = (category) => {
     'height': 'Working at Height',
     'fall': 'Working at Height',
     'ladder': 'Working at Height',
-    'barricade': 'Barricades',
-    'barrier': 'Barricades',
     'coshh': 'COSHH',
     'chemical': 'COSHH',
     'hazardous substance': 'COSHH',
-    'dust': 'Dust Control',
-    'silica': 'Dust Control',
-    'bbs': 'BBS',
-    'behavior': 'BBS',
-    'behaviour': 'BBS',
     'housekeeping': 'Housekeeping',
     'clean': 'Housekeeping',
     'tidy': 'Housekeeping',
-    'ppe': 'PPE',
-    'protective': 'PPE',
-    'helmet': 'PPE',
-    'sign': 'Safety Sign',
-    'signage': 'Safety Sign',
     'security': 'Site Security',
-    'access': 'Access',
-    'egress': 'Access',
-    'welfare': 'Site Welfare',
-    'toilet': 'Site Welfare',
-    'supervision': 'Safety Supervision',
-    'supervisor': 'Safety Supervision',
     'tool': 'Tools',
     'traffic': 'Traffic Management',
     'pedestrian': 'Traffic Management',
     'environment': 'Work Environment',
     'weather': 'Work Environment',
     'lighting': 'Work Environment',
-    'permit': 'Permit and RAMS',
-    'rams': 'Permit and RAMS',
-    'risk assessment': 'Permit and RAMS',
-    'training': 'Training and Competency',
-    'competenc': 'Training and Competency',
-    'emergency': 'Emergency Preparedness',
-    'evacuation': 'Emergency Preparedness',
     'heat': 'Working in Heat',
     'hot surface': 'Working in Heat',
     'thermal': 'Working in Heat',
@@ -439,12 +420,71 @@ export const normalizeHazardCategory = (category) => {
     'hotwork': 'Hot Work',
     'hotworks': 'Hot Work',
 
-    // Legacy mappings from old categories
-    'slip': 'Access',
-    'trip': 'Access',
+    // ============================================================
+    // BACKWARD COMPATIBILITY MAPPINGS (legacy → new category names)
+    // ============================================================
+
+    // Physical Hazard (replaces 'Struck By')
+    'struck by': 'Physical Hazard',
+    'struck-by': 'Physical Hazard',
+    'falling objects': 'Physical Hazard',
+    'falling object': 'Physical Hazard',
+    'dropped object': 'Physical Hazard',
+    'impalement': 'Physical Hazard',
+    'sharp object': 'Physical Hazard',
+    'protruding rebar': 'Physical Hazard',
+    'physical hazard': 'Physical Hazard',
+    'struck': 'Physical Hazard',
+
+    // Mechanical Hazard (NEW)
+    'caught in': 'Mechanical Hazard',
+    'caught-in': 'Mechanical Hazard',
+    'caught in between': 'Mechanical Hazard',
+    'caught between': 'Mechanical Hazard',
+    'caught-between': 'Mechanical Hazard',
+    'pinch point': 'Mechanical Hazard',
+    'crushing': 'Mechanical Hazard',
+    'machinery': 'Mechanical Hazard',
+    'mechanical hazard': 'Mechanical Hazard',
+    'entanglement': 'Mechanical Hazard',
+    'amputation': 'Mechanical Hazard',
+
+    // Slip and Trip (replaces 'Slips Trips Falls')
+    'slip and trip': 'Slip and Trip',
+    'slips trips falls': 'Slip and Trip',  // backward compat
+    'slip trip fall': 'Slip and Trip',
+    'slips trips and falls': 'Slip and Trip',
+    'slip trip': 'Slip and Trip',
+    'slip': 'Slip and Trip',
+    'trip': 'Slip and Trip',
+
+    // Worker Welfare (replaces 'Site Welfare')
+    'site welfare': 'Worker Welfare',       // backward compat
+    'worker welfare': 'Worker Welfare',
+    'welfare': 'Worker Welfare',
+    'camp': 'Worker Welfare',
+    'camps': 'Worker Welfare',
+    'accommodation': 'Worker Welfare',
+    'toilet': 'Worker Welfare',
+    'canteen': 'Worker Welfare',
+    'dormitory': 'Worker Welfare',
+
+    // Respiratory Hazard (replaces 'Dust Control')
+    'dust control': 'Respiratory Hazard',   // backward compat
+    'respiratory hazard': 'Respiratory Hazard',
+    'dust': 'Respiratory Hazard',
+    'silica': 'Respiratory Hazard',
+    'fumes': 'Respiratory Hazard',
+    'respiratory': 'Respiratory Hazard',
+    'inhalation': 'Respiratory Hazard',
+    'airborne': 'Respiratory Hazard',
+
+    // Access (updated - slip/trip moved to Slip and Trip)
+    'access': 'Access',
+    'egress': 'Access',
+
+    // Legacy fallbacks
     'manual handling': 'Lifting',
-    'struck': 'Mobile Plant & Equipment',
-    'machinery': 'Mobile Plant & Equipment',
     'general safety': 'Work Environment',
     'general': 'Work Environment',
     'other': 'Work Environment',
@@ -525,7 +565,227 @@ const checkContextRedirects = (text) => {
 }
 
 /**
- * 7-Step Context-Aware Hazard Classification System
+ * Sentence-Aware Classification
+ * Uses grammatical structure to weight keywords based on their role:
+ * - SUBJECT (weight 1.0): Main problem/hazard - highest priority
+ * - OBJECT (weight 0.7): Equipment/material involved
+ * - ACTOR (weight 0.6): Person involved (for context)
+ * - LOCATION (weight 0.4): Where it happened - lower priority
+ *
+ * Example: "poor housekeeping on welfare"
+ * - "housekeeping" is SUBJECT (weight 1.0) → Housekeeping
+ * - "welfare" is LOCATION (weight 0.4) → Worker Welfare
+ * Result: Housekeeping wins due to higher weight
+ */
+const classifyWithSentenceAwareness = (text) => {
+  if (!text || text.length < 5) {
+    return { category: null, confidence: 0, isMainSubject: false }
+  }
+
+  // Parse the sentence to extract components
+  const parsed = parseSentence(text)
+  const matches = []
+
+  // Check each keyword part against hazard patterns
+  for (const kwPart of parsed.keywords) {
+    const partText = kwPart.text.toLowerCase()
+
+    // Check against all hazard patterns
+    for (const category of CATEGORY_PRIORITY) {
+      const patterns = HAZARD_PATTERNS[category] || []
+      const phrases = HAZARD_PHRASES[category] || []
+
+      // Check phrases first (more specific)
+      for (const phrase of phrases) {
+        if (partText.includes(phrase.toLowerCase())) {
+          matches.push({
+            keyword: phrase,
+            category,
+            role: kwPart.role,
+            weight: kwPart.weight,
+            confidence: parsed.confidence * kwPart.weight,
+            isMainSubject: kwPart.role === 'SUBJECT',
+            isLocation: kwPart.role === 'LOCATION',
+            matchType: 'phrase'
+          })
+        }
+      }
+
+      // Check keywords
+      for (const keyword of patterns) {
+        if (partText.includes(keyword.toLowerCase())) {
+          matches.push({
+            keyword,
+            category,
+            role: kwPart.role,
+            weight: kwPart.weight,
+            confidence: parsed.confidence * kwPart.weight,
+            isMainSubject: kwPart.role === 'SUBJECT',
+            isLocation: kwPart.role === 'LOCATION',
+            matchType: 'keyword'
+          })
+        }
+      }
+    }
+  }
+
+  if (matches.length === 0) {
+    return { category: null, confidence: 0, isMainSubject: false, parsed }
+  }
+
+  // Sort by confidence (weight * parsing confidence), prefer phrases
+  matches.sort((a, b) => {
+    // Prefer phrases over keywords
+    if (a.matchType === 'phrase' && b.matchType !== 'phrase') return -1
+    if (b.matchType === 'phrase' && a.matchType !== 'phrase') return 1
+    // Then by confidence
+    return b.confidence - a.confidence
+  })
+
+  const bestMatch = matches[0]
+
+  // Check for conflicts (multiple categories with similar confidence)
+  const hasConflict = matches.length > 1 &&
+    matches[0].category !== matches[1].category &&
+    Math.abs(matches[0].confidence - matches[1].confidence) < 0.2
+
+  // If conflict, prefer SUBJECT over LOCATION
+  if (hasConflict) {
+    const subjectMatch = matches.find(m => m.isMainSubject)
+    if (subjectMatch) {
+      return {
+        category: subjectMatch.category,
+        confidence: subjectMatch.confidence,
+        isMainSubject: true,
+        keyword: subjectMatch.keyword,
+        role: subjectMatch.role,
+        alternativeCategory: matches.find(m => m !== subjectMatch)?.category,
+        reason: `Subject "${subjectMatch.keyword}" takes priority over location`,
+        parsed
+      }
+    }
+
+    // Prefer non-location match
+    const nonLocationMatch = matches.find(m => !m.isLocation)
+    if (nonLocationMatch) {
+      return {
+        category: nonLocationMatch.category,
+        confidence: nonLocationMatch.confidence,
+        isMainSubject: nonLocationMatch.isMainSubject,
+        keyword: nonLocationMatch.keyword,
+        role: nonLocationMatch.role,
+        alternativeCategory: matches.find(m => m.isLocation)?.category,
+        reason: `"${nonLocationMatch.keyword}" takes priority over location keyword`,
+        parsed
+      }
+    }
+  }
+
+  return {
+    category: bestMatch.category,
+    confidence: bestMatch.confidence,
+    isMainSubject: bestMatch.isMainSubject,
+    keyword: bestMatch.keyword,
+    role: bestMatch.role,
+    reason: `Matched "${bestMatch.keyword}" with role ${bestMatch.role}`,
+    parsed,
+    actor: parsed.actor,
+    object: parsed.object,
+    action: parsed.action,
+    location: parsed.location
+  }
+}
+
+// Export for use in other modules
+export { classifyWithSentenceAwareness }
+
+/**
+ * Get full sentence analysis for an observation
+ * Returns WHO, WHAT, WHERE, WHY breakdown plus hazard classification
+ * Useful for UI display and root cause investigation
+ */
+export const getObservationAnalysis = (description) => {
+  if (!description) {
+    return null
+  }
+
+  const text = description.toLowerCase()
+
+  // Get sentence parsing
+  const parsed = parseSentence(description)
+
+  // Get root cause analysis
+  const rootCause = analyzeForRootCause(description)
+
+  // Get classification with sentence awareness
+  const classification = classifyWithSentenceAwareness(text)
+
+  // Get final hazard category
+  const hazardCategory = categorizeHazard(description)
+
+  return {
+    // Sentence breakdown
+    who: {
+      actor: parsed.actor,
+      actorType: parsed.actorType,
+    },
+    what: {
+      object: parsed.object,
+      objectType: parsed.objectType,
+      action: parsed.action,
+      actionType: parsed.actionType,
+    },
+    where: {
+      location: parsed.location,
+    },
+    why: {
+      cause: parsed.cause || rootCause.immediateCause,
+      deviation: rootCause.deviation,
+    },
+
+    // Classification result
+    classification: {
+      category: hazardCategory,
+      confidence: classification.confidence,
+      matchedKeyword: classification.keyword,
+      keywordRole: classification.role,
+      isMainSubject: classification.isMainSubject,
+      alternativeCategory: classification.alternativeCategory,
+    },
+
+    // Root cause components
+    rootCause: {
+      deviation: rootCause.deviation,
+      deviationConfidence: rootCause.deviationConfidence,
+      immediateCause: rootCause.immediateCause,
+      consequence: rootCause.consequence,
+      affectedItem: rootCause.affectedItem,
+    },
+
+    // All extracted keywords with weights
+    keywords: parsed.keywords,
+
+    // Parsing metadata
+    pattern: parsed.pattern,
+    overallConfidence: parsed.confidence,
+  }
+}
+
+/**
+ * 8-Step Context-Aware Hazard Classification System
+ *
+ * STEP 0: Context-Aware Analysis (object → action → outcome)
+ * STEP 0.5: Sentence-Aware Parsing (grammatical role weighting) ← NEW
+ * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
+ *         - Handles misleading terms like "line of fire" → Mobile Plant, not Fire
+ * STEP 2: Trust Excel category if valid (respecting exclusions)
+ * STEP 3: Check PHRASES for MAJOR hazards (15 significant hazards)
+ * STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (11 lower priority)
+ * STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
+ * STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards (with exclusion checking)
+ * STEP 7: Default fallback → "Work Environment" (never "Others")
+ *
+ * FULLY AUTOMATED - No manual review required
  *
  * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
  *         - Handles misleading terms like "line of fire" → Mobile Plant, not Fire
@@ -546,7 +806,7 @@ export const categorizeHazard = (description, existingCategory = '') => {
   const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
 
   // ============================================
-  // STEP 0: Context-Aware Analysis (NEW - Complementary Engine)
+  // STEP 0: Context-Aware Analysis (Complementary Engine)
   // Uses Hazard Object → Action → Potential Outcome reasoning
   // Only overrides when confidence meets settings threshold or disambiguation rule matches
   // ============================================
@@ -557,8 +817,21 @@ export const categorizeHazard = (description, existingCategory = '') => {
     return contextResult.category
   }
 
-  // Store context result for later use (will be attached to incident record)
-  // This allows existing logic to continue as fallback
+  // ============================================
+  // STEP 0.5: SENTENCE-AWARE PARSING (NEW)
+  // Analyzes grammatical structure to identify:
+  // - WHO (actor), WHAT (object), WHERE (location), WHY (cause)
+  // - Assigns weights based on grammatical role (subject > object > location)
+  // ============================================
+  const sentenceResult = classifyWithSentenceAwareness(text)
+
+  // If sentence parsing found a high-confidence match with clear subject, use it
+  if (sentenceResult.category && sentenceResult.confidence >= 0.7 && sentenceResult.isMainSubject) {
+    // Verify the category is valid and not excluded
+    if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category)) {
+      return sentenceResult.category
+    }
+  }
 
   // ============================================
   // STEP 1: Check CONTEXT_REDIRECTS first (HIGHEST PRIORITY)
