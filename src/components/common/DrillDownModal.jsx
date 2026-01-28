@@ -384,12 +384,25 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
  * Records Table View
  */
 const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
+  const [copiedId, setCopiedId] = React.useState(null)
+
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-surface-500">
         No events found
       </div>
     )
+  }
+
+  const handleCopyReport = async (record) => {
+    const text = `Description: ${record.description || 'No description'}\nCategory: ${record.location || 'Unclassified'}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(record.externalId || record.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
   }
 
   const getStatusColor = (status) => {
@@ -444,21 +457,46 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
                 )}
               </div>
             </div>
-            {/* View button - Full width on mobile for better touch target */}
-            <button
-              onClick={() => onViewDetails(record)}
-              className={`
-                flex items-center justify-center gap-1.5 font-medium text-blue-600
-                hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
-                ${isMobile
-                  ? 'w-full h-11 text-sm bg-blue-50 mt-1'
-                  : 'px-3 py-1.5 text-sm'
-                }
-              `}
-            >
-              <Eye size={isMobile ? 18 : 14} />
-              View Details
-            </button>
+            {/* Action buttons */}
+            <div className={`flex items-center gap-2 ${isMobile ? 'w-full mt-1' : ''}`}>
+              {/* Copy button */}
+              <button
+                onClick={() => handleCopyReport(record)}
+                className={`
+                  flex items-center justify-center gap-1.5 font-medium transition-colors rounded-lg
+                  ${copiedId === (record.externalId || record.id)
+                    ? 'text-green-600 bg-green-50'
+                    : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50 active:bg-purple-100'
+                  }
+                  ${isMobile ? 'h-11 px-4 text-sm' : 'px-3 py-1.5 text-sm'}
+                `}
+                title="Copy description + category"
+              >
+                {copiedId === (record.externalId || record.id) ? (
+                  <>
+                    <Check size={isMobile ? 18 : 14} />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy size={isMobile ? 18 : 14} />
+                    Copy
+                  </>
+                )}
+              </button>
+              {/* View button */}
+              <button
+                onClick={() => onViewDetails(record)}
+                className={`
+                  flex items-center justify-center gap-1.5 font-medium text-blue-600
+                  hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
+                  ${isMobile ? 'flex-1 h-11 text-sm bg-blue-50' : 'px-3 py-1.5 text-sm'}
+                `}
+              >
+                <Eye size={isMobile ? 18 : 14} />
+                View Details
+              </button>
+            </div>
           </div>
         </div>
       ))}
