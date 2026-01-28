@@ -14,6 +14,10 @@ import {
   ChevronUp,
   Database,
   Info,
+  Brain,
+  X,
+  Clipboard,
+  Sparkles,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import KPICard from '../components/dashboard/KPICard'
@@ -36,6 +40,8 @@ import {
   getOpenActionsCount,
   recategorizeBlankHazards,
 } from '../utils/calculations'
+import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
+import { categorizeHazard } from '../utils/excelParser'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 
 // Normalize hazard name for consistent grouping (fixes duplicates)
@@ -96,6 +102,11 @@ const Dashboard = () => {
 
   // Report modal state
   const [viewingRecord, setViewingRecord] = useState(null)
+
+  // Observation Parser Tester state
+  const [showObservationTester, setShowObservationTester] = useState(false)
+  const [testObservation, setTestObservation] = useState('')
+  const [testResult, setTestResult] = useState(null)
 
   // All Records section state
   const [showAllRecords, setShowAllRecords] = useState(false)
@@ -215,6 +226,36 @@ const Dashboard = () => {
 
   const handleMonthSelect = useCallback((monthData) => {
     setDrillDown(prev => ({ ...prev, level: 3, period: monthData.period }))
+  }, [])
+
+  // Handle observation parser test
+  const handleTestObservation = useCallback(() => {
+    if (!testObservation.trim()) {
+      setTestResult(null)
+      return
+    }
+
+    const text = testObservation.trim()
+    const parsed = parseSentence(text)
+    const rootCause = analyzeForRootCause(text)
+    const suggestedCategory = categorizeHazard(text, '')
+
+    setTestResult({
+      parsed,
+      rootCause,
+      suggestedCategory,
+      text
+    })
+  }, [testObservation])
+
+  // Handle paste from clipboard
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      setTestObservation(text)
+    } catch (err) {
+      console.error('Failed to read clipboard:', err)
+    }
   }, [])
 
   // Get unique contractors from incidents
@@ -682,6 +723,19 @@ const Dashboard = () => {
           Import
         </button>
 
+        {/* Test Parser Button */}
+        <button
+          onClick={() => setShowObservationTester(!showObservationTester)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+            showObservationTester
+              ? 'bg-purple-600 text-white'
+              : 'bg-white border border-purple-300 text-purple-700 hover:bg-purple-50'
+          }`}
+        >
+          <Brain size={16} />
+          Test Parser
+        </button>
+
         {/* Export Menu (3-dot) */}
         <ExportMenu
           onExportPDF={handleExportPDF}
@@ -690,6 +744,152 @@ const Dashboard = () => {
           exportProgress={exportProgress}
         />
       </div>
+
+      {/* Observation Parser Tester Panel */}
+      {showObservationTester && (
+        <div className="bg-white border border-purple-200 rounded-lg p-4 shadow-soft">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-2">
+              <Brain size={16} />
+              Observation Parser Tester
+            </h3>
+            <button
+              onClick={() => setShowObservationTester(false)}
+              className="p-1 hover:bg-surface-100 rounded"
+            >
+              <X size={16} className="text-surface-500" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {/* Input Area */}
+            <div className="flex gap-2">
+              <textarea
+                value={testObservation}
+                onChange={(e) => setTestObservation(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    handleTestObservation()
+                  }
+                }}
+                placeholder="Paste or type an observation to analyze... (Ctrl+Enter to analyze)"
+                className="flex-1 p-3 border border-surface-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                rows={3}
+              />
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handlePasteFromClipboard}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-surface-100 text-surface-700 rounded-lg hover:bg-surface-200 transition-colors text-sm"
+                  title="Paste from clipboard"
+                >
+                  <Clipboard size={16} />
+                  Paste
+                </button>
+                <button
+                  onClick={handleTestObservation}
+                  disabled={!testObservation.trim()}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                >
+                  <Sparkles size={16} />
+                  Analyze
+                </button>
+              </div>
+            </div>
+
+            {/* Results */}
+            {testResult && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
+                {/* Suggested Category */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-surface-500">Suggested Category:</span>
+                  <span className="px-2 py-1 bg-purple-600 text-white text-sm font-semibold rounded">
+                    {testResult.suggestedCategory}
+                  </span>
+                  {testResult.parsed?.confidence && (
+                    <span className="text-xs text-surface-500">
+                      ({Math.round(testResult.parsed.confidence * 100)}% confidence)
+                    </span>
+                  )}
+                </div>
+
+                {/* Parsed Components */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  {testResult.parsed?.mainSubject && (
+                    <div className="bg-white p-2 rounded border">
+                      <span className="font-medium text-blue-600">WHAT:</span>
+                      <span className="ml-1 text-surface-700">{testResult.parsed.mainSubject}</span>
+                    </div>
+                  )}
+                  {testResult.parsed?.location && (
+                    <div className="bg-white p-2 rounded border">
+                      <span className="font-medium text-green-600">WHERE:</span>
+                      <span className="ml-1 text-surface-700">{testResult.parsed.location}</span>
+                    </div>
+                  )}
+                  {testResult.parsed?.actor && (
+                    <div className="bg-white p-2 rounded border">
+                      <span className="font-medium text-orange-600">WHO:</span>
+                      <span className="ml-1 text-surface-700">{testResult.parsed.actor}</span>
+                    </div>
+                  )}
+                  {testResult.parsed?.deviation && (
+                    <div className="bg-white p-2 rounded border">
+                      <span className="font-medium text-red-600">ISSUE:</span>
+                      <span className="ml-1 text-surface-700">{testResult.parsed.deviation}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Keywords Detected */}
+                {testResult.parsed?.keywords?.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-surface-500">Keywords Detected:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {testResult.parsed.keywords.slice(0, 10).map((kw, i) => (
+                        <span
+                          key={i}
+                          className={`px-2 py-0.5 text-xs rounded ${
+                            kw.role === 'SUBJECT' ? 'bg-blue-100 text-blue-700' :
+                            kw.role === 'LOCATION' ? 'bg-green-100 text-green-700' :
+                            kw.role === 'ACTOR' ? 'bg-orange-100 text-orange-700' :
+                            'bg-surface-100 text-surface-600'
+                          }`}
+                        >
+                          {kw.text} <span className="opacity-60">({kw.role})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ambiguity Resolutions */}
+                {testResult.parsed?.ambiguities?.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-surface-500">Ambiguity Resolved:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {testResult.parsed.ambiguities.map((amb, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
+                          "{amb.word}" → {amb.hazard} ({Math.round(amb.confidence * 100)}%)
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Specialist Detection */}
+                {testResult.parsed?.specialistMatch && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-surface-500">Specialist Detected:</span>
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-medium">
+                      {testResult.parsed.specialistMatch.role} → {testResult.parsed.specialistMatch.hazard}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Quick Import Modal */}
       <QuickImportModal
