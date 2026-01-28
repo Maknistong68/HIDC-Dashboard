@@ -364,6 +364,22 @@ export const CONTEXT_REDIRECTS = {
   'mess hall': 'Worker Welfare',
   'eating area': 'Worker Welfare',
 
+  // Chemical spill / Environmental contamination → Environmental
+  'chemical spill': 'Environmental',
+  'spill was observed': 'Environmental',
+  'contamination of the soil': 'Environmental',
+  'soil contamination': 'Environmental',
+  'ground contamination': 'Environmental',
+  'oil spill': 'Environmental',
+  'fuel spill': 'Environmental',
+  'diesel spill': 'Environmental',
+  'petrol spill': 'Environmental',
+  'leaked onto': 'Environmental',
+  'spilled onto ground': 'Environmental',
+  'spilled on ground': 'Environmental',
+  'polluting': 'Environmental',
+  'pollution': 'Environmental',
+
   // Waste/Debris - prevent "inspection" matching Safety Supervision
   'concrete waste': 'Housekeeping',
   'waste observed': 'Housekeeping',
