@@ -384,7 +384,7 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
  * Records Table View
  */
 const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
-  const [copiedId, setCopiedId] = React.useState(null)
+  const [copied, setCopied] = React.useState(false)
 
   if (!data || data.length === 0) {
     return (
@@ -394,12 +394,14 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
     )
   }
 
-  const handleCopyReport = async (record) => {
-    const text = `Description: ${record.description || 'No description'}\nCategory: ${record.location || 'Unclassified'}`
+  const handleCopyAll = async () => {
+    const lines = data.map(record =>
+      `Description: ${record.description || 'No description'}\nCategory: ${record.location || 'Unclassified'}`
+    ).join('\n\n---\n\n')
     try {
-      await navigator.clipboard.writeText(text)
-      setCopiedId(record.externalId || record.id)
-      setTimeout(() => setCopiedId(null), 2000)
+      await navigator.clipboard.writeText(lines)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Copy failed:', err)
     }
@@ -418,6 +420,20 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
 
   return (
     <div className={`space-y-2 ${isMobile ? 'space-y-3' : ''}`}>
+      {/* Copy All Button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={handleCopyAll}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            copied
+              ? 'bg-green-100 text-green-700'
+              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+          }`}
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+          {copied ? 'Copied All!' : `Copy All (${data.length})`}
+        </button>
+      </div>
       {data.map((record, idx) => (
         <div
           key={record.externalId || idx}
@@ -457,46 +473,21 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
                 )}
               </div>
             </div>
-            {/* Action buttons */}
-            <div className={`flex items-center gap-2 ${isMobile ? 'w-full mt-1' : ''}`}>
-              {/* Copy button */}
-              <button
-                onClick={() => handleCopyReport(record)}
-                className={`
-                  flex items-center justify-center gap-1.5 font-medium transition-colors rounded-lg
-                  ${copiedId === (record.externalId || record.id)
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50 active:bg-purple-100'
-                  }
-                  ${isMobile ? 'h-11 px-4 text-sm' : 'px-3 py-1.5 text-sm'}
-                `}
-                title="Copy description + category"
-              >
-                {copiedId === (record.externalId || record.id) ? (
-                  <>
-                    <Check size={isMobile ? 18 : 14} />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy size={isMobile ? 18 : 14} />
-                    Copy
-                  </>
-                )}
-              </button>
-              {/* View button */}
-              <button
-                onClick={() => onViewDetails(record)}
-                className={`
-                  flex items-center justify-center gap-1.5 font-medium text-blue-600
-                  hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
-                  ${isMobile ? 'flex-1 h-11 text-sm bg-blue-50' : 'px-3 py-1.5 text-sm'}
-                `}
-              >
-                <Eye size={isMobile ? 18 : 14} />
-                View Details
-              </button>
-            </div>
+            {/* View button */}
+            <button
+              onClick={() => onViewDetails(record)}
+              className={`
+                flex items-center justify-center gap-1.5 font-medium text-blue-600
+                hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
+                ${isMobile
+                  ? 'w-full h-11 text-sm bg-blue-50 mt-1'
+                  : 'px-3 py-1.5 text-sm'
+                }
+              `}
+            >
+              <Eye size={isMobile ? 18 : 14} />
+              View Details
+            </button>
           </div>
         </div>
       ))}
