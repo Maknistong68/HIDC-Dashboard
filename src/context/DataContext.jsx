@@ -86,17 +86,13 @@ export const DataProvider = ({ children }) => {
       saveData('INCIDENTS', storedIncidents)
     }
 
-    // MIGRATION v4: Force recategorize ALL records with expanded redirects
-    // Fixes: PPE→Work Environment, Toilets→Worker Welfare, No welfare→Worker Welfare
-    // v4: Added 'no welfare' patterns and Hot Work exclusions for welfare
-    const migrationKey = 'MIGRATION_RECATEGORIZE_V4_WELFARE_FIX'
-    const migrationComplete = localStorage.getItem(migrationKey)
-    if (!migrationComplete && storedIncidents.length > 0) {
-      console.log('[Migration v4] Recategorizing all records with expanded welfare redirects...')
+    // ALWAYS recategorize ALL records on load to apply latest classification rules
+    // This ensures CONTEXT_REDIRECTS and HAZARD_EXCLUSIONS are always applied
+    if (storedIncidents.length > 0) {
+      console.log('[Recategorize] Applying latest classification rules to all records...')
       storedIncidents = recategorizeBlankHazards(storedIncidents)
       saveData('INCIDENTS', storedIncidents)
-      localStorage.setItem(migrationKey, 'true')
-      console.log('[Migration v4] Recategorization complete')
+      console.log('[Recategorize] Complete -', storedIncidents.length, 'records processed')
     }
 
     setProjects(storedProjects || [])
