@@ -14,7 +14,6 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
-  Info,
   Tag,
   Eye,
   Brain,
@@ -32,6 +31,7 @@ import {
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { useDate } from '../context/DateContext'
+import { InfoTooltip } from '../components/ui/Tooltip'
 import {
   BarChart,
   Bar,
@@ -99,38 +99,6 @@ const getStatusIcon = (status) => {
   }
 }
 
-// Info Tooltip Component - Shows explanation on hover/tap
-const InfoTooltip = ({ text }) => {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="relative inline-flex items-center ml-1.5">
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          setIsOpen(!isOpen)
-        }}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        className="text-surface-400 cursor-help hover:text-surface-600 transition-colors p-1 -m-1"
-        aria-label="More information"
-      >
-        <Info size={14} />
-      </button>
-      {isOpen && (
-        <div
-          className="absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
-          <span className="relative">{text}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // Quality Score Gauge component
 const QualityScoreGauge = ({ score }) => {
   const getScoreColor = () => {
@@ -169,7 +137,7 @@ const QualityScoreGauge = ({ score }) => {
       <div>
         <div className="flex items-center text-sm font-medium text-surface-500">
           Data Quality Score
-          <InfoTooltip text="Overall rating (0-100) based on: Categorization (25%), Description quality (25%), Near miss rate (20%), Coverage (20%), and Reporter engagement (10%)." />
+          <InfoTooltip text="HOW THIS SCORE IS CALCULATED: Your data is evaluated across 5 categories, each contributing to the total: (1) CATEGORIZATION (25%): Are observations properly classified into hazard types? More complete categorization = higher score. (2) DESCRIPTION QUALITY (25%): Are descriptions detailed enough to understand what happened? Longer, more specific descriptions score higher. (3) NEAR-MISS RATE (20%): Are near-misses being reported? A healthy ratio of near-misses to incidents indicates good hazard awareness. (4) COVERAGE (20%): Is reporting happening across all shifts and days? Even distribution across day/night and weekdays/weekends scores higher. (5) REPORTER ENGAGEMENT (10%): Are many different people reporting, or just a few? More diverse reporters indicate wider engagement. GREEN (80+): Excellent data. YELLOW (60-79): Good but has gaps. RED (below 60): Needs significant improvement." />
         </div>
         <div className="text-xs text-surface-400">out of 100</div>
       </div>
@@ -1174,7 +1142,7 @@ const DataQuality = () => {
               status={categorization.status}
               icon={FileText}
               subtitle={`${categorization.proper}/${categorization.total} proper`}
-              info="Percentage of observations with a proper hazard category (not blank or 'Other')."
+              info="HOW THIS IS CALCULATED: We check every observation's hazard category field. If it contains an actual hazard type (like 'Working at Height', 'Electrical', etc.) it counts as 'proper'. If it's blank, empty, or just says 'Other', it doesn't count. The percentage shows how many of your observations have meaningful categorization. GREEN (90%+): Excellent - almost all observations are properly categorized. YELLOW (70-89%): Some gaps - consider training on hazard selection. RED (below 70%): Significant gaps - many observations can't be properly analyzed by hazard type."
             />
             <KPIMiniCard
               title="Description"
@@ -1183,7 +1151,7 @@ const DataQuality = () => {
               status={description.status}
               icon={FileText}
               subtitle={`Avg ${description.avgWordCount} words`}
-              info="Percentage of observations with detailed descriptions (more than 15 words)."
+              info="HOW THIS IS CALCULATED: We count the words in each observation's description. Descriptions with 16 or more words are considered 'detailed' because they typically have enough content to explain what happened. This metric shows what percentage of your observations meet this threshold. The subtitle shows the average word count across all observations. GREEN (80%+): Most descriptions are detailed. YELLOW (60-79%): Mix of detailed and brief. RED (below 60%): Too many brief descriptions - coach reporters to include more detail."
             />
             <KPIMiniCard
               title="Near Miss"
@@ -1192,7 +1160,7 @@ const DataQuality = () => {
               status={nearMiss.status}
               icon={AlertTriangle}
               subtitle={`Target: 5%`}
-              info="Percentage of non-positive observations that are near misses. Target: 5% indicates good hazard awareness."
+              info="HOW THIS IS CALCULATED: We first exclude positive observations (since they're not hazards), then count how many of the remaining observations are classified as 'Near Miss'. The percentage shows near misses out of all negative observations. WHY NEAR MISSES MATTER: Near misses are incidents that ALMOST happened. If people are reporting these, it means they're catching hazards BEFORE they cause harm. Industry best practice suggests 5-10% near-miss rate indicates good awareness. A very low rate might mean people only report after something bad happens, missing prevention opportunities."
             />
             <KPIMiniCard
               title="Coverage"
@@ -1201,7 +1169,7 @@ const DataQuality = () => {
               status={coverage.status}
               icon={Calendar}
               subtitle={`${coverage.activeDays} active days`}
-              info="Percentage of days in the period with at least one observation submitted."
+              info="HOW THIS IS CALCULATED: We look at the selected time period and count how many days had at least one observation submitted. This percentage shows coverage - are people reporting consistently every day, or are there big gaps? The subtitle shows the actual number of 'active' days. GREEN (80%+): Excellent - observations being submitted almost every day. YELLOW (50-79%): Some gaps - certain days have no reporting. RED (below 50%): Major gaps - more than half the days have no observations. This could indicate reporting is only happening on certain shifts or after incidents, rather than proactively."
             />
             <KPIMiniCard
               title="Reporters"
@@ -1210,7 +1178,7 @@ const DataQuality = () => {
               status={quality.breakdown.reporters.active >= quality.breakdown.reporters.total * 0.7 ? 'good' : 'warning'}
               icon={Users}
               subtitle="with 5+ obs"
-              info="Number of reporters with 5 or more observations, indicating consistent engagement."
+              info="HOW THIS IS CALCULATED: We count how many different individuals have submitted 5 or more observations during the selected period. This identifies your 'active' reporters - people who regularly engage with safety reporting, not just one-time submitters. WHY THIS MATTERS: A healthy safety culture has many engaged reporters, not just a few people doing all the reporting. If this number is low compared to your total workforce, it might indicate that most people aren't participating in safety reporting. Consider recognition programs to encourage more widespread engagement."
             />
             <KPIMiniCard
               title="Data Integrity"
@@ -1219,7 +1187,7 @@ const DataQuality = () => {
               status={quality.breakdown.dataIntegrity?.status || 'good'}
               icon={CheckCircle}
               subtitle={`${duplicates.totalDuplicates} duplicates (${duplicates.duplicateRate}%)`}
-              info="Formula: 100 - (Duplicate Rate × 5). Example: 0% = 100%, 5% = 75%, 10% = 50%, 20%+ = 0%."
+              info="HOW THIS SCORE IS CALCULATED: We detect copy-paste descriptions (identical text used in multiple observations) and calculate the 'duplicate rate' - what percentage of your observations are duplicates. This score penalizes duplicates: 0% duplicates = 100 score, 5% duplicates = 75 score, 10% duplicates = 50 score, 20%+ duplicates = 0 score. The subtitle shows the actual count and percentage of duplicate descriptions found. WHY THIS MATTERS: Copy-pasted descriptions indicate low-quality data entry where reporters aren't describing each unique situation. Each observation should have its own specific description."
             />
           </div>
         </div>
@@ -1248,7 +1216,7 @@ const DataQuality = () => {
           <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
             <TrendingUp size={14} />
             Quality Score Trend (Last 12 Months)
-            <InfoTooltip text="Monthly trend of overall data quality score. Click on any point to see that month's observations." />
+            <InfoTooltip text="HOW THIS CHART IS CREATED: Each month, we calculate a quality score for all observations submitted during that month using the same 5-category formula (categorization, description quality, near-miss rate, coverage, and reporter diversity). This line shows how your data quality changes over time. UPWARD TREND: Quality is improving - training and processes are working. DOWNWARD TREND: Quality is declining - may need refresher training or process review. The dashed blue line at 75% shows the recommended target. Click any dot to see the actual observations from that month." />
           </h3>
           <div className={isMobile ? 'h-32' : 'h-40'}>
             <ResponsiveContainer width="100%" height="100%">
@@ -1287,7 +1255,7 @@ const DataQuality = () => {
                 <FileText size={16} className="text-surface-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Duplicates</span>
-              <InfoTooltip text="Copy-paste descriptions indicating low-quality data entry" />
+              <InfoTooltip text="HOW DUPLICATES ARE DETECTED: We compare the description text of every observation against all others. If two or more observations have identical or nearly identical descriptions, they're flagged as potential copy-paste entries. This often indicates someone is re-using the same description instead of writing specific details for each observation. WHY THIS MATTERS: Copied descriptions don't capture what actually happened in each unique situation, making them less useful for identifying patterns and preventing future incidents. Consider training reporters to write unique, specific descriptions for each observation." />
             </div>
             <div className="text-right">
               <div className={`text-3xl font-bold ${duplicates.totalGroups > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -1375,7 +1343,7 @@ const DataQuality = () => {
                 <Type size={16} className="text-surface-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Spelling</span>
-              <InfoTooltip text="Misspellings detected using dictionary-based spell checker" />
+              <InfoTooltip text="HOW MISSPELLINGS ARE DETECTED: We run every description through a spell checker that compares words against a large dictionary. Words not found in the dictionary are flagged as potential misspellings. The system is smart enough to ignore proper nouns, technical terms, and common abbreviations. WHY THIS MATTERS: Excessive spelling errors can indicate rushed data entry, which often correlates with poor overall quality. They can also make it harder to search for specific terms later. Consider this as one indicator of data entry care, not as a criticism of individual reporters." />
             </div>
             <div className="text-right">
               {spellCheckerReady ? (
@@ -1500,7 +1468,7 @@ const DataQuality = () => {
                 <AlertOctagon size={16} className="text-red-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Foul Words</span>
-              <InfoTooltip text="Inappropriate or unprofessional language in observation descriptions" />
+              <InfoTooltip text="HOW FLAGGED LANGUAGE IS DETECTED: We scan descriptions for words that may be inappropriate, unprofessional, or indicate frustration rather than objective reporting. This includes profanity, inflammatory language, and highly subjective terms. WHY THIS MATTERS: Safety reports should be objective and factual. Emotional or inappropriate language can indicate reporter frustration (which may be worth addressing) or could create issues if reports are shared with external parties. These records may need review and potential editing to maintain professional standards." />
             </div>
             <div className="text-right">
               <div className={`text-3xl font-bold ${qualityData.foulWords?.count > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -1583,7 +1551,7 @@ const DataQuality = () => {
                 <MessageSquareWarning size={16} className="text-yellow-600" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Vague Hazards</span>
-              <InfoTooltip text="Descriptions using generic terms like 'unsafe', 'risk', 'danger' without specifics" />
+              <InfoTooltip text="HOW VAGUE DESCRIPTIONS ARE DETECTED: We look for descriptions that use generic safety terms (like 'unsafe', 'dangerous', 'hazardous', 'at risk') without providing specific details about WHAT was unsafe or WHY it was dangerous. A good description should explain the specific situation, not just label it. WHY THIS MATTERS: Vague descriptions like 'worker was unsafe' don't help anyone understand or fix the problem. What were they doing? What made it unsafe? Without specifics, the observation has limited value for prevention. Consider coaching reporters to always include the WHO, WHAT, WHERE, and WHY details." />
             </div>
             <div className="text-right">
               <div className={`text-3xl font-bold ${qualityData.vagueHazards?.count > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
@@ -1661,7 +1629,7 @@ const DataQuality = () => {
                 <AlertTriangle size={16} className="text-surface-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Needs Review</span>
-              <InfoTooltip text="Records that couldn't be properly classified due to missing or unclear descriptions" />
+              <InfoTooltip text="HOW UNCLASSIFIABLE RECORDS ARE IDENTIFIED: When we try to automatically categorize observations into hazard types, some records don't contain enough information to determine the correct category. This happens when: the description is too short, the description is too vague, no recognizable hazard keywords are present, or the hazard type is very unusual. WHY THIS MATTERS: These records are essentially 'unknown' in your data - they can't be properly analyzed or included in hazard trending. Review these records and consider adding better descriptions or manually assigning hazard categories to improve your data completeness." />
             </div>
             <div className="text-right">
               <div className={`text-3xl font-bold ${
@@ -1796,7 +1764,7 @@ const DataQuality = () => {
                 <AlignLeft size={16} className="text-surface-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Description Quality</span>
-              <InfoTooltip text="Word count distribution. Good descriptions have 16+ words with sufficient detail." />
+              <InfoTooltip text="HOW WORD COUNT IS MEASURED: We simply count the number of words in each observation's description. The bars show how many observations fall into each length category. SHORT (1-15 words): Often too brief to be useful - may just be a sentence fragment. MEDIUM (16-50 words): A good target range - enough to explain the situation. LONG (51+ words): Very detailed - excellent for serious issues. WHY THIS MATTERS: Research shows that observations with more words tend to contain more actionable information. Very short descriptions often miss important context. This chart helps you see if your reporters are generally providing enough detail." />
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-green-600">{description.qualityRate}%</div>
@@ -1853,7 +1821,7 @@ const DataQuality = () => {
             <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <AlertTriangle size={14} className="text-orange-600" />
               Potential Misclassifications
-              <InfoTooltip text="Records where the current hazard category doesn't match what the description suggests. These may need manual review and correction." />
+              <InfoTooltip text="HOW MISCLASSIFICATIONS ARE DETECTED: We read each observation's description and use keyword analysis to determine what hazard category it SHOULD be in. Then we compare this to what category it's ACTUALLY assigned to. When they don't match, it's flagged as a potential misclassification. Example: A description about 'ladder without proper footing' is about Working at Height, but might have been marked as 'Manual Handling'. WHY THIS MATTERS: Misclassified records throw off your hazard statistics. If you're tracking 'Working at Height' incidents but some are hidden in other categories, you won't see the true picture. Review these and correct the categories to improve data accuracy." />
               <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
                 {misclassificationData.totalMisclassified}
               </span>
@@ -2072,7 +2040,7 @@ const DataQuality = () => {
             <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <Tag size={14} className="text-blue-600" />
               Import Classification Review
-              <InfoTooltip text="Records automatically classified during import when the original hazard category was blank or generic ('Other'). Shows the keywords that triggered each classification." />
+              <InfoTooltip text="HOW AUTO-CLASSIFICATION WORKS: When you import data, some observations may have blank hazard categories or just say 'Other'. The system automatically reads the description and assigns an appropriate hazard category based on keywords it finds. For example, if the description mentions 'scaffolding' or 'ladder', it gets classified as 'Working at Height'. The table shows which keywords triggered each auto-classification. WHY THIS MATTERS: Auto-classification helps fill in missing data so your analysis is more complete. However, it's not perfect - keywords can sometimes be misleading. Review the matches to verify the system got it right, especially for high-priority hazard categories." />
               <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
                 {classificationReviewData.totalAutoClassified}
               </span>
@@ -2258,7 +2226,7 @@ const DataQuality = () => {
         <div className="bg-white border border-surface-200 rounded-lg p-4">
         <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-4 flex items-center gap-2">
           Categorization Breakdown (Before vs After)
-          <InfoTooltip text="Compare how observations were categorized in Excel (before) vs current state (after auto-classification). Shows the improvement from auto-classification." />
+          <InfoTooltip text="HOW THIS COMPARISON WORKS: This shows a before-and-after view of your hazard categorization. BEFORE (from Excel): How observations were categorized in your original imported file. This often includes many 'Other' or blank categories. AFTER (auto-classified): How the system has re-categorized observations based on their descriptions. The comparison helps you see how much auto-classification has improved your data completeness. A large reduction in 'Other/Unknown' means the system successfully identified specific hazard types that were previously uncategorized. Use this to understand the value of auto-classification and identify any categories that might need manual review." />
         </h3>
 
         <div className={isMobile ? 'space-y-4' : 'grid grid-cols-2 gap-8'}>
@@ -2378,7 +2346,7 @@ const DataQuality = () => {
             <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2">
               <Building2 size={14} />
               Contractor Quality
-              <InfoTooltip text="Quality metrics by contractor: observation count, quality score, and active days." />
+              <InfoTooltip text="HOW CONTRACTOR METRICS ARE CALCULATED: For each contractor, we analyze all their observations to calculate: TOTAL OBS: How many observations they've submitted. QUALITY SCORE: Average quality of their descriptions (word count, detail level, proper categorization). ACTIVE DAYS: How many different days they've submitted at least one observation. Why this helps: You can identify which contractors are most engaged (high observation counts), which produce the best quality data (high quality scores), and which report consistently (high active days). Use this to have data-driven conversations with contractors about their safety reporting performance." />
             </h3>
             <select
               value={contractorSort}
@@ -2462,7 +2430,7 @@ const DataQuality = () => {
             <h3 className={`font-semibold text-surface-700 uppercase tracking-wide flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
               <Users size={16} />
               Reporter Performance
-              <InfoTooltip text="Comprehensive reporter metrics with performance flags. Click any row for detailed analytics." />
+              <InfoTooltip text="HOW REPORTER METRICS ARE CALCULATED: For each individual reporter, we analyze: TOTAL OBSERVATIONS: How many they've submitted. POSITIVE %: What percentage of their reports are positive observations (recognizing safe behaviors). AVG QUALITY: Average quality score of their descriptions. FLAGS: Special indicators like 'Top Reporter' (high volume), 'Quality Star' (consistently detailed), or concerns like 'Declining' (fewer reports recently) or 'Low Quality' (brief descriptions). Click any row to see detailed analytics for that reporter. WHY THIS MATTERS: Helps identify your safety champions (high reporters), people who may need coaching (low quality), and concerning trends (declining activity) so you can provide targeted support and recognition." />
             </h3>
             {isMobile && (
               <select

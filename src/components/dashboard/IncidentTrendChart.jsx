@@ -41,7 +41,7 @@ const IncidentTrendChart = ({ data }) => {
       <Card.Header>
         <Card.Title>
           Positive vs. Negative Observation Trend
-          <InfoTooltip text="Monthly trend of positive observations (green) vs negative observations (red). A healthy safety culture shows increasing positive observations over time." />
+          <InfoTooltip text="HOW THIS CHART IS CREATED: We look at the 'Date' field of each observation and group them by month. Then we split each month's observations into two groups based on the 'Type' field: POSITIVE (green line) = observations where someone was doing something safely - good behaviors being recognized. NEGATIVE (red line) = everything else including near misses, unsafe acts, unsafe conditions, and incidents. A healthy safety culture shows the green line trending UP over time (more recognition of safe behaviors) while the red line stays stable or goes DOWN. Hover over any point to see exact numbers." />
         </Card.Title>
       </Card.Header>
 

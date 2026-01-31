@@ -148,7 +148,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
       <Card.Header>
         <Card.Title>
           Observation Categories
-          <InfoTooltip text="Safety pyramid showing observation distribution by severity. Click any level to drill down. Incidents (top) are most severe, Positive observations (bottom) indicate proactive safety culture." />
+          <InfoTooltip text="HOW THIS PYRAMID IS BUILT: We look at the 'Type' field of each observation and count how many fall into each category. The pyramid shape represents severity - most serious at the top, least serious at the bottom. INCIDENT (top, red): Actual injuries or property damage (LTI, MTI, FAC). NEAR MISS: Something almost happened but didn't cause harm. NCR: Non-conformance to safety rules. UNSAFE ACT: A person doing something dangerous. UNSAFE CONDITION: A dangerous situation in the environment. POSITIVE: Someone spotted doing something SAFELY. LEADERSHIP: Management safety activities. Click any level to see the actual observations. The numbers show open/closed status if enabled." />
         </Card.Title>
       </Card.Header>
 

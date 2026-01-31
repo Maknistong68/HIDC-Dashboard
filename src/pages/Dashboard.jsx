@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronUp,
   Database,
-  Info,
   Download,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -29,6 +28,7 @@ import EmptyState from '../components/dashboard/EmptyState'
 import ExportMenu from '../components/dashboard/ExportMenu'
 import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
+import { InfoTooltip } from '../components/ui/Tooltip'
 import { useExport } from '../hooks/useExport'
 import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../utils/constants'
 import {
@@ -51,17 +51,6 @@ const normalizeHazard = memoize((hazard) => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
 }, 500) // Cache up to 500 unique hazard names
-
-// Info tooltip component for chart explanations
-const InfoTooltip = ({ text }) => (
-  <div className="group relative inline-flex items-center ml-1.5">
-    <Info size={14} className="text-surface-400 cursor-help hover:text-surface-600 transition-colors" />
-    <div className="hidden group-hover:block absolute z-50 w-64 p-2.5 bg-surface-900 text-white text-xs rounded-lg shadow-xl left-5 top-0 leading-relaxed">
-      <div className="absolute -left-1.5 top-1.5 w-3 h-3 bg-surface-900 transform rotate-45"></div>
-      <span className="relative">{text}</span>
-    </div>
-  </div>
-)
 
 const Dashboard = () => {
   const { projects, incidents, isLoading, showOpenClosed } = useData()
@@ -692,7 +681,7 @@ const Dashboard = () => {
           subtitle={period === null ? 'All time' : period === 0.25 ? 'Last week' : period === 1 ? 'Last month' : `Last ${period} months`}
           icon={FileText}
           color="primary"
-          info="Total number of observations matching current filters. Includes all types: incidents, near misses, unsafe acts/conditions, and positive observations."
+          info="HOW THIS NUMBER IS CALCULATED: We count every single safety observation that was submitted during the selected time period. This includes all types - incidents, near misses, unsafe acts, unsafe conditions, positive observations, and leadership events. If you've applied any filters (like selecting a specific contractor or site), this number only counts observations matching those filters. A higher number generally means more people are actively reporting safety concerns, which is a good sign of an engaged safety culture."
         />
         <KPICard
           title="Close Out Rate"
@@ -700,7 +689,7 @@ const Dashboard = () => {
           subtitle={`${filteredIncidents.filter(i => i.actionStatus === 'closed').length} of ${filteredIncidents.length} closed`}
           icon={CheckCircle}
           color={closeOutPercentage >= 80 ? 'success' : closeOutPercentage >= 50 ? 'warning' : 'danger'}
-          info="Percentage of observations that have been closed. Target: 80%+ indicates good follow-through on safety actions."
+          info="HOW THIS IS CALCULATED: We look at the 'Action Status' field in your data. If an observation is marked as 'Closed', it means someone has addressed the issue and completed any required actions. This percentage shows how many observations have been fully resolved compared to the total. GREEN (80%+): Excellent - your team is closing out issues quickly. YELLOW (50-79%): Needs attention - some issues are lingering. RED (below 50%): Urgent - too many open items need action."
         />
         <KPICard
           title="Positive Rate"
@@ -708,7 +697,7 @@ const Dashboard = () => {
           subtitle={`${positiveCount} of ${filteredIncidents.length} positive`}
           icon={ThumbsUp}
           color={positivePercentage >= 30 ? 'success' : positivePercentage >= 15 ? 'warning' : 'info'}
-          info="Percentage of positive observations. Higher rates (30%+) indicate proactive safety culture where good behaviors are recognized."
+          info="HOW THIS IS CALCULATED: We count observations where the 'Type' field is marked as 'Positive Observation' or similar positive category, then divide by the total number of observations. Positive observations are when someone spots a person doing something SAFELY and reports it as a good example. GREEN (30%+): Your team actively recognizes good safety behaviors - this builds a positive safety culture. YELLOW (15-29%): Some positive reporting, but encourage more recognition of safe work. BLUE (below 15%): Consider training staff to spot and report positive safety behaviors."
         />
         <KPICard
           title="Open > 1 Month"
@@ -716,7 +705,7 @@ const Dashboard = () => {
           subtitle="Overdue actions"
           icon={CalendarClock}
           color={openMoreThanMonth > 10 ? 'danger' : openMoreThanMonth > 5 ? 'warning' : 'info'}
-          info="Number of observations open for more than 30 days. High numbers indicate action follow-up delays that need attention."
+          info="HOW THIS IS CALCULATED: We check each observation's date and compare it to today. If an observation was submitted more than 30 days ago AND it's still marked as 'Open' (not closed), it appears in this count. These are overdue items that need attention. RED (more than 10): Urgent - you have a backlog of unresolved safety issues that need immediate focus. YELLOW (6-10): Some items are slipping through - review and prioritize. BLUE (0-5): Good control - keep monitoring these older items."
         />
       </div>
 
@@ -728,7 +717,7 @@ const Dashboard = () => {
           subtitle="Fully closed items"
           icon={CheckCheck}
           color="success"
-          info="Observations that have been fully closed and resolved. These require no further action."
+          info="HOW THIS IS CALCULATED: We look at the 'Approval Status' column in your data (different from Action Status). When this field shows 'Closed', it means the observation has gone through all review stages and is completely finished. No more work needed on these items. This is your count of successfully completed observations where all investigations, reviews, and follow-up actions are done."
         />
         <KPICard
           title="Contractor Review"
@@ -736,7 +725,7 @@ const Dashboard = () => {
           subtitle="Pending contractor review"
           icon={UserCheck}
           color={approvalCounts.contractorReview > 10 ? 'warning' : 'info'}
-          info="Observations awaiting contractor review and response. Monitor to ensure timely contractor engagement."
+          info="HOW THIS IS CALCULATED: We filter observations where the 'Approval Status' column contains 'Contractor Review'. These are items waiting for a contractor to look at and respond. The contractor needs to review what happened and provide their input before the observation can move forward. YELLOW (more than 10): You have a backlog - consider following up with contractors to speed up their reviews."
         />
         <KPICard
           title="Review"
@@ -744,7 +733,7 @@ const Dashboard = () => {
           subtitle="Pending review"
           icon={ClipboardList}
           color={approvalCounts.review > 10 ? 'warning' : 'info'}
-          info="Observations pending internal review. High numbers may indicate review bottleneck."
+          info="HOW THIS IS CALCULATED: We count observations where the 'Approval Status' column shows 'Review'. These items are waiting for someone on your team to look at them and decide on next steps. They haven't been assigned to a contractor yet - they need internal attention first. YELLOW (more than 10): Your review queue is building up - consider dedicating time to work through these."
         />
         <KPICard
           title="Contractor Investigation"
@@ -752,7 +741,7 @@ const Dashboard = () => {
           subtitle="Under investigation"
           icon={Search}
           color={approvalCounts.contractorInvestigation > 5 ? 'warning' : 'info'}
-          info="Observations under contractor investigation. These typically involve more serious issues requiring detailed analysis."
+          info="HOW THIS IS CALCULATED: We count observations where the 'Approval Status' column shows 'Contractor Investigation'. These are typically more serious issues where the contractor needs to dig deeper - finding out what happened, why it happened, and how to prevent it in the future. Investigations take longer than simple reviews because they require gathering evidence and interviewing people. YELLOW (more than 5): Monitor these closely as investigations shouldn't drag on too long."
         />
       </div>
 
@@ -777,7 +766,7 @@ const Dashboard = () => {
         <div ref={topHazardsRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Top Significant Hazards
-            <InfoTooltip text="Top 10 hazard categories ranked by observation count. Click any bar to drill down into specific observations. Red/green bars show open vs closed status." />
+            <InfoTooltip text="HOW THIS DATA IS COLLECTED: Every observation has a 'Hazard Category' or 'Location' field that describes what type of hazard was involved. We group all observations by their hazard type and count how many times each one appears, then show you the top 10 most common hazards. The bar colors show status: RED portion = still open (needs action), GREEN portion = closed (resolved). Click any bar to see the actual observations in that hazard category. Note: Positive observations are excluded since they report SAFE behaviors, not hazards." />
           </h3>
           {topHazards.length > 0 ? (
             <div className="space-y-1">
@@ -833,7 +822,7 @@ const Dashboard = () => {
         <div ref={topObserversRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Top Observers
-            <InfoTooltip text="Top 10 reporters ranked by observation count. Click any bar to see their observations. High reporter activity indicates strong safety culture engagement." />
+            <InfoTooltip text="HOW THIS DATA IS COLLECTED: Every observation has a 'Reported By' or 'Observer' field containing the name of who submitted it. We count how many observations each person has submitted and rank them from most to least active. The top 10 most active reporters are shown here. The bar colors show status of their reports: RED = still open, GREEN = closed. Click any name to see all their observations. People who report more safety observations are actively engaged in keeping the workplace safe." />
           </h3>
           {observersData.length > 0 ? (
             <div className="space-y-1">
@@ -902,7 +891,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide flex items-center">
               Hazards Heatmap (by Month)
-              <InfoTooltip text="Monthly distribution of hazard categories. Darker colors indicate higher counts. Click any cell to drill down into that specific hazard/month combination." />
+              <InfoTooltip text="HOW THIS DATA IS COLLECTED: This table combines hazard categories (rows) with months (columns). For each cell, we count how many observations of that hazard type occurred during that month. Colors indicate intensity: WHITE = no observations that month, YELLOW to ORANGE = moderate activity, RED = high activity (most observations). This shows you patterns over time - you can spot which hazards are increasing, decreasing, or seasonal. Click any colored cell to see the actual observations for that hazard and month. Note: Positive observations are excluded since they're not hazards." />
             </h3>
             {hazardsHeatmap.months.length > 12 && (
               <span className="text-xs text-surface-400">
@@ -1014,7 +1003,7 @@ const Dashboard = () => {
             <Database size={18} className="text-surface-600" />
             <h3 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center">
               All Records
-              <InfoTooltip text="Complete list of all observations matching current filters. Search, sort, and click any row to view full details." />
+              <InfoTooltip text="HOW THIS DATA IS DISPLAYED: This is a complete list of every observation that matches your current filters (time period, contractor, site). Each row is one observation from your imported data. You can search by typing keywords, sort by clicking column headers, and click any row to see the full details including the complete description, all photos, and action history. Use this to find specific observations or review data in detail." />
             </h3>
             <span className="text-xs text-surface-500 bg-surface-100 px-2 py-0.5 rounded-full">
               {filteredIncidents.length} records

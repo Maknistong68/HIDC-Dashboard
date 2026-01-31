@@ -90,7 +90,7 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
       <Card.Header>
         <Card.Title>
           Observations by Hour of Day
-          <InfoTooltip text="Distribution of observations by hour. Bars are colored by intensity (yellow to red = more observations). Day shift: 6AM-6PM, Night shift: 6PM-6AM." />
+          <InfoTooltip text="HOW THIS CHART IS CREATED: We look at the 'Time' field of each observation (if available) to see what hour it was reported. Each bar represents one hour of the day (00:00 to 23:00). The color shows intensity: YELLOW = fewer observations, ORANGE = moderate, RED = most observations that hour. DAY SHIFT (6AM-6PM) vs NIGHT SHIFT (6PM-6AM) percentages are shown below. This helps identify: Are observations being reported throughout the day? Low night shift percentages might indicate night workers aren't reporting as much, which could be a safety concern. Note: This only works if your data includes time information." />
         </Card.Title>
       </Card.Header>
 

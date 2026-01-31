@@ -54,7 +54,7 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
       <Card.Header>
         <Card.Title>
           Observations by Day of Week
-          <InfoTooltip text="Distribution of observations across days of the week. Blue bars are weekdays, gray bars are weekends. Helps identify reporting patterns and potential gaps." />
+          <InfoTooltip text="HOW THIS CHART IS CREATED: We look at the 'Date' field of each observation and determine which day of the week it was submitted (Sunday through Saturday). Then we count how many observations were submitted on each day. BLUE bars = weekdays (Monday-Friday). GRAY bars = weekends (Saturday-Sunday). This helps you spot patterns: Are people reporting equally throughout the week? Low weekend numbers might be normal if no one works weekends, or it could mean weekend reporting needs improvement. Large spikes on certain days might indicate batch reporting rather than real-time submissions." />
         </Card.Title>
       </Card.Header>
 
