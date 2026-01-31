@@ -61,7 +61,7 @@ const KPICard = ({
   const numericValue = typeof value === 'string'
     ? parseFloat(value.replace(/[^0-9.-]/g, ''))
     : value
-  const isNumeric = !isNaN(numericValue) && typeof value !== 'string'
+  const isNumeric = !isNaN(numericValue) && isFinite(numericValue)
   const valuePrefix = typeof value === 'string' && value.includes('%') ? '' : ''
   const valueSuffix = typeof value === 'string' && value.includes('%') ? '%' : ''
 
@@ -134,4 +134,4 @@ const KPICard = ({
   )
 }
 
-export default KPICard
+export default React.memo(KPICard)

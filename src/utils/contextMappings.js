@@ -131,6 +131,21 @@ export const OUTCOME_TO_HAZARD = {
   'engulfed in flames': 'Fire',
   'fire spread': 'Fire',
 
+  // Explosives & Blasting outcomes (NEOM Eltizam Hazard #12)
+  'blasting injury': 'Explosives & Blasting',
+  'blast injury': 'Explosives & Blasting',
+  'flyrock': 'Explosives & Blasting',
+  'fly rock': 'Explosives & Blasting',
+  'flyrock injury': 'Explosives & Blasting',
+  'misfire': 'Explosives & Blasting',
+  'misfired': 'Explosives & Blasting',
+  'unexploded': 'Explosives & Blasting',
+  'premature detonation': 'Explosives & Blasting',
+  'unplanned detonation': 'Explosives & Blasting',
+  'ground vibration damage': 'Explosives & Blasting',
+  'blast damage': 'Explosives & Blasting',
+  'blasting incident': 'Explosives & Blasting',
+
   // Hot Work outcomes
   'explosion': 'Hot Work',
   'exploded': 'Hot Work',
@@ -335,7 +350,26 @@ export const HAZARD_OBJECTS = {
     // Pressure Testing
     'pressure test', 'pressure testing', 'hydrostatic test',
     'hydro test', 'hydrotest', 'pressure gauge',
-    'pressure relief', 'over pressure', 'pressure buildup', 'high pressure'
+    'pressure relief', 'over pressure', 'pressure buildup', 'high pressure',
+    // Common misspellings and variations
+    'bldozer', 'blodozer', 'excevator', 'loder',
+    // Water tanker variants
+    'water tanker', 'vacuum tanker',
+    // Dump truck variants
+    'dumptruck', 'dump trucks', 'dumper trucks', 'tipper trucks',
+    // Roller variants
+    'compact roller', 'roller compactor', 'drum roller',
+    // Additional equipment
+    'front loader', 'back hoe', 'earth moving equipment',
+    'crusher plant', 'portable generator',
+    // Man-machine interface keywords
+    'man-machine interface', 'man machine interface', 'mepi',
+    // Equipment verification keywords
+    'qr code', 'veri-fi', 'verifi', 'vvs',
+    // Equipment safety features
+    'beacon light', 'beacon lights', 'pwas', 'pwas camera',
+    'rotating parts', 'moving parts', 'protection guard',
+    'wheel chock', 'wheel chocks', 'whip check', 'whiplash arrestor'
   ],
 
   'Fire': [
@@ -396,7 +430,20 @@ export const HAZARD_OBJECTS = {
     'pickup', 'pickup truck', 'ute',
     'suv', '4x4', 'four wheel drive',
     'company vehicle', 'fleet vehicle', 'pool car',
-    'road', 'highway', 'motorway', 'freeway'
+    'road', 'highway', 'motorway', 'freeway',
+    // NEOM Standard additions
+    'seatbelt', 'seat belt', 'safety belt',
+    'driver license', 'driving license', 'driving permit',
+    'speed limit', 'speed sign', 'speed camera',
+    'mobile phone', 'handheld device', 'distraction',
+    // Three factor risk assessment
+    'driver competency', 'driver training', 'defensive driving',
+    'vehicle fitness', 'vehicle inspection', 'vehicle maintenance',
+    'route planning', 'journey management', 'journey plan',
+    // Site driving rules
+    'reverse parking', 'reverse park', 'designated route',
+    'tailgating', 'safe following distance', 'overtaking',
+    'vehicle rollover', 'rollover protection'
   ],
 
   'Lifting': [
@@ -442,19 +489,79 @@ export const HAZARD_OBJECTS = {
     'water body', 'body of water', 'open water',
     'flood water', 'flooded', 'flooding',
     'swimming pool', 'pool', 'water tank',
-    'drainage', 'drain', 'storm water', 'stormwater'
+    'drainage', 'drain', 'storm water', 'stormwater',
+    // NEOM Standard additions - Rescue equipment
+    'lifebuoy', 'life buoy', 'lifebuoys', 'ring buoy',
+    'lifeline', 'life line', '30m lifeline', 'rescue line',
+    'lifejacket', 'life jacket', 'lifejackets', 'pfd',
+    'personal flotation device', 'buoyancy aid',
+    // Rescue boat requirements
+    'rescue boat', 'rescue craft', 'standby boat',
+    // Spacing requirements (NEOM: 60m max spacing)
+    '60m spacing', 'lifebuoy spacing', 'rescue equipment spacing',
+    // Night work
+    'chemical light stick', 'search light', 'night marine work',
+    'emergency light', 'whistle',
+    // Buddy system
+    'buddy system', 'no lone working', 'lone working near water',
+    // Boat operations
+    'coxswain', 'boat operator', 'man overboard',
+    'embarking', 'disembarking', 'gangway',
+    // Weather (sea work)
+    'sea state', 'sea forecast', 'tide', 'tidal'
   ],
 
   'Hot Work': [
-    'welding equipment', 'welder', 'welding machine', 'mig welder', 'tig welder',
-    'cutting torch', 'oxy torch', 'gas torch', 'plasma cutter',
-    'grinder', 'angle grinder', 'disc grinder', 'grinding wheel',
+    // Direct hot work terms
+    'hot work', 'hot work activities', 'hot work activity', 'hot work area',
+    // Welding
+    'welding', 'welding equipment', 'welder', 'welding machine', 'mig welder', 'tig welder',
+    // Cutting
+    'cutting torch', 'oxy torch', 'gas torch', 'plasma cutter', 'thermal cutting',
+    // Grinding
+    'grinder', 'angle grinder', 'disc grinder', 'grinding wheel', 'grinding',
+    // Hot materials
     'hot metal', 'molten metal', 'molten material',
-    'brazing equipment', 'brazing torch',
-    'soldering iron', 'soldering equipment',
+    // Brazing/soldering
+    'brazing equipment', 'brazing torch', 'brazing',
+    'soldering iron', 'soldering equipment', 'soldering',
+    // Other
     'heat gun', 'hot air gun',
     'welding rod', 'electrode', 'filler wire',
-    'welding slag', 'spatter', 'weld spatter'
+    'welding slag', 'spatter', 'weld spatter',
+    'spark', 'sparks', 'fire watch', 'fire watcher'
+  ],
+
+  // Explosives & Blasting (NEOM Eltizam Hazard #12)
+  'Explosives & Blasting': [
+    // Explosives and detonators
+    'explosive', 'explosives', 'explosive material', 'explosive charge',
+    'detonator', 'detonators', 'detonating cord', 'det cord', 'detcord',
+    'primer', 'primers', 'booster', 'boosters', 'initiator',
+    'blasting cap', 'blasting caps', 'electric detonator',
+    'non-electric detonator', 'nonel', 'shock tube',
+    // Blasting operations
+    'blast', 'blasting', 'blasting operation', 'blasting activity',
+    'drill and blast', 'controlled blasting', 'presplit blasting',
+    'smooth blasting', 'cushion blasting', 'blast hole', 'blast holes',
+    'shot hole', 'shot holes', 'blast pattern', 'blast design',
+    // Personnel
+    'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
+    'blasting supervisor', 'sentry', 'sentries', 'explosives handler',
+    // Storage
+    'magazine', 'explosives magazine', 'explosive store', 'explosive storage',
+    'detonator storage', 'magazine key', 'magazine register',
+    // Safety equipment and procedures
+    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
+    'blast zone', 'exclusion zone', 'blast radius', 'danger zone',
+    'misfire', 'unexploded', 'blind hole', 'bootleg',
+    'flyrock', 'fly rock', 'fragmentation',
+    // Vibration monitoring
+    'seismograph', 'vibration monitor', 'ppv', 'peak particle velocity',
+    'ground vibration', 'air overpressure', 'blast vibration',
+    // Permits and documentation
+    'blasting permit', 'blasting schedule', 'blasting plan',
+    'blast log', 'shot record', 'post blast inspection'
   ],
 
   'Breaking Ground & Excavation': [
@@ -466,7 +573,23 @@ export const HAZARD_OBJECTS = {
     'utilities', 'underground utilities', 'buried services',
     'underground service', 'underground cable', 'underground pipe',
     'gas main', 'water main', 'sewer', 'storm drain',
-    'soil', 'earth', 'ground', 'spoil'
+    'soil', 'earth', 'ground', 'spoil',
+    // NEOM Standard additions - Service detection
+    'cat and genny', 'cat/genny', 'cable avoidance tool', 'genny',
+    'gpr', 'ground penetrating radar', 'service detection',
+    'service locator', 'utility locator', 'cable locator',
+    // Permit system
+    'permit to dig', 'dig permit', 'excavation permit',
+    'breaking ground permit', 'hold point',
+    // Design and stability
+    'soil sampling', 'ground conditions', 'soil conditions',
+    'water table', 'groundwater level', 'stability assessment',
+    'dewatering', 'wellpoint', 'sump pump',
+    'surface water', 'water diversion',
+    // Edge protection (NEOM specific)
+    'excavation edge', 'setback from edge', '1m setback',
+    'stop block', 'stop blocks', 'vehicle stop',
+    'bund wall', 'material bund'
   ],
 
   'Temporary Works': [
@@ -482,14 +605,46 @@ export const HAZARD_OBJECTS = {
     'makeshift wooden', 'makeshift support', 'makeshift supports',
     'makeshift wooden planks', 'supported using makeshift',
     'unstable support', 'unstable supports',
-    'pipes elevated', 'pipe elevated', 'hdpe pipe', 'hdpe pipes'
+    'pipes elevated', 'pipe elevated', 'hdpe pipe', 'hdpe pipes',
+    // NEOM Standard additions - Personnel
+    'twc', 'temporary works coordinator', 'tw coordinator',
+    'tws', 'temporary works supervisor', 'tw supervisor',
+    'designated individual', 'di',
+    // BS5975 stages
+    'permission to load', 'permission to strike', 'permission to dismantle',
+    'permission to install', 'design check', 'design approval',
+    // Design categories
+    'category 0', 'category 1', 'category 2', 'category 3',
+    'tw design', 'tw register', 'temporary works register',
+    // Specific TW elements
+    'crane foundation', 'tower crane base', 'grillage',
+    'piling mat', 'crane mat', 'access bridge',
+    'loading tower', 'waste chute', 'anchor point',
+    'hoist base', 'cantilever', 'temporary roof'
   ],
 
   'Working in Heat': [
     'hot environment', 'hot weather', 'high temperature',
     'sun', 'sunlight', 'direct sun', 'solar radiation',
     'heat', 'extreme heat', 'hot conditions',
-    'furnace', 'oven', 'kiln', 'boiler'
+    'furnace', 'oven', 'kiln', 'boiler',
+    // NEOM Standard additions - TWL categories
+    'thermal work limit', 'twl', 'twl category',
+    'work rest cycle', 'rest cycle', 'cooling period',
+    // Heat illness
+    'heat stroke', 'heatstroke', 'heat exhaustion',
+    'heat stress', 'heat cramps', 'heat syncope',
+    'hyperthermia', 'overheating',
+    // Hydration
+    'hydration', 'dehydration', 'dehydrated',
+    'water station', 'hydration station', 'drinking water',
+    // Shade and cooling
+    'shade area', 'shaded area', 'cooling area',
+    'shade shelter', 'rest shelter', 'cooling tent',
+    // Acclimatization
+    'acclimatization', 'acclimation', 'new worker heat',
+    // Weather monitoring
+    'weather station', 'temperature monitoring', 'wbgt'
   ],
 
   'Working on or Near Live Roads': [
@@ -498,7 +653,24 @@ export const HAZARD_OBJECTS = {
     'traffic lane', 'travel lane', 'carriageway',
     'work zone', 'construction zone', 'road works',
     'traffic management', 'traffic control',
-    'road closure', 'lane closure'
+    'road closure', 'lane closure',
+    // NEOM Standard additions
+    'live carriageway', 'live lane', 'open lane',
+    'temporary traffic management', 'ttm', 'ttm plan',
+    'traffic management plan', 'traffic logistics plan',
+    // Barriers (NEOM specific - jersey barriers required within 10m)
+    'jersey barrier', 'jersey barriers', 'water filled barrier',
+    'concrete barrier', 'new jersey barrier',
+    // Access/egress
+    'work zone access', 'work zone egress', 'access point',
+    'egress point', 'controlled crossing', 'crossing point',
+    // High visibility
+    'high visibility', 'hi-vis', 'reflective clothing',
+    // Ministry coordination
+    'ministry of transport', 'mot approval', 'mot coordination',
+    // Roadside hazards
+    'roadside work', 'highway maintenance', 'road maintenance',
+    'struck by passing', 'vehicle intrusion', 'runaway vehicle'
   ],
 
   // Physical Hazard - Sharp objects, falling objects, protruding items causing injury
@@ -763,7 +935,7 @@ export const HAZARD_OBJECTS = {
     'not properly fixed', 'stairs not fixed', 'steps not fixed'
   ],
 
-  'Work Environment': [
+  'General Site Issues': [
     // Lighting
     'lighting', 'light', 'illumination', 'poor lighting', 'insufficient lighting',
     'dark', 'dim', 'bright', 'glare', 'task lighting', 'area lighting',
@@ -870,6 +1042,18 @@ export const HAZARD_ACTIONS = {
     'drilling', 'drilled', 'drill',
     'breaking ground', 'broke ground',
     'earthworks', 'earthmoving'
+  ],
+
+  // Blasting actions → Explosives & Blasting (NEOM Eltizam #12)
+  'blasting': [
+    'blasting', 'blasted', 'blast',
+    'detonating', 'detonated', 'detonate',
+    'firing', 'fired', 'shot firing',
+    'drilling blast holes', 'charging', 'charged',
+    'priming', 'primed', 'stemming',
+    'connecting detonators', 'wiring up',
+    'clearing blast zone', 'evacuating blast area',
+    'post blast inspection', 'inspecting blast'
   ],
 
   // Electrical actions → Energized System
@@ -1039,7 +1223,7 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'fire assembly', wrongCategory: null, correctCategory: 'Fire', reason: 'fire evacuation' },
   { pattern: 'fire muster', wrongCategory: null, correctCategory: 'Fire', reason: 'fire evacuation' },
   { pattern: 'fire prevention', wrongCategory: null, correctCategory: 'Fire', reason: 'fire safety' },
-  { pattern: 'fire risk assessment', wrongCategory: 'Fire', correctCategory: 'Permit and RAMS', reason: 'documentation' },
+  { pattern: 'fire risk assessment', wrongCategory: 'Fire', correctCategory: 'General Site Issues', reason: 'documentation' },
 
   // Lifting disambiguations
   { pattern: 'forklift', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'vehicle, not crane lifting' },
@@ -1050,8 +1234,8 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'cherry picker', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'elevated work platform' },
   { pattern: 'mewp', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'mobile elevated platform' },
   { pattern: 'ewp', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'elevated work platform' },
-  { pattern: 'lifting morale', wrongCategory: 'Lifting', correctCategory: 'Work Environment', reason: 'figurative expression' },
-  { pattern: 'lifting spirits', wrongCategory: 'Lifting', correctCategory: 'Work Environment', reason: 'figurative expression' },
+  { pattern: 'lifting morale', wrongCategory: 'Lifting', correctCategory: 'General Site Issues', reason: 'figurative expression' },
+  { pattern: 'lifting spirits', wrongCategory: 'Lifting', correctCategory: 'General Site Issues', reason: 'figurative expression' },
   { pattern: 'pallet jack', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'manual handling equipment' },
   { pattern: 'hand pallet truck', wrongCategory: 'Lifting', correctCategory: 'Mobile Plant & Equipment', reason: 'manual handling equipment' },
 
@@ -1059,22 +1243,22 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'open pit', wrongCategory: 'Confined Spaces', correctCategory: 'Breaking Ground & Excavation', reason: 'excavation hazard, not confined space' },
   { pattern: 'open pits', wrongCategory: 'Confined Spaces', correctCategory: 'Breaking Ground & Excavation', reason: 'excavation hazard, not confined space' },
   { pattern: 'pit without barricade', wrongCategory: 'Confined Spaces', correctCategory: 'Breaking Ground & Excavation', reason: 'excavation hazard' },
-  { pattern: 'office space', wrongCategory: 'Confined Spaces', correctCategory: 'Work Environment', reason: 'work area, not confined space' },
+  { pattern: 'office space', wrongCategory: 'Confined Spaces', correctCategory: 'General Site Issues', reason: 'work area, not confined space' },
   { pattern: 'storage space', wrongCategory: 'Confined Spaces', correctCategory: 'Housekeeping', reason: 'storage area' },
   { pattern: 'parking space', wrongCategory: 'Confined Spaces', correctCategory: 'Traffic Management', reason: 'vehicle parking' },
-  { pattern: 'work space', wrongCategory: 'Confined Spaces', correctCategory: 'Work Environment', reason: 'work area' },
+  { pattern: 'work space', wrongCategory: 'Confined Spaces', correctCategory: 'General Site Issues', reason: 'work area' },
   { pattern: 'living space', wrongCategory: 'Confined Spaces', correctCategory: 'Worker Welfare', reason: 'accommodation' },
 
   // Working at Height disambiguations
-  { pattern: 'fallen sign', wrongCategory: 'Working at Height', correctCategory: 'Work Environment', reason: 'object on ground' },
-  { pattern: 'fallen signage', wrongCategory: 'Working at Height', correctCategory: 'Work Environment', reason: 'signage issue' },
+  { pattern: 'fallen sign', wrongCategory: 'Working at Height', correctCategory: 'General Site Issues', reason: 'object on ground' },
+  { pattern: 'fallen signage', wrongCategory: 'Working at Height', correctCategory: 'General Site Issues', reason: 'signage issue' },
   { pattern: 'fallen barrier', wrongCategory: 'Working at Height', correctCategory: 'Access', reason: 'barrier issue' },
   { pattern: 'fallen barricade', wrongCategory: 'Working at Height', correctCategory: 'Access', reason: 'barricade issue' },
   { pattern: 'fallen cone', wrongCategory: 'Working at Height', correctCategory: 'Traffic Management', reason: 'traffic equipment' },
   { pattern: 'fall protection', wrongCategory: 'Working at Height', correctCategory: 'Working at Height', reason: 'confirm - height safety equipment' },
   { pattern: 'height of scaffold', wrongCategory: 'Working at Height', correctCategory: 'Working at Height', reason: 'confirm - scaffold measurement' },
-  { pattern: 'tall building', wrongCategory: 'Working at Height', correctCategory: 'Work Environment', reason: 'structure description' },
-  { pattern: 'height measurement', wrongCategory: 'Working at Height', correctCategory: 'Work Environment', reason: 'measurement activity' },
+  { pattern: 'tall building', wrongCategory: 'Working at Height', correctCategory: 'General Site Issues', reason: 'structure description' },
+  { pattern: 'height measurement', wrongCategory: 'Working at Height', correctCategory: 'General Site Issues', reason: 'measurement activity' },
 
   // COSHH / Chemical disambiguations
   { pattern: 'food poisoning', wrongCategory: 'COSHH', correctCategory: 'Worker Welfare', reason: 'illness from food, not chemical' },
@@ -1082,25 +1266,25 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'stomach bug', wrongCategory: 'COSHH', correctCategory: 'Worker Welfare', reason: 'illness' },
   { pattern: 'sick from food', wrongCategory: 'COSHH', correctCategory: 'Worker Welfare', reason: 'food-related illness' },
 
-  // PPE disambiguations → Work Environment (PPE is a control, not a hazard)
-  { pattern: 'ppe available', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE availability' },
-  { pattern: 'ppe missing', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE issue' },
-  { pattern: 'ppe not worn', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
+  // PPE disambiguations → Unclassified (PPE is a control, not a hazard)
+  { pattern: 'ppe available', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE availability' },
+  { pattern: 'ppe missing', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE issue' },
+  { pattern: 'ppe not worn', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
 
   // Driving disambiguations
-  { pattern: 'driving rain', wrongCategory: 'Driving', correctCategory: 'Work Environment', reason: 'weather condition' },
-  { pattern: 'driving wind', wrongCategory: 'Driving', correctCategory: 'Work Environment', reason: 'weather condition' },
+  { pattern: 'driving rain', wrongCategory: 'Driving', correctCategory: 'General Site Issues', reason: 'weather condition' },
+  { pattern: 'driving wind', wrongCategory: 'Driving', correctCategory: 'General Site Issues', reason: 'weather condition' },
   { pattern: 'pile driving', wrongCategory: 'Driving', correctCategory: 'Breaking Ground & Excavation', reason: 'piling operation' },
   { pattern: 'sheet pile driving', wrongCategory: 'Driving', correctCategory: 'Breaking Ground & Excavation', reason: 'piling operation' },
 
-  // Training/meetings → Work Environment (training is a control, not a hazard)
-  { pattern: 'toolbox talk', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety engagement activity' },
-  { pattern: 'safety meeting', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety engagement' },
-  { pattern: 'safety briefing', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety engagement' },
-  { pattern: 'safety induction', wrongCategory: null, correctCategory: 'Work Environment', reason: 'training activity' },
-  { pattern: 'site induction', wrongCategory: null, correctCategory: 'Work Environment', reason: 'training activity' },
-  { pattern: 'good catch', wrongCategory: null, correctCategory: 'Work Environment', reason: 'positive observation' },
-  { pattern: 'near miss report', wrongCategory: null, correctCategory: 'Work Environment', reason: 'reporting activity' },
+  // Training/meetings → Unclassified (training is a control, not a hazard)
+  { pattern: 'toolbox talk', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety engagement activity' },
+  { pattern: 'safety meeting', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety engagement' },
+  { pattern: 'safety briefing', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety engagement' },
+  { pattern: 'safety induction', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'training activity' },
+  { pattern: 'site induction', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'training activity' },
+  { pattern: 'good catch', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'positive observation' },
+  { pattern: 'near miss report', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'reporting activity' },
 
   // ============================================================================
   // NEW DISAMBIGUATION RULES (for common phrases from real data)
@@ -1136,42 +1320,42 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'welfare facility', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'welfare area' },
   { pattern: 'rest shelter', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'welfare area' },
 
-  // Safety officer and supervision patterns → Work Environment (supervision is a control)
-  { pattern: 'safety officer not present', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
-  { pattern: 'no safety officer', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
-  { pattern: 'without safety coverage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
-  { pattern: 'safety personnel', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision' },
-  { pattern: 'without supervision', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
-  { pattern: 'without safety officer', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
-  { pattern: 'safety coverage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision' },
-  { pattern: 'lack of supervision', wrongCategory: null, correctCategory: 'Work Environment', reason: 'supervision issue' },
+  // Safety officer and supervision patterns → Unclassified (supervision is a control)
+  { pattern: 'safety officer not present', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
+  { pattern: 'no safety officer', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
+  { pattern: 'without safety coverage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
+  { pattern: 'safety personnel', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision' },
+  { pattern: 'without supervision', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
+  { pattern: 'without safety officer', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
+  { pattern: 'safety coverage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision' },
+  { pattern: 'lack of supervision', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision issue' },
 
-  // PPE patterns → Work Environment (PPE is a control, not a hazard)
-  { pattern: 'not wearing ppe', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
-  { pattern: 'without ppe', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
-  { pattern: 'ppe not worn', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
-  { pattern: 'ear protection', wrongCategory: null, correctCategory: 'Work Environment', reason: 'hearing PPE' },
-  { pattern: 'safety glasses', wrongCategory: null, correctCategory: 'Work Environment', reason: 'eye PPE' },
-  { pattern: 'safety goggles', wrongCategory: null, correctCategory: 'Work Environment', reason: 'eye PPE' },
-  { pattern: 'not wearing proper ppe', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
-  { pattern: 'incomplete ppe', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE compliance' },
-  { pattern: 'proper ppe', wrongCategory: null, correctCategory: 'Work Environment', reason: 'PPE requirement' },
+  // PPE patterns → Unclassified (PPE is a control, not a hazard)
+  { pattern: 'not wearing ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'without ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'ppe not worn', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'ear protection', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'hearing PPE' },
+  { pattern: 'safety glasses', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'eye PPE' },
+  { pattern: 'safety goggles', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'eye PPE' },
+  { pattern: 'not wearing proper ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'incomplete ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'proper ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE requirement' },
 
-  // Training and briefing patterns → Work Environment (training is a control)
-  { pattern: 'pre-task briefing', wrongCategory: null, correctCategory: 'Work Environment', reason: 'briefing activity' },
-  { pattern: 'pre task briefing', wrongCategory: null, correctCategory: 'Work Environment', reason: 'briefing activity' },
-  { pattern: 'tbt', wrongCategory: null, correctCategory: 'Work Environment', reason: 'toolbox talk' },
-  { pattern: 'lmra', wrongCategory: null, correctCategory: 'Work Environment', reason: 'risk assessment' },
-  { pattern: 'safety standout', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety meeting' },
-  { pattern: 'safety stand down', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety meeting' },
-  { pattern: 'competent person', wrongCategory: null, correctCategory: 'Work Environment', reason: 'competency' },
+  // Training and briefing patterns → Unclassified (training is a control)
+  { pattern: 'pre-task briefing', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'briefing activity' },
+  { pattern: 'pre task briefing', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'briefing activity' },
+  { pattern: 'tbt', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'toolbox talk' },
+  { pattern: 'lmra', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'risk assessment' },
+  { pattern: 'safety standout', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety meeting' },
+  { pattern: 'safety stand down', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety meeting' },
+  { pattern: 'competent person', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'competency' },
 
-  // Positive observation patterns → Work Environment (behavioral observations)
-  { pattern: 'positive observation', wrongCategory: null, correctCategory: 'Work Environment', reason: 'behavioral safety' },
-  { pattern: 'positive culture', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety culture' },
-  { pattern: 'best performer', wrongCategory: null, correctCategory: 'Work Environment', reason: 'recognition' },
-  { pattern: 'gift card', wrongCategory: null, correctCategory: 'Work Environment', reason: 'recognition/reward' },
-  { pattern: 'indicating a positive', wrongCategory: null, correctCategory: 'Work Environment', reason: 'positive observation' },
+  // Positive observation patterns → Unclassified (behavioral observations)
+  { pattern: 'positive observation', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'behavioral safety' },
+  { pattern: 'positive culture', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety culture' },
+  { pattern: 'best performer', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'recognition' },
+  { pattern: 'gift card', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'recognition/reward' },
+  { pattern: 'indicating a positive', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'positive observation' },
 
   // Housekeeping patterns
   { pattern: 'poor housekeeping', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'housekeeping issue' },
@@ -1212,14 +1396,14 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'parking area', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'parking' },
   { pattern: 'parked on slope', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'parking issue' },
 
-  // Signage patterns → Work Environment (signage is a control)
-  { pattern: 'no signage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage missing' },
-  { pattern: 'signage not', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage issue' },
-  { pattern: 'sign not installed', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage missing' },
-  { pattern: 'suitable signage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage requirement' },
-  { pattern: 'no awareness signage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage missing' },
-  { pattern: 'awareness signage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage required' },
-  { pattern: 'warning signage', wrongCategory: null, correctCategory: 'Work Environment', reason: 'signage requirement' },
+  // Signage patterns → Unclassified (signage is a control)
+  { pattern: 'no signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage missing' },
+  { pattern: 'signage not', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage issue' },
+  { pattern: 'sign not installed', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage missing' },
+  { pattern: 'suitable signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage requirement' },
+  { pattern: 'no awareness signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage missing' },
+  { pattern: 'awareness signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage required' },
+  { pattern: 'warning signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage requirement' },
 
   // Equipment and tools specific
   { pattern: 'rotating part', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'machine guarding' },
@@ -1251,10 +1435,10 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'assembly point', wrongCategory: null, correctCategory: 'Fire', reason: 'fire evacuation procedure' },
 
   // Weather and environment patterns
-  { pattern: 'weather station', wrongCategory: null, correctCategory: 'Work Environment', reason: 'weather monitoring' },
-  { pattern: 'insufficient lighting', wrongCategory: null, correctCategory: 'Work Environment', reason: 'lighting issue' },
-  { pattern: 'poor lighting', wrongCategory: null, correctCategory: 'Work Environment', reason: 'lighting issue' },
-  { pattern: 'poorly illuminated', wrongCategory: null, correctCategory: 'Work Environment', reason: 'lighting issue' },
+  { pattern: 'weather station', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'weather monitoring' },
+  { pattern: 'insufficient lighting', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'lighting issue' },
+  { pattern: 'poor lighting', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'lighting issue' },
+  { pattern: 'poorly illuminated', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'lighting issue' },
 
   // ============================================================================
   // NEW DISAMBIGUATION RULES (from low confidence analysis)
@@ -1319,31 +1503,31 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'unsecured grating', wrongCategory: null, correctCategory: 'Working at Height', reason: 'fall hazard' },
   { pattern: 'green mesh', wrongCategory: null, correctCategory: 'Access', reason: 'safety mesh/barrier' },
 
-  // Suggestion box / positive culture patterns → Work Environment
-  { pattern: 'suggestion box', wrongCategory: null, correctCategory: 'Work Environment', reason: 'employee engagement' },
-  { pattern: 'ideas and feedback', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety culture' },
-  { pattern: 'continuous improvement', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety culture' },
-  { pattern: 'overconfidence', wrongCategory: null, correctCategory: 'Work Environment', reason: 'behavioral observation' },
-  { pattern: 'lack of proper positioning', wrongCategory: null, correctCategory: 'Work Environment', reason: 'behavioral observation' },
+  // Suggestion box / positive culture patterns → Unclassified
+  { pattern: 'suggestion box', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'employee engagement' },
+  { pattern: 'ideas and feedback', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety culture' },
+  { pattern: 'continuous improvement', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety culture' },
+  { pattern: 'overconfidence', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'behavioral observation' },
+  { pattern: 'lack of proper positioning', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'behavioral observation' },
 
-  // Driving campaign patterns → Work Environment
-  { pattern: 'safe driving campaign', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety campaign' },
-  { pattern: 'driving campaign', wrongCategory: 'Driving', correctCategory: 'Work Environment', reason: 'safety campaign not driving activity' },
-  { pattern: 'campaign was found', wrongCategory: null, correctCategory: 'Work Environment', reason: 'safety campaign' },
+  // Driving campaign patterns → Unclassified
+  { pattern: 'safe driving campaign', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety campaign' },
+  { pattern: 'driving campaign', wrongCategory: 'Driving', correctCategory: 'General Site Issues', reason: 'safety campaign not driving activity' },
+  { pattern: 'campaign was found', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'safety campaign' },
 
   // Proper arrangement / lifting positive patterns
   { pattern: 'proper arrangement', wrongCategory: null, correctCategory: 'Lifting', reason: 'lifting preparation' },
   { pattern: 'lifting operation', wrongCategory: null, correctCategory: 'Lifting', reason: 'lifting activity' },
 
-  // Bulletin board patterns → Work Environment
-  { pattern: 'bulletin board', wrongCategory: null, correctCategory: 'Work Environment', reason: 'information display' },
-  { pattern: 'campaign bulletin', wrongCategory: null, correctCategory: 'Work Environment', reason: 'information display' },
-  { pattern: 'weekly campaign bulletin', wrongCategory: null, correctCategory: 'Work Environment', reason: 'information display' },
+  // Bulletin board patterns → Unclassified
+  { pattern: 'bulletin board', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'information display' },
+  { pattern: 'campaign bulletin', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'information display' },
+  { pattern: 'weekly campaign bulletin', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'information display' },
 
   // Backfilling / interference patterns
   { pattern: 'backfilling work', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'excavation activity' },
-  { pattern: 'too close to each other', wrongCategory: null, correctCategory: 'Work Environment', reason: 'activity interference' },
-  { pattern: 'interference between', wrongCategory: null, correctCategory: 'Work Environment', reason: 'activity interference' },
+  { pattern: 'too close to each other', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'activity interference' },
+  { pattern: 'interference between', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'activity interference' },
 
   // Rebar work / steel work patterns
   { pattern: 'rebar work', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'steel work activity' },
@@ -1376,8 +1560,8 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'spikes protruding', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' },
 
   // Emergency contact patterns
-  { pattern: 'emergency contact number', wrongCategory: null, correctCategory: 'Work Environment', reason: 'emergency information' },
-  { pattern: 'contact number displayed', wrongCategory: null, correctCategory: 'Work Environment', reason: 'emergency information' },
+  { pattern: 'emergency contact number', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'emergency information' },
+  { pattern: 'contact number displayed', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'emergency information' },
 
   // Confined space protection
   { pattern: 'hard protection for', wrongCategory: null, correctCategory: 'Confined Spaces', reason: 'confined space barrier' },
@@ -1497,7 +1681,595 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'sharp nail', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' },
   { pattern: 'sharp nails', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' },
   { pattern: 'rusty nail', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' },
-  { pattern: 'rusty nails', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' }
+  { pattern: 'rusty nails', wrongCategory: null, correctCategory: 'Physical Hazard', reason: 'puncture hazard' },
+
+  // ============================================================================
+  // MAN-MACHINE INTERFACE (MEPI) PATTERNS → Mobile Plant & Equipment
+  // These are about workers in proximity to moving equipment
+  // ============================================================================
+  { pattern: 'man-machine interface', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near moving equipment' },
+  { pattern: 'man machine interface', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near moving equipment' },
+  { pattern: 'man and machine interface', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near moving equipment' },
+  { pattern: 'man & machine interface', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near moving equipment' },
+  { pattern: 'mepi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'man-machine', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'no boots on ground', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI policy violation' },
+  { pattern: 'boots on ground', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI policy' },
+  { pattern: 'working in man-machine', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'in man-machine interface', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'close proximity to', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near equipment' },
+  { pattern: 'close to operation equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'close to operating equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'near moving equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'near moving plant', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'near active', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - near active equipment' },
+  { pattern: 'struck-by hazard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'struck-by hazard from equipment' },
+  { pattern: 'struck by hazard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'struck-by hazard from equipment' },
+  { pattern: 'line of fire', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'struck-by hazard zone, not fire' },
+  { pattern: 'directing dump truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - person directing equipment' },
+  { pattern: 'standing in line of fire', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'struck-by hazard zone, not fire' },
+  { pattern: 'within the line of fire', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'struck-by hazard zone, not fire' },
+  { pattern: 'roaming close to', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - worker near equipment' },
+  { pattern: 'moving around mobile plant', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'positioned in between', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - between moving equipment' },
+  { pattern: 'few meters from', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - proximity to equipment' },
+  { pattern: 'operatives were observed working very close', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'working very close to a moving', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'insufficient clearance between', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard - inadequate separation' },
+
+  // ============================================================================
+  // QR CODE / VERI-FI / VVS STATUS PATTERNS → Mobile Plant & Equipment
+  // Equipment verification and certification status
+  // ============================================================================
+  { pattern: 'qr code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification status' },
+  { pattern: 'qr-code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification status' },
+  { pattern: 'veri-fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
+  { pattern: 'verifi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
+  { pattern: 'veri fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
+  { pattern: 'neom qr code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
+  { pattern: 'vvs system', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'vehicle verification system' },
+  { pattern: 'vvs status', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'vehicle verification system' },
+  { pattern: 'red status', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment red status - non-compliant' },
+  { pattern: 'red category', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment red category - non-compliant' },
+  { pattern: 'access denied status', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment access denied' },
+  { pattern: 'exp qr code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired QR code' },
+  { pattern: 'expired qr', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired QR code' },
+  { pattern: 'baar code expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired barcode/QR' },
+  { pattern: 'bar code expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired barcode/QR' },
+  { pattern: 'barcode expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired barcode/QR' },
+
+  // ============================================================================
+  // EQUIPMENT CERTIFICATION PATTERNS → Mobile Plant & Equipment
+  // Third party certification, TPC, MVP certificates
+  // ============================================================================
+  { pattern: 'third party certified', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment certification' },
+  { pattern: 'third party certification', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment certification' },
+  { pattern: 'third-party certified', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment certification' },
+  { pattern: 'tpc expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'third party certification expired' },
+  { pattern: 'tpc found expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'third party certification expired' },
+  { pattern: 'tpc was expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'third party certification expired' },
+  { pattern: 'tpc of the', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'third party certification' },
+  { pattern: 'mvp certificate', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment MVP certification' },
+  { pattern: 'expired mvp', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'expired MVP certificate' },
+  { pattern: '3rd party certificate', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment certification' },
+  { pattern: 'certificate was expired', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment certification expired' },
+  { pattern: 'proof of worthiness', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment fitness verification' },
+  { pattern: 'verifiable proof', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification' },
+
+  // ============================================================================
+  // PWAS / CAMERA PATTERNS → Mobile Plant & Equipment
+  // Proximity Warning and Alert System cameras
+  // ============================================================================
+  { pattern: 'pwas', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'proximity warning system' },
+  { pattern: 'pwas camera', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'proximity warning camera' },
+  { pattern: 'pwas cameras', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'proximity warning cameras' },
+  { pattern: 'pwas-360', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: '360 proximity warning camera' },
+  { pattern: 'pwas system', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'proximity warning system' },
+  { pattern: 'pwas not installed', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing PWAS' },
+  { pattern: 'without pwas', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing PWAS' },
+  { pattern: 'non-availability pwas', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing PWAS' },
+  { pattern: '360 camera', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment camera system' },
+  { pattern: 'camera was missing', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment camera missing' },
+  { pattern: 'cameras were not installed', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment cameras missing' },
+  { pattern: 'alarm feature', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment alarm system' },
+
+  // ============================================================================
+  // BEACON LIGHT / WARNING LIGHT PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'beacon light', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning light' },
+  { pattern: 'beacon lights', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning lights' },
+  { pattern: 'blinking light', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning light' },
+  { pattern: 'blinking lights', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning lights' },
+  { pattern: 'beacon was missing', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing beacon light' },
+  { pattern: 'beacon light was turned off', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'beacon not activated' },
+  { pattern: 'beacon light was not switched', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'beacon not activated' },
+  { pattern: 'lights not functioning', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment lights malfunction' },
+  { pattern: 'strobe light', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning light' },
+  { pattern: 'warning light', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning light' },
+  { pattern: 'rotating beacon', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment warning light' },
+
+  // ============================================================================
+  // BLACK SMOKE / EMISSIONS PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'black smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions issue' },
+  { pattern: 'emitting black smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions' },
+  { pattern: 'emitting smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions' },
+  { pattern: 'too much smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions' },
+  { pattern: 'make black smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions' },
+  { pattern: 'exhaust smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment emissions' },
+  { pattern: 'bldozer black smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'bulldozer emissions' },
+  { pattern: 'bulldozer black smoke', wrongCategory: 'Fire', correctCategory: 'Mobile Plant & Equipment', reason: 'bulldozer emissions' },
+
+  // ============================================================================
+  // WHEEL CHOCK PATTERNS → Mobile Plant & Equipment (maintenance context)
+  // ============================================================================
+  { pattern: 'wheel chock', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance safety' },
+  { pattern: 'wheel chocks', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance safety' },
+  { pattern: 'wheel chock not in use', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'maintenance without wheel chock' },
+  { pattern: 'wheel chocks not in use', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'maintenance without wheel chock' },
+  { pattern: 'wheel chocks were not placed', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'missing wheel chocks' },
+  { pattern: 'without wheel chock', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'missing wheel chocks' },
+  { pattern: 'chocks were not placed', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'missing wheel chocks' },
+  { pattern: 'did not provide wheel chock', wrongCategory: 'Traffic Management', correctCategory: 'Mobile Plant & Equipment', reason: 'missing wheel chocks' },
+  { pattern: 'truck may move during', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'uncontrolled equipment movement risk' },
+
+  // ============================================================================
+  // HYDRAULIC / OIL LEAK PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'hydraulic leak', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment hydraulic failure' },
+  { pattern: 'hydraulic leaked', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment hydraulic failure' },
+  { pattern: 'hydraulic pump leaked', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment hydraulic failure' },
+  { pattern: 'hydrolic leak', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment hydraulic failure (typo)' },
+  { pattern: 'oil leak', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment oil leak' },
+  { pattern: 'oil leakage', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment oil leak' },
+  { pattern: 'oil spil', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment oil spill (typo)' },
+  { pattern: 'leaking hydraulic', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment hydraulic failure' },
+  { pattern: 'rusty and unlubricated', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance issue' },
+  { pattern: 'crawler tracks', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'tracked equipment' },
+
+  // ============================================================================
+  // ROTATING PARTS / MACHINE GUARD PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'rotating parts', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded rotating parts' },
+  { pattern: 'rotating part', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded rotating parts' },
+  { pattern: 'moving parts', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded moving parts' },
+  { pattern: 'moving machine parts', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded moving parts' },
+  { pattern: 'protection guard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment guarding' },
+  { pattern: 'protection gurad', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment guarding (typo)' },
+  { pattern: 'without guard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded equipment' },
+  { pattern: 'without any guard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unguarded equipment' },
+  { pattern: 'safety guard', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment guarding' },
+  { pattern: 'safety guards', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment guarding' },
+  { pattern: 'safeguarded adequately', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment guarding' },
+  { pattern: 'not safeguarded', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'inadequate equipment safeguards' },
+  { pattern: 'not adequately safeguarded', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'inadequate equipment safeguards' },
+  { pattern: 'missing safety panels', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing equipment guards' },
+  { pattern: 'missing guards', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'missing equipment guards' },
+  { pattern: 'exposing the rotating', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'exposed rotating parts' },
+
+  // ============================================================================
+  // COMPRESSOR / AIR HOSE PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'whip check', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'air hose safety' },
+  { pattern: 'whip lash arrestor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'air hose safety' },
+  { pattern: 'whiplash arrestor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'air hose safety' },
+  { pattern: 'whip lash arrester', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'air hose safety' },
+  { pattern: 'air hose compressor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compressor equipment' },
+  { pattern: 'air hose joints', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compressor air hose' },
+  { pattern: 'air receiving tank', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compressor pressure vessel' },
+  { pattern: 'compressor was not', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compressor equipment' },
+
+  // ============================================================================
+  // BUCKET / PIN ASSEMBLY PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'bucket with iron rod', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'improper bucket attachment' },
+  { pattern: 'instead of a cotter pin', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'improper pin assembly' },
+  { pattern: 'pin assembly', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment pin assembly' },
+  { pattern: 'fixing the pin', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'excavator bucket', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'excavator attachment' },
+  { pattern: 'backhoe bucket', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'backhoe attachment' },
+  { pattern: 'makeshift welded', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'improper equipment repair' },
+  { pattern: 'counter pin lock', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment locking mechanism' },
+  { pattern: 'locking system', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment locking' },
+  { pattern: 'backshield protection', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment protection' },
+
+  // ============================================================================
+  // DUMP TRUCK / TIPPER SPECIFIC PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'dump truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dump truck equipment' },
+  { pattern: 'dumper truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dump truck equipment' },
+  { pattern: 'tipper truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'tipper truck equipment' },
+  { pattern: 'haul truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'haul truck equipment' },
+  { pattern: 'back door no open', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dump truck door malfunction' },
+  { pattern: 'door no moving', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dump truck door malfunction' },
+  { pattern: 'no good working', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment malfunction' },
+  { pattern: 'retro reflective tape', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment visibility marking' },
+  { pattern: 'retroreflective tape', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment visibility marking' },
+  { pattern: 'heap shape', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'improper material hauling' },
+  { pattern: 'carrying spoil', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'spoil hauling' },
+  { pattern: 'hauling operation', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'hauling operation' },
+  { pattern: 'front cabnet open', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment cab door issue (typo)' },
+  { pattern: 'front cabinet open', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment cab door issue' },
+  { pattern: 'tipping operations', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dump truck tipping' },
+  { pattern: 'dumping material', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dumping operation' },
+  { pattern: 'during dumping', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dumping operation' },
+  { pattern: 'at the time of dumping', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'dumping operation' },
+  { pattern: 'tarping station', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'tarping operation near equipment' },
+  { pattern: 'ticket counter', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'ticket counter in MEPI zone' },
+
+  // ============================================================================
+  // OBSTRUCTED VIEW / VISIBILITY PATTERNS → Driving
+  // ============================================================================
+  { pattern: 'curtain on a window', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'curtain on window', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'curtains used to cover', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'obstructive view', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'restricted vision', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'dirt on windscreen', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'windscreens and side window', wrongCategory: null, correctCategory: 'Driving', reason: 'obstructed driver view' },
+  { pattern: 'traditional dress kurta', wrongCategory: null, correctCategory: 'Driving', reason: 'driver dress code violation' },
+  { pattern: 'freelancer driver', wrongCategory: null, correctCategory: 'Driving', reason: 'unauthorized driver' },
+  { pattern: 'driver competency', wrongCategory: null, correctCategory: 'Driving', reason: 'driver qualification' },
+
+  // ============================================================================
+  // PARKING / DESIGNATED AREA PATTERNS → Traffic Management
+  // ============================================================================
+  { pattern: 'designated parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'parking area issue' },
+  { pattern: 'undesignated area', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized area' },
+  { pattern: 'undesignated parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized parking' },
+  { pattern: 'designated area', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'designated area compliance' },
+  { pattern: 'not designated', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized area' },
+  { pattern: 'parked on designated', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'parking compliance' },
+  { pattern: 'equipment parking area', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'equipment parking' },
+  { pattern: 'heavy equipment parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'equipment parking' },
+  { pattern: 'light vehicle parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'vehicle parking' },
+  { pattern: 'parked in laydown area', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized parking' },
+  { pattern: 'unauthorized parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized parking' },
+  { pattern: 'parked in wrong way', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'improper parking' },
+  { pattern: 'parked in an undesignated', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unauthorized parking' },
+  { pattern: 'parked near the edge', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'unsafe parking location' },
+  { pattern: 'obstructing access', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'vehicle obstructing access' },
+  { pattern: 'obstructing the designated', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'vehicle obstructing designated area' },
+  { pattern: 'separate parking for light and heavy', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'segregated parking requirement' },
+  { pattern: 'parked on the access road', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'vehicle blocking access' },
+
+  // ============================================================================
+  // TRAFFIC CONTROLLER / MANAGEMENT PATTERNS → Traffic Management
+  // ============================================================================
+  { pattern: 'traffic controller', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic control' },
+  { pattern: 'traffic controllers', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic control' },
+  { pattern: 'traffic management', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic management' },
+  { pattern: 'vehicle movement', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic management' },
+  { pattern: 'improper traffic', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic management issue' },
+  { pattern: 'blocked by dumper', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road blockage' },
+  { pattern: 'internal road was blocked', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road blockage' },
+  { pattern: 'entry and exit signage', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'traffic signage' },
+  { pattern: 'pick and drop', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'pick up/drop off point' },
+  { pattern: 'pick up and drop off', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'pick up/drop off point' },
+  { pattern: 'bus pick up', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'bus stop location' },
+
+  // ============================================================================
+  // ILLUMINATION / LIGHTING PATTERNS → Traffic Management (for roads) or General
+  // ============================================================================
+  { pattern: 'tower light', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road illumination' },
+  { pattern: 'tower lights', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road illumination' },
+  { pattern: 'haul road', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'haul road traffic' },
+  { pattern: 'haul roads', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'haul road traffic' },
+  { pattern: 'access road', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'access road traffic' },
+  { pattern: 'adequately lit', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road illumination' },
+  { pattern: 'adequately illuminated', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road illumination' },
+  { pattern: 'no illumination', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'missing road illumination' },
+  { pattern: 'totally dark', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'inadequate illumination' },
+  { pattern: 'lux reading', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'illumination measurement' },
+  { pattern: 'lux meter', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'illumination measurement' },
+  { pattern: 'lux level', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'illumination level' },
+  { pattern: 'no lights available', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'missing illumination' },
+  { pattern: 'width of road', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road dimension issue' },
+  { pattern: 'unsafe road', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road safety issue' },
+  { pattern: 'road edge', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'road edge protection' },
+  { pattern: 'signage installed in equipment parking', wrongCategory: null, correctCategory: 'Traffic Management', reason: 'parking signage' },
+
+  // ============================================================================
+  // STOCKPILE / OVERHANG / COLLAPSE PATTERNS → Breaking Ground & Excavation
+  // ============================================================================
+  { pattern: 'stockpile', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'stockpile hazard' },
+  { pattern: 'stockpiles', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'stockpile hazard' },
+  { pattern: 'stock pile', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'stockpile hazard' },
+  { pattern: 'stuckpile', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'stockpile hazard (typo)' },
+  { pattern: 'overhang of soil', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'soil overhang collapse risk' },
+  { pattern: 'soil overhang', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'soil overhang collapse risk' },
+  { pattern: 'significant overhang', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'overhang collapse risk' },
+  { pattern: 'risk of detachment', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'soil collapse risk' },
+  { pattern: 'subsequent collapse', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'soil collapse risk' },
+  { pattern: 'unsupported by any underlying', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'unsupported soil' },
+  { pattern: 'insecurely balanced', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'unstable stockpile' },
+  { pattern: 'susceptible to vibrations', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'vibration collapse risk' },
+  { pattern: 'collapsing over the equipment', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'soil collapse on equipment' },
+  { pattern: 'buried under the falling', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'burial hazard' },
+  { pattern: 'huge collapse', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'collapse hazard' },
+  { pattern: 'removing materials from stockpiles', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'stockpile operations' },
+  { pattern: 'backfilling area', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'backfilling operations' },
+  { pattern: 'dumping yard', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'dumping area' },
+
+  // ============================================================================
+  // OVERHEAD POWER LINE PATTERNS → Energized System
+  // ============================================================================
+  { pattern: 'overhead power line', wrongCategory: null, correctCategory: 'Energized System', reason: 'overhead electrical hazard' },
+  { pattern: 'overhead high voltage', wrongCategory: null, correctCategory: 'Energized System', reason: 'overhead electrical hazard' },
+  { pattern: 'under overhead', wrongCategory: null, correctCategory: 'Energized System', reason: 'work under power lines' },
+  { pattern: 'directly under overhead', wrongCategory: null, correctCategory: 'Energized System', reason: 'work under power lines' },
+
+  // ============================================================================
+  // WELFARE / REST SHELTER PATTERNS → Worker Welfare
+  // ============================================================================
+  { pattern: 'rest shelter', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'worker welfare facility' },
+  { pattern: 'resting shelter', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'worker welfare facility' },
+  { pattern: 'welfare facilities', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'worker welfare' },
+  { pattern: 'welfare areas', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'worker welfare area' },
+  { pattern: 'welfare area', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'worker welfare area' },
+  { pattern: 'security cabin', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'site facility' },
+  { pattern: 'sitting under heavy equipment', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'unsafe resting location' },
+  { pattern: 'resting underneath', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'unsafe resting location' },
+  { pattern: 'sitting/resting underneath', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'unsafe resting location' },
+  { pattern: 'drinking water station', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'drinking water facility' },
+  { pattern: 'lone worker', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'lone working hazard' },
+  { pattern: 'working alone', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'lone working hazard' },
+  { pattern: 'found working alone', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'lone working hazard' },
+  { pattern: 'absence of supervision', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'supervision issue' },
+  { pattern: 'immediate assistance', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'emergency response' },
+  { pattern: 'emergency procedure', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'emergency preparedness' },
+  { pattern: 'emergency numbers', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'emergency information' },
+  { pattern: 'insufficient safety coverage', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'supervision issue' },
+  { pattern: 'safety officer is present', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'supervision' },
+  { pattern: 'iqama is expired', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'documentation compliance' },
+  { pattern: 'sewage waste', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'sanitation issue' },
+  { pattern: 'pump out the sewage', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'sanitation issue' },
+  { pattern: 'tank is full', wrongCategory: null, correctCategory: 'Worker Welfare', reason: 'sanitation issue' },
+
+  // ============================================================================
+  // PPE VIOLATIONS → General Site Issues (PPE is a control)
+  // ============================================================================
+  { pattern: 'mandatory ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'mandatory ppes', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'without mandatory ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'without basic mandatory ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'substandard helmet', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE quality issue' },
+  { pattern: 'sub standard helmet', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE quality issue' },
+  { pattern: 'not wearing safety', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'without safety gloves', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'without safety shoes', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'job specific ppe', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE requirement' },
+  { pattern: 'face shield', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE item' },
+  { pattern: 'ear plugs', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE item' },
+  { pattern: 'improper storage of face shield', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE storage' },
+  { pattern: 'wearing safety goggles', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'proper helmet', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE compliance' },
+  { pattern: 'without ppes', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE violation' },
+  { pattern: 'eye protection and hand protection', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE requirement' },
+
+  // ============================================================================
+  // NEOM ID / INDUCTION PATTERNS → Site Security
+  // ============================================================================
+  { pattern: 'neom id', wrongCategory: null, correctCategory: 'Site Security', reason: 'site ID requirement' },
+  { pattern: 'site induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction requirement' },
+  { pattern: 'site safety induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction requirement' },
+  { pattern: 'without site induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction violation' },
+  { pattern: 'unauthorized operatives', wrongCategory: null, correctCategory: 'Site Security', reason: 'unauthorized access' },
+  { pattern: 'unauthorized area', wrongCategory: null, correctCategory: 'Site Security', reason: 'unauthorized access' },
+  { pattern: 'entered in an unauthorized', wrongCategory: null, correctCategory: 'Site Security', reason: 'unauthorized entry' },
+  { pattern: 'company logo stickers', wrongCategory: null, correctCategory: 'Site Security', reason: 'vehicle identification' },
+  { pattern: 'identification', wrongCategory: null, correctCategory: 'Site Security', reason: 'identification requirement' },
+
+  // ============================================================================
+  // HOUSEKEEPING / STORAGE PATTERNS → Housekeeping
+  // ============================================================================
+  { pattern: 'cardboard waste', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'waste accumulation' },
+  { pattern: 'cardboards and packing', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'waste accumulation' },
+  { pattern: 'accumulated', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material accumulation' },
+  { pattern: 'unwanted material', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'waste material' },
+  { pattern: 'cable drum roller', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'equipment storage' },
+  { pattern: 'cables drum', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'equipment storage' },
+  { pattern: 'unsafe storage', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'storage issue' },
+  { pattern: 'without any stopper', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'unsecured storage' },
+  { pattern: 'proper housekeeping', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'housekeeping requirement' },
+  { pattern: 'strict housekeeping', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'housekeeping requirement' },
+  { pattern: 'gre pipes are stored', wrongCategory: null, correctCategory: 'Housekeeping', reason: 'material storage issue' },
+
+  // ============================================================================
+  // TOOLS / EQUIPMENT INSPECTION PATTERNS → Tools
+  // ============================================================================
+  { pattern: 'drill machine', wrongCategory: null, correctCategory: 'Tools', reason: 'power tool' },
+  { pattern: 'without handle', wrongCategory: null, correctCategory: 'Tools', reason: 'tool defect' },
+  { pattern: 'lacks a handle', wrongCategory: null, correctCategory: 'Tools', reason: 'tool defect' },
+  { pattern: 'without installing the handle', wrongCategory: null, correctCategory: 'Tools', reason: 'improper tool use' },
+  { pattern: 'color code', wrongCategory: null, correctCategory: 'Tools', reason: 'inspection color coding' },
+  { pattern: 'rotate over hazards', wrongCategory: null, correctCategory: 'Tools', reason: 'tool rotation hazard' },
+
+  // ============================================================================
+  // STAIRCASE / ACCESS PATTERNS → Slip and Trip or Access
+  // ============================================================================
+  { pattern: 'staircase was not designed', wrongCategory: null, correctCategory: 'Slip and Trip', reason: 'staircase design issue' },
+  { pattern: 'depth of the tread', wrongCategory: null, correctCategory: 'Slip and Trip', reason: 'staircase dimension issue' },
+  { pattern: 'inadequate width', wrongCategory: null, correctCategory: 'Slip and Trip', reason: 'dimension issue' },
+
+  // ============================================================================
+  // SIGNAGE PATTERNS → General Site Issues
+  // ============================================================================
+  { pattern: 'driving safety signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage issue' },
+  { pattern: 'signage found fell down', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'signage maintenance' },
+  { pattern: 'warning signage for stalled', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'warning signage' },
+  { pattern: 'missing warning signage', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'missing signage' },
+
+  // ============================================================================
+  // HOT WORK / WELDING RELATED IN EQUIPMENT CONTEXT → Hot Work
+  // ============================================================================
+  { pattern: 'hot work activities', wrongCategory: null, correctCategory: 'Hot Work', reason: 'hot work operation' },
+  { pattern: 'cutting and grinding', wrongCategory: null, correctCategory: 'Hot Work', reason: 'hot work activities' },
+  { pattern: 'fence removal', wrongCategory: null, correctCategory: 'Hot Work', reason: 'hot work for cutting' },
+  { pattern: 'butt fusion', wrongCategory: null, correctCategory: 'Hot Work', reason: 'fusion welding' },
+  { pattern: 'butt fusion-welding', wrongCategory: null, correctCategory: 'Hot Work', reason: 'fusion welding' },
+
+  // ============================================================================
+  // REFUELING / FUEL STORAGE PATTERNS → Fire
+  // ============================================================================
+  { pattern: 'designated refueling', wrongCategory: null, correctCategory: 'Fire', reason: 'refueling area requirement' },
+  { pattern: 'refueling area', wrongCategory: null, correctCategory: 'Fire', reason: 'refueling operation' },
+  { pattern: 'diesel tanker', wrongCategory: null, correctCategory: 'Fire', reason: 'fuel handling' },
+  { pattern: 'refueling excavator', wrongCategory: null, correctCategory: 'Fire', reason: 'fuel handling' },
+  { pattern: 'substandard bottles', wrongCategory: null, correctCategory: 'Fire', reason: 'improper fuel storage' },
+  { pattern: 'fuel storage', wrongCategory: null, correctCategory: 'Fire', reason: 'fuel storage' },
+  { pattern: 'without drip tray', wrongCategory: null, correctCategory: 'Fire', reason: 'spill containment missing' },
+  { pattern: 'drip tray', wrongCategory: null, correctCategory: 'Fire', reason: 'spill containment' },
+  { pattern: 'chemical spill', wrongCategory: null, correctCategory: 'Fire', reason: 'spill hazard' },
+  { pattern: 'cleaned up', wrongCategory: null, correctCategory: 'Fire', reason: 'spill cleanup' },
+
+  // ============================================================================
+  // FIRE EXTINGUISHER PATTERNS → Fire
+  // ============================================================================
+  { pattern: 'fire extinguisher', wrongCategory: null, correctCategory: 'Fire', reason: 'fire safety equipment' },
+  { pattern: 'de-pressurized', wrongCategory: null, correctCategory: 'Fire', reason: 'fire extinguisher condition' },
+  { pattern: 'depressurized', wrongCategory: null, correctCategory: 'Fire', reason: 'fire extinguisher condition' },
+
+  // ============================================================================
+  // MEWP / STRANDED PATTERNS → Working at Height
+  // ============================================================================
+  { pattern: 'stranded on roof', wrongCategory: null, correctCategory: 'Working at Height', reason: 'workers stranded at height' },
+  { pattern: 'stranded on rooftop', wrongCategory: null, correctCategory: 'Working at Height', reason: 'workers stranded at height' },
+  { pattern: 'leaving operatives stranded', wrongCategory: null, correctCategory: 'Working at Height', reason: 'workers stranded at height' },
+  { pattern: 'mewp as access', wrongCategory: null, correctCategory: 'Working at Height', reason: 'MEWP access issue' },
+  { pattern: 'absence of alternate access', wrongCategory: null, correctCategory: 'Working at Height', reason: 'access to height issue' },
+  { pattern: 'on top of portable', wrongCategory: null, correctCategory: 'Working at Height', reason: 'working at height' },
+  { pattern: 'on top of wall', wrongCategory: null, correctCategory: 'Working at Height', reason: 'working at height' },
+  { pattern: 'top of wall', wrongCategory: null, correctCategory: 'Working at Height', reason: 'working at height' },
+
+  // ============================================================================
+  // PERMIT / MSRA PATTERNS → General Site Issues
+  // ============================================================================
+  { pattern: 'permit to work', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'permit requirement' },
+  { pattern: 'no permit', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'missing permit' },
+  { pattern: 'method statement', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'MSRA requirement' },
+  { pattern: 'risk assessment', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'MSRA requirement' },
+  { pattern: 'msra', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'MSRA requirement' },
+  { pattern: 'no supervision', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'supervision requirement' },
+  { pattern: 'planned scope of work', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'scope deviation' },
+
+  // ============================================================================
+  // EQUIPMENT AGE / CONDITION PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'over 15 years old', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment age compliance' },
+  { pattern: 'older than 15 years', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment age compliance' },
+  { pattern: 'aging components', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment age' },
+  { pattern: 'manufacture date', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment age verification' },
+  { pattern: 'air conditioning system', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment modification' },
+  { pattern: 'make shift air conditioning', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'makeshift equipment modification' },
+  { pattern: 'taped electrical cable', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'improper equipment repair' },
+
+  // ============================================================================
+  // ADDITIONAL EQUIPMENT TYPES → Mobile Plant & Equipment
+  // From 212 observation analysis
+  // ============================================================================
+  { pattern: 'plate compactor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compaction equipment' },
+  { pattern: 'walk behind plate compactor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compaction equipment' },
+  { pattern: 'portable generator', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'portable power equipment' },
+  { pattern: 'water tanker', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'water tanker vehicle' },
+  { pattern: 'vacuum tanker', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'vacuum tanker vehicle' },
+  { pattern: 'roller compactor', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compaction equipment' },
+  { pattern: 'drum roller', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compaction equipment' },
+  { pattern: 'compact roller', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'compaction equipment' },
+  { pattern: 'motor grader', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'grading equipment' },
+  { pattern: 'grader', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'grading equipment' },
+  { pattern: 'bulldozer', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'earth moving equipment' },
+  { pattern: 'bldozer', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'bulldozer (typo)' },
+  { pattern: 'blodozer', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'bulldozer (typo)' },
+  { pattern: 'loder', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'loader (typo)' },
+  { pattern: 'loader', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'loader equipment' },
+  { pattern: 'backhoe', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'backhoe equipment' },
+  { pattern: 'front and backhoe', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment PWAS cameras' },
+  { pattern: 'earth moving equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'earth moving' },
+  { pattern: 'breaker', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'hydraulic breaker' },
+  { pattern: 'jcb', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'JCB equipment' },
+  { pattern: 'crusher plant', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'crusher equipment' },
+  { pattern: 'workers buses', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'personnel transport' },
+  { pattern: 'staff bus', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'personnel transport' },
+  { pattern: 'trailer', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'trailer equipment' },
+
+  // ============================================================================
+  // EQUIPMENT MAINTENANCE / FACILITY PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'plant maintenance facility', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance facility' },
+  { pattern: 'plant maintenance', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'maintenance of the truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'truck maintenance' },
+  { pattern: 'maintenance work activity', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'maintenance team', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'usual maintenance', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'during maintenance', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'bucket replacement', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment maintenance' },
+  { pattern: 'equipment and plants', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'mobile plant equipment' },
+  { pattern: 'heavy equipment and plants', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'mobile plant equipment' },
+  { pattern: 'plants and heavy trucks', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'mobile plant equipment' },
+
+  // ============================================================================
+  // EQUIPMENT PLATE / ID PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'plate no', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment identification' },
+  { pattern: 'plate number', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment identification' },
+  { pattern: 'plate#', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment identification' },
+  { pattern: 'equipment no', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment identification' },
+  { pattern: 's.no.', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment serial number' },
+
+  // ============================================================================
+  // SITTING/STANDING UNDER EQUIPMENT → Mobile Plant & Equipment (MEPI)
+  // ============================================================================
+  { pattern: 'sitting under heavy equipment', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'sitting underneath', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'underneath of excavator', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'underneath excavator', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'drivers sitting under', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'some drivers sitting under', wrongCategory: 'Worker Welfare', correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI - unsafe position near equipment' },
+  { pattern: 'check some things around dump truck', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'unsafe activity near equipment' },
+
+  // ============================================================================
+  // DRIVING / DRIVER SPECIFIC PATTERNS → Driving
+  // ============================================================================
+  { pattern: 'driver found without', wrongCategory: null, correctCategory: 'Driving', reason: 'driver compliance' },
+  { pattern: 'driver was driving', wrongCategory: null, correctCategory: 'Driving', reason: 'driving activity' },
+  { pattern: 'dump truck driver', wrongCategory: null, correctCategory: 'Driving', reason: 'driver issue' },
+  { pattern: 'tipper truck driver', wrongCategory: null, correctCategory: 'Driving', reason: 'driver issue' },
+  { pattern: 'equipment drivers', wrongCategory: null, correctCategory: 'Driving', reason: 'driver training' },
+  { pattern: 'drive his car', wrongCategory: null, correctCategory: 'Driving', reason: 'driving issue' },
+  { pattern: 'too closer to', wrongCategory: null, correctCategory: 'Driving', reason: 'unsafe distance driving' },
+
+  // ============================================================================
+  // RIPRAP / GROUND WORK PATTERNS → Breaking Ground & Excavation
+  // ============================================================================
+  { pattern: 'riprap', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'riprap activity' },
+  { pattern: 'riprap activity', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'riprap work' },
+  { pattern: 'riprap activities', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'riprap work' },
+  { pattern: 'soil haulage', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'earth moving operation' },
+  { pattern: 'non compacted soil', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'unstable ground' },
+  { pattern: 'legs were buried', wrongCategory: null, correctCategory: 'Breaking Ground & Excavation', reason: 'burial hazard' },
+
+  // ============================================================================
+  // ADDITIONAL SAFETY PATTERNS
+  // ============================================================================
+  { pattern: 'in direct sunlight', wrongCategory: null, correctCategory: 'Working in Heat', reason: 'heat exposure' },
+  { pattern: 'direct sunlight', wrongCategory: null, correctCategory: 'Working in Heat', reason: 'heat exposure' },
+  { pattern: 'stand in direct', wrongCategory: null, correctCategory: 'Working in Heat', reason: 'heat exposure' },
+  { pattern: 'movement of heavy equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment movement hazard' },
+  { pattern: 'maneuvering heavy equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment movement hazard' },
+  { pattern: 'frequent movement of heavy', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment movement hazard' },
+  { pattern: 'from moving vehicles and plant', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'moving equipment and plants', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+  { pattern: 'near moving equipment', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'MEPI hazard' },
+
+  // ============================================================================
+  // HAZARD STANDARD REFERENCE PATTERNS → Mobile Plant & Equipment
+  // ============================================================================
+  { pattern: 'neom phsas 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard for Mobile Plant' },
+  { pattern: 'phsas 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard for Mobile Plant' },
+  { pattern: 'section-17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard section 17' },
+  { pattern: 'section 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard section 17' },
+  { pattern: 'neom-npr-std-001', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM HSE standard' }
 ]
 
 // ============================================================================
@@ -1509,6 +2281,7 @@ export const HAZARD_SEVERITY = {
   // Level 1 - Fatal/Catastrophic (highest priority)
   'Confined Spaces': 1,
   'Energized System': 1,
+  'Explosives & Blasting': 1,  // NEOM Eltizam #12 - Fatal/Catastrophic
   'Working at Height': 1,
   'Lifting': 1,
   'Mobile Plant & Equipment': 1,
@@ -1536,7 +2309,7 @@ export const HAZARD_SEVERITY = {
   'Access': 3,
   'Slip and Trip': 3,
   'Environmental': 3,
-  'Work Environment': 4 // Lowest priority (default)
+  'General Site Issues': 4 // Lowest priority (default)
 }
 
 // ============================================================================
@@ -1622,23 +2395,30 @@ export const OBJECT_ACTION_OUTCOMES = {
 // SECTION G: SIGNIFICANT HAZARD LIST (for reference)
 // ============================================================================
 
+// 14 SIGNIFICANT HAZARDS - NEOM Eltizam Program
+// These match the order and list from constants.js (NEOM-NPR-STD-001 Rev 01.00)
 export const SIGNIFICANT_HAZARDS = [
   'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
+  'Explosives & Blasting',        // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
   'Fire',
   'Hot Work',
   'Lifting',
   'Mobile Plant & Equipment',
   'Temporary Works',
-  'Working in Heat',
+  'Driving',
   'Working at Height',
+  'Working in Heat',
   'Working on or Near Live Roads',
   'Working on or Near Water',
-  'Driving'
 ]
 
+// 13 ADDITIONAL HAZARDS - Sub-significant categories for detailed classification
+// Physical Hazard and Mechanical Hazard moved from SIGNIFICANT_HAZARDS
 export const SUB_SIGNIFICANT_HAZARDS = [
+  'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
+  'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
   'COSHH',
   'Respiratory Hazard',
   'Traffic Management',
@@ -1647,9 +2427,9 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'Worker Welfare',
   'Housekeeping',
   'Access',
-  'Work Environment',
   'Environmental',
-  'Slip and Trip'
+  'Slip and Trip',
+  'General Site Issues',       // Fallback for observations requiring manual review
 ]
 
 // ============================================================================
@@ -1658,10 +2438,14 @@ export const SUB_SIGNIFICANT_HAZARDS = [
 // ============================================================================
 
 export const HSE_ABBREVIATIONS = {
-  // Working at Height
+  // Working at Height & Fall Protection
   'wah': 'working at height',
   'wah violation': 'working at height violation',
   'wah issue': 'working at height issue',
+  'fbh': 'full body harness',
+  'fph': 'fall protection harness',
+  'pfas': 'personal fall arrest system',
+  'srl': 'self retracting lifeline',
 
   // Permits & Procedures
   'ptw': 'permit to work',
@@ -1748,7 +2532,25 @@ export const HSE_ABBREVIATIONS = {
   'dddm': 'data driven decision making',
   'kpi': 'key performance indicator',
   'lagging': 'lagging indicator',
-  'leading': 'leading indicator'
+  'leading': 'leading indicator',
+
+  // NEOM Equipment Verification
+  'vvs': 'vehicle verification system',
+  'tpc': 'third party certification',
+  'mvp': 'motor vehicle pass',
+  'pwas': 'proximity warning and alert system',
+  'mepi': 'man equipment personnel interface',
+
+  // Equipment Types
+  'jcb': 'backhoe loader',
+  'adt': 'articulated dump truck',
+  'rtc': 'rough terrain crane',
+  'atc': 'all terrain crane',
+
+  // Site Management
+  'msra': 'method statement risk assessment',
+  'isf': 'interim support facility',
+  'pwp': 'portable water pump'
 }
 
 // ============================================================================
@@ -1835,4 +2637,198 @@ export const EQUIPMENT_TO_CATEGORY = {
   // Energized System
   'panel': 'Energized System',
   'generator': 'Energized System'
+}
+
+// ============================================================================
+// SECTION K: CONTROL-TO-HAZARD CONTEXT LINKING
+// When a control issue is detected (signage, PPE, permit, RAMS, etc.),
+// use these context keywords to determine the underlying hazard category.
+// This implements Option C: Link controls to underlying hazards.
+// ============================================================================
+
+/**
+ * Keywords that indicate an observation is about a CONTROL (not a hazard itself)
+ */
+export const CONTROL_KEYWORDS = [
+  // Signage controls
+  'signage', 'sign', 'signages', 'signs', 'label', 'labels', 'labeling', 'labelling',
+  'awareness signage', 'warning sign', 'safety sign', 'identification signage',
+  'no signage', 'missing signage', 'lacks signage', 'without signage',
+
+  // PPE controls
+  'ppe', 'personal protective equipment', 'safety glasses', 'goggles', 'gloves',
+  'helmet', 'hard hat', 'hi-vis', 'high visibility', 'ear protection', 'hearing protection',
+  'safety boots', 'safety shoes', 'coverall', 'overalls', 'face shield', 'respirator',
+  'not wearing', 'without wearing', 'sub-standard', 'substandard', 'improper ppe',
+
+  // Permit/RAMS controls
+  'permit', 'ptw', 'permit to work', 'permits', 'risk assessment', 'method statement',
+  'rams', 'swms', 'jsea', 'jsa', 'not applicable', 'not filled', 'improperly completed',
+  'incomplete permit', 'missing permit', 'expired permit', 'no permit',
+  'permit receiver', 'permit issuer', 'activity briefing',
+
+  // Documentation controls
+  'checklist', 'documentation', 'documents', 'form', 'forms', 'record', 'records',
+  'not documented', 'missing documentation', 'incomplete documentation',
+
+  // Inspection controls
+  'inspection', 'inspected', 'not inspected', 'without inspection', 'color coded',
+  'colour coded', 'inspection tag', 'inspection sticker',
+
+  // Training/competency controls
+  'training', 'trained', 'competent', 'certified', 'qualified', 'induction',
+  'toolbox talk', 'tbt', 'briefing', 'safety briefing',
+
+  // Supervision controls
+  'supervision', 'supervisor', 'safety officer', 'no supervision', 'unsupervised'
+]
+
+/**
+ * Hazard context keywords - when found alongside control issues,
+ * these determine which hazard category the observation belongs to
+ */
+export const CONTROL_HAZARD_CONTEXT = {
+  'Working at Height': [
+    'scaffold', 'scaffolding', 'scaffolds', 'ladder', 'ladders', 'roof', 'rooftop',
+    'edge', 'edges', 'platform', 'elevated', 'height', 'heights', 'high level',
+    'harness', 'lanyard', 'fall protection', 'fbh', 'full body harness', 'body harness',
+    'shock absorber', 'anchor', 'lifeline', 'fall arrest', 'mewp', 'ewp',
+    'boom lift', 'scissor lift', 'cherry picker', 'formwork', 'de-shuttering',
+    'deform', 'shuttering', 'falsework', 'atrium', 'void', 'opening', 'floor opening',
+    'guardrail', 'handrail', 'toe board', 'access tower', 'cladding', 'cladding sheet',
+    'at height', 'above ground', 'elevated work', 'working on roof'
+  ],
+
+  'Hot Work': [
+    'welding', 'weld', 'welder', 'grinding', 'grinder', 'cutting', 'torch',
+    'flame', 'spark', 'sparks', 'hot work', 'hot work activities', 'oxy', 'acetylene', 'brazing',
+    'soldering', 'burning', 'fire watch', 'fire watcher', 'arc welding', 'gas cutting',
+    'thermal cutting', 'hot cutting', 'metal cutting', 'abrasive wheel'
+  ],
+
+  'Lifting': [
+    'crane', 'cranes', 'lift', 'lifting', 'hoist', 'hoisting', 'rigging', 'rigger', 'riggers',
+    'sling', 'slings', 'load', 'loads', 'banksman', 'slinger', 'signaler',
+    'signaller', 'chain block', 'come-along', 'winch', 'suspended load',
+    'lifting operation', 'lifting gear', 'lifting equipment', 'shackle', 'hook'
+  ],
+
+  'Breaking Ground & Excavation': [
+    'excavation', 'excavating', 'excavated', 'trench', 'trenching', 'digging', 'dig',
+    'backfill', 'backfilling', 'pit', 'pits', 'hole', 'underground', 'buried',
+    'utility', 'utilities', 'cable strike', 'pipe strike', 'shoring', 'benching',
+    'ground work', 'groundwork', 'earthwork', 'earth moving'
+  ],
+
+  'Energized System': [
+    'electrical', 'electric', 'power', 'cable', 'cables', 'wiring', 'wire',
+    'panel', 'distribution board', 'switchboard', 'voltage', 'live', 'energized',
+    'circuit', 'breaker', 'fuse', 'transformer', 'generator', 'socket', 'outlet',
+    'junction box', 'conduit', 'loto', 'lockout', 'tagout', 'isolation',
+    'db box', 'db panel', 'electrical panel', 'power supply', 'mains'
+  ],
+
+  'Confined Spaces': [
+    'confined', 'confined space', 'tank', 'tanks', 'vessel', 'vessels', 'manhole',
+    'manholes', 'pit', 'silo', 'silos', 'chamber', 'culvert', 'pipe', 'tunnel',
+    'enclosed', 'restricted entry', 'atmosphere', 'ventilation', 'rescue',
+    'sewage', 'sewer', 'septic', 'underground chamber'
+  ],
+
+  'Mobile Plant & Equipment': [
+    'vehicle', 'vehicles', 'excavator', 'forklift', 'loader', 'truck', 'trucks',
+    'plant', 'equipment', 'tanker', 'concrete pouring', 'concrete pouring tanker', 'mixer', 'dumper',
+    'roller', 'compactor', 'grader', 'bulldozer', 'dozer', 'backhoe', 'jcb',
+    'telehandler', 'operator', 'operating', 'reversing', 'moving plant',
+    'heavy equipment', 'mobile equipment', 'plant movement', 'equipment movement',
+    // Extended equipment types
+    'dump truck', 'tipper', 'water tanker', 'water truck', 'vacuum tanker',
+    'crawler', 'earth moving', 'piling rig', 'drill rig', 'crusher',
+    'air compressor', 'portable generator', 'front loader', 'wheel loader',
+    // Man-machine interface
+    'man-machine interface', 'man machine interface', 'mepi', 'boots on ground',
+    'proximity', 'struck by', 'struck-by', 'line of fire',
+    // Equipment verification
+    'qr code', 'veri-fi', 'verifi', 'vvs', 'tpc', 'third party certification',
+    'mvp certificate', 'access denied', 'red status', 'red category',
+    // Equipment safety features
+    'beacon light', 'pwas', 'pwas camera', '360 camera', 'blinking light',
+    'rotating parts', 'moving parts', 'guard', 'protection guard',
+    'wheel chock', 'whip check', 'whiplash arrestor',
+    // Equipment issues
+    'black smoke', 'hydraulic leak', 'oil leak', 'bucket', 'pin assembly',
+    'retro reflective', 'beacon', 'alarm', 'backshield'
+  ],
+
+  'Traffic Management': [
+    'parking', 'parked', 'parking area', 'vehicle movement', 'traffic', 'pedestrian', 'road',
+    'reverse', 'reversing', 'reverse parking', 'designated area', 'drop bar',
+    'access point', 'entry point', 'exit point', 'speed', 'speeding',
+    'haul road', 'vehicle access', 'pedestrian crossing', 'walkway'
+  ],
+
+  'Fire': [
+    'fire', 'flammable', 'combustible', 'fuel', 'diesel', 'petrol', 'gas',
+    'extinguisher', 'emergency', 'evacuation', 'fire exit', 'assembly point',
+    'smoke detector', 'fire alarm', 'fire blanket', 'fire hose', 'hydrant',
+    'emergency response', 'emergency preparedness'
+  ],
+
+  'COSHH': [
+    'chemical', 'chemicals', 'hazardous', 'substance', 'substances', 'sds', 'msds',
+    'toxic', 'corrosive', 'irritant', 'flammable liquid', 'solvent', 'paint',
+    'coating', 'adhesive', 'fuel', 'spill', 'spillage', 'containment',
+    'painting', 'painting activities', 'painting work', 'spray painting',
+    'hazardous material', 'curing', 'curing water', 'chemical storage'
+  ],
+
+  'Worker Welfare': [
+    'drinking water', 'water tank', 'legionnaires', 'water analysis', 'water test',
+    'first aid', 'first aider', 'first aider numbers', 'toilet', 'welfare', 'rest', 'shelter', 'shade',
+    'defibrillator', 'aed', 'medical', 'ambulance', 'potable', 'hygiene', 'sanitation',
+    'emergency response', 'response time', 'welfare facility', 'camp', 'accommodation',
+    'canteen', 'drinking', 'water cooler', 'water dispenser', 'backup batteries'
+  ],
+
+  'Temporary Works': [
+    'formwork', 'falsework', 'propping', 'shoring', 'temporary structure',
+    'temporary support', 'scaffolding', 'access platform', 'staging', 'hoarding',
+    'temporary barrier', 'edge protection system', 'form work', 'de-shuttering', 'deform',
+    'shuttering', 'prop', 'props', 'temporary works'
+  ],
+
+  'Housekeeping': [
+    'materials', 'storage', 'wooden', 'wooden materials', 'scattered', 'waste', 'debris', 'cleanup',
+    'clean up', 'unusable', 'unusable materials', 'scrap', 'clutter', 'tidy', 'orderly', 'stacked',
+    'stacking', 'piled', 'organized', 'organised', 'housekeeping', 'workplace',
+    'boxes', 'stored', 'stored properly', 'material storage'
+  ],
+
+  'Tools': [
+    'tool', 'tools', 'hand tool', 'hand tools', 'power tool', 'power tools',
+    'cabinet', 'toolbox', 'tool box', 'tool cabinet', 'hand tools cabinet',
+    'equipment', 'grinder', 'drill', 'saw', 'hammer', 'wrench', 'spanner',
+    'pressure washer', 'power washer', 'cutting tool'
+  ],
+
+  'Respiratory Hazard': [
+    'dust', 'dusty', 'silica', 'asbestos', 'fumes', 'vapour', 'vapor',
+    'respiratory', 'breathing', 'mask', 'respirator', 'air quality',
+    'inhalation', 'airborne', 'particulate'
+  ],
+
+  'Slip and Trip': [
+    'floor', 'surface', 'walkway', 'pathway', 'stairs', 'steps', 'slippery',
+    'wet', 'uneven', 'trip hazard', 'slip hazard', 'walking surface'
+  ],
+
+  'Access': [
+    'access', 'egress', 'barricade', 'barricaded', 'barrier', 'access point',
+    'entry', 'exit', 'closed', 'blocked', 'restricted', 'authorized', 'unauthorised'
+  ],
+
+  'Environmental': [
+    'irrigation', 'plants', 'vegetation', 'soil', 'contamination', 'sewage',
+    'waste water', 'wastewater', 'environment', 'environmental'
+  ]
 }

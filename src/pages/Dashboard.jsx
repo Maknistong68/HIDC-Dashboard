@@ -1,10 +1,8 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   FileText,
-  Upload,
   CheckCircle,
   CalendarClock,
-  Calendar,
   ThumbsUp,
   CheckCheck,
   UserCheck,
@@ -14,38 +12,36 @@ import {
   ChevronUp,
   Database,
   Info,
-  Brain,
-  X,
-  Clipboard,
-  Sparkles,
+  Download,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useDate } from '../context/DateContext'
+import { useFilter } from '../context/FilterContext'
 import KPICard from '../components/dashboard/KPICard'
 import IncidentTrendChart from '../components/dashboard/IncidentTrendChart'
 import IncidentPyramid from '../components/dashboard/IncidentPyramid'
 import ObservationsByDayOfWeek from '../components/dashboard/ObservationsByDayOfWeek'
 import ObservationsByHourOfDay from '../components/dashboard/ObservationsByHourOfDay'
 import FilterBar from '../components/common/FilterBar'
+import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
-import QuickImportModal from '../components/import/QuickImportModal'
 import ExportMenu from '../components/dashboard/ExportMenu'
 import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { useExport } from '../hooks/useExport'
-import { INCIDENT_TYPES, ACTION_STATUSES } from '../utils/constants'
+import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
   getOpenActionsCount,
-  recategorizeBlankHazards,
 } from '../utils/calculations'
-import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
-import { categorizeHazard } from '../utils/excelParser'
+import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 
 // Normalize hazard name for consistent grouping (fixes duplicates)
-const normalizeHazard = (hazard) => {
+// Memoized to prevent redundant string operations on filter changes
+const normalizeHazard = memoize((hazard) => {
   if (!hazard) return null
   return hazard
     .trim()
@@ -54,7 +50,7 @@ const normalizeHazard = (hazard) => {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
+}, 500) // Cache up to 500 unique hazard names
 
 // Info tooltip component for chart explanations
 const InfoTooltip = ({ text }) => (
@@ -69,20 +65,10 @@ const InfoTooltip = ({ text }) => (
 
 const Dashboard = () => {
   const { projects, incidents, isLoading, showOpenClosed } = useData()
+  const { cutoffDates, getPeriodRange } = useDate()
 
-  // Import modal state
-  const [showImportModal, setShowImportModal] = useState(false)
-
-  // "This Month" quick filter
-  const [thisMonthActive, setThisMonthActive] = useState(false)
-
-  // Filter state - contractor is parent, site is child
-  const [filters, setFilters] = useState({
-    contractor: '',
-    site: '',
-    dateFrom: '',
-    dateTo: ''
-  })
+  // Shared filter state from context
+  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters, contractor, site } = useFilter()
 
   // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({
@@ -102,11 +88,6 @@ const Dashboard = () => {
 
   // Report modal state
   const [viewingRecord, setViewingRecord] = useState(null)
-
-  // Observation Parser Tester state
-  const [showObservationTester, setShowObservationTester] = useState(false)
-  const [testObservation, setTestObservation] = useState('')
-  const [testResult, setTestResult] = useState(null)
 
   // All Records section state
   const [showAllRecords, setShowAllRecords] = useState(false)
@@ -150,51 +131,25 @@ const Dashboard = () => {
     }
   }, [incidents])
 
-  // Get this month's date range
-  const getThisMonthRange = () => {
-    const now = new Date()
-    const start = format(startOfMonth(now), 'yyyy-MM-dd')
-    const end = format(endOfMonth(now), 'yyyy-MM-dd')
-    return { start, end }
-  }
-
-  // Handle "This Month" toggle - memoized to prevent child re-renders
-  const handleThisMonthToggle = useCallback(() => {
-    if (thisMonthActive) {
-      // Turn off - clear date filters
-      setFilters(prev => ({ ...prev, dateFrom: '', dateTo: '' }))
-      setThisMonthActive(false)
-    } else {
-      // Turn on - set to this month
-      const { start, end } = getThisMonthRange()
-      setFilters(prev => ({ ...prev, dateFrom: start, dateTo: end }))
-      setThisMonthActive(true)
-    }
-    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
-    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }, [thisMonthActive])
-
-  // Handle filter changes - reset site when contractor changes
-  const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value }
-      // Reset site filter when contractor changes (parent-child relationship)
-      if (key === 'contractor') {
-        newFilters.site = ''
-      }
-      return newFilters
-    })
-    setThisMonthActive(false) // Turn off "This Month" when manual filter changes
+  // Handle period change
+  const handlePeriodChange = useCallback((newPeriod) => {
+    setPeriod(newPeriod)
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }, [])
+
+  // Handle filter changes - uses shared context (resets site when contractor changes)
+  const handleFilterChange = useCallback((key, value) => {
+    setFilter(key, value)
+    setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
+    setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
+  }, [setFilter])
 
   const clearFilters = useCallback(() => {
-    setFilters({ contractor: '', site: '', dateFrom: '', dateTo: '' })
-    setThisMonthActive(false)
+    contextClearFilters()
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }, [])
+  }, [contextClearFilters])
 
   // Handle heatmap cell click - opens modal
   const handleHeatmapCellClick = useCallback((hazard, month, value) => {
@@ -228,36 +183,6 @@ const Dashboard = () => {
     setDrillDown(prev => ({ ...prev, level: 3, period: monthData.period }))
   }, [])
 
-  // Handle observation parser test
-  const handleTestObservation = useCallback(() => {
-    if (!testObservation.trim()) {
-      setTestResult(null)
-      return
-    }
-
-    const text = testObservation.trim()
-    const parsed = parseSentence(text)
-    const rootCause = analyzeForRootCause(text)
-    const suggestedCategory = categorizeHazard(text, '')
-
-    setTestResult({
-      parsed,
-      rootCause,
-      suggestedCategory,
-      text
-    })
-  }, [testObservation])
-
-  // Handle paste from clipboard
-  const handlePasteFromClipboard = useCallback(async () => {
-    try {
-      const text = await navigator.clipboard.readText()
-      setTestObservation(text)
-    } catch (err) {
-      console.error('Failed to read clipboard:', err)
-    }
-  }, [])
-
   // Get unique contractors from incidents
   const uniqueContractors = useMemo(() => {
     const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
@@ -268,12 +193,12 @@ const Dashboard = () => {
   const siteOptions = useMemo(() => {
     let relevantIncidents = incidents
     // If contractor is selected, only show sites belonging to that contractor
-    if (filters.contractor) {
-      relevantIncidents = incidents.filter(i => i.contractor === filters.contractor)
+    if (contractor) {
+      relevantIncidents = incidents.filter(i => i.contractor === contractor)
     }
     const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
     return sites.sort().map(site => ({ value: site, label: site }))
-  }, [incidents, filters.contractor])
+  }, [incidents, contractor])
 
   // Filter configuration - Contractor (parent) and Site (child)
   const filterConfig = [
@@ -290,44 +215,33 @@ const Dashboard = () => {
       label: 'Site',
       placeholder: 'All Sites',
       options: siteOptions
-    },
-    {
-      key: 'dateFrom',
-      type: 'date',
-      label: 'From',
-      placeholder: 'Start Date'
-    },
-    {
-      key: 'dateTo',
-      type: 'date',
-      label: 'To',
-      placeholder: 'End Date'
     }
   ]
 
-  // Filtered incidents based on contractor, site, and date (for KPIs, charts, Top Hazards, Top Observers)
+  // Filtered incidents based on contractor, site, and period (for KPIs, charts, Top Hazards, Top Observers)
+  // Note: Hazard categorization is done at import time, so no recategorization needed here
+  // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
   const filteredIncidents = useMemo(() => {
-    let result = [...incidents]
-
-    // Filter by contractor (parent filter)
-    if (filters.contractor) {
-      result = result.filter(i => i.contractor === filters.contractor)
+    // If period is null, show all data (no date filtering)
+    if (period === null) {
+      return incidents.filter(i => {
+        if (contractor && i.contractor !== contractor) return false
+        if (site && i.site !== site) return false
+        return true
+      })
     }
 
-    // Filter by site (child filter - only shows sites for selected contractor)
-    if (filters.site) {
-      result = result.filter(i => i.site === filters.site)
-    }
+    // Get date range from period
+    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
 
-    if (filters.dateFrom) {
-      result = result.filter(i => i.date >= filters.dateFrom)
-    }
-    if (filters.dateTo) {
-      result = result.filter(i => i.date <= filters.dateTo)
-    }
-
-    return recategorizeBlankHazards(result)
-  }, [incidents, filters])
+    return incidents.filter(i => {
+      if (contractor && i.contractor !== contractor) return false
+      if (site && i.site !== site) return false
+      if (i.date < dateFrom) return false
+      if (i.date > dateTo) return false
+      return true
+    })
+  }, [incidents, contractor, site, period])
 
   // Export hook - dashboardContentRef for PDF full-page capture, chartRefs for PowerPoint
   // Note: filteredIncidents is passed for summary statistics in exports
@@ -336,21 +250,15 @@ const Dashboard = () => {
   // Heatmap uses ALL incidents (not filtered by "This Month")
   // Only contractor/site filter applies to heatmap
   // Exclude positive observations from heatmap
+  // Note: Hazard categorization is done at import time, so no recategorization needed here
   const heatmapIncidents = useMemo(() => {
-    let result = [...incidents]
-
-    if (filters.contractor) {
-      result = result.filter(i => i.contractor === filters.contractor)
-    }
-    if (filters.site) {
-      result = result.filter(i => i.site === filters.site)
-    }
-
-    // Exclude positive observations from heatmap
-    result = result.filter(i => i.type !== 'positive')
-
-    return recategorizeBlankHazards(result)
-  }, [incidents, filters.contractor, filters.site])
+    return incidents.filter(i => {
+      if (i.type === 'positive') return false
+      if (contractor && i.contractor !== contractor) return false
+      if (site && i.site !== site) return false
+      return true
+    })
+  }, [incidents, contractor, site])
 
   // Get filtered data based on drill-down selection
   const getFilteredBySelection = useMemo(() => {
@@ -405,13 +313,17 @@ const Dashboard = () => {
   }, [drillDown, getFilteredBySelection])
 
   // Heatmap drill-down data (uses heatmapIncidents, not filteredIncidents)
+  // Uses case-insensitive comparison to match canonical hazard names
   const heatmapDrillDownData = useMemo(() => {
     if (!heatmapDrillDown.hazard || !heatmapDrillDown.month) return []
 
+    const targetHazardLower = heatmapDrillDown.hazard.toLowerCase()
+
     return heatmapIncidents.filter(i => {
       const normalizedLocation = normalizeHazard(i.location)
+      if (!normalizedLocation) return false
       const incidentMonth = i.date?.substring(0, 7)
-      return normalizedLocation === heatmapDrillDown.hazard && incidentMonth === heatmapDrillDown.month
+      return normalizedLocation.toLowerCase() === targetHazardLower && incidentMonth === heatmapDrillDown.month
     })
   }, [heatmapDrillDown, heatmapIncidents])
 
@@ -488,18 +400,14 @@ const Dashboard = () => {
     return Math.round((closed / filteredIncidents.length) * 100)
   }, [filteredIncidents])
 
-  // Open more than 1 month (30 days)
+  // Open more than 1 month (30 days) - uses centralized cutoff date
   const openMoreThanMonth = useMemo(() => {
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const cutoffDate = format(thirtyDaysAgo, 'yyyy-MM-dd')
-
     return filteredIncidents.filter(i =>
       i.actionStatus !== 'closed' &&
       i.date &&
-      i.date < cutoffDate
+      i.date < cutoffDates.overdue30Days
     ).length
-  }, [filteredIncidents])
+  }, [filteredIncidents, cutoffDates.overdue30Days])
 
   // Positive observation percentage
   const positivePercentage = useMemo(() => {
@@ -563,6 +471,7 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Top Hazards data - EXCLUDES positive observations (only counts non-positive)
+  // Significant Hazards (13 official categories) are prioritized first
   const topHazards = useMemo(() => {
     const counts = {}
     // Filter out positive observations - Top Hazards should only show non-positive observations
@@ -587,22 +496,73 @@ const Dashboard = () => {
         closed: data.closed,
         total: data.open + data.closed
       }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => {
+        // Priority 1: Significant Hazards first (14 NEOM Eltizam categories)
+        // Use case-insensitive comparison because normalizeHazard may change case of words like "on", "or"
+        const lowerA = a.name.toLowerCase()
+        const lowerB = b.name.toLowerCase()
+        const isSignificantA = SIGNIFICANT_HAZARDS.some(h => h.toLowerCase() === lowerA)
+        const isSignificantB = SIGNIFICANT_HAZARDS.some(h => h.toLowerCase() === lowerB)
+
+        // If both are significant or both are not, sort by count
+        if (isSignificantA === isSignificantB) {
+          return b.total - a.total
+        }
+        // Significant hazards come first
+        return isSignificantA ? -1 : 1
+      })
       .slice(0, 10)
   }, [filteredIncidents])
 
   // Hazards Heatmap data (uses heatmapIncidents - not affected by "This Month")
+  // Always shows all 14 NEOM Eltizam Significant Hazards + any additional hazards with data
   const hazardsHeatmap = useMemo(() => {
-    if (heatmapIncidents.length === 0) return { months: [], hazards: [], data: {}, maxValue: 0 }
+    // Start with all 14 Significant Hazards (NEOM Eltizam) - use canonical names
+    const hazardSet = new Set(SIGNIFICANT_HAZARDS)
 
-    const hazardSet = new Set()
+    // Track lowercase versions to prevent duplicates
+    const hazardSetLower = new Set(SIGNIFICANT_HAZARDS.map(h => h.toLowerCase()))
+
+    // Add any additional hazards from data (sub-significant hazards that appear in incidents)
+    // Only add if not already present (case-insensitive check)
     heatmapIncidents.forEach(i => {
       const normalized = normalizeHazard(i.location)
       if (normalized && normalized !== 'Not Specified') {
-        hazardSet.add(normalized)
+        const lowerNormalized = normalized.toLowerCase()
+        // Only add if this hazard (case-insensitive) doesn't already exist
+        if (!hazardSetLower.has(lowerNormalized)) {
+          // Check if there's a canonical form in SUB_SIGNIFICANT_HAZARDS
+          const canonicalSub = SUB_SIGNIFICANT_HAZARDS.find(h => h.toLowerCase() === lowerNormalized)
+          hazardSet.add(canonicalSub || normalized)
+          hazardSetLower.add(lowerNormalized)
+        }
       }
     })
-    const hazards = Array.from(hazardSet).sort()
+
+    // Sort hazards by priority: Significant (14 NEOM Eltizam) first, then Sub-significant, then alphabetical
+    const hazards = Array.from(hazardSet).sort((a, b) => {
+      const lowerA = a.toLowerCase()
+      const lowerB = b.toLowerCase()
+      const significantIndexA = SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerA)
+      const significantIndexB = SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerB)
+      const subIndexA = SUB_SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerA)
+      const subIndexB = SUB_SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerB)
+
+      // Both are significant hazards - sort by priority order
+      if (significantIndexA !== -1 && significantIndexB !== -1) return significantIndexA - significantIndexB
+      // A is significant - A comes first
+      if (significantIndexA !== -1) return -1
+      // B is significant - B comes first
+      if (significantIndexB !== -1) return 1
+      // Both are sub-significant - sort by sub order
+      if (subIndexA !== -1 && subIndexB !== -1) return subIndexA - subIndexB
+      // A is sub-significant - A comes first
+      if (subIndexA !== -1) return -1
+      // B is sub-significant - B comes first
+      if (subIndexB !== -1) return 1
+      // Fallback: alphabetical
+      return a.localeCompare(b)
+    })
 
     const dates = heatmapIncidents.map(i => i.date).filter(Boolean).sort()
     if (dates.length === 0) return { months: [], hazards: [], data: {}, maxValue: 0 }
@@ -623,14 +583,22 @@ const Dashboard = () => {
       })
     })
 
+    // Create a lowercase-to-canonical mapping for case-insensitive data aggregation
+    const lowerToCanonical = {}
+    hazards.forEach(h => {
+      lowerToCanonical[h.toLowerCase()] = h
+    })
+
     heatmapIncidents.forEach(incident => {
       const normalized = normalizeHazard(incident.location)
       if (normalized && normalized !== 'Not Specified' && incident.date) {
         const month = incident.date.substring(0, 7)
-        if (data[normalized] && data[normalized][month] !== undefined) {
-          data[normalized][month]++
-          if (data[normalized][month] > maxValue) {
-            maxValue = data[normalized][month]
+        // Find the canonical hazard name (case-insensitive match)
+        const canonicalHazard = lowerToCanonical[normalized.toLowerCase()]
+        if (canonicalHazard && data[canonicalHazard] && data[canonicalHazard][month] !== undefined) {
+          data[canonicalHazard][month]++
+          if (data[canonicalHazard][month] > maxValue) {
+            maxValue = data[canonicalHazard][month]
           }
         }
       }
@@ -701,200 +669,18 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* This Month Button */}
-        <button
-          onClick={handleThisMonthToggle}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-            thisMonthActive
-              ? 'bg-primary-600 text-white'
-              : 'bg-white border border-surface-300 text-surface-700 hover:bg-surface-50'
-          }`}
-        >
-          <Calendar size={16} />
-          This Month
-        </button>
+        {/* Time Period Toggle */}
+        <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
 
-        {/* Import More Button */}
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
-        >
-          <Upload size={16} />
-          Import
-        </button>
-
-        {/* Test Parser Button */}
-        <button
-          onClick={() => setShowObservationTester(!showObservationTester)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-            showObservationTester
-              ? 'bg-purple-600 text-white'
-              : 'bg-white border border-purple-300 text-purple-700 hover:bg-purple-50'
-          }`}
-        >
-          <Brain size={16} />
-          Test Parser
-        </button>
-
-        {/* Export Menu (3-dot) */}
+        {/* Export Button (compact icon) */}
         <ExportMenu
           onExportPDF={handleExportPDF}
           onExportPPTX={handleExportPPTX}
           isExporting={isExporting}
           exportProgress={exportProgress}
+          compact
         />
       </div>
-
-      {/* Observation Parser Tester Panel */}
-      {showObservationTester && (
-        <div className="bg-white border border-purple-200 rounded-lg p-4 shadow-soft">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-2">
-              <Brain size={16} />
-              Observation Parser Tester
-            </h3>
-            <button
-              onClick={() => setShowObservationTester(false)}
-              className="p-1 hover:bg-surface-100 rounded"
-            >
-              <X size={16} className="text-surface-500" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {/* Input Area */}
-            <div className="flex gap-2">
-              <textarea
-                value={testObservation}
-                onChange={(e) => setTestObservation(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                    handleTestObservation()
-                  }
-                }}
-                placeholder="Paste or type an observation to analyze... (Ctrl+Enter to analyze)"
-                className="flex-1 p-3 border border-surface-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                rows={3}
-              />
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={handlePasteFromClipboard}
-                  className="flex items-center justify-center gap-1 px-3 py-2 bg-surface-100 text-surface-700 rounded-lg hover:bg-surface-200 transition-colors text-sm"
-                  title="Paste from clipboard"
-                >
-                  <Clipboard size={16} />
-                  Paste
-                </button>
-                <button
-                  onClick={handleTestObservation}
-                  disabled={!testObservation.trim()}
-                  className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                  <Sparkles size={16} />
-                  Analyze
-                </button>
-              </div>
-            </div>
-
-            {/* Results */}
-            {testResult && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
-                {/* Suggested Category + Main Keyword */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-surface-500">Category:</span>
-                    <span className="px-2 py-1 bg-purple-600 text-white text-sm font-semibold rounded">
-                      {testResult.suggestedCategory}
-                    </span>
-                  </div>
-                  {testResult.parsed?.mainKeyword && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-surface-500">Main Keyword:</span>
-                      <span className={`px-2 py-1 text-sm font-semibold rounded ${
-                        testResult.parsed.mainKeywordIsSignal
-                          ? 'bg-green-600 text-white'
-                          : 'bg-surface-600 text-white'
-                      }`}>
-                        {testResult.parsed.mainKeyword}
-                        {testResult.parsed.mainKeywordIsSignal && ' ✓'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Summary: WHO / WHAT / WHERE / ISSUE */}
-                {testResult.parsed?.summary && (
-                  <div className="bg-white p-2 rounded border">
-                    <span className="text-xs font-semibold text-surface-600 block mb-1">Summary (for Root Cause Analysis):</span>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                      <div>
-                        <span className="font-medium text-orange-600">WHO:</span>
-                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.who || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-blue-600">WHAT:</span>
-                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.what || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-green-600">WHERE:</span>
-                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.where || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-red-600">ISSUE:</span>
-                        <span className="ml-1 text-surface-700">{testResult.parsed.summary.issue || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Filtered Keywords (noise removed) */}
-                {testResult.parsed?.filteredKeywords?.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-surface-500">Signal Words (noise filtered):</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {testResult.parsed.filteredKeywords.slice(0, 15).map((word, i) => (
-                        <span key={i} className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Ambiguity Resolutions */}
-                {testResult.parsed?.ambiguities?.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-surface-500">Ambiguity Resolved:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {testResult.parsed.ambiguities.map((amb, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
-                          "{amb.word}" → {amb.hazard} ({Math.round(amb.confidence * 100)}%)
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Specialist Detection */}
-                {testResult.parsed?.actorIsSpecialist && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-surface-500">Specialist Detected:</span>
-                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-medium">
-                      {testResult.parsed.actor} → {testResult.parsed.actorSuggestedHazard}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Quick Import Modal */}
-      <QuickImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-      />
 
       {/* Dashboard Content - wrapped for PDF export full-page capture */}
       <div ref={dashboardContentRef} className="space-y-3 bg-surface-50 p-2 -m-2">
@@ -903,7 +689,7 @@ const Dashboard = () => {
         <KPICard
           title="Total Observations"
           value={filteredIncidents.length}
-          subtitle={thisMonthActive ? 'This month' : 'All records'}
+          subtitle={period === null ? 'All time' : period === 0.25 ? 'Last week' : period === 1 ? 'Last month' : `Last ${period} months`}
           icon={FileText}
           color="primary"
           info="Total number of observations matching current filters. Includes all types: incidents, near misses, unsafe acts/conditions, and positive observations."

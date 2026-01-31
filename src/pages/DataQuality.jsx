@@ -10,13 +10,11 @@ import {
   Users,
   FileText,
   FileX,
-  Calendar,
   Building2,
   Download,
   ChevronDown,
   ChevronUp,
   Info,
-  Upload,
   Tag,
   Eye,
   Brain,
@@ -27,10 +25,13 @@ import {
   AlignLeft,
   HelpCircle,
   AlertOctagon,
-  MessageSquareWarning
+  MessageSquareWarning,
+  Flag,
+  Calendar
 } from 'lucide-react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
 import FilterBar from '../components/common/FilterBar'
+import TimePeriodToggle from '../components/common/TimePeriodToggle'
+import { useDate } from '../context/DateContext'
 import {
   BarChart,
   Bar,
@@ -48,6 +49,7 @@ import {
   ReferenceLine
 } from 'recharts'
 import { useData } from '../context/DataContext'
+import { useFilter } from '../context/FilterContext'
 import {
   calculateQualityScore,
   getCategorizationMetrics,
@@ -68,7 +70,8 @@ import {
   getBeforeAfterCategorizationMetrics,
   getUnclassifiableRecords,
   detectFoulWords,
-  detectVagueHazards
+  detectVagueHazards,
+  getFlaggedRecords
 } from '../utils/dataQualityCalculations'
 import { detectMisspellings } from '../utils/spellChecker'
 import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
@@ -200,7 +203,7 @@ const KPIMiniCard = ({ title, value, unit, status, icon: Icon, subtitle, onClick
 }
 
 const DataQuality = () => {
-  const { incidents, isLoading, importWarnings } = useData()
+  const { incidents, isLoading, importWarnings, updateIncident } = useData()
   const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
   const [expandedSection, setExpandedSection] = useState(null)
   const [reporterSort, setReporterSort] = useState('total')
@@ -233,51 +236,21 @@ const DataQuality = () => {
     context: {}        // Extra context (metric name, day name, etc.)
   })
 
-  // Filter state - same as Dashboard
-  const [thisMonthActive, setThisMonthActive] = useState(false)
-  const [filters, setFilters] = useState({
-    contractor: '',
-    site: '',
-    dateFrom: '',
-    dateTo: ''
-  })
+  // Get period range function from context
+  const { getPeriodRange } = useDate()
 
-  // Get this month's date range
-  const getThisMonthRange = () => {
-    const now = new Date()
-    const start = format(startOfMonth(now), 'yyyy-MM-dd')
-    const end = format(endOfMonth(now), 'yyyy-MM-dd')
-    return { start, end }
-  }
+  // Shared filter state from context
+  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site } = useFilter()
 
-  // Handle "This Month" toggle
-  const handleThisMonthToggle = () => {
-    if (thisMonthActive) {
-      setFilters(prev => ({ ...prev, dateFrom: '', dateTo: '' }))
-      setThisMonthActive(false)
-    } else {
-      const { start, end } = getThisMonthRange()
-      setFilters(prev => ({ ...prev, dateFrom: start, dateTo: end }))
-      setThisMonthActive(true)
-    }
-  }
+  // Handle period change
+  const handlePeriodChange = useCallback((newPeriod) => {
+    setPeriod(newPeriod)
+  }, [setPeriod])
 
-  // Handle filter changes - reset site when contractor changes
+  // Handle filter changes - uses shared context (resets site when contractor changes)
   const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value }
-      if (key === 'contractor') {
-        newFilters.site = ''
-      }
-      return newFilters
-    })
-    setThisMonthActive(false)
-  }, [])
-
-  const clearFilters = () => {
-    setFilters({ contractor: '', site: '', dateFrom: '', dateTo: '' })
-    setThisMonthActive(false)
-  }
+    setFilter(key, value)
+  }, [setFilter])
 
   // Get unique contractors from incidents
   const uniqueContractors = useMemo(() => {
@@ -288,14 +261,14 @@ const DataQuality = () => {
   // Get sites filtered by selected contractor
   const siteOptions = useMemo(() => {
     let relevantIncidents = incidents
-    if (filters.contractor) {
-      relevantIncidents = incidents.filter(i => i.contractor === filters.contractor)
+    if (contractor) {
+      relevantIncidents = incidents.filter(i => i.contractor === contractor)
     }
     const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
     return sites.sort().map(site => ({ value: site, label: site }))
-  }, [incidents, filters.contractor])
+  }, [incidents, contractor])
 
-  // Filter configuration
+  // Filter configuration - Contractor (parent) and Site (child)
   const filterConfig = [
     {
       key: 'contractor',
@@ -310,95 +283,121 @@ const DataQuality = () => {
       label: 'Site',
       placeholder: 'All Sites',
       options: siteOptions
-    },
-    {
-      key: 'dateFrom',
-      type: 'date',
-      label: 'From',
-      placeholder: 'Start Date'
-    },
-    {
-      key: 'dateTo',
-      type: 'date',
-      label: 'To',
-      placeholder: 'End Date'
     }
   ]
 
-  // Filtered incidents based on filters
+  // Filtered incidents based on contractor, site, and period
+  // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
   const filteredIncidents = useMemo(() => {
-    let result = [...incidents]
-
-    if (filters.contractor) {
-      result = result.filter(i => i.contractor === filters.contractor)
-    }
-    if (filters.site) {
-      result = result.filter(i => i.site === filters.site)
-    }
-    if (filters.dateFrom) {
-      result = result.filter(i => i.date >= filters.dateFrom)
-    }
-    if (filters.dateTo) {
-      result = result.filter(i => i.date <= filters.dateTo)
+    // If period is null, show all data (no date filtering)
+    if (period === null) {
+      return incidents.filter(i => {
+        if (contractor && i.contractor !== contractor) return false
+        if (site && i.site !== site) return false
+        return true
+      })
     }
 
-    return result
-  }, [incidents, filters])
+    // Get date range from period
+    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
 
-  // Calculate all metrics using filtered incidents
-  const qualityData = useMemo(() => {
+    return incidents.filter(i => {
+      if (contractor && i.contractor !== contractor) return false
+      if (site && i.site !== site) return false
+      if (i.date < dateFrom) return false
+      if (i.date > dateTo) return false
+      return true
+    })
+  }, [incidents, contractor, site, period])
+
+  // ============================================
+  // SPLIT CALCULATIONS INTO FOCUSED MEMOS
+  // Each group only recalculates when its dependencies change
+  // ============================================
+
+  // Group 1: Core quality score metrics (lightweight)
+  const coreQualityMetrics = useMemo(() => {
     if (filteredIncidents.length === 0) return null
-
-    const quality = calculateQualityScore(filteredIncidents)
-    const categorization = getCategorizationMetrics(filteredIncidents)
-    const description = getDescriptionMetrics(filteredIncidents)
-    const nearMiss = getNearMissMetrics(filteredIncidents)
-    const reporters = getReporterMetrics(filteredIncidents)
-    const contractors = getContractorMetrics(filteredIncidents)
-    const coverage = getCoverageMetrics(filteredIncidents)
-    const trend = getQualityTrend(filteredIncidents, 12)
-    const alerts = [] // Coverage alerts removed - charts moved to Dashboard
-    const duplicates = getDuplicateDescriptions(filteredIncidents)
-    // Spelling issues - instant hybrid spell checker (no loading required)
-    const spellingIssues = detectMisspellings(filteredIncidents)
-
-    // Foul words detection - inappropriate language in descriptions
-    const foulWords = detectFoulWords(filteredIncidents)
-
-    // Vague hazards detection - generic terms without specifics
-    const vagueHazards = detectVagueHazards(filteredIncidents)
-
-    const otherHazards = getOtherHazardAnalysis(filteredIncidents)
-
-    // Auto-Classification Summary (shows what WAS auto-classified)
-    const autoClassification = getAutoClassificationSummary(filteredIncidents)
-
-    // Before/After Categorization Comparison
-    const categorizationComparison = getBeforeAfterCategorizationMetrics(filteredIncidents)
-
-    // Unclassifiable Records (records needing manual review)
-    const unclassifiableRecords = getUnclassifiableRecords(filteredIncidents)
-
     return {
-      quality,
-      categorization,
-      description,
-      nearMiss,
-      reporters,
-      contractors,
-      coverage,
-      trend,
-      alerts,
-      duplicates,
-      spellingIssues,
-      foulWords,
-      vagueHazards,
-      otherHazards,
-      autoClassification,
-      categorizationComparison,
-      unclassifiableRecords
+      quality: calculateQualityScore(filteredIncidents),
+      nearMiss: getNearMissMetrics(filteredIncidents),
+      coverage: getCoverageMetrics(filteredIncidents),
     }
   }, [filteredIncidents])
+
+  // Group 2: Categorization metrics
+  const categorizationMetrics = useMemo(() => {
+    if (filteredIncidents.length === 0) return null
+    return {
+      categorization: getCategorizationMetrics(filteredIncidents),
+      autoClassification: getAutoClassificationSummary(filteredIncidents),
+      categorizationComparison: getBeforeAfterCategorizationMetrics(filteredIncidents),
+      otherHazards: getOtherHazardAnalysis(filteredIncidents),
+    }
+  }, [filteredIncidents])
+
+  // Group 3: Text analysis (spelling, duplicates, vague hazards) - can be expensive
+  const textAnalysisMetrics = useMemo(() => {
+    if (filteredIncidents.length === 0) return null
+    return {
+      description: getDescriptionMetrics(filteredIncidents),
+      duplicates: getDuplicateDescriptions(filteredIncidents),
+      spellingIssues: detectMisspellings(filteredIncidents),
+      foulWords: detectFoulWords(filteredIncidents),
+      vagueHazards: detectVagueHazards(filteredIncidents),
+    }
+  }, [filteredIncidents])
+
+  // Group 4: Reporter and contractor metrics
+  const reporterContractorMetrics = useMemo(() => {
+    if (filteredIncidents.length === 0) return null
+    return {
+      reporters: getReporterMetrics(filteredIncidents),
+      contractors: getContractorMetrics(filteredIncidents),
+    }
+  }, [filteredIncidents])
+
+  // Group 5: Trend and flagged records
+  const trendAndFlaggedMetrics = useMemo(() => {
+    if (filteredIncidents.length === 0) return null
+    return {
+      trend: getQualityTrend(filteredIncidents, 12),
+      unclassifiableRecords: getUnclassifiableRecords(filteredIncidents),
+      flaggedRecords: getFlaggedRecords(filteredIncidents),
+    }
+  }, [filteredIncidents])
+
+  // Combined quality data object - only creates new reference when sub-memos change
+  const qualityData = useMemo(() => {
+    if (!coreQualityMetrics) return null
+
+    return {
+      // Core quality
+      quality: coreQualityMetrics.quality,
+      nearMiss: coreQualityMetrics.nearMiss,
+      coverage: coreQualityMetrics.coverage,
+      // Categorization
+      categorization: categorizationMetrics?.categorization,
+      autoClassification: categorizationMetrics?.autoClassification,
+      categorizationComparison: categorizationMetrics?.categorizationComparison,
+      otherHazards: categorizationMetrics?.otherHazards,
+      // Text analysis
+      description: textAnalysisMetrics?.description,
+      duplicates: textAnalysisMetrics?.duplicates,
+      spellingIssues: textAnalysisMetrics?.spellingIssues,
+      foulWords: textAnalysisMetrics?.foulWords,
+      vagueHazards: textAnalysisMetrics?.vagueHazards,
+      // Reporter/contractor
+      reporters: reporterContractorMetrics?.reporters,
+      contractors: reporterContractorMetrics?.contractors,
+      // Trend and flagged
+      trend: trendAndFlaggedMetrics?.trend,
+      unclassifiableRecords: trendAndFlaggedMetrics?.unclassifiableRecords,
+      flaggedRecords: trendAndFlaggedMetrics?.flaggedRecords,
+      // Legacy empty array
+      alerts: [],
+    }
+  }, [coreQualityMetrics, categorizationMetrics, textAnalysisMetrics, reporterContractorMetrics, trendAndFlaggedMetrics])
 
   // Sort reporters
   const sortedReporters = useMemo(() => {
@@ -443,12 +442,12 @@ const DataQuality = () => {
   }, [filteredIncidents])
 
   // Handle reporter click
-  const handleReporterClick = (reporterName) => {
+  const handleReporterClick = useCallback((reporterName) => {
     setSelectedReporter(reporterName)
-  }
+  }, [])
 
-  // Drill-down handlers
-  const openDrillDown = (title, records, breadcrumb = [], context = {}) => {
+  // Drill-down handlers - memoized to prevent child re-renders
+  const openDrillDown = useCallback((title, records, breadcrumb = [], context = {}) => {
     setDrillDown({
       isOpen: true,
       type: 'records',
@@ -458,9 +457,9 @@ const DataQuality = () => {
       level: 2,
       context
     })
-  }
+  }, [])
 
-  const closeDrillDown = () => {
+  const closeDrillDown = useCallback(() => {
     setDrillDown({
       isOpen: false,
       type: null,
@@ -470,10 +469,10 @@ const DataQuality = () => {
       level: 1,
       context: {}
     })
-  }
+  }, [])
 
   // Day of week drill-down
-  const handleDayDrillDown = (dayData) => {
+  const handleDayDrillDown = useCallback((dayData) => {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const dayIndex = dayNames.findIndex(d => d.slice(0, 3) === dayData.day)
     const records = filteredIncidents.filter(inc => {
@@ -487,10 +486,10 @@ const DataQuality = () => {
       ['Data Quality', 'Day of Week', dayNames[dayIndex]],
       { day: dayNames[dayIndex], dayIndex }
     )
-  }
+  }, [filteredIncidents, openDrillDown])
 
   // Hour drill-down
-  const handleHourDrillDown = (hourData) => {
+  const handleHourDrillDown = useCallback((hourData) => {
     // hourData has hourNum (integer) and hour (formatted string like "09:00")
     const hourNum = hourData.hourNum
     const records = filteredIncidents.filter(inc => {
@@ -505,10 +504,10 @@ const DataQuality = () => {
       ['Data Quality', 'Hour of Day', hourLabel],
       { hour: hourNum }
     )
-  }
+  }, [filteredIncidents, openDrillDown])
 
   // Contractor drill-down
-  const handleContractorDrillDown = (contractor) => {
+  const handleContractorDrillDown = useCallback((contractor) => {
     const records = filteredIncidents.filter(inc => inc.contractor === contractor.name)
     openDrillDown(
       `${contractor.name} - All Observations`,
@@ -516,10 +515,10 @@ const DataQuality = () => {
       ['Data Quality', 'Contractor', contractor.name],
       { contractor: contractor.name }
     )
-  }
+  }, [filteredIncidents, openDrillDown])
 
   // KPI drill-down
-  const handleKPIDrillDown = (metric, title, filterFn) => {
+  const handleKPIDrillDown = useCallback((metric, title, filterFn) => {
     const records = filteredIncidents.filter(filterFn)
     openDrillDown(
       title,
@@ -527,7 +526,7 @@ const DataQuality = () => {
       ['Data Quality', metric],
       { metric }
     )
-  }
+  }, [filteredIncidents, openDrillDown])
 
   // Categorization drill-down
   const handleCategorizationDrillDown = (category, count) => {
@@ -794,7 +793,8 @@ const DataQuality = () => {
       noDescription: 'No Description',
       tooShort: 'Too Short',
       unrecognizedCategory: 'Unrecognized Category',
-      lowConfidence: 'Low Confidence'
+      lowConfidence: 'Low Confidence',
+      historicalPlaceholder: 'Historical/Placeholder'
     }
 
     openDrillDown(
@@ -874,34 +874,9 @@ const DataQuality = () => {
             />
           </div>
 
-          {/* This Month Button */}
-          <button
-            onClick={handleThisMonthToggle}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              thisMonthActive
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
-            }`}
-          >
-            <Calendar size={16} />
-            This Month
-          </button>
-
-          {/* Import Button */}
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap"
-          >
-            <Upload size={16} />
-            Import Data
-          </button>
+          {/* Time Period Toggle */}
+          <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
         </div>
-
-        {/* Quick Import Modal */}
-        <QuickImportModal
-          isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        />
 
         <div className="flex flex-col items-center justify-center h-64 text-surface-500">
           <BarChart3 size={48} className="mb-4 opacity-50" />
@@ -911,7 +886,7 @@ const DataQuality = () => {
     )
   }
 
-  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, spellingIssues, otherHazards, autoClassification, categorizationComparison, unclassifiableRecords } = qualityData
+  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, spellingIssues, otherHazards, autoClassification, categorizationComparison, unclassifiableRecords, flaggedRecords } = qualityData
 
   // Pie chart colors
   const COLORS = ['#22c55e', '#94a3b8', '#f97316']
@@ -931,20 +906,8 @@ const DataQuality = () => {
 
         {/* Action Buttons - side by side on mobile */}
         <div className={isMobile ? 'flex items-center gap-2' : 'flex items-center gap-2'}>
-          {/* This Month Button */}
-          <button
-            onClick={handleThisMonthToggle}
-            className={`flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              isMobile ? 'flex-1 h-11 px-3' : 'px-3 py-2'
-            } ${
-              thisMonthActive
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-surface-200 text-surface-700 hover:bg-surface-50'
-            }`}
-          >
-            <Calendar size={isMobile ? 18 : 16} />
-            {isMobile ? 'Month' : 'This Month'}
-          </button>
+          {/* Time Period Toggle */}
+          <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
 
           {/* Observation Tester Button */}
           <button
@@ -960,25 +923,8 @@ const DataQuality = () => {
             <Brain size={isMobile ? 18 : 16} />
             {isMobile ? 'Test' : 'Test Parser'}
           </button>
-
-          {/* Import Button */}
-          <button
-            onClick={() => setShowImportModal(true)}
-            className={`flex items-center justify-center gap-2 bg-surface-800 text-white rounded-lg hover:bg-surface-700 transition-colors text-sm font-medium whitespace-nowrap ${
-              isMobile ? 'flex-1 h-11 px-3' : 'px-3 py-2'
-            }`}
-          >
-            <Upload size={isMobile ? 18 : 16} />
-            Import
-          </button>
         </div>
       </div>
-
-      {/* Quick Import Modal */}
-      <QuickImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-      />
 
       {/* Observation Tester Panel */}
       {showObservationTester && (
@@ -1705,8 +1651,9 @@ const DataQuality = () => {
       </div>
 
       {/* ROW 2: Needs Review & Description Length (2 columns) */}
+      {/* ROW 2: Needs Review & Description Quality (2 columns) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Needs Review (Unclassifiable Records) */}
+        {/* Needs Review (Unclassifiable + Flagged Records) */}
         <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -1714,11 +1661,11 @@ const DataQuality = () => {
                 <AlertTriangle size={16} className="text-surface-500" />
               </div>
               <span className="text-sm font-semibold text-surface-800">Needs Review</span>
-              <InfoTooltip text="Records that couldn't be properly classified" />
+              <InfoTooltip text="Records that couldn't be properly classified due to missing or unclear descriptions" />
             </div>
             <div className="text-right">
               <div className={`text-3xl font-bold ${
-                qualityData.unclassifiableRecords?.total > 0 ? 'text-red-600' : 'text-green-600'
+                (qualityData.unclassifiableRecords?.total || 0) > 0 ? 'text-red-600' : 'text-green-600'
               }`}>
                 {qualityData.unclassifiableRecords?.total || 0}
               </div>
@@ -1738,7 +1685,7 @@ const DataQuality = () => {
               {/* Visual breakdown with progress bars */}
               <div className="flex-1 space-y-3">
                 {/* No Description */}
-                {qualityData.unclassifiableRecords.byReason.noDescription.count > 0 && (
+                {qualityData.unclassifiableRecords?.byReason?.noDescription?.count > 0 && (
                   <div
                     className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
                     onClick={() => handleUnclassifiableDrillDown('noDescription')}
@@ -1750,14 +1697,14 @@ const DataQuality = () => {
                     <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.noDescription.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.noDescription.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Too Short */}
-                {qualityData.unclassifiableRecords.byReason.tooShort.count > 0 && (
+                {qualityData.unclassifiableRecords?.byReason?.tooShort?.count > 0 && (
                   <div
                     className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
                     onClick={() => handleUnclassifiableDrillDown('tooShort')}
@@ -1769,14 +1716,14 @@ const DataQuality = () => {
                     <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.tooShort.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.tooShort.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Unrecognized Category */}
-                {qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count > 0 && (
+                {qualityData.unclassifiableRecords?.byReason?.unrecognizedCategory?.count > 0 && (
                   <div
                     className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
                     onClick={() => handleUnclassifiableDrillDown('unrecognizedCategory')}
@@ -1788,14 +1735,14 @@ const DataQuality = () => {
                     <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.unrecognizedCategory.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Low Confidence */}
-                {qualityData.unclassifiableRecords.byReason.lowConfidence.count > 0 && (
+                {qualityData.unclassifiableRecords?.byReason?.lowConfidence?.count > 0 && (
                   <div
                     className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
                     onClick={() => handleUnclassifiableDrillDown('lowConfidence')}
@@ -1807,7 +1754,26 @@ const DataQuality = () => {
                     <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.lowConfidence.count / qualityData.unclassifiableRecords.total) * 100))}%` }}
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.lowConfidence.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Historical/Placeholder (Enablon legacy) */}
+                {qualityData.unclassifiableRecords?.byReason?.historicalPlaceholder?.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('historicalPlaceholder')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Historical/Placeholder</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.historicalPlaceholder.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.historicalPlaceholder.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
                       />
                     </div>
                   </div>

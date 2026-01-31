@@ -2,15 +2,21 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
+import { DateProvider } from './context/DateContext.jsx'
 import { DataProvider } from './context/DataContext.jsx'
+import { FilterProvider } from './context/FilterContext.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <DataProvider>
-        <App />
-      </DataProvider>
+      <DateProvider>
+        <DataProvider>
+          <FilterProvider>
+            <App />
+          </FilterProvider>
+        </DataProvider>
+      </DateProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

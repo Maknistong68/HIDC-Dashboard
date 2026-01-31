@@ -227,6 +227,14 @@ export const getDescriptionMetrics = (incidents) => {
 }
 
 /**
+ * Get records flagged for miscategorization review
+ * Returns all incidents where user has flagged the category as wrong
+ */
+export const getFlaggedRecords = (incidents) => {
+  return incidents.filter(i => i._flaggedMiscategorized === true)
+}
+
+/**
  * Calculate near miss rate (leading indicator)
  * Denominator: Only incident types that form the traditional safety pyramid
  * (LTI, MTI, FAC, Near-miss, Unsafe Act, Unsafe Condition)
@@ -842,7 +850,7 @@ export const getAutoClassificationSummary = (incidents) => {
   autoClassified.forEach(incident => {
     const originalRaw = incident.originalHazardCategory
     const from = !originalRaw || originalRaw.trim() === '' ? '(blank)' : originalRaw
-    const to = incident.location || 'Work Environment'
+    const to = incident.location || 'General Site Issues'
     const key = `${from}|||${to}`
 
     if (!mappingGroups[key]) {
@@ -1606,22 +1614,23 @@ export const getUnclassifiableRecords = (incidents) => {
   const tooShort = []
   const unrecognizedCategory = []
   const lowConfidence = []
+  const historicalPlaceholder = [] // Enablon legacy/placeholder events
 
   // Track unique records (for total count - avoid double counting)
   const allUnclassifiable = new Set()
 
-  // Approved categories that normalize correctly (26 hazard categories)
+  // Approved categories that normalize correctly (27 hazard categories)
   const approvedCategories = [
-    // 15 Major Hazards
-    'Confined Spaces', 'Energized System', 'Mobile Plant & Equipment',
-    'Breaking Ground & Excavation', 'Fire', 'Hot Work', 'Lifting',
-    'Temporary Works', 'Working on or Near Live Roads', 'Working on or Near Water',
-    'Driving', 'Working at Height', 'Working in Heat',
+    // 14 NEOM Eltizam Significant Hazards + Physical/Mechanical
+    'Confined Spaces', 'Energized System', 'Explosives & Blasting',
+    'Mobile Plant & Equipment', 'Breaking Ground & Excavation', 'Fire',
+    'Hot Work', 'Lifting', 'Temporary Works', 'Working on or Near Live Roads',
+    'Working on or Near Water', 'Driving', 'Working at Height', 'Working in Heat',
     'Physical Hazard', 'Mechanical Hazard',
     // 11 Sub-significant Hazards
     'COSHH', 'Respiratory Hazard', 'Housekeeping', 'Site Security',
     'Access', 'Worker Welfare', 'Tools', 'Traffic Management',
-    'Work Environment', 'Environmental', 'Slip and Trip'
+    'General Site Issues', 'Environmental', 'Slip and Trip'
   ]
 
   // Generic/blank values that indicate classification issues
@@ -1629,6 +1638,14 @@ export const getUnclassifiableRecords = (incidents) => {
 
   // Placeholder values that should be treated as "no description"
   const emptyPlaceholders = ['n/a', 'na', 'none', '-', '.', '...', 'nil', 'null', 'empty', '(empty)', '(blank)', 'blank', 'tbd', 'tbc', 'pending', 'no description', 'not applicable', 'n.a.', 'n.a']
+
+  // Historical/placeholder events that should be flagged (e.g., Enablon legacy data)
+  const historicalPlaceholderPatterns = [
+    'historical event',
+    'please ignore this event',
+    'do not submit for investigation',
+    'loaded here for consistency'
+  ]
 
   incidents.forEach(incident => {
     const description = (incident.description || '').trim()
@@ -1650,7 +1667,7 @@ export const getUnclassifiableRecords = (incidents) => {
         site: incident.site || '',
         description: description || '(empty)',
         originalCategory: originalCategory || '(blank)',
-        currentCategory: incident.location || 'Work Environment',
+        currentCategory: incident.location || 'General Site Issues',
         reason: description ? `Placeholder value: "${description}"` : 'No description provided',
         incident
       })
@@ -1668,7 +1685,7 @@ export const getUnclassifiableRecords = (incidents) => {
         description: description,
         wordCount: wordCount,
         originalCategory: originalCategory || '(blank)',
-        currentCategory: incident.location || 'Work Environment',
+        currentCategory: incident.location || 'General Site Issues',
         reason: `Description too short (${wordCount} word${wordCount === 1 ? '' : 's'})`,
         incident
       })
@@ -1699,7 +1716,7 @@ export const getUnclassifiableRecords = (incidents) => {
             site: incident.site || '',
             description: description || '(empty)',
             originalCategory: originalCategory,
-            currentCategory: incident.location || 'Work Environment',
+            currentCategory: incident.location || 'General Site Issues',
             confidence: confidence,
             reason: confidence > 0
               ? `Unrecognized category "${originalCategory}" (reclassified with ${confidence}% confidence)`
@@ -1721,9 +1738,30 @@ export const getUnclassifiableRecords = (incidents) => {
         site: incident.site || '',
         description: description || '(empty)',
         originalCategory: originalCategory || '(blank)',
-        currentCategory: incident.location || 'Work Environment',
+        currentCategory: incident.location || 'General Site Issues',
         confidence: confidence,
         reason: `Low confidence classification (${confidence}%)`,
+        incident
+      })
+      hasIssue = true
+    }
+
+    // Check 5: Historical/placeholder events (e.g., Enablon legacy data)
+    // These are fake observations that say "please ignore" - they shouldn't count in metrics
+    const isHistoricalPlaceholder = historicalPlaceholderPatterns.some(pattern =>
+      descriptionLower.includes(pattern)
+    )
+    if (isHistoricalPlaceholder) {
+      historicalPlaceholder.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description.substring(0, 100) + (description.length > 100 ? '...' : ''),
+        originalCategory: originalCategory || '(blank)',
+        currentCategory: incident.location || 'General Site Issues',
+        reason: 'Historical/placeholder event - should be excluded from metrics',
         incident
       })
       hasIssue = true
@@ -1767,6 +1805,13 @@ export const getUnclassifiableRecords = (incidents) => {
         percentage: totalIncidents > 0 ? ((lowConfidence.length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Low Confidence',
         description: 'Auto-classified with less than 65% confidence'
+      },
+      historicalPlaceholder: {
+        count: historicalPlaceholder.length,
+        records: historicalPlaceholder,
+        percentage: totalIncidents > 0 ? ((historicalPlaceholder.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'Historical/Placeholder',
+        description: 'Legacy Enablon events marked as "ignore" - not real observations'
       }
     },
     summary: {

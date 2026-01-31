@@ -249,4 +249,4 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   )
 }
 
-export default IncidentPyramid
+export default React.memo(IncidentPyramid)

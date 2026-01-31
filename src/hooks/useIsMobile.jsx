@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react'
 
 /**
+ * Shared breakpoint constants - use these throughout the app for consistency
+ * Based on Tailwind CSS breakpoints
+ */
+export const BREAKPOINTS = {
+  SM: 640,   // Small phones -> larger phones
+  MD: 768,   // Phones -> tablets (primary mobile/desktop breakpoint)
+  LG: 1024,  // Tablets -> laptops
+  XL: 1280,  // Laptops -> desktops
+  XXL: 1536, // Large desktops
+}
+
+// Default mobile breakpoint used throughout the app
+export const MOBILE_BREAKPOINT = BREAKPOINTS.MD
+
+/**
  * useIsMobile - Hook for detecting mobile/tablet breakpoints
  *
- * @param {number} breakpoint - The breakpoint in pixels (default: 640 = Tailwind's 'sm')
+ * @param {number} breakpoint - The breakpoint in pixels (default: 768 = Tailwind's 'md')
  * @returns {boolean} - True if viewport is below breakpoint
  */
-const useIsMobile = (breakpoint = 640) => {
+const useIsMobile = (breakpoint = MOBILE_BREAKPOINT) => {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth < breakpoint

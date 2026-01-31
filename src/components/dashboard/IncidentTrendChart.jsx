@@ -122,4 +122,4 @@ const IncidentTrendChart = ({ data }) => {
   )
 }
 
-export default IncidentTrendChart
+export default React.memo(IncidentTrendChart)

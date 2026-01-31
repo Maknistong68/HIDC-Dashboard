@@ -1,13 +1,72 @@
-// LocalStorage keys
+/**
+ * Storage Layer for HSE Dashboard
+ *
+ * Provides backward-compatible API that uses IndexedDB for enterprise-scale storage.
+ * Falls back to localStorage for settings and small data if IndexedDB fails.
+ *
+ * Migration: Automatically migrates data from localStorage to IndexedDB on first load.
+ */
+
+import {
+  isIndexedDBSupported,
+  getAllRecords,
+  addRecords,
+  createFile,
+  getAllFiles,
+  deleteFile as idbDeleteFile,
+  getStorageStats,
+  clearAllData as idbClearAllData,
+  exportAllData as idbExportAllData,
+  importAllData as idbImportAllData,
+  getSetting,
+  setSetting,
+  getAllSettings
+} from './indexedDBStorage'
+
+// LocalStorage keys (for backward compatibility and fallback)
 const STORAGE_KEYS = {
   PROJECTS: 'hse_projects',
   INCIDENTS: 'hse_incidents',
   ENGAGEMENTS: 'hse_engagements',
   COMPLIANCE: 'hse_compliance',
   SETTINGS: 'hse_settings',
+  MIGRATED_TO_IDB: 'hse_migrated_to_idb'
 }
 
-// Get data from localStorage
+// Track if we're using IndexedDB
+let useIndexedDB = null
+
+/**
+ * Check if we should use IndexedDB
+ */
+const shouldUseIndexedDB = async () => {
+  if (useIndexedDB === null) {
+    useIndexedDB = await isIndexedDBSupported()
+  }
+  return useIndexedDB
+}
+
+/**
+ * Check if data has been migrated to IndexedDB
+ */
+const isMigrated = () => {
+  return localStorage.getItem(STORAGE_KEYS.MIGRATED_TO_IDB) === 'true'
+}
+
+/**
+ * Mark data as migrated
+ */
+const markMigrated = () => {
+  localStorage.setItem(STORAGE_KEYS.MIGRATED_TO_IDB, 'true')
+}
+
+// ============================================
+// LEGACY LOCALSTORAGE FUNCTIONS (kept for fallback)
+// ============================================
+
+/**
+ * Get data from localStorage (legacy)
+ */
 export const getData = (key) => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS[key])
@@ -18,7 +77,9 @@ export const getData = (key) => {
   }
 }
 
-// Save data to localStorage
+/**
+ * Save data to localStorage (legacy)
+ */
 export const saveData = (key, data) => {
   try {
     localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data))
@@ -29,7 +90,9 @@ export const saveData = (key, data) => {
   }
 }
 
-// Clear specific data
+/**
+ * Clear specific data from localStorage (legacy)
+ */
 export const clearData = (key) => {
   try {
     localStorage.removeItem(STORAGE_KEYS[key])
@@ -40,12 +103,21 @@ export const clearData = (key) => {
   }
 }
 
-// Clear all data
-export const clearAllData = () => {
+/**
+ * Clear all data from localStorage
+ */
+export const clearAllData = async () => {
   try {
+    // Clear localStorage
     Object.values(STORAGE_KEYS).forEach(key => {
       localStorage.removeItem(key)
     })
+
+    // Clear IndexedDB if supported
+    if (await shouldUseIndexedDB()) {
+      await idbClearAllData()
+    }
+
     return true
   } catch (error) {
     console.error('Error clearing all data:', error)
@@ -53,27 +125,299 @@ export const clearAllData = () => {
   }
 }
 
-// Export all data to JSON
-export const exportAllData = () => {
-  const data = {
-    version: '1.0',
-    exportDate: new Date().toISOString(),
-    projects: getData('PROJECTS') || [],
-    incidents: getData('INCIDENTS') || [],
-    engagements: getData('ENGAGEMENTS') || [],
-    compliance: getData('COMPLIANCE') || [],
-    settings: getData('SETTINGS') || {},
+// ============================================
+// MIGRATION FUNCTIONS
+// ============================================
+
+/**
+ * Migrate data from localStorage to IndexedDB
+ * This runs once on first load after IndexedDB is enabled
+ */
+export const migrateToIndexedDB = async () => {
+  if (isMigrated()) {
+    console.log('[Migration] Already migrated to IndexedDB')
+    return { success: true, skipped: true }
   }
-  return data
+
+  if (!(await shouldUseIndexedDB())) {
+    console.log('[Migration] IndexedDB not supported, using localStorage')
+    return { success: false, reason: 'IndexedDB not supported' }
+  }
+
+  try {
+    console.log('[Migration] Starting localStorage → IndexedDB migration...')
+
+    // Get existing incidents from localStorage
+    const incidents = getData('INCIDENTS') || []
+
+    if (incidents.length > 0) {
+      // Create a file record for the migrated data
+      const fileId = await createFile({
+        fileName: 'Migrated from localStorage',
+        fileSize: 0,
+        recordCount: incidents.length,
+        status: 'active',
+        migratedFrom: 'localStorage'
+      })
+
+      // Add all records to IndexedDB with the file reference
+      await addRecords(incidents, fileId)
+
+      console.log(`[Migration] Migrated ${incidents.length} records to IndexedDB`)
+    }
+
+    // Migrate settings
+    const settings = getData('SETTINGS')
+    if (settings) {
+      for (const [key, value] of Object.entries(settings)) {
+        await setSetting(key, value)
+      }
+      console.log('[Migration] Migrated settings to IndexedDB')
+    }
+
+    // Mark as migrated
+    markMigrated()
+
+    // Clear localStorage incidents (keep settings as backup)
+    clearData('INCIDENTS')
+
+    console.log('[Migration] Migration complete!')
+    return { success: true, recordsMigrated: incidents.length }
+  } catch (error) {
+    console.error('[Migration] Error during migration:', error)
+    return { success: false, error: error.message }
+  }
 }
 
-// Import data from JSON
-export const importAllData = (data) => {
+// ============================================
+// UNIFIED STORAGE API
+// ============================================
+
+/**
+ * Load all incidents (from IndexedDB or localStorage)
+ */
+export const loadIncidents = async () => {
+  try {
+    // Try IndexedDB first
+    if (await shouldUseIndexedDB()) {
+      // Run migration if needed
+      await migrateToIndexedDB()
+
+      const records = await getAllRecords()
+      return records
+    }
+
+    // Fallback to localStorage
+    return getData('INCIDENTS') || []
+  } catch (error) {
+    console.error('Error loading incidents:', error)
+    // Final fallback
+    return getData('INCIDENTS') || []
+  }
+}
+
+/**
+ * Save incidents (to IndexedDB with file tracking)
+ * Note: For new imports, use saveIncidentsWithFile instead
+ */
+export const saveIncidents = async (incidents) => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      // For direct saves (not through import), update existing records
+      // This is mainly for recategorization and updates
+      await idbClearAllData()
+
+      if (incidents.length > 0) {
+        // Group by fileId if available
+        const byFile = new Map()
+        for (const incident of incidents) {
+          const fileId = incident.fileId || 'legacy'
+          if (!byFile.has(fileId)) {
+            byFile.set(fileId, [])
+          }
+          byFile.get(fileId).push(incident)
+        }
+
+        // Re-create files and add records
+        for (const [fileId, records] of byFile) {
+          const newFileId = await createFile({
+            fileName: fileId === 'legacy' ? 'Legacy Data' : `File ${fileId}`,
+            fileSize: 0,
+            recordCount: records.length,
+            status: 'active'
+          })
+          await addRecords(records, newFileId)
+        }
+      }
+
+      return true
+    }
+
+    // Fallback to localStorage
+    return saveData('INCIDENTS', incidents)
+  } catch (error) {
+    console.error('Error saving incidents:', error)
+    return saveData('INCIDENTS', incidents)
+  }
+}
+
+/**
+ * Save incidents with file tracking (for imports)
+ * @param {Array} incidents - Array of incident records
+ * @param {Object} fileInfo - { fileName, fileSize }
+ * @returns {Promise<{ fileId: number, recordCount: number }>}
+ */
+export const saveIncidentsWithFile = async (incidents, fileInfo) => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      // Create file record
+      const fileId = await createFile({
+        fileName: fileInfo.fileName,
+        fileSize: fileInfo.fileSize || 0,
+        recordCount: incidents.length,
+        status: 'active'
+      })
+
+      // Add records with file reference
+      await addRecords(incidents, fileId)
+
+      return { fileId, recordCount: incidents.length }
+    }
+
+    // Fallback: append to localStorage
+    const existing = getData('INCIDENTS') || []
+    saveData('INCIDENTS', [...existing, ...incidents])
+    return { fileId: null, recordCount: incidents.length }
+  } catch (error) {
+    console.error('Error saving incidents with file:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all imported files
+ */
+export const getImportedFiles = async () => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      return await getAllFiles()
+    }
+    // No file tracking in localStorage
+    return []
+  } catch (error) {
+    console.error('Error getting imported files:', error)
+    return []
+  }
+}
+
+/**
+ * Delete a file and all its records
+ * @param {number} fileId
+ */
+export const deleteImportedFile = async (fileId) => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      return await idbDeleteFile(fileId)
+    }
+    // Not supported in localStorage
+    return { deletedRecords: 0 }
+  } catch (error) {
+    console.error('Error deleting file:', error)
+    throw error
+  }
+}
+
+/**
+ * Get storage statistics
+ */
+export const getStorageStatistics = async () => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      return await getStorageStats()
+    }
+
+    // Estimate localStorage usage
+    let totalSize = 0
+    for (const key of Object.values(STORAGE_KEYS)) {
+      const item = localStorage.getItem(key)
+      if (item) {
+        totalSize += item.length * 2 // UTF-16
+      }
+    }
+
+    const incidents = getData('INCIDENTS') || []
+    return {
+      fileCount: 0,
+      recordCount: incidents.length,
+      estimatedSize: totalSize,
+      estimatedSizeMB: (totalSize / 1024 / 1024).toFixed(2),
+      isIndexedDB: false
+    }
+  } catch (error) {
+    console.error('Error getting storage statistics:', error)
+    return { fileCount: 0, recordCount: 0, estimatedSize: 0, estimatedSizeMB: '0' }
+  }
+}
+
+// ============================================
+// EXPORT/IMPORT FUNCTIONS
+// ============================================
+
+/**
+ * Export all data to JSON
+ */
+export const exportAllData = async () => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      return await idbExportAllData()
+    }
+
+    return {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      projects: getData('PROJECTS') || [],
+      incidents: getData('INCIDENTS') || [],
+      engagements: getData('ENGAGEMENTS') || [],
+      compliance: getData('COMPLIANCE') || [],
+      settings: getData('SETTINGS') || {},
+    }
+  } catch (error) {
+    console.error('Error exporting data:', error)
+    throw error
+  }
+}
+
+/**
+ * Import data from JSON
+ */
+export const importAllData = async (data) => {
   try {
     if (!data.version) {
       throw new Error('Invalid data format: missing version')
     }
 
+    if (await shouldUseIndexedDB()) {
+      // Check if this is the new format (with files array)
+      if (data.files && data.records) {
+        return await idbImportAllData(data)
+      }
+
+      // Convert legacy format
+      if (data.incidents && data.incidents.length > 0) {
+        const fileId = await createFile({
+          fileName: 'Imported from backup',
+          fileSize: 0,
+          recordCount: data.incidents.length,
+          status: 'active',
+          importedAt: data.exportDate || new Date().toISOString()
+        })
+
+        await addRecords(data.incidents, fileId)
+        return { success: true, records: data.incidents.length }
+      }
+    }
+
+    // Fallback to localStorage
     if (data.projects) saveData('PROJECTS', data.projects)
     if (data.incidents) saveData('INCIDENTS', data.incidents)
     if (data.engagements) saveData('ENGAGEMENTS', data.engagements)
@@ -87,7 +431,9 @@ export const importAllData = (data) => {
   }
 }
 
-// Download JSON file
+/**
+ * Download JSON file
+ */
 export const downloadJSON = (data, filename) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -100,7 +446,9 @@ export const downloadJSON = (data, filename) => {
   URL.revokeObjectURL(url)
 }
 
-// Read JSON file
+/**
+ * Read JSON file
+ */
 export const readJSONFile = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -115,4 +463,35 @@ export const readJSONFile = (file) => {
     reader.onerror = () => reject(new Error('Error reading file'))
     reader.readAsText(file)
   })
+}
+
+// ============================================
+// SETTINGS (sync access for backward compatibility)
+// ============================================
+
+/**
+ * Get settings (sync for backward compatibility)
+ * Uses localStorage directly for immediate access
+ */
+export const getSettingsSync = () => {
+  return getData('SETTINGS') || {}
+}
+
+/**
+ * Save settings (both localStorage and IndexedDB)
+ */
+export const saveSettings = async (settings) => {
+  // Always save to localStorage for sync access
+  saveData('SETTINGS', settings)
+
+  // Also save to IndexedDB if available
+  try {
+    if (await shouldUseIndexedDB()) {
+      for (const [key, value] of Object.entries(settings)) {
+        await setSetting(key, value)
+      }
+    }
+  } catch (error) {
+    console.error('Error saving settings to IndexedDB:', error)
+  }
 }

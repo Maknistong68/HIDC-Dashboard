@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Check, Upload, GitCompare, CheckCircle, AlertTriangle } from 'lucide-react'
+import React, { useState, useCallback, useRef } from 'react'
+import { Check, Upload, Settings, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import FileUpload from './FileUpload'
-import DuplicateReview from './DuplicateReview'
+import ImportOptions, { getImportOptions } from './ImportOptions'
 import ImportSummary from './ImportSummary'
 import {
   parseExcelFile,
@@ -13,28 +13,36 @@ import {
   NEOM_REQUIRED_COLUMNS,
 } from '../../utils/excelParser'
 
-// Simplified steps - no column mapping needed
+// Simplified 3-step flow: Upload → Options → Complete
 const STEPS = [
-  { id: 1, name: 'Upload File', icon: Upload },
-  { id: 2, name: 'Review', icon: GitCompare },
+  { id: 1, name: 'Upload', icon: Upload },
+  { id: 2, name: 'Options', icon: Settings },
   { id: 3, name: 'Complete', icon: CheckCircle },
 ]
 
 const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true }) => {
-  const { incidents, addIncident, updateIncident, recordImportWarnings, recordImportStats } = useData()
+  const {
+    incidents,
+    addIncidentsWithFile,
+    updateIncident,
+    recordImportWarnings,
+    recordImportStats
+  } = useData()
 
   const [currentStep, setCurrentStep] = useState(1)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // Step 1: File data
+  // Step 1: File data (combined from all files)
   const [fileData, setFileData] = useState(null)
+  const [fileNames, setFileNames] = useState([])
+  const fileSizeRef = useRef(0)
 
   // NEOM format validation
   const [formatValidation, setFormatValidation] = useState(null)
   const [columnMappings, setColumnMappings] = useState({})
 
-  // Step 2: Duplicate check results
-  const [duplicateResults, setDuplicateResults] = useState(null)
+  // Transformed data ready for import
+  const [transformedData, setTransformedData] = useState(null)
 
   // Step 3: Import results
   const [importResults, setImportResults] = useState(null)
@@ -43,159 +51,176 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
   const [importWarnings, setImportWarnings] = useState(null)
 
   // Handle file selection - validates NEOM format and auto-maps columns
-  const handleFileSelect = useCallback(async (file) => {
+  // Now accepts array of files for bulk import
+  const handleFileSelect = useCallback(async (files) => {
     setIsProcessing(true)
     setFormatValidation(null)
-    try {
-      const data = await parseExcelFile(file)
-      setFileData(data)
 
-      // Validate NEOM format
-      const validation = validateNEOMFormat(data.headers)
+    // Ensure files is an array
+    const fileArray = Array.isArray(files) ? files : [files]
+    setFileNames(fileArray.map(f => f.name))
+    fileSizeRef.current = fileArray.reduce((sum, f) => sum + f.size, 0)
+
+    try {
+      // Parse all files
+      const allParsedData = await Promise.all(fileArray.map(file => parseExcelFile(file)))
+
+      // Validate first file for NEOM format (all files should have same format)
+      const validation = validateNEOMFormat(allParsedData[0].headers)
       setFormatValidation(validation)
 
-      if (validation.valid) {
-        // Auto-map NEOM columns by header name
-        const mappings = mapNEOMColumns(data.headers)
-        setColumnMappings(mappings)
-
-        // Process data immediately and go to review step
-        processDataWithMappings(data, mappings)
+      if (!validation.valid) {
+        setIsProcessing(false)
+        return
       }
+
+      // Validate all files have compatible headers
+      for (let i = 1; i < allParsedData.length; i++) {
+        const otherValidation = validateNEOMFormat(allParsedData[i].headers)
+        if (!otherValidation.valid) {
+          setFormatValidation({
+            valid: false,
+            missing: otherValidation.missing,
+            message: `File "${fileArray[i].name}" has invalid format`
+          })
+          setIsProcessing(false)
+          return
+        }
+      }
+
+      // Combine all rows from all files
+      const combinedHeaders = allParsedData[0].headers
+      const combinedRows = allParsedData.flatMap(data => data.rows)
+
+      const combinedData = {
+        headers: combinedHeaders,
+        rows: combinedRows,
+        totalRows: combinedRows.length,
+        fileCount: fileArray.length
+      }
+
+      setFileData(combinedData)
+
+      // Auto-map NEOM columns by header name
+      const mappings = mapNEOMColumns(combinedHeaders)
+      setColumnMappings(mappings)
+
+      // Go to step 2 (Options)
+      setCurrentStep(2)
     } catch (error) {
-      console.error('Error parsing file:', error)
-      alert('Error parsing file: ' + error.message)
+      console.error('Error parsing files:', error)
+      alert('Error parsing files: ' + error.message)
     } finally {
       setIsProcessing(false)
     }
   }, [])
 
-  // Process data with auto-mapped NEOM columns
-  const processDataWithMappings = useCallback((data, mappings) => {
-    try {
-      // Transform rows using NEOM column mappings
-      // Pass existing incidents for contractor name normalization
-      const { incidents: transformedIncidents, warnings } =
-        transformRows(data.rows, data.headers, mappings, null, incidents)
-
-      // Store warnings for later
-      setImportWarnings(warnings)
-
-      // Go directly to duplicate check (step 2)
-      performDuplicateCheck(transformedIncidents)
-    } catch (error) {
-      console.error('Error processing data:', error)
-      alert('Error processing data: ' + error.message)
-    }
-  }, [incidents])
-
-  // Perform duplicate check
-  const performDuplicateCheck = useCallback((incidentsToCheck) => {
-    // Check for duplicates against existing incidents
-    const incidentResults = checkDuplicates(incidentsToCheck, incidents, 'externalId')
-
-    setDuplicateResults({
-      incidents: incidentResults,
-      newRecords: incidentResults.newRecords,
-      updates: incidentResults.updates,
-      skipped: incidentResults.skipped
-    })
-
-    setCurrentStep(2) // Step 2 is now Review (was step 3)
-  }, [incidents])
-
-  // Execute import
-  const executeImport = useCallback(async () => {
-    if (!duplicateResults) return
+  // Execute import with selected options - now uses file tracking
+  const executeImport = useCallback(async (importOptions) => {
+    if (!fileData || !columnMappings) return
 
     setIsProcessing(true)
 
     try {
+      // Transform rows using import options for classification mode
+      const { incidents: transformedIncidents, warnings } =
+        transformRows(fileData.rows, fileData.headers, columnMappings, null, incidents, importOptions)
+
+      // Store warnings for later
+      setImportWarnings(warnings)
+      setTransformedData(transformedIncidents)
+
+      // Check for duplicates with selected handling mode
+      const duplicateResults = checkDuplicates(
+        transformedIncidents,
+        incidents,
+        'externalId',
+        importOptions.duplicateHandling
+      )
+
       let incidentsAdded = 0
       let incidentsUpdated = 0
       let failed = 0
 
-      // Add new incidents
-      for (const incident of duplicateResults.incidents.newRecords) {
+      // Add new incidents with file tracking
+      if (duplicateResults.newRecords.length > 0) {
         try {
-          addIncident({
-            ...incident,
-            id: undefined // Let the system generate ID
-          })
-          incidentsAdded++
-        } catch {
-          failed++
+          const displayFileName = fileNames.length > 1
+            ? `${fileNames.length} files (${fileNames.join(', ')})`
+            : fileNames[0]
+          const result = await addIncidentsWithFile(
+            duplicateResults.newRecords,
+            {
+              fileName: displayFileName,
+              fileSize: fileSizeRef.current
+            },
+            importOptions
+          )
+          incidentsAdded = result.recordCount
+        } catch (error) {
+          console.error('Error adding incidents:', error)
+          failed = duplicateResults.newRecords.length
         }
       }
 
-      // Update existing incidents
-      for (const update of duplicateResults.incidents.updates) {
+      // Update existing incidents (when duplicateHandling is 'update')
+      for (const update of duplicateResults.updates) {
         try {
-          updateIncident(update.existing.id, update.changes)
+          await updateIncident(update.existing.id, update.changes)
           incidentsUpdated++
         } catch {
           failed++
         }
       }
 
+      const displayFileName = fileNames.length > 1
+        ? `${fileNames.length} files`
+        : fileNames[0]
+
       const results = {
         incidentsAdded,
         incidentsUpdated,
         skipped: duplicateResults.skipped.length,
         failed,
+        fileName: displayFileName,
+        fileNames, // Include all file names
+        fileCount: fileNames.length,
       }
 
       setImportResults(results)
 
       // Record warnings and stats in context
-      if (importWarnings) {
-        recordImportWarnings(importWarnings)
+      if (warnings) {
+        recordImportWarnings(warnings)
       }
       recordImportStats({
         added: incidentsAdded,
         updated: incidentsUpdated,
         skipped: duplicateResults.skipped.length,
         failed,
-        warningCount: (importWarnings?.dateIssues?.length || 0) + (importWarnings?.hazardIssues?.length || 0)
+        warningCount: (warnings?.dateIssues?.length || 0) + (warnings?.hazardIssues?.length || 0),
+        fileName: displayFileName,
       })
 
-      setCurrentStep(3) // Step 3 is now Complete (was step 4)
+      setCurrentStep(3) // Go to Complete
     } catch (error) {
       console.error('Error during import:', error)
       alert('Error during import: ' + error.message)
     } finally {
       setIsProcessing(false)
     }
-  }, [duplicateResults, addIncident, updateIncident, importWarnings, recordImportWarnings, recordImportStats])
-
-  // Navigation (3-step flow: Upload → Review → Complete)
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1: return formatValidation?.valid && duplicateResults // File uploaded and validated
-      case 2: return duplicateResults && (duplicateResults.newRecords.length > 0 || duplicateResults.updates.length > 0)
-      default: return true
-    }
-  }
-
-  const handleNext = () => {
-    if (currentStep === 2) {
-      executeImport()
-    } else {
-      setCurrentStep(prev => prev + 1)
-    }
-  }
-
-  const handleBack = () => {
-    setCurrentStep(prev => prev - 1)
-  }
+  }, [fileData, columnMappings, incidents, fileNames, addIncidentsWithFile, updateIncident, recordImportWarnings, recordImportStats])
 
   const resetWizard = () => {
     setCurrentStep(1)
     setFileData(null)
+    setFileNames([])
+    fileSizeRef.current = 0
     setColumnMappings({})
-    setDuplicateResults(null)
+    setTransformedData(null)
     setImportResults(null)
     setImportWarnings(null)
+    setFormatValidation(null)
   }
 
   const handleGoToDashboard = () => {
@@ -206,6 +231,15 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
 
   const handleImportMore = () => {
     resetWizard()
+  }
+
+  const handleCancelFromOptions = () => {
+    // Go back to step 1
+    setCurrentStep(1)
+    setFileData(null)
+    setFileNames([])
+    fileSizeRef.current = 0
+    setFormatValidation(null)
   }
 
   // Container styling based on mode
@@ -260,11 +294,12 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
 
       {/* Step Content */}
       <div className="bg-white rounded-xl border border-surface-200 p-6 min-h-[400px]">
+        {/* Step 1: Upload File */}
         {currentStep === 1 && (
           <>
             <FileUpload onFileSelect={handleFileSelect} isLoading={isProcessing} />
 
-            {/* NEOM Format Validation Result */}
+            {/* NEOM Format Validation Error */}
             {formatValidation && !formatValidation.valid && (
               <div className="mt-6 bg-red-50 border border-red-300 p-4 rounded-lg">
                 <div className="flex items-start gap-3">
@@ -290,28 +325,22 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
                 </div>
               </div>
             )}
-
-            {/* NEOM Format Detected Success */}
-            {formatValidation?.valid && duplicateResults && (
-              <div className="mt-6 bg-green-50 border border-green-300 p-4 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="text-green-600" size={20} />
-                  <div>
-                    <h4 className="text-green-800 font-bold text-sm">NEOM Format Detected</h4>
-                    <p className="text-green-700 text-sm">
-                      {fileData?.totalRows || 0} records ready to import. Click "Next" to review.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 
-        {currentStep === 2 && duplicateResults && (
-          <DuplicateReview results={duplicateResults} />
+        {/* Step 2: Import Options */}
+        {currentStep === 2 && fileData && (
+          <ImportOptions
+            fileName={fileNames.length > 1 ? `${fileNames.length} files` : fileNames[0]}
+            fileNames={fileNames}
+            recordCount={fileData.totalRows}
+            onImport={executeImport}
+            onCancel={handleCancelFromOptions}
+            isProcessing={isProcessing}
+          />
         )}
 
+        {/* Step 3: Complete */}
         {currentStep === 3 && importResults && (
           <ImportSummary
             results={importResults}
@@ -322,39 +351,14 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      {currentStep < 3 && (
-        <div className="flex justify-between mt-6">
+      {/* Navigation Buttons - Only show on Step 1 if there's a cancel handler */}
+      {currentStep === 1 && onCancel && (
+        <div className="flex justify-start mt-6">
           <button
-            onClick={currentStep === 1 && onCancel ? onCancel : handleBack}
-            disabled={currentStep === 1 && !onCancel}
-            className="flex items-center gap-2 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            onClick={onCancel}
+            className="flex items-center gap-2 px-4 py-2 border border-surface-200 text-surface-700 rounded-lg hover:bg-surface-50 font-medium"
           >
-            <ChevronLeft size={20} />
-            {currentStep === 1 && onCancel ? 'Cancel' : 'Back'}
-          </button>
-
-          <button
-            onClick={handleNext}
-            disabled={!canProceed() || isProcessing}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {isProcessing ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Processing...
-              </>
-            ) : currentStep === 2 ? (
-              <>
-                Import Data
-                <Check size={20} />
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight size={20} />
-              </>
-            )}
+            Cancel
           </button>
         </div>
       )}

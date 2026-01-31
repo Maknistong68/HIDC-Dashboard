@@ -1,24 +1,28 @@
-// Default settings for HIDC Dashboard
-// All settings are user-friendly and stored in localStorage
+/**
+ * Settings Defaults - Simplified
+ * These are the hardcoded defaults used throughout the app.
+ * The complex settings page has been removed in favor of simple import options.
+ */
 
-export const SETTINGS_VERSION = '1.0'
+export const SETTINGS_VERSION = '2.0'
 export const SETTINGS_STORAGE_KEY = 'hse_settings'
 
+// Simplified defaults - no longer user-configurable
 export const defaultSettings = {
   version: SETTINGS_VERSION,
 
-  // 1. Clean Up My Data
+  // Text cleanup (always enabled)
   cleanup: {
     text: {
       removeExtraSpaces: true,
-      fixLineBreaks: false,
-      capitalization: 'none', // none | title | upper | lower | sentence
-      removeUnwantedChars: ['emojis'], // emojis | symbols | html | nonPrintable
+      fixLineBreaks: true,
+      capitalization: 'none',
+      removeUnwantedChars: ['emojis', 'html', 'nonPrintable'],
       fixQuotationMarks: true,
     },
     dates: {
-      inputFormat: 'DD/MM/YYYY', // DD/MM/YYYY | MM/DD/YYYY | YYYY-MM-DD | DD-MMM-YYYY
-      badDateAction: 'flag', // reject | useToday | flag
+      inputFormat: 'DD/MM/YYYY',
+      badDateAction: 'flag',
       allowFutureDates: false,
       validDateRange: {
         enabled: true,
@@ -27,110 +31,41 @@ export const defaultSettings = {
       },
     },
     names: {
-      contractor: 'title', // none | trim | title | upper | fuzzy
+      contractor: 'title',
       site: 'title',
-      reporter: 'title', // also supports 'flipName' for "Last, First" -> "First Last"
-    },
-    description: {
-      minLength: 20,
-      maxLength: 2000,
+      reporter: 'title',
     },
   },
 
-  // 2. Find Duplicates
-  duplicates: {
-    enabled: true,
-    strictness: 'similar', // exact | similar | smart
-    sensitivity: 0.85, // 0.5 to 1.0 (lower = catch more)
-    compareAgainst: 'all', // thisImport | all | last30Days
-    mustMatch: ['date', 'contractor', 'description'],
-    shouldBeSimilar: ['site', 'reporter'],
-    dateFlexibility: 1, // days (0-7)
-    whenFound: {
-      action: 'flag', // skip | importAnyway | combine | flag
-      keepVersion: 'latest', // first | latest | bestQuality
-      keepLog: true,
-    },
-  },
-
-  // 3. Auto-Categorize Hazards
+  // Categorization (hardcoded 70% confidence)
   categorization: {
     enabled: true,
-    confidenceLevel: 0.7, // 0.5 to 1.0
-    whenUnsure: 'flag', // bestGuess | leaveBlank | flag | useOther
-    multipleMatches: 'highest', // highest | first | mostSpecific | flag
+    confidenceLevel: 0.7,
     rules: {
       prioritizeMajorHazards: true,
-      customOrder: [], // empty = use default order
       useSmartCorrections: true,
       useExclusionRules: true,
     },
-    customKeywords: {}, // { categoryName: ['keyword1', 'keyword2'] }
-    customExclusions: {}, // { categoryName: ['exclude1', 'exclude2'] }
   },
 
-  // 4. Validate My Data
-  validation: {
-    requiredFields: ['date', 'type', 'description', 'contractor'],
-    whenMissing: 'flag', // reject | useDefault | flag
-    defaultValues: {
-      status: 'Open',
-      type: 'Unsafe Condition',
-      site: '',
-      reporter: '',
-    },
-    fieldRules: {
-      incidentTypes: 'flexible', // strict | flexible | any
-      statusValues: 'flexible',
-      contractorNames: 'autoAdd', // any | mustExist | autoAdd
-      siteNames: 'autoAdd',
-    },
-    qualityScoring: {
-      enabled: true,
-      weights: {
-        description: 40, // percentage
-        categorization: 35,
-        completeness: 25,
-      },
-      minQualityToImport: 0, // 0-100, 0 means accept all
+  // Duplicates (handled via import options)
+  duplicates: {
+    enabled: true,
+    sensitivity: 0.85,
+    mustMatch: ['date', 'contractor', 'description'],
+    shouldBeSimilar: ['site', 'reporter'],
+    dateFlexibility: 1,
+    whenFound: {
+      action: 'skip',
+      keepVersion: 'latest',
     },
   },
 
-  // 5. Organize My Data
-  organize: {
-    sorting: {
-      primaryField: 'date',
-      primaryOrder: 'desc', // asc | desc
-      secondaryField: 'type',
-      secondaryOrder: 'asc',
-      emptyValuesPosition: 'last', // first | last
-    },
-    grouping: {
-      enabled: false,
-      groupBy: 'none', // none | type | contractor | site | month | status | hazardCategory
-      orderBy: 'countDesc', // alpha | countDesc | countAsc | custom
-      startCollapsed: false,
-    },
-    defaultFilters: {
-      dateRange: 'thisMonth', // allTime | thisMonth | last30Days | thisQuarter | thisYear | ytd
-      contractor: 'all',
-      site: 'all',
-      status: 'all', // all | open | closed
-      incidentTypes: ['all'], // array of types or ['all']
-      rememberFilters: true,
-    },
-    hierarchy: {
-      linkSitesToContractors: true,
-      allowSharedSites: false,
-    },
-  },
-
-  // 6. Transform My Data
+  // Type/Status mappings (always enabled)
   transform: {
     typeMapping: {
       enabled: true,
       mappings: {
-        // Common variations mapped to standard types
         'Near Hit': 'Near Miss',
         'Near-Miss': 'Near Miss',
         'Unsafe Action': 'Unsafe Act',
@@ -145,8 +80,6 @@ export const defaultSettings = {
         'Lost Time': 'LTI',
         'Lost Time Injury': 'LTI',
       },
-      whenUnknown: 'flag', // reject | useDefault | flag
-      defaultType: 'Unsafe Condition',
     },
     statusMapping: {
       enabled: true,
@@ -158,55 +91,6 @@ export const defaultSettings = {
         'Complete': 'Closed',
         'Done': 'Closed',
       },
-      whenUnknown: 'flag',
-      defaultStatus: 'Open',
-    },
-    autoCalculate: {
-      age: true, // days since creation
-      month: true, // extract month
-      quarter: true, // extract quarter (Q1-Q4)
-      generateId: true,
-      idFormat: 'OBS-{YYYY}-{####}', // pattern for auto-generated IDs
-    },
-  },
-
-  // 7. Master Lists
-  masterLists: {
-    contractors: {
-      enabled: true,
-      autoAddNew: true,
-      requireApproval: false,
-      matchSimilarNames: true,
-      similarityThreshold: 0.8,
-      mergeDuplicates: false,
-      list: [], // populated from data
-    },
-    sites: {
-      enabled: true,
-      linkToContractors: true,
-      autoAddNew: true,
-      autoFillContractor: true,
-      list: [], // populated from data
-    },
-    categories: {
-      useStandard: true,
-      allowCustom: false,
-      customLimit: 10,
-      nicknames: {}, // { 'nickname': 'Standard Category Name' }
-    },
-  },
-
-  // 8. Import Process
-  importProcess: {
-    stepOrder: ['clean', 'validate', 'dedupe', 'categorize', 'transform', 'score'],
-    stopOnErrors: false,
-    errorLimit: 10, // percentage
-    batchSize: 500,
-    reviewQueue: {
-      enabled: true,
-      autoImportGood: true,
-      expiryDays: 7,
-      notifyMe: true,
     },
   },
 }
@@ -237,53 +121,29 @@ export const setSettingValue = (settings, path, value) => {
   return newSettings
 }
 
-// Merge saved settings with defaults (handles new settings added in updates)
+// Merge saved settings with defaults (for backwards compatibility)
+// Performs deep merge to preserve user customizations while ensuring new defaults are applied
 export const mergeWithDefaults = (savedSettings) => {
   if (!savedSettings) return { ...defaultSettings }
 
-  const merge = (defaults, saved) => {
-    const result = { ...defaults }
-    for (const key in saved) {
-      if (saved[key] !== null && typeof saved[key] === 'object' && !Array.isArray(saved[key])) {
-        result[key] = merge(defaults[key] || {}, saved[key])
-      } else {
-        result[key] = saved[key]
-      }
+  // Deep merge saved settings with defaults
+  const merged = { ...defaultSettings }
+
+  for (const key of Object.keys(savedSettings)) {
+    if (savedSettings[key] !== null && typeof savedSettings[key] === 'object' && !Array.isArray(savedSettings[key])) {
+      // Deep merge nested objects
+      merged[key] = { ...defaultSettings[key], ...savedSettings[key] }
+    } else {
+      // Shallow copy primitive values and arrays
+      merged[key] = savedSettings[key]
     }
-    return result
   }
 
-  return merge(defaultSettings, savedSettings)
+  return merged
 }
 
 // Validate settings structure
 export const validateSettings = (settings) => {
-  const errors = []
-
-  // Check version
-  if (!settings.version) {
-    errors.push('Missing settings version')
-  }
-
-  // Check required sections
-  const requiredSections = ['cleanup', 'duplicates', 'categorization', 'validation', 'organize', 'transform', 'masterLists', 'importProcess']
-  for (const section of requiredSections) {
-    if (!settings[section]) {
-      errors.push(`Missing section: ${section}`)
-    }
-  }
-
-  // Validate ranges
-  if (settings.duplicates?.sensitivity < 0.5 || settings.duplicates?.sensitivity > 1) {
-    errors.push('Duplicate sensitivity must be between 0.5 and 1.0')
-  }
-
-  if (settings.categorization?.confidenceLevel < 0.5 || settings.categorization?.confidenceLevel > 1) {
-    errors.push('Categorization confidence must be between 0.5 and 1.0')
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  }
+  // Always valid since we use hardcoded defaults
+  return { isValid: true, errors: [] }
 }

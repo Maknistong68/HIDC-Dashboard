@@ -12,6 +12,20 @@
  */
 
 // ============================================================================
+// SECTION A: CONFIDENCE CONSTANTS
+// ============================================================================
+
+// Default confidence level for hazard classification (0-1 scale)
+// Used when no specific context indicates higher or lower confidence
+export const DEFAULT_CONFIDENCE = 0.7
+
+// Higher confidence for clear, unambiguous patterns
+export const HIGH_CONFIDENCE = 0.85
+
+// Lower confidence for context-dependent or ambiguous patterns
+export const LOW_CONFIDENCE = 0.5
+
+// ============================================================================
 // SECTION A0: NOISE WORDS - Words that don't contribute to hazard classification
 // Filter these out to focus on the MAIN hazard-indicating keywords
 // ============================================================================
@@ -472,8 +486,8 @@ export const ACTOR_HAZARD_CONFIDENCE = {
   'crane operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.85 },
   'loader operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
   'dump truck driver': { hazard: 'Mobile Plant & Equipment', confidence: 0.9 },
-  'operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.7 },
-  'driver': { hazard: 'Driving', confidence: 0.7 },
+  'operator': { hazard: 'Mobile Plant & Equipment', confidence: DEFAULT_CONFIDENCE },
+  'driver': { hazard: 'Driving', confidence: DEFAULT_CONFIDENCE },
 
   // Confined space roles
   'confined space entrant': { hazard: 'Confined Spaces', confidence: 0.95 },
@@ -706,7 +720,7 @@ export const OBJECT_HAZARD_CONFIDENCE = {
 
   // Confined space → Confined Spaces
   'manhole': { hazard: 'Confined Spaces', confidence: 0.9 },
-  'tank': { hazard: 'Confined Spaces', confidence: 0.7 },
+  'tank': { hazard: 'Confined Spaces', confidence: DEFAULT_CONFIDENCE },
   'gas detector': { hazard: 'Confined Spaces', confidence: 0.9 },
 
   // Sharp objects → Physical Hazard
@@ -855,7 +869,7 @@ export const extractObject = (text) => {
     const regex = new RegExp(`\\b${escapedObj}\\b`, 'i')
     if (regex.test(lowerText)) {
       // Get hazard confidence from mapping
-      const hazardInfo = OBJECT_HAZARD_CONFIDENCE[obj.toLowerCase()] || { hazard: null, confidence: 0.7 }
+      const hazardInfo = OBJECT_HAZARD_CONFIDENCE[obj.toLowerCase()] || { hazard: null, confidence: DEFAULT_CONFIDENCE }
       return {
         object: obj,
         type,
@@ -946,11 +960,11 @@ export const AMBIGUOUS_WORDS = {
   'fall': {
     contexts: [
       { pattern: /fall\s+from|fell\s+from|fall\s+off|fell\s+off|falling\s+from/, hazard: 'Working at Height', confidence: 0.95 },
-      { pattern: /fall\s+into|fell\s+into/, hazard: 'Confined Spaces', confidence: 0.7 },
+      { pattern: /fall\s+into|fell\s+into/, hazard: 'Confined Spaces', confidence: DEFAULT_CONFIDENCE },
       { pattern: /slip.*fall|trip.*fall|fall.*slip|fall.*trip/, hazard: 'Slip and Trip', confidence: 0.85 },
       { pattern: /same\s+level|ground\s+level|floor/, hazard: 'Slip and Trip', confidence: 0.8 },
     ],
-    default: { hazard: 'Working at Height', confidence: 0.7 }
+    default: { hazard: 'Working at Height', confidence: DEFAULT_CONFIDENCE }
   },
 
   // "Fire" - could be actual fire hazard or fire-fighting equipment
@@ -961,7 +975,7 @@ export const AMBIGUOUS_WORDS = {
       { pattern: /on\s+fire|caught\s+fire|fire\s+broke|fire\s+started/, hazard: 'Fire', confidence: 0.95 },
       { pattern: /hot\s+work|welding|cutting|grinding/, hazard: 'Hot Work', confidence: 0.85 },
     ],
-    default: { hazard: 'Fire', confidence: 0.7 }
+    default: { hazard: 'Fire', confidence: DEFAULT_CONFIDENCE }
   },
 
   // "Water" - could be Working on/Near Water or Worker Welfare
@@ -1017,17 +1031,17 @@ export const AMBIGUOUS_WORDS = {
       { pattern: /inspection\s+pit|service\s+pit/, hazard: 'Confined Spaces', confidence: 0.8 },
       { pattern: /fall.*pit|pit.*fall/, hazard: 'Breaking Ground & Excavation', confidence: 0.85 },
     ],
-    default: { hazard: 'Breaking Ground & Excavation', confidence: 0.7 }
+    default: { hazard: 'Breaking Ground & Excavation', confidence: DEFAULT_CONFIDENCE }
   },
 
   // "Tank" - could be Confined Space or storage
   'tank': {
     contexts: [
       { pattern: /confined|entry|enter|entrant|inside\s+tank/, hazard: 'Confined Spaces', confidence: 0.95 },
-      { pattern: /water\s+tank|storage\s+tank|fuel\s+tank/, hazard: 'Work Environment', confidence: 0.6 },
+      { pattern: /water\s+tank|storage\s+tank|fuel\s+tank/, hazard: 'General Site Issues', confidence: 0.6 },
       { pattern: /cleaning.*tank|tank.*cleaning/, hazard: 'Confined Spaces', confidence: 0.9 },
     ],
-    default: { hazard: 'Confined Spaces', confidence: 0.7 }
+    default: { hazard: 'Confined Spaces', confidence: DEFAULT_CONFIDENCE }
   },
 
   // "Heat" - could be Working in Heat or Hot Work
@@ -1037,7 +1051,7 @@ export const AMBIGUOUS_WORDS = {
       { pattern: /heat\s+stress|heat\s+stroke|working\s+in\s+heat|hot\s+weather/, hazard: 'Working in Heat', confidence: 0.95 },
       { pattern: /heat\s+exposure|high\s+temperature|extreme\s+heat/, hazard: 'Working in Heat', confidence: 0.9 },
     ],
-    default: { hazard: 'Working in Heat', confidence: 0.7 }
+    default: { hazard: 'Working in Heat', confidence: DEFAULT_CONFIDENCE }
   },
 
   // "Crane" - could be Lifting or Mobile Plant
@@ -1228,12 +1242,12 @@ export const parseSentence = (text) => {
     result.object = objectInfo.object
     result.objectType = objectInfo.type
     result.objectSuggestedHazard = objectInfo.suggestedHazard
-    result.objectHazardConfidence = objectInfo.hazardConfidence || 0.7
+    result.objectHazardConfidence = objectInfo.hazardConfidence || DEFAULT_CONFIDENCE
 
     result.keywords.push({
       text: objectInfo.object,
       role: 'OBJECT',
-      weight: objectInfo.hazardConfidence || 0.7,
+      weight: objectInfo.hazardConfidence || DEFAULT_CONFIDENCE,
       suggestedHazard: objectInfo.suggestedHazard
     })
   }
@@ -1305,7 +1319,7 @@ export const parseSentence = (text) => {
               break
             case 'PRIMARY':
             case 'SECONDARY':
-              result.keywords.push({ text: value, role: role, weight: role === 'PRIMARY' ? 0.7 : 0.5 })
+              result.keywords.push({ text: value, role: role, weight: role === 'PRIMARY' ? DEFAULT_CONFIDENCE : LOW_CONFIDENCE })
               break
             case 'PURPOSE':
               result.keywords.push({ text: value, role: 'PURPOSE', weight: GRAMMATICAL_WEIGHTS.INDIRECT_OBJECT })
@@ -1543,7 +1557,7 @@ export const analyzeForRootCause = (text) => {
   // Extract consequence
   if (parsed.consequence) {
     analysis.consequence = parsed.consequence
-    analysis.consequenceConfidence = parsed.confidence * 0.7
+    analysis.consequenceConfidence = parsed.confidence * DEFAULT_CONFIDENCE
   }
 
   return analysis

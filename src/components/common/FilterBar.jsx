@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react'
-import useIsMobile from '../../hooks/useIsMobile'
+import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
 
 /**
  * FilterBar - Consistent filter controls with animations
@@ -13,7 +13,7 @@ const FilterBar = ({
   onClearFilters,
   className = '',
 }) => {
-  const isMobile = useIsMobile(640)
+  const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const hasActiveFilters = Object.values(activeFilters).some(

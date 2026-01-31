@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, Sparkles, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, Sparkles, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
+import { useData } from '../../context/DataContext'
 import { parseSentence, filterNoiseWords } from '../../utils/sentenceParser'
+import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import ExportConfirmDialog from './ExportConfirmDialog'
 
@@ -154,6 +156,12 @@ const DrillDownModal = ({
                 breadcrumb={breadcrumb}
                 title={title}
                 isMobile={isMobile}
+                copyContext={{
+                  source: 'Safety Outlook',
+                  title: title,
+                  breadcrumb: breadcrumb,
+                  count: data.length
+                }}
               />
             )}
           </div>
@@ -383,7 +391,7 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
 /**
  * Records Table View
  */
-const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
+const RecordsTable = ({ data, onViewDetails, isMobile = false, copyContext = {} }) => {
   const [copied, setCopied] = React.useState(false)
 
   if (!data || data.length === 0) {
@@ -394,12 +402,69 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
     )
   }
 
+  /**
+   * Copy all observations with CONTEXT HEADER for classification tuning
+   * Format includes:
+   * - Source: Safety Outlook
+   * - Type: Other/Site Issues/Positives
+   * - Hazard Category: Mobile Plant & Equipment
+   * - Count: Number of observations
+   * - Numbered list of descriptions
+   */
   const handleCopyAll = async () => {
-    const lines = data.map(record =>
-      `Description: ${record.description || 'No description'}\nCategory: ${record.location || 'Unclassified'}`
-    ).join('\n\n---\n\n')
+    // Build context header
+    const contextLines = []
+    contextLines.push('=== SAFETY OUTLOOK DRILL-DOWN COPY ===')
+
+    // Extract type and category from title/breadcrumb
+    const title = copyContext.title || 'Observations'
+    const breadcrumb = copyContext.breadcrumb || []
+
+    // Determine observation type (Other, Site Issues, Positives)
+    let observationType = 'Unknown'
+    if (title.includes('Other')) {
+      observationType = 'Other (Misclassified/Uncategorized)'
+    } else if (title.includes('Site Issues') || title.includes('Negative')) {
+      observationType = 'Site Issues (Negative Observations)'
+    } else if (title.includes('Positive')) {
+      observationType = 'Positives (Good Observations)'
+    } else {
+      observationType = title
+    }
+
+    // Extract hazard category from breadcrumb or title
+    let hazardCategory = 'Unknown'
+    const categoryMatch = title.match(/from\s+(.+)$/i)
+    if (categoryMatch) {
+      hazardCategory = categoryMatch[1].trim()
+    } else if (breadcrumb.length > 0) {
+      // Look for category in breadcrumb (usually the first item after "Safety Outlook")
+      for (const crumb of breadcrumb) {
+        if (crumb && !crumb.includes('Safety') && !crumb.includes('Outlook')) {
+          hazardCategory = crumb
+          break
+        }
+      }
+    }
+
+    contextLines.push(`Source: Safety Outlook`)
+    contextLines.push(`Type: ${observationType}`)
+    contextLines.push(`Hazard Category: ${hazardCategory}`)
+    contextLines.push(`Count: ${data.length} observations`)
+    contextLines.push(`Breadcrumb: ${breadcrumb.length > 0 ? breadcrumb.join(' > ') : 'N/A'}`)
+    contextLines.push('')
+    contextLines.push('=== OBSERVATIONS ===')
+    contextLines.push('')
+
+    // Add numbered observations
+    const observations = data.map((record, idx) => {
+      return `${idx + 1}. "${record.description || 'No description'}"`
+    })
+
+    const fullText = contextLines.join('\n') + observations.join('\n')
+
     try {
-      await navigator.clipboard.writeText(lines)
+      await navigator.clipboard.writeText(fullText)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
@@ -407,16 +472,7 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'closed':
-        return 'bg-green-100 text-green-700 border-green-200'
-      case 'in-progress':
-        return 'bg-orange-100 text-orange-700 border-orange-200'
-      default:
-        return 'bg-red-100 text-red-700 border-red-200'
-    }
-  }
+  // Status color imported from shared utility
 
   return (
     <div className={`space-y-2 ${isMobile ? 'space-y-3' : ''}`}>
@@ -501,6 +557,17 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false }) => {
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
+  const { updateIncident } = useData()
+
+  // Flag for miscategorization
+  const isFlagged = record._flaggedMiscategorized
+
+  const handleToggleFlag = () => {
+    updateIncident(record.id, {
+      _flaggedMiscategorized: !isFlagged,
+      _flaggedMiscategorizedAt: !isFlagged ? new Date().toISOString() : null
+    })
+  }
 
   // Resizable functionality
   const {
@@ -831,7 +898,26 @@ const RecordDetailsModal = ({ record, onClose }) => {
               <DetailField icon={Calendar} label="Date" value={formatDate(record.date)} />
               <DetailField icon={Building2} label="Contractor" value={record.contractor} />
               <DetailField icon={MapPin} label="Site" value={record.site} />
-              <DetailField icon={AlertCircle} label="Hazard Category" value={record.location} />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-surface-500 uppercase tracking-wide">
+                  <AlertCircle size={12} />
+                  Hazard Category
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-surface-900">{record.location || '-'}</span>
+                  <button
+                    onClick={handleToggleFlag}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      isFlagged
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                    }`}
+                  >
+                    <Flag size={12} />
+                    {isFlagged ? 'Flagged' : 'Flag'}
+                  </button>
+                </div>
+              </div>
               <DetailField icon={User} label="Reported By" value={record.reportedBy} />
 
               {/* Status with icon */}

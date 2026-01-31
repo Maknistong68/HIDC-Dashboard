@@ -9,12 +9,12 @@ import { parseISO, getDay } from 'date-fns'
 const ObservationsByDayOfWeek = ({ incidents = [] }) => {
   const dayData = useMemo(() => {
     const days = [
-      { key: 0, name: 'Sun', isWeekend: false },
+      { key: 0, name: 'Sun', isWeekend: true },
       { key: 1, name: 'Mon', isWeekend: false },
       { key: 2, name: 'Tue', isWeekend: false },
       { key: 3, name: 'Wed', isWeekend: false },
       { key: 4, name: 'Thu', isWeekend: false },
-      { key: 5, name: 'Fri', isWeekend: true },
+      { key: 5, name: 'Fri', isWeekend: false },
       { key: 6, name: 'Sat', isWeekend: true },
     ]
 
@@ -103,4 +103,4 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
   )
 }
 
-export default ObservationsByDayOfWeek
+export default React.memo(ObservationsByDayOfWeek)

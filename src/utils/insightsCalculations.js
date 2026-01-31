@@ -3,9 +3,16 @@
  * Provides insights, recommendations, and trend analysis
  */
 
-import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, differenceInDays } from 'date-fns'
+import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ROOT_CAUSES } from './constants'
+import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES } from './constants'
+import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
+import { aggregateRootCausesForHazard, getObservationTypeStats } from './rootCauseEngine'
+
+// Re-export the new keyword-based root cause detection as extractDeviationsForHazard
+// for backward compatibility with existing components
+export { aggregateRootCausesForHazard as extractDeviationsForHazard }
+export { getObservationTypeStats }
 
 // ============================================================================
 // RECOMMENDATIONS ENGINE (PRIMARY)
@@ -487,7 +494,8 @@ export const getTrendDirection = (dataPoints, field = 'value', periods = 3) => {
   const sumXY = values.reduce((sum, val, i) => sum + i * val, 0)
   const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
 
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
   const avgValue = sumY / n
   const percentChange = avgValue !== 0 ? (slope / avgValue) * 100 : 0
 
@@ -812,8 +820,9 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
     sumX2 += i * i
   }
 
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
-  const intercept = (sumY - slope * sumX) / n
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
+  const intercept = n > 0 ? (sumY - slope * sumX) / n : 0
 
   // Calculate R-squared
   const meanY = sumY / n
@@ -1786,6 +1795,741 @@ export const getContractorBenchmark = (incidents) => {
     hasData: true
   }
 }
+
+// ============================================================================
+// SAFETY OUTLOOK HELPERS (Phase 7)
+// ============================================================================
+
+/**
+ * Convert score to 5-level status for Safety Outlook gauge
+ */
+export const getOutlookLevel = (score) => {
+  if (score >= 81) return { level: 'excellent', label: 'Excellent', color: 'primary' }
+  if (score >= 61) return { level: 'good', label: 'Good', color: 'success' }
+  if (score >= 41) return { level: 'stable', label: 'Stable', color: 'caution' }
+  if (score >= 21) return { level: 'caution', label: 'Caution', color: 'warning' }
+  return { level: 'critical', label: 'Critical', color: 'danger' }
+}
+
+/**
+ * Categorize risk factors into Leading/Trailing/Quality indicators
+ */
+export const categorizeRiskFactors = (factors) => {
+  return {
+    leading: factors.filter(f => ['Near-Miss Reporting'].includes(f.name)),
+    trailing: factors.filter(f => ['Action Closure'].includes(f.name)),
+    quality: factors.filter(f => ['Shift Coverage', 'Contractor Quality'].includes(f.name))
+  }
+}
+
+/**
+ * Get top signals from hazard trending + anomalies
+ * Returns combined signals for TrendingSignalCards
+ */
+export const getTopSignals = (incidents, limit = 6) => {
+  const trending = getHazardTrending(incidents)
+  const anomalies = getAnomalyAnalysis(incidents)
+
+  // Get signals from trending hazards
+  const trendingSignals = trending
+    .filter(h => h.trend !== 'stable')
+    .slice(0, limit)
+    .map(h => ({
+      id: `trend-${h.hazard}`,
+      name: h.hazard,
+      type: 'trending',
+      direction: h.trend,
+      changePercent: h.changePercent,
+      previousCount: h.previousCount,
+      currentCount: h.currentCount,
+      isMajor: h.isMajor,
+      severity: h.isMajor ? 'major' : 'standard',
+      isAnomaly: false
+    }))
+
+  // Add anomaly flags
+  const anomalyDates = new Set(anomalies.anomalies.map(a => a.date))
+
+  // Check if any trending hazards have anomalies
+  trendingSignals.forEach(signal => {
+    const relatedAnomalies = anomalies.anomalies.filter(a =>
+      a.incidents?.some(i => i.location === signal.name)
+    )
+    if (relatedAnomalies.length > 0) {
+      signal.isAnomaly = true
+      signal.anomalyCount = relatedAnomalies.length
+    }
+  })
+
+  return trendingSignals.slice(0, limit)
+}
+
+/**
+ * Calculate contractor trend (current vs previous period)
+ * Enhanced version of getContractorBenchmark with trend data
+ */
+export const getContractorTrend = (incidents, periodDays = 30) => {
+  const benchmark = getContractorBenchmark(incidents)
+
+  if (!benchmark.hasData) return benchmark
+
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return benchmark
+
+  const endDate = parseISO(dates[dates.length - 1])
+  const midDate = subMonths(endDate, 1)
+  const startDate = subMonths(endDate, 2)
+
+  // Split into previous and current periods
+  const previousPeriod = incidents.filter(i => {
+    if (!i.date) return false
+    const d = parseISO(i.date.substring(0, 10))
+    return d >= startDate && d < midDate
+  })
+
+  const currentPeriod = incidents.filter(i => {
+    if (!i.date) return false
+    const d = parseISO(i.date.substring(0, 10))
+    return d >= midDate && d <= endDate
+  })
+
+  // Calculate scores for each period
+  const previousBenchmark = getContractorBenchmark(previousPeriod)
+
+  // Add trend data to each contractor
+  const rankingsWithTrend = benchmark.rankings.map(contractor => {
+    const prevContractor = previousBenchmark.rankings?.find(c => c.name === contractor.name)
+    const prevScore = prevContractor?.compositeScore || contractor.compositeScore
+    const scoreDelta = contractor.compositeScore - prevScore
+
+    let trend = 'stable'
+    if (scoreDelta > 5) trend = 'improving'
+    else if (scoreDelta < -5) trend = 'declining'
+
+    // Determine action required based on score and trend
+    let actionRequired = 'none'
+    let urgency = 'low'
+
+    if (contractor.compositeScore < 30) {
+      actionRequired = 'Immediate intervention required'
+      urgency = 'critical'
+    } else if (contractor.compositeScore < 50) {
+      actionRequired = 'Performance review needed'
+      urgency = 'high'
+    } else if (trend === 'declining' && scoreDelta < -10) {
+      actionRequired = 'Investigate declining performance'
+      urgency = 'medium'
+    } else if (contractor.compositeScore < 60 && contractor.nearMissRate < 2) {
+      actionRequired = 'Improve near-miss reporting'
+      urgency = 'low'
+    }
+
+    return {
+      ...contractor,
+      prevScore,
+      scoreDelta,
+      trend,
+      actionRequired,
+      urgency
+    }
+  })
+
+  return {
+    ...benchmark,
+    rankings: rankingsWithTrend
+  }
+}
+
+/**
+ * Get overall trend direction for the outlook gauge
+ */
+export const getOverallTrend = (incidents) => {
+  const composite = getCompositeTrends(incidents)
+
+  if (!composite.incidents) return { direction: 'stable', confidence: 'low' }
+
+  // Weigh the different trends
+  const incidentTrend = composite.incidents.direction
+  const nearMissTrend = composite.nearMiss?.direction
+
+  // If incidents are improving (worsening means more hazards = bad)
+  // and near-miss is improving (worsening means less reporting = bad)
+  // then overall is improving
+
+  let score = 0
+  if (incidentTrend === 'improving') score += 1
+  else if (incidentTrend === 'worsening') score -= 1
+
+  if (nearMissTrend === 'improving') score += 1
+  else if (nearMissTrend === 'worsening') score -= 1
+
+  let direction = 'stable'
+  if (score >= 1) direction = 'improving'
+  else if (score <= -1) direction = 'declining'
+
+  return {
+    direction,
+    confidence: composite.incidents.confidence,
+    details: {
+      incidents: incidentTrend,
+      nearMiss: nearMissTrend
+    }
+  }
+}
+
+// ============================================================================
+// SAFETY OUTLOOK - HAZARD LIST VIEW (Phase 8)
+// ============================================================================
+
+/**
+ * Get trend level from percentage change
+ * Returns 5-level trend classification for UI display
+ * isNew flag indicates no baseline data exists for comparison
+ */
+export const getTrendLevel = (changePercent, isNew = false) => {
+  // When no baseline data exists, mark as "New" (neutral status)
+  if (isNew) {
+    return { level: 'new', icon: '★', label: 'New', color: 'info', sortOrder: 2.5 }
+  }
+
+  if (changePercent > 30) {
+    return { level: 'significant-rise', icon: '▲▲', label: 'Significant Rise', color: 'critical', sortOrder: 0 }
+  }
+  if (changePercent > 10) {
+    return { level: 'rising', icon: '▲', label: 'Rising', color: 'warning', sortOrder: 1 }
+  }
+  if (changePercent > -10) {
+    return { level: 'stable', icon: '→', label: 'Stable', color: 'neutral', sortOrder: 2 }
+  }
+  if (changePercent > -30) {
+    return { level: 'declining', icon: '▼', label: 'Declining', color: 'success-light', sortOrder: 3 }
+  }
+  return { level: 'significant-decline', icon: '▼▼', label: 'Significant Decline', color: 'success', sortOrder: 4 }
+}
+
+/**
+ * Enhanced hazard trending with configurable period
+ * Split by period: compare current vs previous
+ * Return hazards sorted by trend level
+ */
+export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return []
+
+  const endDate = parseISO(dates[dates.length - 1])
+  const dataStartDate = parseISO(dates[0])
+
+  let midDate, startDate
+
+  // Handle null/undefined period (All time) - use full data range, split in half
+  if (periodMonths === null || periodMonths === undefined) {
+    // For "All time", use full data range and split at midpoint
+    startDate = dataStartDate
+    const totalDays = differenceInDays(endDate, dataStartDate)
+    midDate = subDays(endDate, Math.floor(totalDays / 2))
+  } else {
+    // Calculate half period for comparison (current half vs previous half)
+    const halfPeriodMonths = periodMonths / 2
+
+    if (halfPeriodMonths < 1) {
+      const halfPeriodDays = Math.round(halfPeriodMonths * 30)
+      midDate = subDays(endDate, halfPeriodDays)
+      startDate = subDays(endDate, halfPeriodDays * 2)
+    } else {
+      midDate = subMonths(endDate, halfPeriodMonths)
+      startDate = subMonths(endDate, periodMonths)
+    }
+
+    // If calculated start is before actual data, use data start date
+    if (startDate < dataStartDate) {
+      startDate = dataStartDate
+    }
+  }
+
+  // Split into previous period vs current period
+  const previousPeriod = incidents.filter(i => {
+    if (!i.date) return false
+    try {
+      const d = parseISO(i.date.substring(0, 10))
+      if (isNaN(d.getTime())) return false
+      return d >= startDate && d < midDate
+    } catch {
+      return false
+    }
+  })
+
+  const currentPeriod = incidents.filter(i => {
+    if (!i.date) return false
+    try {
+      const d = parseISO(i.date.substring(0, 10))
+      if (isNaN(d.getTime())) return false
+      return d >= midDate && d <= endDate
+    } catch {
+      return false
+    }
+  })
+
+  // Count by hazard for each period
+  const previousCounts = {}
+  previousPeriod.forEach(i => {
+    const h = i.location || 'Unspecified'
+    previousCounts[h] = (previousCounts[h] || 0) + 1
+  })
+
+  const currentCounts = {}
+  currentPeriod.forEach(i => {
+    const h = i.location || 'Unspecified'
+    currentCounts[h] = (currentCounts[h] || 0) + 1
+  })
+
+  // ALWAYS include ALL hazard categories from the master list
+  // Plus any additional hazards found in the data that aren't in the standard list
+  const dataHazards = new Set([...Object.keys(previousCounts), ...Object.keys(currentCounts)])
+  const allHazards = new Set([...ALL_HAZARDS, ...dataHazards])
+
+  const trending = [...allHazards].map(hazard => {
+    const prev = previousCounts[hazard] || 0
+    const curr = currentCounts[hazard] || 0
+    const total = prev + curr
+
+    // Determine if this is a "new" hazard (no baseline data to compare)
+    const isNew = prev === 0 && curr > 0
+
+    let changePercent = 0
+    if (prev > 0) {
+      changePercent = ((curr - prev) / prev) * 100
+    }
+    // If isNew, changePercent stays 0 (will be displayed as "New" not +100%)
+
+    // For hazards with no data at all, use a special "no-data" level
+    const hasNoData = total === 0
+    const trendLevel = hasNoData
+      ? { level: 'no-data', icon: '○', label: 'No Data', color: 'muted', sortOrder: 5 }
+      : getTrendLevel(changePercent, isNew)
+
+    return {
+      name: hazard,
+      previousCount: prev,
+      currentCount: curr,
+      totalCount: total,
+      changePercent,
+      isNew,
+      hasNoData,
+      trendLevel,
+      isMajor: MAJOR_HAZARDS.includes(hazard)
+    }
+  })
+
+  // Sort: hazards with data first (by trend level), then no-data hazards alphabetically
+  return trending
+    .filter(h => h.name !== 'Unspecified')
+    .sort((a, b) => {
+      // Hazards with data come before hazards without data
+      if (a.hasNoData !== b.hasNoData) {
+        return a.hasNoData ? 1 : -1
+      }
+      // For hazards with data, sort by trend level
+      if (!a.hasNoData) {
+        const levelDiff = a.trendLevel.sortOrder - b.trendLevel.sortOrder
+        if (levelDiff !== 0) return levelDiff
+        // Within same level, sort by total count (higher first)
+        return b.totalCount - a.totalCount
+      }
+      // For no-data hazards, sort alphabetically
+      return a.name.localeCompare(b.name)
+    })
+}
+
+/**
+ * Get root causes for specific hazard
+ * Filters incidents by selected hazard, then groups by root cause
+ */
+export const getRootCausesForHazard = (incidents, hazardName) => {
+  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  return getRootCauseBreakdown(hazardIncidents)
+}
+
+/**
+ * Get daily breakdown for a specific hazard within time period
+ * Used for the trend chart in detail view
+ */
+// Observation type constants
+const NEGATIVE_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
+const POSITIVE_TYPES = ['positive']
+
+export const getHazardDailyData = (incidents, hazardName, periodMonths = 6) => {
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return { days: [], hasData: false }
+
+  const endDate = parseISO(dates[dates.length - 1])
+
+  // Handle null/undefined period (All time) - use full data range
+  let startDate
+  if (periodMonths === null || periodMonths === undefined) {
+    startDate = parseISO(dates[0])
+  } else if (periodMonths < 1) {
+    // Handle fractional months by converting to days
+    const periodDays = Math.round(periodMonths * 30)
+    startDate = subDays(endDate, periodDays)
+  } else {
+    startDate = subMonths(endDate, periodMonths)
+  }
+
+  // Filter to hazard-specific incidents within the period
+  const hazardIncidents = incidents.filter(i => {
+    if (!i.date || i.location !== hazardName) return false
+    try {
+      const d = parseISO(i.date.substring(0, 10))
+      if (isNaN(d.getTime())) return false
+      return d >= startDate && d <= endDate
+    } catch {
+      return false
+    }
+  })
+
+  // Count by day - separate positive and negative
+  const dailyCounts = {}
+  hazardIncidents.forEach(i => {
+    const dateKey = i.date.substring(0, 10)
+    if (!dailyCounts[dateKey]) {
+      dailyCounts[dateKey] = { total: 0, positive: 0, negative: 0 }
+    }
+    dailyCounts[dateKey].total++
+    if (POSITIVE_TYPES.includes(i.type)) {
+      dailyCounts[dateKey].positive++
+    } else if (NEGATIVE_TYPES.includes(i.type)) {
+      dailyCounts[dateKey].negative++
+    }
+  })
+
+  // Build daily data array for the entire period
+  const days = []
+  let currentDate = new Date(startDate)
+  while (currentDate <= endDate) {
+    const dateKey = format(currentDate, 'yyyy-MM-dd')
+    const dayLabel = format(currentDate, 'MMM d')
+    const dayCounts = dailyCounts[dateKey] || { total: 0, positive: 0, negative: 0 }
+
+    days.push({
+      date: dateKey,
+      label: dayLabel,
+      count: dayCounts.total,
+      positive: dayCounts.positive,
+      negative: dayCounts.negative
+    })
+
+    currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+  }
+
+  // Calculate totals
+  const totalPositive = hazardIncidents.filter(i => POSITIVE_TYPES.includes(i.type)).length
+  const totalNegative = hazardIncidents.filter(i => NEGATIVE_TYPES.includes(i.type)).length
+
+  // Calculate trend line based on negative observations (simple linear regression)
+  const n = days.length
+  const values = days.map(d => d.negative)
+
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0
+  for (let i = 0; i < n; i++) {
+    sumX += i
+    sumY += values[i]
+    sumXY += i * values[i]
+    sumX2 += i * i
+  }
+
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = n > 1 && denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
+  const intercept = n > 0 ? (sumY - slope * sumX) / n : 0
+
+  // Add trend line values
+  const daysWithTrend = days.map((d, i) => ({
+    ...d,
+    trendValue: Math.max(0, slope * i + intercept)
+  }))
+
+  return {
+    days: daysWithTrend,
+    hasData: hazardIncidents.length > 0,
+    totalCount: hazardIncidents.length,
+    totalPositive,
+    totalNegative,
+    avgPerDay: n > 0 ? Math.round((hazardIncidents.length / n) * 100) / 100 : 0,
+    trend: slope > 0.01 ? 'increasing' : slope < -0.01 ? 'decreasing' : 'stable'
+  }
+}
+
+/**
+ * Get daily data for a specific contributing factor
+ * Similar to getHazardDailyData but filters by factor detection
+ */
+export const getFactorDailyData = (incidents, factorName, periodMonths = 6, detectFn) => {
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return { days: [], hasData: false }
+
+  const endDate = parseISO(dates[dates.length - 1])
+
+  // Handle null/undefined period (All time) - use full data range
+  let startDate
+  if (periodMonths === null || periodMonths === undefined) {
+    startDate = parseISO(dates[0])
+  } else if (periodMonths < 1) {
+    const periodDays = Math.round(periodMonths * 30)
+    startDate = subDays(endDate, periodDays)
+  } else {
+    startDate = subMonths(endDate, periodMonths)
+  }
+
+  // Filter to factor-specific incidents within the period
+  // Only consider negative observations for factors
+  const factorIncidents = incidents.filter(i => {
+    if (!i.date) return false
+    if (!NEGATIVE_TYPES.includes(i.type)) return false
+
+    try {
+      const d = parseISO(i.date.substring(0, 10))
+      if (isNaN(d.getTime())) return false
+      if (d < startDate || d > endDate) return false
+
+      // Check if this factor is detected in the description
+      if (detectFn) {
+        const detectedFactors = detectFn(i.description)
+        return detectedFactors.some(f => f.factor === factorName)
+      }
+      return false
+    } catch {
+      return false
+    }
+  })
+
+  // Count by day
+  const dailyCounts = {}
+  factorIncidents.forEach(i => {
+    const dateKey = i.date.substring(0, 10)
+    if (!dailyCounts[dateKey]) {
+      dailyCounts[dateKey] = { total: 0, negative: 0 }
+    }
+    dailyCounts[dateKey].total++
+    dailyCounts[dateKey].negative++
+  })
+
+  // Build daily data array
+  const days = []
+  let currentDate = new Date(startDate)
+  while (currentDate <= endDate) {
+    const dateKey = format(currentDate, 'yyyy-MM-dd')
+    const dayLabel = format(currentDate, 'MMM d')
+    const dayCounts = dailyCounts[dateKey] || { total: 0, negative: 0 }
+
+    days.push({
+      date: dateKey,
+      label: dayLabel,
+      count: dayCounts.total,
+      negative: dayCounts.negative
+    })
+
+    currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+  }
+
+  // Calculate totals
+  const totalNegative = factorIncidents.length
+
+  // Calculate trend (simple linear regression)
+  const n = days.length
+  const values = days.map(d => d.negative)
+
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0
+  for (let i = 0; i < n; i++) {
+    sumX += i
+    sumY += values[i]
+    sumXY += i * values[i]
+    sumX2 += i * i
+  }
+
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = n > 1 && denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
+
+  return {
+    days,
+    hasData: factorIncidents.length > 0,
+    totalCount: factorIncidents.length,
+    totalNegative,
+    avgPerDay: n > 0 ? Math.round((factorIncidents.length / n) * 100) / 100 : 0,
+    trend: slope > 0.01 ? 'increasing' : slope < -0.01 ? 'decreasing' : 'stable'
+  }
+}
+
+// ============================================================================
+// DEVIATION EXTRACTION FOR ROOT CAUSE ANALYSIS
+// ============================================================================
+
+/**
+ * Deviation categories for normalization
+ * Maps common patterns to standardized deficiency labels
+ */
+const DEVIATION_CATEGORIES = {
+  // PPE Issues
+  'PPE not worn': ['no ppe', 'without ppe', 'missing ppe', 'ppe not worn', 'not wearing ppe', 'ppe not', 'lack of ppe'],
+  'Harness not worn': ['no harness', 'without harness', 'harness not', 'missing harness', 'not wearing harness'],
+  'Helmet not worn': ['no helmet', 'without helmet', 'helmet not', 'missing helmet', 'no hard hat', 'hard hat not', 'not wearing helmet'],
+  'Gloves not worn': ['no gloves', 'without gloves', 'gloves not', 'missing gloves', 'not wearing gloves'],
+  'Safety glasses not worn': ['no safety glasses', 'no goggles', 'without goggles', 'missing goggles', 'eye protection not'],
+  'Safety vest not worn': ['no vest', 'no hi-vis', 'hi-vis not', 'without vest', 'missing vest'],
+  'Safety boots not worn': ['no safety boots', 'no boots', 'without boots', 'improper footwear'],
+
+  // Equipment Issues
+  'Missing guardrail': ['no guardrail', 'guardrail missing', 'missing guardrail', 'without guardrail', 'guardrail not', 'no guard rail'],
+  'Missing barricade': ['no barricade', 'barricade missing', 'without barricade', 'barricade not', 'missing barricade'],
+  'Damaged equipment': ['damaged', 'broken equipment', 'faulty equipment', 'defective', 'equipment damaged'],
+  'Unsecured scaffold': ['unsecured scaffold', 'scaffold not secured', 'unstable scaffold', 'scaffold unstable'],
+  'Exposed cables': ['exposed cable', 'exposed wire', 'live wire', 'unprotected cable', 'cable exposed', 'wire exposed'],
+  'Unprotected edge': ['unprotected edge', 'edge not protected', 'no edge protection', 'open edge', 'leading edge'],
+  'Unsecured load': ['unsecured load', 'load not secured', 'loose load', 'load unsecured'],
+  'Missing cover': ['no cover', 'cover missing', 'missing cover', 'uncovered', 'without cover', 'open hole'],
+  'Equipment not inspected': ['not inspected', 'no inspection', 'inspection not', 'expired inspection', 'overdue inspection'],
+
+  // Work Practice Issues
+  'Working without permit': ['no permit', 'without permit', 'permit not', 'missing permit', 'lack of permit'],
+  'Improper procedure': ['improper procedure', 'wrong procedure', 'not following procedure', 'procedure not followed'],
+  'Poor housekeeping': ['poor housekeeping', 'housekeeping', 'untidy', 'cluttered', 'mess', 'debris', 'scattered'],
+  'Improper lifting': ['improper lifting', 'wrong lifting', 'manual handling', 'lifting technique', 'incorrect lifting'],
+  'Working at height without protection': ['working at height without', 'height without', 'no fall protection'],
+  'Improper storage': ['improper storage', 'incorrect storage', 'poor storage', 'storage not', 'not stored properly'],
+  'Unauthorized access': ['unauthorized access', 'access not controlled', 'no access control', 'unauthorized entry'],
+
+  // Barrier/Control Issues
+  'Inadequate signage': ['no sign', 'missing sign', 'inadequate sign', 'signage not', 'poor signage', 'no warning'],
+  'Missing fire extinguisher': ['no fire extinguisher', 'fire extinguisher missing', 'missing extinguisher'],
+  'Blocked access': ['blocked access', 'access blocked', 'exit blocked', 'blocked exit', 'obstructed'],
+  'Inadequate lighting': ['poor lighting', 'inadequate lighting', 'no lighting', 'insufficient lighting', 'dark area'],
+  'Missing first aid': ['no first aid', 'first aid missing', 'missing first aid', 'no first aid kit'],
+
+  // Worker Welfare Issues
+  'No drinking water': ['no drinking water', 'drinking water not', 'water not available', 'no potable water', 'lack of water'],
+  'Welfare facility missing': ['welfare missing', 'no welfare', 'welfare not', 'inadequate welfare', 'lack of welfare'],
+  'Poor toilet condition': ['toilet poor', 'poor toilet', 'toilet not clean', 'dirty toilet', 'toilet condition'],
+  'Rest area inadequate': ['no rest area', 'rest area inadequate', 'inadequate rest', 'no shade', 'lack of rest'],
+  'First aid not available': ['first aid not', 'no first aid', 'first aid missing'],
+
+  // Supervision Issues
+  'No supervision': ['no supervision', 'without supervision', 'unsupervised', 'supervision not', 'lack of supervision'],
+  'No banksman': ['no banksman', 'banksman not', 'without banksman', 'missing banksman', 'no spotter'],
+  'No signalman': ['no signalman', 'signalman not', 'without signalman', 'missing signalman'],
+
+  // Documentation Issues
+  'Missing documentation': ['no documentation', 'documentation missing', 'missing document', 'no paperwork'],
+  'Expired certificate': ['expired certificate', 'certificate expired', 'expired license', 'license expired'],
+  'No risk assessment': ['no risk assessment', 'risk assessment not', 'missing risk assessment', 'no ra', 'ra not'],
+}
+
+/**
+ * Normalize a deviation string into a standard category
+ */
+const normalizeDeviation = (deviation) => {
+  if (!deviation) return null
+  const lowerDev = deviation.toLowerCase()
+
+  // Check against category patterns
+  for (const [category, patterns] of Object.entries(DEVIATION_CATEGORIES)) {
+    for (const pattern of patterns) {
+      if (lowerDev.includes(pattern)) {
+        return category
+      }
+    }
+  }
+
+  // Clean up and capitalize if no match
+  const cleaned = deviation
+    .replace(/^(was |were |is |are |has |have |had |being |been )/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (cleaned.length < 3) return null
+
+  // Capitalize first letter
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase()
+}
+
+/**
+ * Extract the deviation/deficiency from a parsed sentence and original text
+ */
+const extractDeviation = (parsed, originalText) => {
+  if (!originalText) return null
+  const lowerText = originalText.toLowerCase()
+
+  // Priority 1: Explicit deviation from parser
+  if (parsed.deviation) {
+    return parsed.deviation
+  }
+
+  // Priority 2: Subject with deviation indicator
+  if (parsed.mainSubject) {
+    const hasDeviation = DEVIATION_INDICATORS.some(ind =>
+      parsed.mainSubject.toLowerCase().includes(ind)
+    )
+    if (hasDeviation) {
+      return parsed.mainSubject
+    }
+  }
+
+  // Priority 3: Pattern-based extraction for common deficiency patterns
+  const patterns = [
+    // Missing patterns
+    { regex: /(?:missing|no|without|lacking|lack of|absence of)\s+(\w+(?:\s+\w+){0,2})/i, group: 0 },
+    // Not worn/used patterns
+    { regex: /(\w+(?:\s+\w+)?)\s+(?:not|wasn't|weren't)\s+(?:worn|used|provided|available|installed)/i, group: 0 },
+    // Exposed/damaged patterns
+    { regex: /(?:exposed|damaged|broken|faulty|defective)\s+(\w+(?:\s+\w+)?)/i, group: 0 },
+    // Poor/improper patterns
+    { regex: /(?:poor|improper|inadequate|insufficient|incorrect)\s+(\w+(?:\s+\w+)?)/i, group: 0 },
+    // Failure patterns
+    { regex: /(\w+(?:\s+\w+)?)\s+(?:failure|failed)/i, group: 0 },
+    // Unsecured/unstable patterns
+    { regex: /(?:unsecured|unstable|loose|unprotected)\s+(\w+(?:\s+\w+)?)/i, group: 0 },
+    // Without patterns
+    { regex: /working\s+(?:without|with\s+no)\s+(\w+(?:\s+\w+)?)/i, group: 0 },
+    // Not following patterns
+    { regex: /not\s+(?:following|using|wearing|secured|protected)/i, group: 0 },
+  ]
+
+  for (const { regex, group } of patterns) {
+    const match = lowerText.match(regex)
+    if (match && match[group]) {
+      return match[group].trim()
+    }
+  }
+
+  // Priority 4: Use main keyword if it's a signal word
+  if (parsed.mainKeyword && parsed.mainKeywordIsSignal) {
+    // Check if there's a deviation indicator before it
+    const keywordIndex = lowerText.indexOf(parsed.mainKeyword.toLowerCase())
+    if (keywordIndex > 0) {
+      const beforeKeyword = lowerText.substring(Math.max(0, keywordIndex - 20), keywordIndex)
+      const hasDeviationBefore = DEVIATION_INDICATORS.some(ind => beforeKeyword.includes(ind))
+      if (hasDeviationBefore) {
+        // Extract the phrase with the deviation indicator
+        for (const ind of DEVIATION_INDICATORS) {
+          const indIndex = beforeKeyword.lastIndexOf(ind)
+          if (indIndex >= 0) {
+            return lowerText.substring(keywordIndex - 20 + indIndex, keywordIndex + parsed.mainKeyword.length + 5).trim()
+          }
+        }
+      }
+    }
+    return parsed.mainKeyword
+  }
+
+  // Priority 5: Use summary.issue if available
+  if (parsed.summary && parsed.summary.issue) {
+    return parsed.summary.issue
+  }
+
+  return null
+}
+
+// NOTE: extractDeviationsForHazard is now re-exported from rootCauseEngine.js
+// The new implementation uses predefined root causes with keyword detection
+// instead of free-text extraction, resulting in better categorization and
+// significantly reduced "Other" category (target: <30% vs previous 70-81%)
 
 // ============================================================================
 // HELPER FUNCTIONS

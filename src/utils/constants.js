@@ -1,3 +1,6 @@
+// Fallback category for observations requiring manual review
+export const FALLBACK_CATEGORY = 'General Site Issues'
+
 // Incident Types with severity levels
 export const INCIDENT_TYPES = [
   { value: 'lti', label: 'Lost Time Injury (LTI)', severity: 'critical', color: '#dc2626' },
@@ -11,25 +14,35 @@ export const INCIDENT_TYPES = [
   { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#0891b2' },
 ]
 
-// 29 Approved Hazard Categories (Hazards + Controls that need tracking)
+// Type groupings for aggregation
+// Recordable incidents (aggregate into single "incident" count)
+export const RECORDABLE_INCIDENT_TYPES = ['lti', 'mti', 'fac']
+
+// Negative observation types (for ratio calculations)
+export const NEGATIVE_OBSERVATION_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr']
+
+// 27 Approved Hazard Categories (HAZARDS ONLY - controls removed)
+// 14 Significant Hazards (NEOM Eltizam) + 13 Additional Hazards
+// Observations without clear hazard keywords → "General Site Issues" for manual review
 export const HAZARD_CATEGORIES = [
-  // === 15 MAJOR HAZARDS ===
+  // === 14 SIGNIFICANT HAZARDS (NEOM Eltizam Program) ===
+  'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
-  'Mobile Plant & Equipment',
-  'Breaking Ground & Excavation',
+  'Explosives & Blasting',        // NEW - NEOM Eltizam Hazard #12
   'Fire',
   'Hot Work',
   'Lifting',
+  'Mobile Plant & Equipment',
   'Temporary Works',
-  'Working on or Near Live Roads',
-  'Working on or Near Water',
   'Driving',
   'Working at Height',
   'Working in Heat',
+  'Working on or Near Live Roads',
+  'Working on or Near Water',
+  // === 13 ADDITIONAL HAZARDS ===
   'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
   'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
-  // === 14 SUB-SIGNIFICANT HAZARDS + CONTROLS ===
   'COSHH',
   'Respiratory Hazard',        // Dust, silica, fumes, particles, airborne
   'Housekeeping',
@@ -38,36 +51,39 @@ export const HAZARD_CATEGORIES = [
   'Worker Welfare',            // Welfare facilities, camps, accommodation
   'Tools',
   'Traffic Management',
-  'Work Environment',
   'Environmental',
   'Slip and Trip',             // Slip/trip hazards (falls → Working at Height)
-  'Safety Supervision',        // No safety officer, lack of supervision
-  'Training and Competency',   // No training, no induction, not competent
-  'Permit and RAMS',           // No permit, no RAMS, documentation missing
+  'General Site Issues',       // Fallback for observations requiring manual review
 ]
 
-// 15 Major (Significant) Hazards - HIGHEST PRIORITY in classification
-// Physical Hazard and Mechanical Hazard added (OSHA Fatal Four)
-export const MAJOR_HAZARDS = [
+// 14 SIGNIFICANT HAZARDS - NEOM Eltizam Program
+// These are the 14 significant hazards defined in NEOM-NPR-STD-001 Rev 01.00 (May 2023)
+export const SIGNIFICANT_HAZARDS = [
   'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
+  'Explosives & Blasting',        // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
   'Fire',
   'Hot Work',
   'Lifting',
   'Mobile Plant & Equipment',
-  'Physical Hazard',           // NEW - struck-by is OSHA Fatal Four
-  'Mechanical Hazard',         // NEW - caught-in is OSHA Fatal Four
   'Temporary Works',
-  'Working in Heat',
+  'Driving',
   'Working at Height',
+  'Working in Heat',
   'Working on or Near Live Roads',
   'Working on or Near Water',
-  'Driving',
 ]
 
-// 14 Sub-Significant Hazards - LOWER PRIORITY in classification
+// MAJOR_HAZARDS is an alias for SIGNIFICANT_HAZARDS for backward compatibility
+export const MAJOR_HAZARDS = SIGNIFICANT_HAZARDS
+
+// 13 ADDITIONAL HAZARDS - Sub-significant categories for detailed classification
+// NOTE: Physical Hazard and Mechanical Hazard moved here from MAJOR_HAZARDS
+// These are important hazards but not in the NEOM Eltizam 14 Significant Hazards
 export const SUB_SIGNIFICANT_HAZARDS = [
+  'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
+  'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
   'COSHH',
   'Respiratory Hazard',        // Dust, silica, fumes, particles
   'Traffic Management',
@@ -78,11 +94,12 @@ export const SUB_SIGNIFICANT_HAZARDS = [
   'Environmental',
   'Tools',
   'Access',
-  'Safety Supervision',        // No safety officer, lack of supervision
-  'Training and Competency',   // No training, no induction, not competent
-  'Permit and RAMS',           // No permit, no RAMS, documentation missing
-  'Work Environment',          // LAST - catch-all bucket
+  'General Site Issues',       // LAST - fallback for observations requiring manual review
 ]
+
+// ALL_HAZARDS - Complete list of all hazard categories for Safety Outlook
+// Combines significant hazards + sub-significant hazards (26 total)
+export const ALL_HAZARDS = [...SIGNIFICANT_HAZARDS, ...SUB_SIGNIFICANT_HAZARDS]
 
 // =============================================================================
 // CRITICAL_HAZARD_KEYWORDS - ALWAYS win over location/context words
@@ -110,6 +127,24 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'manhole entry', 'tank entry', 'vessel entry', 'pit entry',
     'confined space without', 'confined space permit',
   ],
+  'Explosives & Blasting': [
+    // Blasting operations
+    'blasting', 'blast', 'blasting operation', 'blasting activity',
+    'drill and blast', 'controlled blasting', 'blasting area',
+    'blast zone', 'blast radius', 'blasting schedule',
+    // Explosives
+    'explosive', 'explosives', 'explosive material', 'explosive storage',
+    'detonator', 'detonators', 'detonation', 'detonating cord',
+    'primer', 'booster', 'initiator', 'blasting cap',
+    // Personnel
+    'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
+    // Incidents
+    'misfire', 'unexploded', 'flyrock', 'fly rock', 'blast damage',
+    'ground vibration', 'ppv', 'peak particle velocity',
+    // Storage and handling
+    'magazine', 'explosives magazine', 'explosive store',
+    'blasting permit', 'blasting signal', 'blast warning',
+  ],
   'Working at Height': [
     'fall from', 'fell from', 'falling from', 'fallen from',
     'working at height', 'work at height', 'roof work', 'rooftop',
@@ -123,6 +158,16 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'digging', 'ground breaking', 'underground', 'buried cable',
     'buried pipe', 'utility strike', 'open pit', 'deep excavation',
     'shoring', 'benching', 'sloping', 'cave-in', 'collapse of excavation',
+    // NEOM Standard additions - Service detection
+    'cat and genny', 'cat/genny', 'cable avoidance tool', 'genny',
+    'gpr', 'ground penetrating radar', 'service detection',
+    'permit to dig', 'dig permit', 'breaking ground permit',
+    // Design and stability
+    'soil sampling', 'ground conditions', 'water table',
+    'dewatering', 'surface water diversion', 'groundwater',
+    // Edge protection
+    'excavation edge protection', 'stop blocks', 'jersey barrier',
+    'bund wall', 'material bund', 'setback from edge',
   ],
   'Lifting': [
     'crane', 'lifting operation', 'rigging', 'sling', 'shackle',
@@ -159,51 +204,77 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'haul road', 'speed limit', 'overspeeding', 'traffic control',
     'pedestrian crossing', 'traffic marshal', 'traffic management plan',
     'vehicle access', 'traffic awareness',
+    // NEOM Standard additions
+    'temporary traffic management', 'ttm', 'ttm plan',
+    'work zone', 'work zone access', 'work zone egress',
+    'vehicle intrusion', 'vehicle pedestrian segregation',
+    'jersey barrier', 'water filled barrier',
+    'ministry of transport', 'mot coordination',
   ],
   'Driving': [
     'driver', 'driving without', 'seatbelt not worn', 'no seatbelt',
     'speeding', 'reckless driving', 'distracted driving',
     'driver fatigue', 'driver competency', 'driving license',
     'vehicle inspection', 'pre-trip inspection',
+    // NEOM Standard additions
+    'reverse parking', 'not reverse parked', 'forward parked',
+    'tailgating', 'following too close', 'safe distance',
+    'defensive driving', 'defensive driver training',
+    'mobile phone while driving', 'phone while driving',
+    'unsecure load', 'unsecured load', 'load not secured',
+    'route not followed', 'shortcut', 'designated route',
+    'overtaking', 'unsafe overtaking', 'vehicle rollover',
   ],
 
-  // PRIORITY 4: Permit/Documentation (IMPORTANT - catches RAMS issues)
-  'Permit and RAMS': [
-    'no permit', 'permit not', 'without permit', 'permit expired',
-    'no rams', 'rams not', 'without rams', 'rams missing',
-    'no msra', 'msra not', 'msra missing', 'no method statement',
-    'risk assessment missing', 'no risk assessment', 'ptw not',
-    'permit to work not', 'work without permit', 'no approved',
-    'documentation missing', 'no documentation', 'not documented',
+  // PRIORITY 4: Other Significant Hazards (NEOM Eltizam)
+  'Working on or Near Live Roads': [
+    'live road', 'live traffic', 'live carriageway',
+    'roadworks', 'road works', 'highway works',
+    'work zone intrusion', 'vehicle intrusion',
+    'temporary traffic management', 'ttm',
+    'struck by passing vehicle', 'hit by traffic',
+    'roadside working', 'working near traffic',
+  ],
+  'Working on or Near Water': [
+    'drowning', 'drowning hazard', 'drowning risk',
+    'working near water', 'working over water', 'working on water',
+    'lifebuoy', 'life buoy', 'lifejacket', 'life jacket',
+    'rescue boat', 'marine operation', 'offshore',
+    'buddy system near water', 'man overboard',
+    'water rescue', 'sea work', 'dock work', 'jetty work',
+  ],
+  'Working in Heat': [
+    'heat stress', 'heat stroke', 'heat exhaustion',
+    'thermal work limit', 'twl', 'hydration',
+    'work rest cycle', 'shade area', 'cooling',
+    'acclimatization', 'acclimation', 'heat illness',
+    'dehydration', 'hyperthermia', 'hot environment',
+  ],
+  'Temporary Works': [
+    'formwork', 'falsework', 'shoring', 'propping',
+    'temporary structure', 'temporary support',
+    'twc', 'temporary works coordinator', 'designated individual',
+    'permission to load', 'permission to strike',
+    'scaffold design', 'temporary stability',
   ],
 
-  // PRIORITY 5: Supervision (catches "no safety officer" issues)
-  'Safety Supervision': [
-    'no safety officer', 'safety officer not present', 'safety officer absent',
-    'safety officer was not', 'without safety officer', 'lack of supervision',
-    'no supervision', 'unsupervised', 'supervisor not present',
-    'supervisor absent', 'no supervisor', 'lack of safety coverage',
-    'safety coverage', 'not supervised', 'absence of safety',
-  ],
-
-  // PRIORITY 6: Training
-  'Training and Competency': [
-    'not trained', 'no training', 'untrained', 'incompetent',
-    'not competent', 'no competency', 'training expired',
-    'no induction', 'induction not completed', 'not inducted',
-    'certification expired', 'no certification', 'not certified',
-    'toolbox talk not', 'no toolbox talk', 'briefing not done',
-    'pre-activity briefing', 'without briefing',
-  ],
+  // NOTE: Permit and RAMS, Safety Supervision, Training and Competency REMOVED
+  // These are CONTROLS, not hazards. The control failure belongs to the UNDERLYING hazard.
+  // Example: "No permit for excavation" → Breaking Ground & Excavation (the hazard)
+  // Example: "No safety officer at height work" → Working at Height (the hazard)
 }
 
 // Function to check CRITICAL_HAZARD_KEYWORDS (used in categorizeHazard)
+// FIXED: Sort keywords by length (longest first) to prevent short keywords from matching before longer, more specific ones
+// Example: "fire hazard" should match before "fire"
 export const checkCriticalKeywords = (text) => {
   const lowerText = text.toLowerCase()
 
   // Check each category in priority order
   for (const [category, keywords] of Object.entries(CRITICAL_HAZARD_KEYWORDS)) {
-    for (const keyword of keywords) {
+    // Sort keywords by length descending - longer (more specific) keywords first
+    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length)
+    for (const keyword of sortedKeywords) {
       if (lowerText.includes(keyword.toLowerCase())) {
         return category
       }
@@ -227,7 +298,7 @@ export const HAZARD_EXCLUSIONS = {
   'Hot Work': [
     'hot spot', 'hot surface', 'hot pipe', 'hot equipment', 'hot tap',
     'heat stroke', 'heat exhaustion', 'hot weather', 'hotline', 'hot day',
-    'hot conditions', 'hot work permit', 'hot cell', 'hot zone',
+    'hot conditions', 'hot cell', 'hot zone',
     // Exclude welfare-related observations in hot work area
     'no welfare', 'welfare facility', 'welfare not', 'lack of welfare',
     'missing welfare', 'welfare issue', 'welfare problem'
@@ -253,7 +324,138 @@ export const HAZARD_EXCLUSIONS = {
     'fell down', 'fell over', 'blown over', 'knocked over', 'tipped over',
     'fallen fence', 'fallen post', 'fallen cone', 'fallen board',
     'price fall', 'fall in temperature', 'fall in pressure', 'rainfall',
-    'waterfall', 'free fall', 'fall behind', 'fall short'
+    'waterfall', 'free fall', 'fall behind', 'fall short',
+
+    // ========================================================================
+    // EXCAVATION-RELATED - Should be "Breaking Ground & Excavation"
+    // "Fall into excavation" is an excavation hazard, NOT working at height
+    // ========================================================================
+    'deep excavation', 'excavation is present', 'excavation without',
+    'excavation area', 'excavation edge', 'edge of excavation',
+    'edges of the deep excavation', 'edges of deep excavation',
+    'unprotected edges of the deep excavation', 'unprotected edges of deep excavation',
+    'unprotected edges of a deep excavation', 'unprotected edges of deep trenches',
+    'unprotected edges of the deep trenches', 'edges of deep trenches',
+    'falling into excavation', 'fall into excavation', 'falling in excavation',
+    'falling into the excavation', 'fall into the excavation',
+    'into the excavation', 'into excavation', 'in the excavation',
+    'risk of vehicles or workers falling in', 'risk of falling in',
+    'workers falling in', 'vehicles falling in', 'equipment falling in',
+    'open ditch', 'ditch without', 'open ditches', 'ditches in the area',
+    'open trench', 'trench without', 'deep trench', 'deep trenches',
+    'open manhole', 'manhole without', 'manhole was observed',
+    'access to the excavation', 'egress to the excavation',
+    'access and egress to the excavation', 'inside the excavation',
+    'chamber preparations', 'shuttering activities inside the excavation',
+    'excavation close to', 'close to the excavation',
+    'near the excavation', 'excavation lacks',
+    'near the edges of the deep excavation', 'near the unprotected edges',
+    'ramp going to site and leading to open deep excavation',
+    'leading to open deep excavation', 'leading to excavation',
+    'stockpile of backfilling materials', 'backfilling materials',
+    'stockpile', 'dangerously stacked', 'stacked',
+    'collapse and fall onto the equipment', 'collapse onto',
+    'handmade wooden ladder', 'wooden ladder',
+    'dewatering activity',
+    'deep pit', 'open space was observed in the deep pit', 'in the deep pit',
+    'deep pit at area', 'posing a fall hazard',
+    'unsafe activities in deep trenches', 'activities in deep trenches',
+    'tasks in deep excavations', 'performing tasks in deep',
+
+    // ========================================================================
+    // HOUSEKEEPING-RELATED - Should be "Housekeeping"
+    // Scattered materials are housekeeping, not working at height
+    // ========================================================================
+    'materials scattered', 'scaffolding materials scattered',
+    'scaffold materials scattered', 'materials were found scattered',
+    'found scattered on the ground', 'scattered on the ground',
+    'scaffolding materials were thrown scattered', 'thrown scattered across the site',
+    'scattered across the site', 'scaffold materials were observed scattered',
+    'materials were observed scattered', 'observed scattered on the ground',
+    'scaffolding materials were improperly placed on the ground',
+    'improperly placed on the ground', 'placed on the ground',
+    'creating a potential slip and trip hazard', 'slip and trip hazard',
+    'wooden pieces and scaffolding materials were found scattered',
+    'unwanted wooden pieces', 'unwanted scaffolding',
+    'unwanted scaffold barricades', 'found unwanted scaffold',
+    'creating a potential trip hazard', 'creating potential trip hazard',
+    'creating trip hazard', 'trip hazard and contributing',
+    'contributing to poor housekeeping', 'poor housekeeping conditions',
+    'poor housekeeping', 'housekeeping conditions',
+    'poor housekeeping observed in the scaffold material storage',
+    'scaffold material storage access', 'slipping and tripping hazards',
+    'slipping and tripping hazards during material shifting',
+    'improper materials arrangements', 'improper materials',
+    'materials arrangements', 'materials stored near the access',
+    'obstructing safe movement', 'obstructing movement',
+    'collision hazards for workers', 'collision hazards',
+    'lying unattended', 'left unattended', 'found lying',
+    'step ladders were found lying', 'ladders were found lying',
+    'cement bags and scaffolding materials',
+    'unsecured grating', 'grating was observed',
+    'slips, trips, or falls', 'trips, or falls',
+    'wooden planks are stored on an unstable', 'stored on an unstable',
+    'overloaded makeshift scaffold', 'makeshift scaffold/rack',
+    'high risk of collapse', 'posing a high risk of collapse',
+    'scaffolding material storage area is not properly barricaded',
+    'material storage area is not properly barricaded',
+    'not properly barricaded, posing a risk of unauthorized access',
+    'nails were observed protruding', 'nails protruding',
+    'protruding from the plywood', 'nails were not removed',
+
+    // ========================================================================
+    // FIRE POINT BLOCKED - Should be "Fire"
+    // Fire point access issues are fire hazards, not working at height
+    // ========================================================================
+    'firepoint', 'fire point', 'fire point blocked',
+    'firepoint blocked', 'firepoint at the', 'fire point at the',
+    'blocked by the scaffold barricade', 'blocked by scaffold barricade',
+    'hindering easy access during an emergency', 'hindering access',
+
+    // ========================================================================
+    // SAFETY SIGN FALLEN - Should be "General Site Issues"
+    // Fallen signage is not a working at height issue
+    // ========================================================================
+    'safety sign board had fallen down', 'sign board had fallen',
+    'safety sign board was found fell down', 'sign board was found fell',
+    'sign board fell', 'signage had fallen',
+
+    // ========================================================================
+    // CONFINED SPACE SUPERVISION - Should be "Confined Spaces"
+    // Confined space work issues are not working at height
+    // ========================================================================
+    'safety officer in charge of confined space', 'in charge of confined space',
+    'confined space does not have', 'no safety supervision in your confined space',
+    'safety supervision in your confined space work', 'confined space work',
+
+    // ========================================================================
+    // PERMIT/DOCUMENTATION - Should be "General Site Issues"
+    // Permit issues are administrative, not working at height
+    // ========================================================================
+    'permit to work was not filled', 'permit not filled',
+    'cold work permit is used', 'cold work permit',
+    'not the appropriate permit', 'inappropriate permit',
+    'temporary works was not mentioned', 'not mentioned as a significant hazard',
+
+    // ========================================================================
+    // CONFINED SPACE - Should be "Confined Spaces"
+    // ========================================================================
+    'edge of the confined space', 'confined space are incomplete',
+    'barricades at the edge of the confined space',
+
+    // ========================================================================
+    // LIFTING - Should be "Lifting"
+    // ========================================================================
+    'tripod used for lifting', 'used for lifting',
+    'lifting an electrical grounding rod',
+
+    // ========================================================================
+    // PHYSICAL HAZARD - Should be "Physical Hazard"
+    // Workers below scaffolding = struck-by hazard, not WAH
+    // ========================================================================
+    'sitting beneath scaffolding', 'beneath scaffolding activity',
+    'materials could potentially fall on him', 'fall on him',
+    'walking underneath', 'underneath the scaffold'
   ],
   'Breaking Ground & Excavation': [
     'breeding ground', 'common ground', 'groundswell', 'background',
@@ -283,16 +485,27 @@ export const HAZARD_EXCLUSIONS = {
     'water shortage', 'water issue', 'water problem', 'water complaint',
     'water not available', 'water not provided', 'no drinking water',
     'water for drinking', 'supply of water', 'lack of water',
+    // Water analysis/testing (welfare, not water hazard)
+    'water analysis', 'water analysis test', 'water quality', 'water sample',
+    'water delivery', 'water delivery date', 'delivery of water',
+    // Water containers/equipment (welfare or housekeeping, not water hazard)
+    'water drum', 'water drums', 'drum of water', 'inside a water',
+    'water igloo', 'igloo', 'water bucket', 'stored inside water',
+    // Complaint/admin (not water hazard)
+    'complaint box', 'complaint', 'sealed', 'properly sealed',
     // PPE-related exclusions (clearly not water hazard)
     'safety shoes', 'safety boots', 'not wearing', 'ppe', 'personal protective equipment',
     'hard hat', 'helmet', 'safety vest', 'hi-vis', 'high visibility', 'gloves',
     'safety glasses', 'goggles', 'ear protection', 'hearing protection',
+    'shoes were found', 'shoes found', 'shoes stored', 'shoes inside',
     // Welfare/sanitation exclusions (clearly not water hazard)
     'toilet', 'toilets', 'contamination', 'odor', 'odour', 'pest', 'pest attraction',
     'sanitation', 'hygiene', 'proper sealing', 'storage area',
     // Personnel/vehicle exclusions (clearly not water hazard)
     'nurse', 'ambulance', 'driver', 'truck driver', 'equipment inspection',
-    'morning inspection', 'daily inspection', 'performing task'
+    'morning inspection', 'daily inspection', 'performing task',
+    // Grouting/construction (not water hazard)
+    'grouting', 'grouting activity', 'used for grouting'
   ],
   'Working in Heat': [
     'heat treatment', 'heat exchanger', 'heat insulation', 'heat shield',
@@ -301,9 +514,14 @@ export const HAZARD_EXCLUSIONS = {
   'COSHH': [
     // Exclude food/hygiene related "poison" - these are Site Welfare, not chemical hazards
     'food poison', 'food poisoning', 'food storage', 'food stored', 'food safety',
-    'food contamination', 'spoiled food', 'expired food', 'rotten food'
+    'food contamination', 'spoiled food', 'expired food', 'rotten food',
+    // Exclude fire extinguisher types - "dry chemical" is extinguisher type, not hazardous substance
+    'dry chemical fire extinguisher', 'chemical fire extinguisher', 'dry chemical extinguisher',
+    'co2 extinguisher', 'co2 fire extinguisher', 'foam extinguisher', 'powder extinguisher',
+    'extinguish the electrical fire', 'extinguish electrical fire', 'electrical fire',
+    'suitable to extinguish', 'not suitable to extinguish'
   ],
-  'Work Environment': [
+  'General Site Issues': [
     // Exclude "inspection" when it's just context for WHEN something was observed
     'during the inspection', 'during inspection', 'observed during inspection',
     'found during inspection', 'noted during inspection', 'seen during inspection',
@@ -326,8 +544,342 @@ export const HAZARD_EXCLUSIONS = {
 
 // CONTEXT_REDIRECTS - Remap misleading terms to the CORRECT category
 // Checked FIRST before any other classification (highest priority)
+// IMPORTANT: Longer, more specific patterns MUST come before shorter patterns
 export const CONTEXT_REDIRECTS = {
+  // ============================================================================
+  // PRIORITY 1: Multi-hazard observations - route to PRIMARY hazard
+  // These patterns prevent "Working at Height" from capturing unrelated hazards
+  // ============================================================================
+
+  // Fire point/equipment access blocked → Fire (not Working at Height even if scaffold mentioned)
+  'fire point access': 'Fire',
+  'fire point was blocked': 'Fire',
+  'fire point blocked': 'Fire',
+  'fire extinguisher access': 'Fire',
+  'fire extinguisher blocked': 'Fire',
+  'blocked by scaffold materials': 'Fire',  // fire point context
+
+  // Scaffolding/materials scattered = Housekeeping (not Working at Height)
+  'scaffolding components were found scattered': 'Housekeeping',
+  'scaffolding components found scattered': 'Housekeeping',
+  'scaffolding components scattered': 'Housekeeping',
+  'scaffold materials scattered': 'Housekeeping',
+  'scaffolding materials were observed stored in a mixed': 'Housekeeping',
+  'scaffolding materials stored in mixed': 'Housekeeping',
+  'scaffolding clamps were found scattered': 'Housekeeping',
+  'scaffolding clamps found scattered': 'Housekeeping',
+  'scaffolding clamps scattered': 'Housekeeping',
+  'scaffold pipe has been stored on the site on the access way': 'Housekeeping',
+  'scaffold pipe stored on access way': 'Housekeeping',
+  'creating trip hazards and contributing to poor housekeeping': 'Housekeeping',
+  'creating trip hazards and poor housekeeping': 'Housekeeping',
+  'creating a tripping hazard and contributing to poor housekeeping': 'Housekeeping',
+  'left unattended on site, no housekeeping': 'Housekeeping',
+  'no housekeeping': 'Housekeeping',
+  'poor housekeeping': 'Housekeeping',
+  'wood timber was disposed of, but the nails were not removed': 'Housekeeping',
+  'nails were not removed': 'Housekeeping',
+
+  // Drone/theft/missing equipment → Site Security
+  'drone was no longer': 'Site Security',
+  'drone was missing': 'Site Security',
+  'missing drone': 'Site Security',
+  'theft': 'Site Security',
+  'stolen': 'Site Security',
+  'disappeared': 'Site Security',
+  'potential theft': 'Site Security',
+  'office security': 'Site Security',
+  'access control': 'Site Security',
+
+  // Deep excavation/trench/ditch hazards → Breaking Ground & Excavation
+  'close to the unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'edges of a deep excavation': 'Breaking Ground & Excavation',
+  'deep excavation without': 'Breaking Ground & Excavation',
+  'deep excavation area': 'Breaking Ground & Excavation',
+  'excavation area': 'Breaking Ground & Excavation',
+  'material management activities near the deep excavation': 'Breaking Ground & Excavation',
+  'climbing in and out of the excavation': 'Breaking Ground & Excavation',
+  'inside an excavation pit': 'Breaking Ground & Excavation',
+  'excavation pit without': 'Breaking Ground & Excavation',
+  'access/egress structure': 'Breaking Ground & Excavation',
+  'entering and exiting a deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges were found around a deep trench': 'Breaking Ground & Excavation',
+  'unprotected edges around a deep trench': 'Breaking Ground & Excavation',
+  'deep trench': 'Breaking Ground & Excavation',
+  'barricades on the ditch': 'Breaking Ground & Excavation',
+  'barricades around the ditch': 'Breaking Ground & Excavation',
+  'installed around the ditch': 'Breaking Ground & Excavation',
+  'installed on the ditch': 'Breaking Ground & Excavation',
+  'ditch where there is a risk': 'Breaking Ground & Excavation',
+
+  // Scaffold access on roadway → Traffic Management
+  'scaffold access entrance is positioned directly on an active roadway': 'Traffic Management',
+  'positioned directly on an active roadway': 'Traffic Management',
+  'on an active roadway': 'Traffic Management',
+  'active roadway': 'Traffic Management',
+  'exposing personnel to vehicular traffic': 'Traffic Management',
+  'vehicular traffic and collision': 'Traffic Management',
+  'vehicular traffic': 'Traffic Management',
+
+  // Barriers near slope/ramp for vehicles → Traffic Management or Access
+  'barriers were not installed on the opposite side of the newly used ramp': 'Traffic Management',
+  'risk of fall of vehicles and equipment': 'Traffic Management',
+  'fall of vehicles': 'Traffic Management',
+  'jersey barriers had been placed very close to the edge of a slope': 'Traffic Management',
+  'close to the edge of a slope': 'Traffic Management',
+
+  // Harnesses stored improperly (not height work) → Housekeeping
+  'harnesses were found hanging on the access ladder': 'Housekeeping',
+  'harnesses hanging on the access ladder': 'Housekeeping',
+  'harness storage point': 'Housekeeping',
+  'harness storage': 'Housekeeping',
+  'harness stored direct to the sunlight': 'Housekeeping',
+  'harness has been stored on the wheelbarrows': 'Housekeeping',
+  'harness stored on wheelbarrows': 'Housekeeping',
+  'full body harness harness stored direct to the sunlight': 'Housekeeping',
+  'full body harness stored': 'Housekeeping',
+  'blocked by stored materials': 'Housekeeping',
+
+  // Trip hazard signage → Access or Slip and Trip
+  'watch your step signage': 'Slip and Trip',
+  'no watch your step signage': 'Slip and Trip',
+  'trip hazard for workers': 'Slip and Trip',
+  'potentially posing a trip hazard': 'Slip and Trip',
+  'posing a trip hazard': 'Slip and Trip',
+
+  // Confined space work → Confined Spaces (not Working at Height)
+  'inside confined space': 'Confined Spaces',
+  'formwork is in progress inside confined space': 'Confined Spaces',
+  'dismantling of formwork is in progress inside confined space': 'Confined Spaces',
+  'safety officer in charge of confined space does not have': 'Confined Spaces',
+  'safety officer in charge of confined space': 'Confined Spaces',
+  'in charge of confined space': 'Confined Spaces',
+  'no safety supervision in your confined space work': 'Confined Spaces',
+  'safety supervision in your confined space': 'Confined Spaces',
+  'confined space work': 'Confined Spaces',
+
+  // Fire point blocked → Fire (not Working at Height)
+  'firepoint at the': 'Fire',
+  'fire point at the': 'Fire',
+  'firepoint blocked': 'Fire',
+  'fire point blocked': 'Fire',
+  'blocked by the scaffold barricade, hindering easy access': 'Fire',
+  'blocked by scaffold barricade, hindering': 'Fire',
+  'hindering easy access during an emergency': 'Fire',
+
+  // Safety sign fallen → General Site Issues (not Working at Height)
+  'safety sign board had fallen down': 'General Site Issues',
+  'sign board had fallen down': 'General Site Issues',
+  'safety sign board was found fell down': 'General Site Issues',
+  'sign board was found fell down': 'General Site Issues',
+  'safety sign board fell': 'General Site Issues',
+
+  // Nails protruding → Physical Hazard (not Working at Height)
+  'nails were observed protruding from the plywood': 'Physical Hazard',
+  'nails were observed protruding': 'Physical Hazard',
+  'nails protruding from the plywood': 'Physical Hazard',
+  'nails protruding': 'Physical Hazard',
+
+  // Lifting operations → Lifting
+  'lifting scaffolding material manually with a rope': 'Lifting',
+  'lifting material manually with a rope': 'Lifting',
+  'lifting manually with a rope': 'Lifting',
+  'without using proper equipment like a pulley': 'Lifting',
+  'risk of falling objects': 'Physical Hazard',
+  'uninspected scaffold structure tripod used for lifting': 'Lifting',
+  'tripod used for lifting': 'Lifting',
+
+  // ============================================================================
+  // EXCAVATION HAZARDS → Breaking Ground & Excavation
+  // These override "fall" keywords when excavation is the context
+  // ============================================================================
+  'deep excavation is present without sturdy barriers': 'Breaking Ground & Excavation',
+  'deep excavation is present without any barriers': 'Breaking Ground & Excavation',
+  'deep excavation is present without': 'Breaking Ground & Excavation',
+  'deep excavation without': 'Breaking Ground & Excavation',
+  'excavation is present without': 'Breaking Ground & Excavation',
+  'risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
+  'posing a risk of vehicles or workers falling': 'Breaking Ground & Excavation',
+  'immediate installation of protective barriers': 'Breaking Ground & Excavation',
+  'installation of protective barriers': 'Breaking Ground & Excavation',
+  'chamber preparations and shuttering activities inside the excavation': 'Breaking Ground & Excavation',
+  'shuttering activities inside the excavation': 'Breaking Ground & Excavation',
+  'inside the excavation area': 'Breaking Ground & Excavation',
+  'lack of safe access and egress': 'Breaking Ground & Excavation',
+  'only one ladder was available for workers to enter and exit the excavation': 'Breaking Ground & Excavation',
+  'enter and exit the excavation': 'Breaking Ground & Excavation',
+  'stockpile of backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
+  'backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
+  'dangerously stacked': 'Breaking Ground & Excavation',
+  'near 90-degree cut': 'Breaking Ground & Excavation',
+  'too steep and unstable': 'Breaking Ground & Excavation',
+  'could collapse and fall onto the equipment': 'Breaking Ground & Excavation',
+  'collapse and fall onto': 'Breaking Ground & Excavation',
+  'unwanted ramp going to site and leading to open deep excavation': 'Breaking Ground & Excavation',
+  'leading to open deep excavation': 'Breaking Ground & Excavation',
+  'ramp leading to excavation': 'Breaking Ground & Excavation',
+  'excavation close to the vehicle access': 'Breaking Ground & Excavation',
+  'close to the vehicle access': 'Breaking Ground & Excavation',
+  'prevent the man/equipment from falling on the deep excavation': 'Breaking Ground & Excavation',
+  'falling on the deep excavation': 'Breaking Ground & Excavation',
+  'deep excavation close to the access road': 'Breaking Ground & Excavation',
+  'excavation close to the access road': 'Breaking Ground & Excavation',
+  'preventing vehicles or equipment from falling': 'Breaking Ground & Excavation',
+  'access and egress to the excavation were being made using': 'Breaking Ground & Excavation',
+  'egress to the excavation': 'Breaking Ground & Excavation',
+  'handmade wooden ladder': 'Breaking Ground & Excavation',
+  'ladder was not secured, appeared unstable': 'Breaking Ground & Excavation',
+  'steel works are ongoing on top of the pit': 'Breaking Ground & Excavation',
+  'on top of the pit where the edges are open': 'Breaking Ground & Excavation',
+  'top of the pit': 'Breaking Ground & Excavation',
+
+  // Deep pit → Breaking Ground & Excavation
+  'open space was observed in the deep pit': 'Breaking Ground & Excavation',
+  'deep pit at area': 'Breaking Ground & Excavation',
+  'in the deep pit': 'Breaking Ground & Excavation',
+  'deep pit': 'Breaking Ground & Excavation',
+
+  // Unprotected edges of excavation/trenches → Breaking Ground & Excavation
+  'unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges of deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges of deep trenches': 'Breaking Ground & Excavation',
+  'unprotected edges of the deep trenches': 'Breaking Ground & Excavation',
+  'edges of the deep excavation': 'Breaking Ground & Excavation',
+  'edges of deep excavation': 'Breaking Ground & Excavation',
+  'edges of deep trenches': 'Breaking Ground & Excavation',
+  'near the edges of the deep excavation': 'Breaking Ground & Excavation',
+  'near the unprotected edges': 'Breaking Ground & Excavation',
+  'standing near the unprotected edges': 'Breaking Ground & Excavation',
+  'outside the barricades near the edges of the deep excavation': 'Breaking Ground & Excavation',
+  'site supervisor found outside the barricades': 'Breaking Ground & Excavation',
+  'placed at the unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
+  'at the unprotected edges': 'Breaking Ground & Excavation',
+  'pose a significant fall hazard': 'Breaking Ground & Excavation',
+  'posed a significant fall hazard': 'Breaking Ground & Excavation',
+  'significant fall hazard to workers and vehicles': 'Breaking Ground & Excavation',
+  'risk of workers or equipment falling into the excavation': 'Breaking Ground & Excavation',
+  'falling into the excavation': 'Breaking Ground & Excavation',
+  'unsafe activities in deep trenches': 'Breaking Ground & Excavation',
+  'tasks in deep excavations': 'Breaking Ground & Excavation',
+  'working in deep excavations': 'Breaking Ground & Excavation',
+  'unprotected edges of deep excavations': 'Breaking Ground & Excavation',
+  'standing at the unprotected edges of deep excavations': 'Breaking Ground & Excavation',
+  'workers are standing at the unprotected edges': 'Breaking Ground & Excavation',
+
+  // Open manhole → Confined Spaces or Breaking Ground & Excavation
+  'open manhole was observed on site without any protective barrier': 'Confined Spaces',
+  'open manhole was observed': 'Confined Spaces',
+  'open manhole without': 'Confined Spaces',
+  'open manhole': 'Confined Spaces',
+
+  // Confined space with barricade issues
+  'barricades at the edge of the confined space are incomplete': 'Confined Spaces',
+  'edge of the confined space are incomplete': 'Confined Spaces',
+  'open ditches in the area': 'Breaking Ground & Excavation',
+
+  // Dewatering activity → Breaking Ground & Excavation (water management in excavation)
+  'dewatering activity has commenced': 'Breaking Ground & Excavation',
+  'dewatering activity': 'Breaking Ground & Excavation',
+
+  // ============================================================================
+  // HOUSEKEEPING HAZARDS → Housekeeping
+  // Scattered materials, improper storage, trip hazards from materials
+  // ============================================================================
+  'unwanted wooden pieces and scaffolding materials were found scattered': 'Housekeeping',
+  'wooden pieces and scaffolding materials were found scattered': 'Housekeeping',
+  'scaffolding materials were found scattered': 'Housekeeping',
+  'found scattered on the ground': 'Housekeeping',
+  'creating a potential trip hazard and contributing to poor housekeeping': 'Housekeeping',
+  'potential trip hazard and contributing to poor housekeeping': 'Housekeeping',
+  'contributing to poor housekeeping conditions': 'Housekeeping',
+  'poor housekeeping conditions on-site': 'Housekeeping',
+  'improper materials arrangements for scaffold materials': 'Housekeeping',
+  'improper materials arrangements': 'Housekeeping',
+  'cement bags and scaffolding materials were observed stored near the access': 'Housekeeping',
+  'stored near the access point': 'Housekeeping',
+  'obstructing safe movement and creating potential trip': 'Housekeeping',
+  'obstructing safe movement': 'Housekeeping',
+  'creating potential trip and collision hazards': 'Housekeeping',
+  'step ladders were found lying unattended': 'Housekeeping',
+  'ladders were found lying unattended': 'Housekeeping',
+  'lying unattended in various work areas': 'Housekeeping',
+  'creating potential trip hazards and obstructing': 'Housekeeping',
+
+  // Scaffolding materials scattered/stored improperly → Housekeeping
+  'scaffolding materials were thrown scattered across the site': 'Housekeeping',
+  'scaffolding materials were thrown scattered': 'Housekeeping',
+  'thrown scattered across the site': 'Housekeeping',
+  'scaffold materials were observed scattered on the ground': 'Housekeeping',
+  'scaffold materials were observed scattered': 'Housekeeping',
+  'materials were observed scattered on the ground': 'Housekeeping',
+  'scaffolding materials were improperly placed on the ground': 'Housekeeping',
+  'improperly placed on the ground, creating a potential slip': 'Housekeeping',
+  'creating a potential slip and trip hazard': 'Housekeeping',
+  'potential slip and trip hazard': 'Housekeeping',
+  'poor housekeeping observed in the scaffold material storage': 'Housekeeping',
+  'scaffold material storage access': 'Housekeeping',
+  'slipping and tripping hazards during material shifting': 'Housekeeping',
+  'wooden planks are stored on an unstable and overloaded': 'Housekeeping',
+  'stored on an unstable and overloaded': 'Housekeeping',
+  'unstable and overloaded makeshift scaffold': 'Housekeeping',
+  'overloaded makeshift scaffold/rack': 'Housekeeping',
+  'makeshift scaffold/rack, posing a high risk of collapse': 'Housekeeping',
+  'high risk of collapse': 'Housekeeping',
+  'scaffolding material storage area is not properly barricaded': 'Housekeeping',
+  'material storage area is not properly barricaded': 'Housekeeping',
+  'not properly barricaded, posing a risk of unauthorized access': 'Site Security',
+  'risk of unauthorized access': 'Site Security',
+  'found unwanted scaffold barricades in front of': 'Housekeeping',
+  'unwanted scaffold barricades in front of the warehouse': 'Housekeeping',
+  'unwanted scaffold barricades': 'Housekeeping',
+
+  // Unsecured grating → Slip and Trip
+  'unsecured grating was observed': 'Slip and Trip',
+  'unsecured grating': 'Slip and Trip',
+  'potential risk of slips, trips, or falls': 'Slip and Trip',
+  'risk of slips, trips': 'Slip and Trip',
+
+  // ============================================================================
+  // PERMIT/DOCUMENTATION ISSUES → General Site Issues
+  // Administrative issues during scaffolding work
+  // ============================================================================
+  'scaffolding activity was ongoing while permit to work was not filled': 'General Site Issues',
+  'permit to work was not filled 100%': 'General Site Issues',
+  'permit to work was not filled': 'General Site Issues',
+  'temporary works was not mentioned as a significant hazard': 'General Site Issues',
+  'not mentioned as a significant hazard': 'General Site Issues',
+  'cold work permit is used but not the appropriate permit': 'General Site Issues',
+  'not the appropriate permit for haulage': 'General Site Issues',
+  'not the appropriate permit': 'General Site Issues',
+
+  // ============================================================================
+  // PHYSICAL HAZARD (Struck-by) → Physical Hazard
+  // Workers beneath scaffolding or in drop zone
+  // ============================================================================
+  'worker is sitting beneath scaffolding activity area': 'Physical Hazard',
+  'sitting beneath scaffolding activity': 'Physical Hazard',
+  'beneath scaffolding activity area': 'Physical Hazard',
+  'materials could potentially fall on him': 'Physical Hazard',
+  'potentially fall on him': 'Physical Hazard',
+
+  // ============================================================================
   // Fire-related terms → Correct category
+  // ============================================================================
+  // Electrical fire + extinguisher issues → Fire (not COSHH)
+  'live electrical panel with provision of dry chemical fire extinguisher': 'Fire',
+  'dry chemical fire extinguisher which is not suitable to extinguish': 'Fire',
+  'not suitable to extinguish the electrical fire': 'Fire',
+  'extinguish the electrical fire': 'Fire',
+  'electrical fire': 'Fire',
+  'co2 extinguisher': 'Fire',
+  'co2 fire extinguisher': 'Fire',
+  'dry chemical fire extinguisher': 'Fire',
+  'dry chemical extinguisher': 'Fire',
+  'powder extinguisher': 'Fire',
+  'foam extinguisher': 'Fire',
+
   'fire extinguisher': 'Fire',
   'fire alarm': 'Fire',
   'fire exit': 'Fire',
@@ -362,35 +914,35 @@ export const CONTEXT_REDIRECTS = {
   'hot day': 'Working in Heat',
   'hot conditions': 'Working in Heat',
   'hot tap': 'Energized System',
-  'hot work permit': 'Permit and RAMS',
+  'hot work permit': 'Hot Work',
 
-  // RAMS/Permit/Documentation → Permit and RAMS (prevent "lifting" in ref quotes from hijacking)
-  'no copy of approved': 'Permit and RAMS',
-  'no copy of rams': 'Permit and RAMS',
-  'no copy of msra': 'Permit and RAMS',
-  'no approved rams': 'Permit and RAMS',
-  'no approved msra': 'Permit and RAMS',
-  'no rams available': 'Permit and RAMS',
-  'no msra available': 'Permit and RAMS',
-  'missing rams': 'Permit and RAMS',
-  'missing msra': 'Permit and RAMS',
-  'rams not available': 'Permit and RAMS',
-  'msra not available': 'Permit and RAMS',
-  'approved msra': 'Permit and RAMS',
-  'approved rams': 'Permit and RAMS',
-  'risk assessment': 'Permit and RAMS',
-  'method statement': 'Permit and RAMS',
-  'no means of guideline': 'Permit and RAMS',
-  'no guideline': 'Permit and RAMS',
-  'tmp on the working': 'Permit and RAMS',
-  'tmp at site': 'Permit and RAMS',
-  'work activities at site': 'Permit and RAMS',
-  'permit to work': 'Permit and RAMS',
-  'ptw not': 'Permit and RAMS',
-  'no ptw': 'Permit and RAMS',
-  'permit not mentioned': 'Permit and RAMS',
-  'not mentioned on permit': 'Permit and RAMS',
-  'not mentioned on rams': 'Permit and RAMS',
+  // RAMS/Permit/Documentation → General Site Issues (control failures require manual review to identify underlying hazard)
+  'no copy of approved': 'General Site Issues',
+  'no copy of rams': 'General Site Issues',
+  'no copy of msra': 'General Site Issues',
+  'no approved rams': 'General Site Issues',
+  'no approved msra': 'General Site Issues',
+  'no rams available': 'General Site Issues',
+  'no msra available': 'General Site Issues',
+  'missing rams': 'General Site Issues',
+  'missing msra': 'General Site Issues',
+  'rams not available': 'General Site Issues',
+  'msra not available': 'General Site Issues',
+  'approved msra': 'General Site Issues',
+  'approved rams': 'General Site Issues',
+  'risk assessment': 'General Site Issues',
+  'method statement': 'General Site Issues',
+  'no means of guideline': 'General Site Issues',
+  'no guideline': 'General Site Issues',
+  'tmp on the working': 'General Site Issues',
+  'tmp at site': 'General Site Issues',
+  'work activities at site': 'General Site Issues',
+  'permit to work': 'General Site Issues',
+  'ptw not': 'General Site Issues',
+  'no ptw': 'General Site Issues',
+  'permit not mentioned': 'General Site Issues',
+  'not mentioned on permit': 'General Site Issues',
+  'not mentioned on rams': 'General Site Issues',
 
   // Lifting equipment → Mobile Plant & Equipment
   'forklift': 'Mobile Plant & Equipment',
@@ -420,6 +972,32 @@ export const CONTEXT_REDIRECTS = {
   'roller': 'Mobile Plant & Equipment',
   'compactor': 'Mobile Plant & Equipment',
 
+  // Equipment brand names → Mobile Plant & Equipment (longer patterns first)
+  'a jcb did not have any requirements': 'Mobile Plant & Equipment',
+  'jcb did not have any requirements': 'Mobile Plant & Equipment',
+  'jcb did not have': 'Mobile Plant & Equipment',
+  'observed that a jcb': 'Mobile Plant & Equipment',
+  'jcb operator': 'Mobile Plant & Equipment',
+  'jcb was not': 'Mobile Plant & Equipment',
+  'jcb': 'Mobile Plant & Equipment',
+  'caterpillar': 'Mobile Plant & Equipment',
+  'komatsu': 'Mobile Plant & Equipment',
+  'volvo': 'Mobile Plant & Equipment',
+  'hitachi': 'Mobile Plant & Equipment',
+  'liebherr': 'Mobile Plant & Equipment',
+  'bobcat': 'Mobile Plant & Equipment',
+  'john deere': 'Mobile Plant & Equipment',
+  'case': 'Mobile Plant & Equipment',
+  'hyundai': 'Mobile Plant & Equipment',
+  'doosan': 'Mobile Plant & Equipment',
+  'kobelco': 'Mobile Plant & Equipment',
+  'tadano': 'Mobile Plant & Equipment',
+  'manitou': 'Mobile Plant & Equipment',
+  'terex': 'Mobile Plant & Equipment',
+  'sany': 'Mobile Plant & Equipment',
+  'xcmg': 'Mobile Plant & Equipment',
+  'zoomlion': 'Mobile Plant & Equipment',
+
   // Height-related terms → Correct category
   'overhead hazard': 'Mobile Plant & Equipment',
   'overhead work': 'Mobile Plant & Equipment',
@@ -448,36 +1026,46 @@ export const CONTEXT_REDIRECTS = {
   'cutting tool': 'Tools',
   'grinding tool': 'Tools',
 
-  // PPE-specific terms → Route to actual hazard or Work Environment
-  'hard hat': 'Work Environment',
-  'safety glasses': 'Work Environment',
-  'safety boots': 'Work Environment',
-  'safety shoes': 'Work Environment',
-  'hi-vis': 'Work Environment',
-  'high visibility': 'Work Environment',
+  // PPE-specific terms → Route to actual hazard or Unclassified
+  'hard hat': 'General Site Issues',
+  'safety glasses': 'General Site Issues',
+  'safety boots': 'General Site Issues',
+  'safety shoes': 'General Site Issues',
+  'hi-vis': 'General Site Issues',
+  'high visibility': 'General Site Issues',
   'safety harness': 'Working at Height',
   'fall harness': 'Working at Height',
-  // Not wearing PPE patterns → Work Environment
-  'not wearing': 'Work Environment',
-  'were not wearing': 'Work Environment',
-  'was not wearing': 'Work Environment',
-  'without ppe': 'Work Environment',
-  'without safety': 'Work Environment',
-  'no ppe': 'Work Environment',
-  'missing ppe': 'Work Environment',
-  'ppe not worn': 'Work Environment',
-  'ppe compliance': 'Work Environment',
-  'personal protective equipment': 'Work Environment',
+  // Not wearing PPE patterns → General Site Issues
+  'not wearing': 'General Site Issues',
+  'were not wearing': 'General Site Issues',
+  'was not wearing': 'General Site Issues',
+  'without ppe': 'General Site Issues',
+  'without safety': 'General Site Issues',
+  'no ppe': 'General Site Issues',
+  'missing ppe': 'General Site Issues',
+  'ppe not worn': 'General Site Issues',
+  'ppe compliance': 'General Site Issues',
+  'personal protective equipment': 'General Site Issues',
 
-  // Signage/Traffic - prevent "fall" matching Working at Height
+  // Signage/Traffic - prevent "fall" matching Working at Height (longer patterns first)
+  'using the access road, which lacks a designated pedestrian walkway': 'Traffic Management',
+  'lacks a designated pedestrian walkway': 'Traffic Management',
+  'designated pedestrian walkway': 'Traffic Management',
+  'using the access road': 'Traffic Management',
+  'pedestrian walkway': 'Traffic Management',
+  'pedestrian access': 'Traffic Management',
+  'pedestrian crossing': 'Traffic Management',
+  'pedestrian route': 'Traffic Management',
   'traffic signage': 'Traffic Management',
   'traffic sign': 'Traffic Management',
   'haul road': 'Traffic Management',
-  'fallen sign': 'Work Environment',
-  'fallen signage': 'Work Environment',
-  'sign fell': 'Work Environment',
-  'signage fell': 'Work Environment',
-  'blown over': 'Work Environment',
+  'access road': 'Traffic Management',
+  'vehicle access': 'Traffic Management',
+  'fallen sign': 'General Site Issues',
+  'fallen signage': 'General Site Issues',
+  'sign fell': 'General Site Issues',
+  'signage fell': 'General Site Issues',
+  'blown over': 'General Site Issues',
   'fallen barrier': 'Access',
   'fallen barricade': 'Access',
   'fallen cone': 'Traffic Management',
@@ -514,6 +1102,12 @@ export const CONTEXT_REDIRECTS = {
   'pollution': 'Environmental',
 
   // Flammable fuel storage → Fire (even if in welfare/rest shelter)
+  'diesel tanker found refueling': 'Fire',
+  'diesel tanker refueling': 'Fire',
+  'refueling excavator at job site': 'Fire',
+  'refueling at job site': 'Fire',
+  'designated refueling area not provided': 'Fire',
+  'refueling area not provided': 'Fire',
   'diesel kept': 'Fire',
   'diesel is kept': 'Fire',
   'diesel being kept': 'Fire',
@@ -570,11 +1164,11 @@ export const CONTEXT_REDIRECTS = {
   'welfare facility:': 'Worker Welfare',
   'welfare facility observed': 'Worker Welfare',
   'confined space:': 'Confined Spaces',
-  'work environment:': 'Work Environment',
-  'work enironment:': 'Work Environment',
-  'work enironment;': 'Work Environment',
+  'work environment:': 'General Site Issues',
+  'work enironment:': 'General Site Issues',
+  'work enironment;': 'General Site Issues',
   'equipment:': 'Mobile Plant & Equipment',
-  'ppe:': 'Work Environment',
+  'ppe:': 'General Site Issues',
   'housekeeping:': 'Housekeeping',
   'housekeeping;': 'Housekeeping',
   'access:': 'Access',
@@ -582,8 +1176,8 @@ export const CONTEXT_REDIRECTS = {
   'fire protection:': 'Fire',
   'electrical:': 'Energized System',
   'barricades:': 'Access',
-  'safety signs:': 'Work Environment',
-  'safety sign:': 'Work Environment',
+  'safety signs:': 'General Site Issues',
+  'safety sign:': 'General Site Issues',
   'hotwork:': 'Hot Work',
   'hotwork;': 'Hot Work',
   'hot work:': 'Hot Work',
@@ -675,19 +1269,19 @@ export const CONTEXT_REDIRECTS = {
   'general waste': 'Housekeeping',
 
   // Bulletin board/signage → Safety Sign
-  'bulletin board': 'Work Environment',
-  'bulletien board': 'Work Environment',
-  'hsse board': 'Work Environment',
-  'hsse bulletin': 'Work Environment',
-  'notice board': 'Work Environment',
-  'missing sign': 'Work Environment',
-  'no signage': 'Work Environment',
-  'lacks signage': 'Work Environment',
-  'without signage': 'Work Environment',
-  'signage missing': 'Work Environment',
-  'signage is missing': 'Work Environment',
-  'awareness signage': 'Work Environment',
-  'missing awareness': 'Work Environment',
+  'bulletin board': 'General Site Issues',
+  'bulletien board': 'General Site Issues',
+  'hsse board': 'General Site Issues',
+  'hsse bulletin': 'General Site Issues',
+  'notice board': 'General Site Issues',
+  'missing sign': 'General Site Issues',
+  'no signage': 'General Site Issues',
+  'lacks signage': 'General Site Issues',
+  'without signage': 'General Site Issues',
+  'signage missing': 'General Site Issues',
+  'signage is missing': 'General Site Issues',
+  'awareness signage': 'General Site Issues',
+  'missing awareness': 'General Site Issues',
 
   // Welding equipment → Hot Work (not just Tools)
   'welding machine': 'Hot Work',
@@ -695,13 +1289,19 @@ export const CONTEXT_REDIRECTS = {
   'cutting machine': 'Hot Work',
   'grinding machine': 'Tools',
 
-  // Chemical storage → COSHH
+  // Chemical storage → COSHH (longer patterns to override PPE patterns)
+  'cleanup of the generator drip tray': 'COSHH',
+  'during the cleanup of the generator drip tray': 'COSHH',
+  'generator drip tray': 'COSHH',
+  'drip tray cleanup': 'COSHH',
+  'drip tray': 'COSHH',
   'chemical stored': 'COSHH',
   'chemicals stored': 'COSHH',
-  'drip tray': 'COSHH',
   'chemical storage': 'COSHH',
   'msds': 'COSHH',
   'sds': 'COSHH',
+  'fuel handling': 'COSHH',
+  'oil spill cleanup': 'COSHH',
 
   // Tripping hazard → Access
   'tripping hazard': 'Access',
@@ -740,7 +1340,7 @@ export const CONTEXT_REDIRECTS = {
   'movement of the equipment': 'Mobile Plant & Equipment',
   'movement of equipment': 'Mobile Plant & Equipment',
 
-  // Rebar/materials storage → Housekeeping or Work Environment
+  // Rebar/materials storage → Housekeeping or Unclassified
   'rebar material': 'Housekeeping',
   'materials not properly stored': 'Housekeeping',
   'material not properly stored': 'Housekeeping',
@@ -802,10 +1402,10 @@ export const CONTEXT_REDIRECTS = {
   'trip and fall': 'Access',
   'stones in the worker area': 'Housekeeping',
 
-  // Concrete activity → Work Environment
-  'concrete activity': 'Work Environment',
-  'concrete has been observed': 'Work Environment',
-  'spikes protruding': 'Work Environment',
+  // Concrete activity → General Site Issues
+  'concrete activity': 'General Site Issues',
+  'concrete has been observed': 'General Site Issues',
+  'spikes protruding': 'General Site Issues',
 
   // Poor housekeeping variations → Housekeeping
   'poor housekeeping': 'Housekeeping',
@@ -857,6 +1457,11 @@ export const CONTEXT_REDIRECTS = {
   'harness not inspected': 'Working at Height',
   'expired harness': 'Working at Height',
   'damaged harness': 'Working at Height',
+  'fbh': 'Working at Height',
+  'full body harness': 'Working at Height',
+  'shock absorber': 'Working at Height',
+  'lanyard': 'Working at Height',
+  'fall arrest': 'Working at Height',
 
   // Generator → Energized System
   'generator running': 'Energized System',
@@ -865,6 +1470,11 @@ export const CONTEXT_REDIRECTS = {
   'portable generator': 'Energized System',
   'generator fuel': 'Energized System',
   'generator maintenance': 'Energized System',
+  'a dg ': 'Energized System',
+  'the dg ': 'Energized System',
+  'dg did not': 'Energized System',
+  'dg was not': 'Energized System',
+  'dg inspection': 'Energized System',
 
   // Compressor → Energized System (not Tools)
   'air compressor': 'Energized System',
@@ -876,11 +1486,11 @@ export const CONTEXT_REDIRECTS = {
   'scaffold parts stored': 'Housekeeping',
   'scaffold components lying': 'Housekeeping',
 
-  // Safety equipment inspection → Work Environment
-  'ppe inspection': 'Work Environment',
-  'helmet inspection': 'Work Environment',
-  'gloves inspection': 'Work Environment',
-  'safety glasses inspection': 'Work Environment',
+  // Safety equipment inspection → General Site Issues
+  'ppe inspection': 'General Site Issues',
+  'helmet inspection': 'General Site Issues',
+  'gloves inspection': 'General Site Issues',
+  'safety glasses inspection': 'General Site Issues',
 
   // Site Welfare patterns (override inspection context)
   'toilet was not': 'Worker Welfare',
@@ -913,11 +1523,34 @@ export const CONTEXT_REDIRECTS = {
   'dust was observed': 'Respiratory Hazard',
   'dust accumulating': 'Respiratory Hazard',
   'dust observed': 'Respiratory Hazard',
+  'no dust control': 'Respiratory Hazard',
+  'dust control': 'Respiratory Hazard',
+  'without dust control': 'Respiratory Hazard',
+  'airborne debris': 'Respiratory Hazard',
+  'not wearing mask': 'Respiratory Hazard',
+  'without mask': 'Respiratory Hazard',
+  'coring activities': 'Respiratory Hazard',
+  'coring process': 'Respiratory Hazard',
+
+  // Working on or Near Water (location patterns)
+  'sea side': 'Working on or Near Water',
+  'seaside': 'Working on or Near Water',
+  'at the sea': 'Working on or Near Water',
+  'near the sea': 'Working on or Near Water',
+  'by the sea': 'Working on or Near Water',
+  'coastal area': 'Working on or Near Water',
+  'beach area': 'Working on or Near Water',
+  'waterfront': 'Working on or Near Water',
 
   // Confined Spaces (override inspection context)
   'gas test': 'Confined Spaces',
   'gas test was not': 'Confined Spaces',
   'confined space entry': 'Confined Spaces',
+  'confined space activity': 'Confined Spaces',
+  'confined space work': 'Confined Spaces',
+  'inside confined': 'Confined Spaces',
+  'entering confined': 'Confined Spaces',
+  'confined space attendant': 'Confined Spaces',
 
   // Breaking Ground & Excavation (override inspection context)
   'deep excavation': 'Breaking Ground & Excavation',
@@ -972,6 +1605,80 @@ export const CONTEXT_REDIRECTS = {
   // Hot Work (override inspection context)
   'welding activities': 'Hot Work',
   'welding machine': 'Hot Work',
+  'hot work activities': 'Hot Work',
+  'hot work activity': 'Hot Work',
+  'grinding activities': 'Hot Work',
+  'grinding activity': 'Hot Work',
+
+  // Rigger → Lifting (rigger is a specialist role for lifting operations)
+  'rigger wearing': 'Lifting',
+  'rigger observed': 'Lifting',
+  'rigger not': 'Lifting',
+  'rigger without': 'Lifting',
+
+  // Distribution board → Energized System
+  'distribution board': 'Energized System',
+  'db board': 'Energized System',
+  'db panel': 'Energized System',
+  'electrical panel': 'Energized System',
+
+  // Drinking water → Worker Welfare
+  'drinking water': 'Worker Welfare',
+  'drinking water tank': 'Worker Welfare',
+  'water tank': 'Worker Welfare',
+  'potable water': 'Worker Welfare',
+  'water analysis': 'Worker Welfare',
+  'water analysis test': 'Worker Welfare',
+  'water delivery': 'Worker Welfare',
+  'water delivery date': 'Worker Welfare',
+  'water igloo': 'Worker Welfare',
+  'igloo': 'Worker Welfare',
+
+  // Complaint box / Admin → General Site Issues
+  'complaint box': 'General Site Issues',
+  'complaint form': 'General Site Issues',
+
+  // Shoes stored in wrong place → Housekeeping
+  'shoes were found stored': 'Housekeeping',
+  'shoes found stored': 'Housekeeping',
+  'shoes stored inside': 'Housekeeping',
+  'stored inside a water': 'Housekeeping',
+  'inside a water drum': 'Housekeeping',
+  'water drum': 'Housekeeping',
+
+  // Painting activities → COSHH
+  'painting activities': 'COSHH',
+  'painting activity': 'COSHH',
+  'spray painting': 'COSHH',
+  'paint without ppe': 'COSHH',
+  'painting without ppe': 'COSHH',
+
+  // Signage + hot work context → Hot Work
+  'no signage for hot work': 'Hot Work',
+  'no signages for hot work': 'Hot Work',
+  'signage for hot work': 'Hot Work',
+  'signages for hot work': 'Hot Work',
+  'hot work no signage': 'Hot Work',
+  'hot work signage': 'Hot Work',
+
+  // Signage + lifting context → Lifting
+  'no signage for lifting': 'Lifting',
+  'lifting signage': 'Lifting',
+  'crane signage': 'Lifting',
+
+  // Signage + excavation context → Breaking Ground & Excavation
+  'excavation signage': 'Breaking Ground & Excavation',
+  'no signage for excavation': 'Breaking Ground & Excavation',
+
+  // Signage + electrical context → Energized System
+  'electrical signage': 'Energized System',
+  'db signage': 'Energized System',
+
+  // DB/Electrical lacks label → Energized System
+  'distribution board lacks': 'Energized System',
+  'db lacks label': 'Energized System',
+  'db board lacks': 'Energized System',
+  'panel lacks label': 'Energized System',
 
   // Sharp objects / Impalement → Physical Hazard (primary hazard is impalement injury)
   // NEOM PHSAS 37.9 Sharp Objects standard
@@ -1124,8 +1831,8 @@ export const CONTEXT_REDIRECTS = {
   'pipe elevated': 'Temporary Works',
   'hdpe pipe': 'Temporary Works',
   'hdpe pipes': 'Temporary Works',
-  'did not comply with the approved': 'Permit and RAMS',
-  'not comply with': 'Permit and RAMS',
+  'did not comply with the approved': 'General Site Issues',
+  'not comply with': 'General Site Issues',
   // Access-related hazards
   'not properly fixed': 'Access',
   'wooden steps': 'Access',
@@ -1170,12 +1877,20 @@ export const CONTEXT_REDIRECTS = {
   'generator drip tray': 'Fire',
   'generator dip tray': 'Fire',
 
-  // Material storage/stacking → Work Environment (collapse hazard)
-  'not properly stacked': 'Work Environment',
-  'improper stacking': 'Work Environment',
-  'without stoppers': 'Work Environment',
-  'prevent rolling': 'Work Environment',
-  'risk of collapse': 'Work Environment',
+  // Material storage/stacking → General Site Issues (collapse hazard)
+  // Unstable stacking/collapse risk → Physical Hazard (struck-by falling materials)
+  'not properly stacked': 'Physical Hazard',
+  'improper stacking': 'Physical Hazard',
+  'without stoppers': 'Physical Hazard',
+  'prevent rolling': 'Physical Hazard',
+  'risk of collapse': 'Physical Hazard',
+  'stacked on slope': 'Physical Hazard',
+  'stacked without support': 'Physical Hazard',
+  'unsecured stacking': 'Physical Hazard',
+  'pipes sliding': 'Physical Hazard',
+  'pipes rolling': 'Physical Hazard',
+  'risk of sliding': 'Physical Hazard',
+  'risk of rolling': 'Physical Hazard',
   'cement bags on ground': 'Housekeeping',
   'cement bags placed on ground': 'Housekeeping',
   'placed directly on the ground': 'Housekeeping',
@@ -1237,6 +1952,963 @@ export const CONTEXT_REDIRECTS = {
   'found scattered': 'Housekeeping',
   'lying on the ground': 'Housekeeping',
   'scattered across': 'Housekeeping',
+
+  // ============================================================================
+  // SCAFFOLD CONTEXT OVERRIDES - Prevent "Working at Height" over-matching
+  // When scaffold is mentioned but the actual hazard is something else
+  // ============================================================================
+
+  // Ladder/access obstructed by materials → Housekeeping (not Working at Height)
+  'access ladder to the scaffold was obstructed': 'Housekeeping',
+  'access ladder was obstructed': 'Housekeeping',
+  'ladder was obstructed by': 'Housekeeping',
+  'obstructed by unwanted materials': 'Housekeeping',
+  'obstructed by materials': 'Housekeeping',
+
+  // Scaffolding materials scattered = Housekeeping (explicit "housekeeping issues")
+  'unwanted scaffolding materials were found scattered': 'Housekeeping',
+  'scaffolding materials were found scattered': 'Housekeeping',
+  'creating housekeeping issues': 'Housekeeping',
+  'housekeeping issues': 'Housekeeping',
+  'risk of trips, falls, and restricted access': 'Housekeeping',
+
+  // Safety signage fallen → Housekeeping/General (not Working at Height)
+  'safety signage had fallen down': 'Housekeeping',
+  'safety signage had fallen': 'Housekeeping',
+  'sign board wads found fall': 'Housekeeping',
+  'signage had fallen': 'Housekeeping',
+
+  // Scaffold barricades near excavation → Breaking Ground & Excavation
+  'scaffold barricades were installed too close to the excavation': 'Breaking Ground & Excavation',
+  'barricades were installed too close to the excavation': 'Breaking Ground & Excavation',
+  'too close to the excavation edges': 'Breaking Ground & Excavation',
+  'close to the excavation edges': 'Breaking Ground & Excavation',
+
+  // Forklift transporting materials → Mobile Plant & Equipment
+  'forklift operator was transporting': 'Mobile Plant & Equipment',
+  'forklift was in motion': 'Mobile Plant & Equipment',
+  'operator\'s view was obstructed': 'Mobile Plant & Equipment',
+  'positioned himself in the line of fire': 'Mobile Plant & Equipment',
+
+  // Scaffolding clamps obstructing walkway/staircase → Housekeeping
+  'scaffolding clamps were found placed in the main staircase': 'Housekeeping',
+  'scaffolding clamps were found placed': 'Housekeeping',
+  'clamps were found placed in': 'Housekeeping',
+  'placed in the main staircase access': 'Housekeeping',
+  'obstructing the walkway': 'Housekeeping',
+  'creating a potential trip hazard for workers': 'Housekeeping',
+
+  // Scaffold ladder on excavation edge → Breaking Ground & Excavation
+  'scaffolding access ladder\'s landing is positioned on the edge of the excavation': 'Breaking Ground & Excavation',
+  'ladder\'s landing is positioned on the edge of the excavation': 'Breaking Ground & Excavation',
+  'landing is positioned on the edge of the excavation': 'Breaking Ground & Excavation',
+  'on the edge of the excavation': 'Breaking Ground & Excavation',
+
+  // Damaged bucket for lifting → Lifting
+  'bucket used for shifting and lifting': 'Lifting',
+  'bucket used for lifting': 'Lifting',
+  'lifting scaffolding materials was found damaged': 'Lifting',
+  'damaged with a hole': 'Lifting',
+  'material falling during lifting operations': 'Lifting',
+  'risk of material falling during lifting': 'Lifting',
+
+  // Electrical cables obstructing access → Energized System
+  'electrical cables were found obstructing': 'Energized System',
+  'cables were found obstructing the access ladder': 'Energized System',
+  'electrical cables obstructing': 'Energized System',
+  'cables obstructing the access': 'Energized System',
+
+  // Excavation access blocked → Breaking Ground & Excavation
+  'access to the excavated area was found blocked': 'Breaking Ground & Excavation',
+  'access to the excavated area': 'Breaking Ground & Excavation',
+  'excavated area was found blocked': 'Breaking Ground & Excavation',
+  'excavated area blocked': 'Breaking Ground & Excavation',
+
+  // Platform blocked by materials → Housekeeping
+  'working platform for piping installation was blocked': 'Housekeeping',
+  'platform was blocked by piping materials': 'Housekeeping',
+  'blocked by piping materials': 'Housekeeping',
+  'hindering the safe movement of workers': 'Housekeeping',
+
+  // Chamber/pit access issues → Breaking Ground & Excavation
+  'loose wooden planks were being used to provide access': 'Breaking Ground & Excavation',
+  'loose wooden planks were being used': 'Breaking Ground & Excavation',
+  'access and exit to/from the chamber': 'Breaking Ground & Excavation',
+  'access to/from the chamber': 'Breaking Ground & Excavation',
+  'chamber had unprotected edges': 'Breaking Ground & Excavation',
+  'unprotected edges around the perimeter': 'Breaking Ground & Excavation',
+  'no guardrails, toe boards, or fall prevention': 'Breaking Ground & Excavation',
+  'fall into excavations, pits, and holes': 'Breaking Ground & Excavation',
+
+  // Deep trench without protection → Breaking Ground & Excavation
+  'deep trench approximately': 'Breaking Ground & Excavation',
+  'trench without proper edge protection': 'Breaking Ground & Excavation',
+  'without proper edge protection or barricading': 'Breaking Ground & Excavation',
+  'no signage or warning indicators': 'Breaking Ground & Excavation',
+  'posing a fall hazard to workers and equipment': 'Breaking Ground & Excavation',
+  'fall hazard to workers and equipment': 'Breaking Ground & Excavation',
+
+  // Hot workshop area → Hot Work
+  'hot workshop area': 'Hot Work',
+  'near the hot workshop area': 'Hot Work',
+  'hot workshop': 'Hot Work',
+
+  // No safe access to chamber → Breaking Ground & Excavation
+  'no safe access and egress provided for operatives': 'Breaking Ground & Excavation',
+  'no safe access and egress': 'Breaking Ground & Excavation',
+  'shuttering and reinforcement activities inside a': 'Breaking Ground & Excavation',
+  'inside a 3-meter-deep chamber': 'Breaking Ground & Excavation',
+  'deep chamber': 'Breaking Ground & Excavation',
+  'unsecured, loose platform to gain access': 'Breaking Ground & Excavation',
+  'loose platform to gain access': 'Breaking Ground & Excavation',
+
+  // PPE non-compliance (scaffold supervisor) → General Site Issues (PPE)
+  'scaffolding supervisor in phase': 'General Site Issues',
+  'supervisor not wearing standard safety glasses': 'General Site Issues',
+  'not wearing standard safety glasses': 'General Site Issues',
+  'noncompliance with required ppe': 'General Site Issues',
+
+  // Scaffold planks improperly placed → Housekeeping
+  'scaffolding planks were found improperly placed': 'Housekeeping',
+  'scaffolding planks improperly placed': 'Housekeeping',
+  'planks were found improperly placed': 'Housekeeping',
+  'improperly placed on top of the material rack': 'Housekeeping',
+  'on top of the material rack': 'Housekeeping',
+  'potential falling object or collapse hazard': 'Housekeeping',
+
+  // ============================================================================
+  // EXCAVATION-RELATED - Override "Working at Height" when excavation is context
+  // ============================================================================
+
+  // Deep excavation patterns → Breaking Ground & Excavation
+  'deep excavation is present without sturdy barriers': 'Breaking Ground & Excavation',
+  'deep excavation is present without any barriers': 'Breaking Ground & Excavation',
+  'posing a risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
+  'risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
+  'immediate installation of protective barriers': 'Breaking Ground & Excavation',
+  'fall into excavations, pits': 'Breaking Ground & Excavation',
+
+  // Dewatering activity → Breaking Ground & Excavation
+  'dewatering activity has commenced': 'Breaking Ground & Excavation',
+  'dewatering activity': 'Breaking Ground & Excavation',
+  'workers do not have proper access or a stable platform': 'Breaking Ground & Excavation',
+
+  // Chamber/shuttering inside excavation → Breaking Ground & Excavation
+  'chamber preparations and shuttering activities inside the excavation': 'Breaking Ground & Excavation',
+  'shuttering activities inside the excavation area': 'Breaking Ground & Excavation',
+  'inside the excavation area': 'Breaking Ground & Excavation',
+  'enter and exit the excavation': 'Breaking Ground & Excavation',
+  'only one ladder was available for workers': 'Breaking Ground & Excavation',
+
+  // Stockpile/backfilling materials → Breaking Ground & Excavation
+  'stockpile of backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
+  'backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
+  'near 90-degree cut': 'Breaking Ground & Excavation',
+  'too steep and unstable for loose soil': 'Breaking Ground & Excavation',
+  'collapse and fall onto the equipment': 'Breaking Ground & Excavation',
+
+  // Unwanted ramp to excavation → Breaking Ground & Excavation
+  'unwanted ramp going to site and leading to open deep excavation': 'Breaking Ground & Excavation',
+  'leading to open deep excavation': 'Breaking Ground & Excavation',
+  'fall of equipmwnt/vehicles in excavation': 'Breaking Ground & Excavation',
+  'fall of equipment/vehicles in excavation': 'Breaking Ground & Excavation',
+
+  // Steel works on pit → Breaking Ground & Excavation
+  'steel works are ongoing on top of the pit': 'Breaking Ground & Excavation',
+  'on top of the pit where the edges are open': 'Breaking Ground & Excavation',
+  'top of the pit where the edges': 'Breaking Ground & Excavation',
+
+  // Excavation close to access road → Breaking Ground & Excavation
+  'excavation close to the vehicle access lacks': 'Breaking Ground & Excavation',
+  'excavation close to the vehicle access': 'Breaking Ground & Excavation',
+  'prevent the man/equipment from falling on the deep excation': 'Breaking Ground & Excavation',
+  'prevent the man/equipment from falling on the deep excavation': 'Breaking Ground & Excavation',
+  'falling on the deep excation': 'Breaking Ground & Excavation',
+  'deep excavation close to the access road': 'Breaking Ground & Excavation',
+  'preventing vehicles or equipment from falling': 'Breaking Ground & Excavation',
+
+  // Handmade ladder for excavation → Breaking Ground & Excavation
+  'access and egress to the excavation were being made using a handmade': 'Breaking Ground & Excavation',
+  'handmade wooden ladder': 'Breaking Ground & Excavation',
+  'ladder was not secured, appeared unstable': 'Breaking Ground & Excavation',
+  'did not meet standard safety requirements for excavation': 'Breaking Ground & Excavation',
+
+  // ============================================================================
+  // PERMIT/DOCUMENTATION ISSUES → General Site Issues
+  // ============================================================================
+  'cold work permit is used but not the appropriate permit': 'General Site Issues',
+  'cold work permit not appropriate': 'General Site Issues',
+  'not the appropriate permit for haulage': 'General Site Issues',
+  'permit to work was not filled 100%': 'General Site Issues',
+  'permit was not filled 100%': 'General Site Issues',
+  'temporary works was not mentioned as a significant hazard': 'General Site Issues',
+
+  // ============================================================================
+  // HOUSEKEEPING - Materials stored/scattered improperly
+  // ============================================================================
+  'improper materials arrangements for scaffold': 'Housekeeping',
+  'improper materials arrangements': 'Housekeeping',
+  'cement bags and scaffolding materials were observed stored near': 'Housekeeping',
+  'stored near the access point': 'Housekeeping',
+  'obstructing safe movement and creating potential trip': 'Housekeeping',
+
+  // Step ladders lying unattended → Housekeeping
+  'step ladders were found lying unattended': 'Housekeeping',
+  'ladders were found lying unattended': 'Housekeeping',
+  'lying unattended in various work areas': 'Housekeeping',
+  'creating potential trip hazards and obstructing': 'Housekeeping',
+
+  // ============================================================================
+  // PHYSICAL HAZARD - Struck-by/Falling objects
+  // ============================================================================
+  'worker is sitting beneath scaffolding activity area': 'Physical Hazard',
+  'sitting beneath scaffolding activity': 'Physical Hazard',
+  'beneath scaffolding activity area': 'Physical Hazard',
+  'where materials could potentially fall on him': 'Physical Hazard',
+  'materials could potentially fall': 'Physical Hazard',
+
+  // ============================================================================
+  // LIFTING - Uninspected equipment for lifting
+  // ============================================================================
+  'uninspected scaffold structure tripod used for lifting': 'Lifting',
+  'tripod used for lifting': 'Lifting',
+  'used for lifting an electrical grounding rod': 'Lifting',
+  'risk of collapse of scaffolding': 'Lifting',
+
+  // ============================================================================
+  // MORE EXCAVATION OVERRIDES - Deep trench/excavation patterns
+  // ============================================================================
+  'standing near the unprotected edges of a deep trench': 'Breaking Ground & Excavation',
+  'unprotected edges of a deep trench': 'Breaking Ground & Excavation',
+  'manually backfilling and removing soil': 'Breaking Ground & Excavation',
+  'trench appeared to be unstable': 'Breaking Ground & Excavation',
+
+  'accesses and egress slope to a deep excavation': 'Breaking Ground & Excavation',
+  'egress slope to a deep excavation': 'Breaking Ground & Excavation',
+  'slope appeared steep and lacked proper support': 'Breaking Ground & Excavation',
+  'workers losing footing or falling into the excavation': 'Breaking Ground & Excavation',
+
+  'access to the deep excavation has been obstructed': 'Breaking Ground & Excavation',
+  'deep excavation has been obstructed by scaffold': 'Breaking Ground & Excavation',
+  'obstructed by scaffold materials': 'Breaking Ground & Excavation',
+
+  'unprotected edges were found around a deep excavation': 'Breaking Ground & Excavation',
+  'around a deep excavation': 'Breaking Ground & Excavation',
+
+  'unprotected edges of deep trenches were observed': 'Breaking Ground & Excavation',
+  'unprotected edges of deep trenches': 'Breaking Ground & Excavation',
+  'unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
+  'at several locations of the deep excavation': 'Breaking Ground & Excavation',
+  'several locations around the site had unprotected edges of deep excavations': 'Breaking Ground & Excavation',
+
+  'site supervisor found outside the barricades near the edges of the deep excavation': 'Breaking Ground & Excavation',
+  'outside the barricades near the edges': 'Breaking Ground & Excavation',
+
+  'hydrotesting device was found placed at the unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
+  'placed at the unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
+
+  'site engineer standing near the unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'very close to the moving radius of an active excavator': 'Mobile Plant & Equipment',
+
+  'unsafe activities in deep trenches': 'Breaking Ground & Excavation',
+  'performing tasks in deep excavations': 'Breaking Ground & Excavation',
+  'workers are standing at the unprotected edges of deep excavations': 'Breaking Ground & Excavation',
+
+  // ============================================================================
+  // CONFINED SPACES - Override WAH when confined space is the context
+  // ============================================================================
+  'scaffold platform within the confined space': 'Confined Spaces',
+  'within the confined space has only one access point': 'Confined Spaces',
+  'ensure easy evacuation during an emergency': 'Confined Spaces',
+
+  'safety officer in charge of confined space does not have': 'Confined Spaces',
+  'safety officer in charge of confined space': 'Confined Spaces',
+  'no safety supervision in your confined space work': 'Confined Spaces',
+
+  // ============================================================================
+  // FIRE - Fire point blocked
+  // ============================================================================
+  'firepoint at the tsf area is blocked': 'Fire',
+  'firepoint at the.*area is blocked': 'Fire',
+  'blocked by the scaffold barricade, hindering easy access': 'Fire',
+  'hindering easy access during an emergency': 'Fire',
+
+  // ============================================================================
+  // MORE HOUSEKEEPING - Scaffold materials stored/scattered improperly
+  // ============================================================================
+  'water shelter was kept on a slope': 'Housekeeping',
+  'possibility to fall from the slope': 'Housekeeping',
+  'potential to harm workers': 'Housekeeping',
+
+  'scaffolding materials were found stacked improperly': 'Housekeeping',
+  'stacked improperly at both the entrance and exit': 'Housekeeping',
+  'obstructing safe access and egress': 'Housekeeping',
+  'stacked materials were not securely arranged': 'Housekeeping',
+
+  'damaged or deformed scaffolding materials stored': 'Housekeeping',
+  'deformed scaffolding materials stored on-site': 'Housekeeping',
+  'pose a risk of being reused': 'Housekeeping',
+
+  'scaffold ladder was observed placed in an undesignated area': 'Housekeeping',
+  'placed in an undesignated area': 'Housekeeping',
+  'create tripping hazards and obstruct pathways': 'Housekeeping',
+  'can damaged the materials itself': 'Housekeeping',
+
+  'steel materials and electric cables have been placed on scaffolding': 'Housekeeping',
+  'electric cables have been placed on scaffolding materials': 'Housekeeping',
+  'creating a potential obstruction for the safe movement': 'Housekeeping',
+
+  'signages were not installed at the edges': 'General Site Issues',
+  'signages all over the site were fallen': 'Housekeeping',
+  'fallen all over the place due to high winds': 'Housekeeping',
+  'due to high winds': 'Housekeeping',
+
+  'scaffold materials were observed to be scattered': 'Housekeeping',
+  'scaffold materials were observed scattered': 'Housekeeping',
+  'creating potential tripping hazards and compromising site organization': 'Housekeeping',
+  'they should be properly stored': 'Housekeeping',
+
+  'fbh has not been stored in the designated area': 'Housekeeping',
+  'left on the scaffold platform, posing potential risks of damage': 'Housekeeping',
+  'posing potential risks of damage and misuse': 'Housekeeping',
+
+  'observed scaffold tubes on-site that were damaged': 'Housekeeping',
+  'scaffold tubes on-site that were damaged': 'Housekeeping',
+
+  'scaffolding materials were thrown scattered': 'Housekeeping',
+  'thrown scattered across the site': 'Housekeeping',
+
+  'unwanted scaffold barricades in front of the warehouse': 'Housekeeping',
+  'front of the warehouse at the tsf area': 'Housekeeping',
+
+  'poor housekeeping observed in the scaffold material storage': 'Housekeeping',
+  'scaffold material storage access': 'Housekeeping',
+  'slipping and tripping hazards during material shifting': 'Housekeeping',
+
+  'wooden planks are stored on an unstable': 'Housekeeping',
+  'unstable and overloaded makeshift scaffold/rack': 'Housekeeping',
+  'posing a high risk of collapse': 'Housekeeping',
+
+  'scaffolding material storage area is not properly barricaded': 'Site Security',
+  'not properly barricaded, posing a risk of unauthorized access': 'Site Security',
+
+  // ============================================================================
+  // PREVENT EXCAVATION OVER-MATCHING - These should NOT be Breaking Ground
+  // ============================================================================
+
+  // Waste bin issues → Worker Welfare (even if near excavation)
+  'polythene bag of the waste bin was not changed': 'Worker Welfare',
+  'polythene bag of waste bin was not changed': 'Worker Welfare',
+  'waste bin was not changed': 'Worker Welfare',
+  'polythene bag in the waste bin': 'Worker Welfare',
+  'waste bin was full': 'Worker Welfare',
+
+  // Toilet checklist near excavation → Worker Welfare
+  'toilet check was not available for the toilet': 'Worker Welfare',
+  'toilet check was not available': 'Worker Welfare',
+  'toilet which was placed near': 'Worker Welfare',
+
+  // Earthing/grounding issues → Energized System
+  'improper non effective earthing': 'Energized System',
+  'non effective earthing': 'Energized System',
+  'earthing on concrete': 'Energized System',
+  'earthing for the.*panel': 'Energized System',
+  'improper earthing': 'Energized System',
+
+  // Dust control during excavation → Respiratory Hazard
+  'no dust control measures were in place': 'Respiratory Hazard',
+  'no dust control measures in place': 'Respiratory Hazard',
+  'dust control measures were in place': 'Respiratory Hazard',
+  'no visible dust control measures': 'Respiratory Hazard',
+  'generating significant airborne dust': 'Respiratory Hazard',
+  'airborne dust': 'Respiratory Hazard',
+  'dust was observed spreading': 'Respiratory Hazard',
+  'reducing visibility and potentially impacting worker health': 'Respiratory Hazard',
+
+  // Interface fence / unauthorized entry → Site Security (not excavation)
+  'interface fence was temporarily open': 'Site Security',
+  'interface fence was.*open': 'Site Security',
+  'creating a risk of unauthorized entry': 'Site Security',
+  'risk of unauthorized entry': 'Site Security',
+
+  // Fire extinguisher in excavator → Fire (equipment inspection, not excavation)
+  'fire extinguisher in the excavator was not updated': 'Fire',
+  'fire extinguisher in the excavator': 'Fire',
+  'fire extinguisher.*excavator.*not updated': 'Fire',
+  'fire extinguisher.*not updated': 'Fire',
+
+  // Generic materials stored without barricades → Housekeeping (not excavation-specific)
+  'materials were found stored without barricades': 'Housekeeping',
+  'materials found stored without barricades': 'Housekeeping',
+  'stored without barricades or safety signages': 'Housekeeping',
+
+  // ============================================================================
+  // ELECTRICAL HAZARDS - Even in welfare context
+  // ============================================================================
+  'live electrical socket was found in direct contact': 'Energized System',
+  'live electrical socket': 'Energized System',
+  'electrical socket.*water cooler': 'Energized System',
+  'exposed the plug and socket to possible condensation': 'Energized System',
+  'potential for electrical shock': 'Energized System',
+  'electrical shock, short-circuiting, or fire': 'Energized System',
+
+  // ============================================================================
+  // MISCELLANEOUS CONTEXT FIXES
+  // ============================================================================
+
+  // Equipment left by unknown firm → Site Security (not Tools)
+  'equipment was found at the entrance of the site parked/left by unknown firm': 'Site Security',
+  'left by unknown firm': 'Site Security',
+  'parked/left by unknown firm': 'Site Security',
+  'by unknown firm': 'Site Security',
+
+  // Worker not attending briefing → General Site Issues (not Tools)
+  'worker not attending pre-task briefing': 'General Site Issues',
+  'not attending pre-task briefing': 'General Site Issues',
+  'instead he is hiding and just using mobile phone': 'General Site Issues',
+  'hiding and just using mobile phone': 'General Site Issues',
+
+  // Parking signage → Traffic Management
+  'no signage indicating the parking area': 'Traffic Management',
+  'signage indicating the parking area': 'Traffic Management',
+  'parking area or reverse parking': 'Traffic Management',
+  'reverse parking': 'Traffic Management',
+
+  // Workers painting without PPE → COSHH
+  'workers were observed performing painting activities without wearing proper': 'COSHH',
+  'performing painting activities without wearing': 'COSHH',
+  'painting activities without.*ppe': 'COSHH',
+  'workers are performing painting activities, but the required specific ppe': 'COSHH',
+  'painting activities, but the required specific ppe': 'COSHH',
+
+  // Unusable materials → Housekeeping
+  'unusable materials were observed in the workplace': 'Housekeeping',
+  'unusable materials were observed': 'Housekeeping',
+  'unusable materials in workplace': 'Housekeeping',
+
+  // ============================================================================
+  // MORE SCAFFOLD CONTEXT OVERRIDES - Prevent WAH over-matching
+  // ============================================================================
+
+  // Signage fallen due to weather → Housekeeping
+  'due to sand storm some sign fall down': 'Housekeeping',
+  'sand storm some sign fall': 'Housekeeping',
+  'due to sand storm': 'Housekeeping',
+
+  // Deep excavation with cave-in/collapse risk → Breaking Ground & Excavation
+  'deep excavation was observed without any isolation': 'Breaking Ground & Excavation',
+  'vibration from the compactor': 'Breaking Ground & Excavation',
+  'cave-ins or soil collapse': 'Breaking Ground & Excavation',
+  'cave-ins': 'Breaking Ground & Excavation',
+  'soil collapse incidents': 'Breaking Ground & Excavation',
+  'soil collapse': 'Breaking Ground & Excavation',
+
+  // Stockpile edge protection → Breaking Ground & Excavation
+  'edge protection for stockpiles is not available': 'Breaking Ground & Excavation',
+  'edge protection for stockpiles': 'Breaking Ground & Excavation',
+  'edge protection for stockpiles was not provided': 'Breaking Ground & Excavation',
+
+  // TMP (Traffic Management Plan) → Traffic Management
+  'non-availability of proper tmp': 'Traffic Management',
+  'proper tmp and edge protection': 'Traffic Management',
+
+  // Permit not issued → General Site Issues
+  'permit not issued for de-shuttering': 'General Site Issues',
+  'permit not issued for': 'General Site Issues',
+
+  // Wire/cable in contact with scaffold → Energized System
+  'wire is in contact with the scaffold': 'Energized System',
+  'wire was in contact with the scaffold': 'Energized System',
+  'live electrical cable came into contact with the scaffolding': 'Energized System',
+  'electrical cable came into contact with': 'Energized System',
+  'cable came into contact with the scaffolding': 'Energized System',
+
+  // Scaffold materials scattered/obstructing → Housekeeping
+  'scaffold materials were observed scattered along the way': 'Housekeeping',
+  'scattered along the way': 'Housekeeping',
+  'scaffold ledgers were scattered and cluttered': 'Housekeeping',
+  'scattered and cluttered throughout': 'Housekeeping',
+  'scaffolding materials were scattered along the edge': 'Housekeeping',
+  'scaffold materials are dispersed across the work zone': 'Housekeeping',
+  'dispersed across the work zone': 'Housekeeping',
+  'pedestrian walkway was blocked due to scaffold scattered material': 'Housekeeping',
+  'walkway was blocked due to scaffold': 'Housekeeping',
+  'scaffolding materials obstructed the entire pathway': 'Housekeeping',
+  'obstructed the entire pathway': 'Housekeeping',
+  'scaffolding material was inadequately placed at site': 'Housekeeping',
+  'inadequately placed at site': 'Housekeeping',
+  'scaffold access was blocked due to the timbers': 'Housekeeping',
+  'access was blocked due to the timbers': 'Housekeeping',
+
+  // Materials accumulated at working zone → Housekeeping
+  'construction material includes such as shuttering tie rods, waste plywood, and scaffolding ledgers were accumulated': 'Housekeeping',
+  'shuttering tie rods, waste plywood, and scaffolding ledgers were accumulated': 'Housekeeping',
+  'accumulated at working zone': 'Housekeeping',
+
+  // Poor housekeeping explicitly mentioned → Housekeeping
+  'poor housekeeping at the workplace': 'Housekeeping',
+  'construction materials and scaffold tubes accumulating': 'Housekeeping',
+  'clutter and disorganization': 'Housekeeping',
+
+  // Worker/person on edge of excavation → Breaking Ground & Excavation
+  'worker was observed standing on the unprotected edge of an excavation': 'Breaking Ground & Excavation',
+  'standing on the unprotected edge of an excavation': 'Breaking Ground & Excavation',
+  'standing on the unprotected edge of the deep excavation': 'Breaking Ground & Excavation',
+  'concrete pump operator.*found standing on the edge of the deep excavation': 'Breaking Ground & Excavation',
+  'standing on the edge of the deep excavation': 'Breaking Ground & Excavation',
+  'steel fixer on the unprotected edge of the deep excavation': 'Breaking Ground & Excavation',
+  'on the unprotected edge of the deep excavation': 'Breaking Ground & Excavation',
+  'land surveyor found on the edge of the deep excavation': 'Breaking Ground & Excavation',
+  'found on the edge of the deep excavation': 'Breaking Ground & Excavation',
+  'workers found walking/ working on the unprotected edge': 'Breaking Ground & Excavation',
+  'walking/ working on the unprotected edge': 'Breaking Ground & Excavation',
+  'crossing the installed rigid barricades': 'Breaking Ground & Excavation',
+
+  // Water igloo on scaffold → Housekeeping (not WAH)
+  'water igloo was observed placed on the scaffold platform': 'Housekeeping',
+  'igloo placed on top of scaffold platform': 'Housekeeping',
+  'igloo placed on scaffold platform': 'Housekeeping',
+
+  // Scaffold inspector PPE issue → General Site Issues
+  'scaffold inspector found on site with long boots with no steel toe': 'General Site Issues',
+  'scaffold inspector found.*with no steel toe': 'General Site Issues',
+  'long boots with no steel toe': 'General Site Issues',
+  'no steel toe and sole': 'General Site Issues',
+
+  // ============================================================================
+  // GENERAL SITE ISSUES OVERRIDES - Route to more specific categories
+  // ============================================================================
+
+  // Rest shelter protection → Worker Welfare
+  'rest shelter was not protected with sand berm': 'Worker Welfare',
+  'rest shellter was not protected': 'Worker Welfare',
+  'rest shelter was not protected': 'Worker Welfare',
+
+  // Sitting arrangements → Worker Welfare
+  'sitting arrangements for operatives was not provided': 'Worker Welfare',
+  'sitting arrangements.*not provided': 'Worker Welfare',
+
+  // Jersey barrier alignment → Traffic Management
+  'jersey barrier were not aligned': 'Traffic Management',
+  'jersey barriers were not aligned': 'Traffic Management',
+  'readjusted after its displacement': 'Traffic Management',
+
+  // Stones/materials in walkway → Housekeeping
+  'stones are laying in the walk way area': 'Housekeeping',
+  'stones are laying in the walkway': 'Housekeeping',
+  'laying in the walk way': 'Housekeeping',
+  'making hurdles for passer byers': 'Housekeeping',
+  'hurdles for passer byers': 'Housekeeping',
+
+  // Material not arranged → Housekeeping
+  'material that is not arranged': 'Housekeeping',
+  'not arranged and making problem for the passer byers': 'Housekeeping',
+  'making problem for the passer byers': 'Housekeeping',
+
+  // Bricks need to be arranged → Housekeeping
+  'bricks need to be arranged': 'Housekeeping',
+
+  // Crusher panel board → Energized System
+  'crusher pannel board was not fix': 'Energized System',
+  'crusher panel board was not fix': 'Energized System',
+  'panel board was not fix in side wall': 'Energized System',
+
+  // ============================================================================
+  // MOBILE PLANT OVERRIDES - Route to more specific categories
+  // ============================================================================
+
+  // Security breach / unauthorized access → Site Security
+  'serious concerns about the security procedures': 'Site Security',
+  'breach of neom security protocols': 'Site Security',
+  'security personnel did not properly check': 'Site Security',
+  'security personnel did not.*check the status': 'Site Security',
+  'allowing unauthorized trucks to enter': 'Site Security',
+  'unauthorized trucks to enter': 'Site Security',
+  'thoroughly verify the access status': 'Site Security',
+  'verify the access status of every vehicle': 'Site Security',
+
+  // PPE non-compliance at equipment → General Site Issues
+  'operative working with rebar bending machine without mandatory ppe': 'General Site Issues',
+  'working with rebar bending machine without.*ppe': 'General Site Issues',
+  'site engineer and cm not worn mandatory ppe': 'General Site Issues',
+  'not worn mandatory ppe': 'General Site Issues',
+
+  // Damaged signboards by equipment → Housekeeping
+  'damaged signboards were observed': 'Housekeeping',
+  'excavator operator damaged all existing signages': 'Housekeeping',
+  'excavator operator damaged.*signages': 'Housekeeping',
+
+  // ============================================================================
+  // MORE MOBILE PLANT OVERRIDES
+  // ============================================================================
+
+  // Carpenter/steel fixing table - ergonomics → Tools
+  'no carpenter table or steel fixing table provided': 'Tools',
+  'carpenter table or steel fixing table': 'Tools',
+  'poor ergonomics for the operators': 'Tools',
+  'whilst operating circular saw by carpenters': 'Tools',
+  'angle grinder by steel fixers involved in cutting': 'Tools',
+
+  // Handrailing on staircase → Access
+  'handrailing was not provided on staircase': 'Access',
+  'hand railing was not provided along the staircase': 'Access',
+  'handrailing was not provided': 'Access',
+  'hand railing was not provided': 'Access',
+
+  // Electrical connection overloading → Energized System
+  'overloading of electrical connection with tower light generator': 'Energized System',
+  'overloading of electrical connection': 'Energized System',
+  'without installing any safety devices to get the circuit tripped': 'Energized System',
+  'in case of any current leakage': 'Energized System',
+
+  // GFCI not installed → Energized System
+  'gfci was not installed in power distribution': 'Energized System',
+  'gfci was not installed': 'Energized System',
+  'power distribution system to crusher plant': 'Energized System',
+
+  // Steel fixers inside retaining wall foundation → Breaking Ground & Excavation
+  'steel fixers fixing steel inside the retaining wall foundation reinforcement': 'Breaking Ground & Excavation',
+  'inside the retaining wall foundation reinforcement': 'Breaking Ground & Excavation',
+  'no safe access egress and rescue arrangements': 'Breaking Ground & Excavation',
+  'inadequate for rescue in case of any emergency': 'Breaking Ground & Excavation',
+
+  // Operator PPE non-compliance → General Site Issues
+  'loader operator did not wear helmet, safety shoes and safety glass': 'General Site Issues',
+  'operator did not wear helmet': 'General Site Issues',
+
+  // ============================================================================
+  // GENERAL SITE ISSUES → HOUSEKEEPING
+  // ============================================================================
+
+  // Materials left unkept → Housekeeping
+  'surplus piping materials left at work location unkept': 'Housekeeping',
+  'piping materials left at work location unkept': 'Housekeeping',
+  'left at work location unkept': 'Housekeeping',
+  'needs removal to provide space': 'Housekeeping',
+
+  // Steel sticks/barricades left unkept → Housekeeping
+  'steel sticks used for barricades, survey markers are left unkept': 'Housekeeping',
+  'survey markers are left unkept': 'Housekeeping',
+  'left unkept anywhere after its use': 'Housekeeping',
+
+  // Work materials thrown → Lifting
+  'work materials thrown up/down on air': 'Lifting',
+  'thrown up/down on air': 'Lifting',
+  'not by bucket and rope': 'Lifting',
+
+  // ============================================================================
+  // MORE WORKING AT HEIGHT OVERRIDES - Additional patterns from test data
+  // ============================================================================
+
+  // Rocks/stones fallen from stockpile → Housekeeping (not WAH)
+  'rocks are fallen down from the steps of old stock pile': 'Housekeeping',
+  'rocks fallen down from the steps': 'Housekeeping',
+  'rocks fallen from stockpile': 'Housekeeping',
+  'rocks fallen from stock pile': 'Housekeeping',
+  'fallen down from the steps': 'Housekeeping',
+  'from the steps of old stock pile': 'Housekeeping',
+  'old stock pile': 'Housekeeping',
+  'stockpile debris': 'Housekeeping',
+
+  // Inappropriate gloves/hand protection for waterproofing → COSHH
+  'inappropriate hand protection worn by workers involved in waterproofing': 'COSHH',
+  'inappropriate hand protection.*waterproofing': 'COSHH',
+  'workers involved in waterproofing': 'COSHH',
+  'waterproofing activities': 'COSHH',
+  'waterproofing work': 'COSHH',
+  'waterproofing without.*gloves': 'COSHH',
+  'waterproofing without.*ppe': 'COSHH',
+
+  // Tower light checklist → Mobile Plant & Equipment (inspection/checklist)
+  'tower light checklist filled out daily': 'Mobile Plant & Equipment',
+  'tower light checklist': 'Mobile Plant & Equipment',
+  'tower light inspection': 'Mobile Plant & Equipment',
+  'light tower checklist': 'Mobile Plant & Equipment',
+  'light tower inspection': 'Mobile Plant & Equipment',
+
+  // Scaffold tag/inspection (structural safety) → Working at Height (keep)
+  'expired scaffolding tag': 'Working at Height',
+  'scaffolding tag expired': 'Working at Height',
+  'scaffold tag expired': 'Working at Height',
+  'expired scaffold tag': 'Working at Height',
+  'scaffold tag': 'Working at Height',
+  'scaffolding tag': 'Working at Height',
+
+  // Electric wire on scaffold → Energized System (override WAH)
+  'electric wire in contact with scaffold': 'Energized System',
+  'electrical wire in contact with scaffold': 'Energized System',
+  'wire touching scaffold': 'Energized System',
+  'cable touching scaffold': 'Energized System',
+  'wire on scaffold': 'Energized System',
+  'cable on scaffold': 'Energized System',
+
+  // Scaffold materials not segregated → Housekeeping
+  'scaffold materials not segregated': 'Housekeeping',
+  'scaffolding materials not segregated': 'Housekeeping',
+  'materials not segregated': 'Housekeeping',
+  'not segregated properly': 'Housekeeping',
+
+  // Scaffold platform as storage → Housekeeping
+  'scaffold platform used as storage': 'Housekeeping',
+  'scaffold platform being used for storage': 'Housekeeping',
+  'using scaffold platform for storage': 'Housekeeping',
+  'materials stored on scaffold platform': 'Housekeeping',
+
+  // Scaffold adjacent to excavation → Breaking Ground & Excavation
+  'scaffold adjacent to excavation': 'Breaking Ground & Excavation',
+  'scaffolding adjacent to excavation': 'Breaking Ground & Excavation',
+  'scaffold near excavation edge': 'Breaking Ground & Excavation',
+  'scaffolding near excavation': 'Breaking Ground & Excavation',
+
+  // ============================================================================
+  // ADDITIONAL WORKING AT HEIGHT OVERRIDES - More specific patterns
+  // ============================================================================
+
+  // Standing very close to excavation edges → Breaking Ground & Excavation
+  'standing very close to the unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
+  'standing very close to the unprotected edges': 'Breaking Ground & Excavation',
+  'standing close to the unprotected edges': 'Breaking Ground & Excavation',
+  'very close to the unprotected edges': 'Breaking Ground & Excavation',
+  'operatives were observed standing very close': 'Breaking Ground & Excavation',
+
+  // Scaffolding supervisor TUV card → General Site Issues (documentation/competency)
+  'scaffolding supervisor does not possess a physical tuv card': 'General Site Issues',
+  'does not possess a physical tuv card': 'General Site Issues',
+  'tuv card': 'General Site Issues',
+  'tuv certification': 'General Site Issues',
+
+  // Scaffold materials in mixed/unorganized manner → Housekeeping
+  'scaffolding materials were observed stored in a mixed and unorganized manner': 'Housekeeping',
+  'stored in a mixed and unorganized manner': 'Housekeeping',
+  'mixed and unorganized manner': 'Housekeeping',
+  'without proper segregation and arrangement': 'Housekeeping',
+
+  // Scaffold access blocked by materials → Fire (fire point context)
+  'fire point access in': 'Fire',
+  'fire point access was blocked': 'Fire',
+  'was blocked by scaffold materials': 'Fire',
+
+  // Ongoing formwork/rebar lack edge protection → Working at Height (correct)
+  // Keep as WAH - this is about edge protection at height
+
+  // Haulage operations multiple hazards → Driving/Traffic Management
+  'during haulage operations': 'Driving',
+  'haulage operations': 'Driving',
+  'haulage activities were conducted': 'Driving',
+  'dump truck drivers were seen climbing on top': 'Working at Height',
+  'manually tie tarpaulins': 'Working at Height',
+  'trapping station': 'Working at Height',
+
+  // Unprotected edges around deep trench → Breaking Ground & Excavation
+  'unprotected edges were found around a deep trench at the site': 'Breaking Ground & Excavation',
+  'found around a deep trench at the site': 'Breaking Ground & Excavation',
+  'around a deep trench at the site': 'Breaking Ground & Excavation',
+  'no physical barriers, guardrails, or warning signs': 'Breaking Ground & Excavation',
+
+  // Working inside excavation pit → Breaking Ground & Excavation
+  'working inside an excavation pit without': 'Breaking Ground & Excavation',
+  'found working inside an excavation pit': 'Breaking Ground & Excavation',
+  'excavation pit without a proper access': 'Breaking Ground & Excavation',
+
+  // No barricades on ditch → Breaking Ground & Excavation
+  'no installed barricades on the ditch': 'Breaking Ground & Excavation',
+  'installed barricades on the ditch': 'Breaking Ground & Excavation',
+
+  // Scaffold entrance on active roadway → Traffic Management
+  'scaffold access entrance is positioned directly on an active roadway': 'Traffic Management',
+  'access entrance is positioned directly on an active roadway': 'Traffic Management',
+  'positioned directly on an active roadway': 'Traffic Management',
+
+  // Harness storage blocked → Housekeeping
+  'harness storage point for safety harnesses': 'Housekeeping',
+  'harness storage point.*was found blocked': 'Housekeeping',
+  'storage point.*was found blocked by stored materials': 'Housekeeping',
+
+  // Handmade access for excavation → Breaking Ground & Excavation
+  'handmade, substandard access/egress structure': 'Breaking Ground & Excavation',
+  'substandard access/egress structure': 'Breaking Ground & Excavation',
+  'for entering and exiting a deep excavation area': 'Breaking Ground & Excavation',
+  'exiting a deep excavation area': 'Breaking Ground & Excavation',
+
+  // Lifting scaffold material with rope → Lifting
+  'lifting scaffolding material manually': 'Lifting',
+  'worker was lifting scaffolding material': 'Lifting',
+  'lifting scaffolding material manually with a rope': 'Lifting',
+
+  // Scaffold barricades unattended, no housekeeping → Housekeeping
+  'unwanted scaffolding barricades left unattended': 'Housekeeping',
+  'scaffolding barricades left unattended': 'Housekeeping',
+  'barricades left unattended on site': 'Housekeeping',
+  'concrete barriers not returned to their original position': 'Housekeeping',
+
+  // Formwork inside confined space → Confined Spaces
+  'formwork is in progress inside confined space': 'Confined Spaces',
+  'in progress inside confined space used scaffolding platform': 'Confined Spaces',
+  'inside confined space used scaffolding platform': 'Confined Spaces',
+  'scaffolding access is red tagged': 'Working at Height',
+
+  // Material management near excavation → Breaking Ground & Excavation
+  'conducting material management activities near the deep excavation': 'Breaking Ground & Excavation',
+  'material management activities near the deep excavation area': 'Breaking Ground & Excavation',
+  'operative was climbing in and out of the excavation': 'Breaking Ground & Excavation',
+
+  // Scaffold tubes on platform → Physical Hazard (falling objects) or WAH
+  'scaffolding tubes were observed stored on the scaffold platform': 'Physical Hazard',
+  'stored on the scaffold platform, creating an unsafe condition': 'Physical Hazard',
+  'increasing the risk of falling objects': 'Physical Hazard',
+
+  // Worker walking under scaffold dismantling → Physical Hazard
+  'walking underneath the scaffold while it is under dismantling': 'Physical Hazard',
+  'underneath the scaffold while.*dismantling': 'Physical Hazard',
+  'underneath.*scaffold.*dismantling': 'Physical Hazard',
+
+  // ============================================================================
+  // ENERGIZED SYSTEM OVERRIDES - Redirect to correct categories
+  // ============================================================================
+
+  // Speed breakers/humps → Traffic Management (not electrical)
+  'speed breakers are not provided': 'Traffic Management',
+  'speed breaker was not provided': 'Traffic Management',
+  'speed breakers not provided': 'Traffic Management',
+  'hump was not provided': 'Traffic Management',
+  'humps not provided': 'Traffic Management',
+  'adequate numbers of speed breaker': 'Traffic Management',
+
+  // Air compressor hose/whip check → Mechanical Hazard (pneumatic, not electrical)
+  'hose is danged and no wipe chaim': 'Mechanical Hazard',
+  'hose is damaged and no whip chain': 'Mechanical Hazard',
+  'no whip chain in air compressor': 'Mechanical Hazard',
+  'no wipe chaim in air compressor': 'Mechanical Hazard',
+  'air hose connections continues without whip checks': 'Mechanical Hazard',
+  'compressed air hose connections without whip checks': 'Mechanical Hazard',
+  'without whip checks': 'Mechanical Hazard',
+  'whip checks': 'Mechanical Hazard',
+  'whip chain': 'Mechanical Hazard',
+  'air hose suddenly came loose': 'Mechanical Hazard',
+  'hose came loose from its position under pressure': 'Mechanical Hazard',
+
+  // Rotating parts not safeguarded → Mechanical Hazard
+  'rotating parts of the air compressor was not safeguarded': 'Mechanical Hazard',
+  'rotating parts.*not safeguarded': 'Mechanical Hazard',
+  'rotating motor haft was not safeguarded': 'Mechanical Hazard',
+  'rotating motor shaft was not safeguarded': 'Mechanical Hazard',
+  'motor shaft was not safeguarded': 'Mechanical Hazard',
+
+  // Boulders near generators → Housekeeping (material placement)
+  'boulders are near the generators': 'Housekeeping',
+  'boulders near the generators': 'Housekeeping',
+  'rocks near generators': 'Housekeeping',
+
+  // Falling loose boulders from stockpile → Physical Hazard
+  'falling of loose boulders were observed from a stock pile': 'Physical Hazard',
+  'falling of loose boulders': 'Physical Hazard',
+  'loose boulders were observed from a stock pile': 'Physical Hazard',
+  'loose boulders from stockpile': 'Physical Hazard',
+  'loose boulders from stock pile': 'Physical Hazard',
+  'posing a continues risk for the motorists': 'Physical Hazard',
+
+  // Generator without fire extinguisher → Fire
+  'portable generator without fire extinguisher': 'Fire',
+  'generator without fire extinguisher': 'Fire',
+  'found portable generator without fire': 'Fire',
+
+  // Diesel stored improperly → Fire (not just electrical panel proximity)
+  'diesel was stored in a plastic container': 'Fire',
+  'diesel stored in a plastic container': 'Fire',
+  'diesel container was not labeled': 'Fire',
+  'diesel container was stored behind': 'Fire',
+
+  // Clinic/welfare not established → Worker Welfare
+  'failed to establish satellite office and a clinic': 'Worker Welfare',
+  'failed to establish.*clinic': 'Worker Welfare',
+  'first aid and medical arrangements are insufficient': 'Worker Welfare',
+  'medical arrangements are insufficient': 'Worker Welfare',
+  'no welfare facilities and power supply provided': 'Worker Welfare',
+
+  // Fire walls in genset room → Fire
+  'fire walls were not provided in genset room': 'Fire',
+  'fire walls were not provided': 'Fire',
+  'emergency on/off switch was not provided out side the genset': 'Fire',
+
+  // Workers standing on fuel tank → Working at Height (fall hazard)
+  'standing on top of a fuel tank': 'Working at Height',
+  'on top of a fuel tank': 'Working at Height',
+  'exposing themselves to fall hazards': 'Working at Height',
+
+  // Compressor not certified (without electrical context) → Mobile Plant & Equipment
+  'compressor was not third party certified': 'Mobile Plant & Equipment',
+  'air compressor without third party certificates': 'Mobile Plant & Equipment',
+
+  // PPE during generator maintenance → General Site Issues
+  'did not wear safety glass and hand gloves while doing maintenance of generator': 'General Site Issues',
+  'not wear safety glass.*maintenance of generator': 'General Site Issues',
+
+  // Welder earth clamp issues → Hot Work (welding context)
+  'welder is using a broken clamp connected to return earth cable': 'Hot Work',
+  'welder is using a broken clamp': 'Hot Work',
+  'return earth clamp was not properly clamped': 'Hot Work',
+
+  // ============================================================================
+  // MOBILE PLANT & EQUIPMENT OVERRIDES - Redirect to correct categories
+  // ============================================================================
+
+  // Vehicle collision due to road conditions → Driving
+  'tipper trucks collided': 'Driving',
+  'trucks collided': 'Driving',
+  'due to wet slippery road condition': 'Driving',
+  'wet slippery road': 'Driving',
+  'adapting driving behavior to the prevailing road conditions': 'Driving',
+  'adapting driving behavior': 'Driving',
+
+  // Boulders rolling from stockpile → Physical Hazard
+  'boulders rolling from the top of the stockpile': 'Physical Hazard',
+  'boulders rolling from the top': 'Physical Hazard',
+  'boulders rolling from stockpile': 'Physical Hazard',
+  'leading to the boulders rolling': 'Physical Hazard',
+  'towards the vehicle and people movement area': 'Physical Hazard',
+
+  // GFCI not installed → Energized System
+  'gfci was not installed in power distribution': 'Energized System',
+  'gfci was not installed': 'Energized System',
+  'gfci not installed': 'Energized System',
+
+  // Air hose not secured → Mechanical Hazard
+  'air hose was not adequately secured': 'Mechanical Hazard',
+  'pneumatic hose.*was not adequately secured': 'Mechanical Hazard',
+  'pneumatic hose of the compressor was not adequately secured': 'Mechanical Hazard',
+  'hose was not adequately secured': 'Mechanical Hazard',
+  'in an event of failure of coupler': 'Mechanical Hazard',
+
+  // Excavator used for unsafe lifting → Lifting
+  'excavator was used in an unsafe lifting': 'Lifting',
+  'unsafe lifting of crusher plant': 'Lifting',
+  'used in an unsafe lifting': 'Lifting',
+
+  // Operator on phone while driving → Driving
+  'operator was on cell phone call while driving': 'Driving',
+  'on cell phone call while driving': 'Driving',
+  'cell phone while driving': 'Driving',
+  'on phone while driving': 'Driving',
+
+  // Fire extinguisher de-pressurized → Fire
+  'fire extinguisher provided in the excavator was de-pressurized': 'Fire',
+  'fire extinguisher.*was de-pressurized': 'Fire',
+  'fire extinguisher was de-pressurized': 'Fire',
+  'fire extinguisher de-pressurized': 'Fire',
+  'fe observed with broken handle': 'Fire',
+
+  // Stockpile collapse over equipment → Breaking Ground & Excavation
+  'unsafe method for removing materials from stockpiles': 'Breaking Ground & Excavation',
+  'soil is collapsing over the equipment': 'Breaking Ground & Excavation',
+  'risk of huge collapse of stockpiles': 'Breaking Ground & Excavation',
+  'equipment that can be buried under the falling material': 'Breaking Ground & Excavation',
+  'buried under the falling material': 'Breaking Ground & Excavation',
+
+  // Dumper unloading on edge of stockpile → Physical Hazard (edge collapse)
+  'dumper is unloading the soil material on the edge of the stock pile': 'Physical Hazard',
+  'unloading.*on the edge of the stock pile': 'Physical Hazard',
+  'on the edge of the stock pile': 'Physical Hazard',
 }
 
 // Hazard category patterns for auto-classification (30 approved categories)
@@ -1255,6 +2927,18 @@ export const HAZARD_PATTERNS = {
     'plug', 'conduit', 'busbar', 'electrical tape', 'insulation tape', 'wire splice',
     'mccb', 'mcb', 'rcd', 'elcb', 'power distribution', 'electrical panel', 'db board',
     'control panel', 'motor', 'pump', 'compressor', 'inverter', 'ups', 'battery bank'
+  ],
+  'Explosives & Blasting': [
+    // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
+    'blasting', 'blast', 'explosive', 'explosives', 'detonator', 'detonation',
+    'drill and blast', 'controlled blasting', 'blasting operation', 'blasting activity',
+    'shot firer', 'shot firing', 'misfire', 'unexploded', 'flyrock', 'fly rock',
+    'blast zone', 'blast radius', 'exclusion zone blasting', 'blast pattern',
+    'magazine', 'explosives magazine', 'explosive storage', 'detonating cord',
+    'primer', 'booster', 'initiator', 'blasting cap', 'stemming',
+    'ground vibration', 'ppv', 'peak particle velocity', 'air overpressure',
+    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
+    'post blast', 'pre blast', 'blasting permit', 'blasting schedule'
   ],
   'Mobile Plant & Equipment': [
     'mobile plant', 'heavy equipment', 'excavator', 'bulldozer', 'loader', 'grader',
@@ -1462,8 +3146,10 @@ export const HAZARD_PATTERNS = {
     'spotter', 'reversing assistant', 'traffic marshal', 'traffic plan', 'haul road',
     'site traffic', 'internal traffic', 'delivery', 'loading', 'unloading'
   ],
-  'Work Environment': [
-    'work environment', 'environment', 'weather', 'temperature', 'heat stress',
+  'General Site Issues': [
+    // NOTE: These generic terms no longer auto-classify
+    // Observations with only these keywords require manual review
+    'work environment', 'environment', 'weather', 'temperature',
     'cold stress', 'lighting', 'illumination', 'noise', 'vibration', 'ergonomic',
     'ventilation', 'air quality', 'humidity', 'wind', 'rain', 'storm', 'condition',
     'climate', 'comfort', 'fatigue', 'shift work', 'working hours'
@@ -1496,6 +3182,12 @@ export const HAZARD_PHRASES = {
     'live wire', 'electrical isolation', 'lockout tagout', 'arc flash', 'electrical work',
     'live electrical', 'energized equipment', 'de-energize', 'electrical hazard',
     'power isolation', 'electrical safety'
+  ],
+  'Explosives & Blasting': [
+    'blasting operation', 'blasting activity', 'drill and blast', 'controlled blasting',
+    'blast zone', 'blasting permit', 'shot firer', 'explosives handling',
+    'explosive storage', 'detonator storage', 'blast signal', 'post blast inspection',
+    'misfire procedure', 'unexploded charge', 'ground vibration monitoring'
   ],
   'Working at Height': [
     'working at height', 'work at height', 'fall protection', 'edge protection', 'roof work',
@@ -1601,25 +3293,29 @@ export const HAZARD_PHRASES = {
 
 // Category priority order - MAJOR HAZARDS FIRST, then Sub-Significant
 // When checking single keywords, categories are checked in this order
+// NOTE: Control categories (Safety Supervision, Training and Competency, Permit and RAMS) REMOVED
+// These are controls, not hazards - classify by the UNDERLYING hazard instead
 export const CATEGORY_PRIORITY = [
-  // === 15 MAJOR (SIGNIFICANT) HAZARDS - Checked First ===
+  // === 16 MAJOR (SIGNIFICANT) HAZARDS - Checked First ===
+  // Includes 14 NEOM Eltizam Hazards + Physical Hazard + Mechanical Hazard
   'Confined Spaces',              // 1 - IDLH environment
   'Energized System',             // 2 - Electrocution risk
-  'Working at Height',            // 3 - Fatal fall risk
-  'Hot Work',                     // 4 - Fire/explosion risk
-  'Lifting',                      // 5 - Suspended load risk
-  'Breaking Ground & Excavation', // 6 - Cave-in risk
-  'Fire',                         // 7 - Fire risk
-  'Mobile Plant & Equipment',     // 8 - Plant strike risk
-  'Physical Hazard',              // 9 - Struck-by risk (OSHA Fatal Four)
-  'Mechanical Hazard',            // 10 - Caught-in risk (OSHA Fatal Four)
-  'Working on or Near Live Roads', // 11 - Traffic risk
-  'Working on or Near Water',     // 12 - Drowning risk
-  'Driving',                      // 13 - Vehicle incident
-  'Temporary Works',              // 14 - Structural collapse
-  'Working in Heat',              // 15 - Heat stress/burn risk
+  'Explosives & Blasting',        // 3 - Blast/explosion risk (NEOM Eltizam #12)
+  'Working at Height',            // 4 - Fatal fall risk
+  'Hot Work',                     // 5 - Fire/explosion risk
+  'Lifting',                      // 6 - Suspended load risk
+  'Breaking Ground & Excavation', // 7 - Cave-in risk
+  'Fire',                         // 8 - Fire risk
+  'Mobile Plant & Equipment',     // 9 - Plant strike risk
+  'Physical Hazard',              // 10 - Struck-by risk (OSHA Fatal Four)
+  'Mechanical Hazard',            // 11 - Caught-in risk (OSHA Fatal Four)
+  'Working on or Near Live Roads', // 12 - Traffic risk
+  'Working on or Near Water',     // 13 - Drowning risk
+  'Driving',                      // 14 - Vehicle incident
+  'Temporary Works',              // 15 - Structural collapse
+  'Working in Heat',              // 16 - Heat stress/burn risk
 
-  // === 14 SUB-SIGNIFICANT HAZARDS + CONTROLS - Checked After Major ===
+  // === 11 SUB-SIGNIFICANT HAZARDS - Checked After Major ===
   'COSHH',                        // 16 - Chemical exposure
   'Respiratory Hazard',           // 17 - Respiratory hazard (dust, silica, fumes)
   'Traffic Management',           // 18 - Site traffic
@@ -1630,10 +3326,7 @@ export const CATEGORY_PRIORITY = [
   'Environmental',                // 23 - Environmental contamination
   'Tools',                        // 24 - Tool hazards
   'Access',                       // 25 - Access/egress hazards
-  'Safety Supervision',           // 26 - No safety officer, lack of supervision
-  'Training and Competency',      // 27 - No training, not competent
-  'Permit and RAMS',              // 28 - No permit, RAMS missing
-  'Work Environment',             // 29 - Most generic (default fallback - LAST)
+  'General Site Issues',          // 26 - Requires manual review (LAST - no garbage bucket)
 ]
 
 // Engagement Types
@@ -1860,3 +3553,16 @@ export const VAGUE_HAZARD_TERMS = [
   { term: 'needs attention', requires: 'what specific attention is needed' },
   { term: 'needs improvement', requires: 'what specific improvement is needed' },
 ]
+
+// Contributing Factor Colors - TRUE ROOT CAUSES (WHY it happened)
+// These are organizational/systemic factors, NOT physical deficiencies
+export const CONTRIBUTING_FACTOR_COLORS = {
+  'Human Factors': '#ef4444',           // Red - Worker behavior (fatigue, complacency, rushing)
+  'Supervision': '#f97316',             // Orange - Oversight failures
+  'Training & Competency': '#eab308',   // Yellow - Knowledge/skill gaps
+  'Planning & Procedures': '#22c55e',   // Green - System/process failures
+  'Communication': '#06b6d4',           // Cyan - Information flow issues
+  'Organizational': '#ec4899',          // Pink - Management/culture issues
+  'Environmental': '#8b5cf6',           // Purple - External conditions
+  'Equipment Management': '#3b82f6'     // Blue - Maintenance/inspection failures
+}

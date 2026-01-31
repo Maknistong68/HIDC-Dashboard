@@ -170,4 +170,4 @@ const ObservationsByHourOfDay = ({ incidents = [] }) => {
   )
 }
 
-export default ObservationsByHourOfDay
+export default React.memo(ObservationsByHourOfDay)

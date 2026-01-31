@@ -2,6 +2,7 @@ import React from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bell, Download, Upload, RefreshCw } from 'lucide-react'
 import { useData } from '../../context/DataContext'
+import { useDate } from '../../context/DateContext'
 import { downloadJSON, exportAllData } from '../../utils/storage'
 import { format } from 'date-fns'
 
@@ -18,32 +19,23 @@ const pageTitles = {
 const Header = () => {
   const location = useLocation()
   const { incidents, compliance, exportData } = useData()
+  const { currentDate, isExpired, isExpiringSoon, formatCurrentDate, getCurrentDate } = useDate()
 
   const title = pageTitles[location.pathname] || 'HSE Dashboard'
 
-  // Calculate alerts
+  // Calculate alerts using centralized date functions
   const openActions = incidents.filter(
     (i) => i.actionStatus === 'open' || i.actionStatus === 'in-progress'
   ).length
 
-  const today = new Date()
-  const expiringCompliance = compliance.filter((c) => {
-    const expiryDate = new Date(c.expiryDate)
-    const daysUntilExpiry = Math.ceil(
-      (expiryDate - today) / (1000 * 60 * 60 * 24)
-    )
-    return daysUntilExpiry <= 30 && daysUntilExpiry > 0
-  }).length
-
-  const expiredCompliance = compliance.filter((c) => {
-    return new Date(c.expiryDate) < today
-  }).length
+  const expiringCompliance = compliance.filter((c) => isExpiringSoon(c.expiryDate, 30)).length
+  const expiredCompliance = compliance.filter((c) => isExpired(c.expiryDate)).length
 
   const totalAlerts = openActions + expiringCompliance + expiredCompliance
 
   const handleExport = () => {
     const data = exportData()
-    const filename = `hse-backup-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.json`
+    const filename = `hse-backup-${format(getCurrentDate(), 'yyyy-MM-dd-HHmmss')}.json`
     downloadJSON(data, filename)
   }
 
@@ -52,7 +44,7 @@ const Header = () => {
       <div>
         <h1 className="text-xl font-semibold text-surface-800">{title}</h1>
         <p className="text-sm text-surface-500">
-          {format(new Date(), 'EEEE, MMMM d, yyyy')}
+          {formatCurrentDate('EEEE, MMMM d, yyyy')}
         </p>
       </div>
 

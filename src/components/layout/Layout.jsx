@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Target, ShieldCheck, Settings, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Target, ShieldCheck, Eye, EyeOff, Trash2, FolderOpen, Gauge } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { Logo } from '../ui'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -14,12 +14,13 @@ const Layout = ({ children }) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const isMobile = useIsMobile(768) // Use md breakpoint for nav switch
 
+  // Main navigation tabs (3 tabs together)
   const navItems = [
     { path: '/', label: 'Hazard Identification', icon: Target },
     { path: '/data-control', label: 'Data Control', icon: ShieldCheck },
+    { path: '/outlook', label: 'Safety Outlook', icon: Gauge },
   ]
 
-  const isSettingsActive = location.pathname === '/settings'
   const hasData = incidents.length > 0
 
   return (
@@ -68,37 +69,58 @@ const Layout = ({ children }) => {
 
           {/* Right Side - Mobile: Just Settings, Desktop: Full controls */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* Desktop: Show toggle and clear buttons */}
-            {!isMobile && hasData && (
+            {/* Desktop: File Manager button + toggle and clear buttons */}
+            {!isMobile && (
               <>
-                <button
-                  onClick={() => setShowOpenClosed(!showOpenClosed)}
+                {/* File Manager button */}
+                <NavLink
+                  to="/files"
                   className={`
                     flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium
                     transition-all duration-200 ease-out
-                    ${showOpenClosed
+                    ${location.pathname === '/files'
                       ? 'bg-primary-100/80 text-primary-700 shadow-sm'
                       : 'bg-white/60 text-surface-600 hover:bg-white/80 hover:text-surface-800 hover:shadow-sm'
                     }
                   `}
-                  aria-pressed={showOpenClosed}
-                  aria-label={showOpenClosed ? 'Hide open/closed breakdown' : 'Show open/closed breakdown'}
+                  aria-label="Open File Manager"
                 >
-                  {showOpenClosed ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
-                  <span className="hidden lg:inline">{showOpenClosed ? 'Showing Open/Closed' : 'All Status'}</span>
-                </button>
+                  <FolderOpen size={16} aria-hidden="true" />
+                  <span className="hidden lg:inline">Files</span>
+                </NavLink>
 
-                <button
-                  onClick={() => setShowClearConfirm(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out bg-safety-critical-light text-safety-critical hover:bg-red-100 hover:shadow-sm"
-                  aria-label="Clear all data"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                  <span className="hidden lg:inline">Clear Data</span>
-                </button>
+                {hasData && (
+                  <>
+                    {/* Divider */}
+                    <div className="w-px h-6 bg-surface-200 mx-1" aria-hidden="true" />
 
-                {/* Divider */}
-                <div className="w-px h-6 bg-surface-200 mx-1" aria-hidden="true" />
+                    <button
+                      onClick={() => setShowOpenClosed(!showOpenClosed)}
+                      className={`
+                        flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium
+                        transition-all duration-200 ease-out
+                        ${showOpenClosed
+                          ? 'bg-primary-100/80 text-primary-700 shadow-sm'
+                          : 'bg-white/60 text-surface-600 hover:bg-white/80 hover:text-surface-800 hover:shadow-sm'
+                        }
+                      `}
+                      aria-pressed={showOpenClosed}
+                      aria-label={showOpenClosed ? 'Hide open/closed breakdown' : 'Show open/closed breakdown'}
+                    >
+                      {showOpenClosed ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
+                      <span className="hidden lg:inline">{showOpenClosed ? 'Showing Open/Closed' : 'All Status'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowClearConfirm(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out bg-safety-critical-light text-safety-critical hover:bg-red-100 hover:shadow-sm"
+                      aria-label="Clear all data"
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                      <span className="hidden lg:inline">Clear Data</span>
+                    </button>
+                  </>
+                )}
               </>
             )}
 
@@ -130,24 +152,6 @@ const Layout = ({ children }) => {
                 </button>
               </>
             )}
-
-            {/* Settings Button - 44px on mobile, 36px on desktop */}
-            <NavLink
-              to="/settings"
-              className={`
-                flex items-center justify-center rounded-lg
-                transition-all duration-200 ease-out
-                ${isMobile ? 'w-11 h-11' : 'w-9 h-9'}
-                ${isSettingsActive
-                  ? 'bg-primary-100/80 text-primary-700 shadow-sm'
-                  : 'text-surface-500 hover:bg-white/60 hover:text-surface-700 hover:shadow-sm'
-                }
-              `}
-              aria-label="Settings"
-              aria-current={isSettingsActive ? 'page' : undefined}
-            >
-              <Settings size={20} aria-hidden="true" />
-            </NavLink>
           </div>
         </div>
       </header>
@@ -163,8 +167,8 @@ const Layout = ({ children }) => {
         </div>
       </main>
 
-      {/* Footer - hide on Data Control and Settings pages */}
-      {location.pathname !== '/data-control' && location.pathname !== '/settings' && (
+      {/* Footer - hide on Data Control page */}
+      {location.pathname !== '/data-control' && (
         <Footer />
       )}
 

@@ -6,8 +6,9 @@ import ExportConfirmDialog from '../common/ExportConfirmDialog'
 /**
  * ExportMenu - Export dropdown with PDF and PowerPoint options
  * Includes confirmation dialog before export
+ * @param {boolean} compact - If true, shows only icon without text
  */
-const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) => {
+const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress, compact = false }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState(null)
@@ -73,8 +74,9 @@ const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) 
           onClick={() => !isExporting && setIsOpen(!isOpen)}
           disabled={isExporting}
           className={`
-            flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+            flex items-center justify-center rounded-lg text-sm font-medium
             transition-all duration-200 ease-out
+            ${compact ? 'p-2' : 'gap-2 px-3 py-2'}
             ${isExporting
               ? 'bg-surface-100 text-surface-400 cursor-wait'
               : 'bg-white border border-surface-300 text-surface-700 hover:bg-surface-50 hover:border-surface-400 hover:shadow-sm'
@@ -83,13 +85,14 @@ const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) 
           aria-label={isExporting ? 'Exporting...' : 'Export options'}
           aria-expanded={isOpen}
           aria-haspopup="menu"
+          title="Export"
         >
           {isExporting ? (
             <LoadingSpinner size="xs" color="gray" />
           ) : (
             <Download size={16} aria-hidden="true" />
           )}
-          <span className="hidden sm:inline">Export</span>
+          {!compact && <span className="hidden sm:inline">Export</span>}
         </button>
 
         {/* Dropdown menu */}
@@ -154,4 +157,4 @@ const ExportMenu = ({ onExportPDF, onExportPPTX, isExporting, exportProgress }) 
   )
 }
 
-export default ExportMenu
+export default React.memo(ExportMenu)

@@ -8,6 +8,7 @@ import {
   HAZARD_EXCLUSIONS,
   CONTEXT_REDIRECTS,
   MAJOR_HAZARDS,
+  FALLBACK_CATEGORY,
   checkCriticalKeywords
 } from './constants'
 import { analyzeObservation } from './contextClassifier'
@@ -25,7 +26,6 @@ import {
   validateRecord,
   calculateRecordQuality,
   checkDuplicate,
-  getCategorizationSettings,
   meetsConfidenceThreshold,
   mapType,
   mapStatus
@@ -159,6 +159,9 @@ export const mapNEOMColumns = (headers) => {
   const mappings = {}
   const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
 
+  // DEBUG: Log headers to diagnose mapping issues
+  console.log('[mapNEOMColumns] Normalized headers:', normalizedHeaders)
+
   // Map NEOM header names to internal field names
   const columnMap = {
     'event id': 'eventId',
@@ -169,14 +172,33 @@ export const mapNEOMColumns = (headers) => {
     'approval': 'status',
     'approval process requirements': 'approvalStatus',
     'reported by': 'reportedBy',
-    'significant hazard': 'hazardCategory'
+    'significant hazard': 'hazardCategory',
+    'contractor': 'contractor',
+    'site': 'site',
+    'level': 'level'
   }
 
+  // First pass: exact matching
   Object.entries(columnMap).forEach(([header, field]) => {
     const index = normalizedHeaders.indexOf(header)
     if (index !== -1) mappings[field] = index
   })
 
+  // Second pass: substring matching for unmapped fields
+  Object.entries(columnMap).forEach(([header, field]) => {
+    if (mappings[field] !== undefined) return // Already mapped
+
+    // Find header that contains our keyword or vice versa
+    const index = normalizedHeaders.findIndex(h =>
+      h.includes(header) || header.includes(h)
+    )
+    if (index !== -1 && !Object.values(mappings).includes(index)) {
+      mappings[field] = index
+      console.log(`[mapNEOMColumns] Substring match: "${header}" found in column ${index}`)
+    }
+  })
+
+  console.log('[mapNEOMColumns] Final mappings:', mappings)
   return mappings
 }
 
@@ -395,9 +417,9 @@ export const normalizeHazardCategory = (category) => {
     'tool': 'Tools',
     'traffic': 'Traffic Management',
     'pedestrian': 'Traffic Management',
-    'environment': 'Work Environment',
-    'weather': 'Work Environment',
-    'lighting': 'Work Environment',
+    'environment': 'General Site Issues',
+    'weather': 'General Site Issues',
+    'lighting': 'General Site Issues',
     'heat': 'Working in Heat',
     'hot surface': 'Working in Heat',
     'thermal': 'Working in Heat',
@@ -486,10 +508,11 @@ export const normalizeHazardCategory = (category) => {
 
     // Legacy fallbacks
     'manual handling': 'Lifting',
-    'general safety': 'Work Environment',
-    'general': 'Work Environment',
-    'other': 'Work Environment',
-    'others': 'Work Environment',
+    'general safety': 'General Site Issues',
+    'general': 'General Site Issues',
+    'other': 'General Site Issues',
+    'others': 'General Site Issues',
+    'unclassified': 'General Site Issues',  // backward compat
     'not specified': null,
   }
 
@@ -505,15 +528,9 @@ export const normalizeHazardCategory = (category) => {
 /**
  * Check if text contains any exclusion term for a category
  * Returns true if the text should be EXCLUDED from matching this category
- * Respects the useExclusionRules setting
+ * Exclusion rules are always enabled (hardcoded default)
  */
 const isExcludedTerm = (text, category) => {
-  // Check if exclusion rules are enabled in settings
-  const catSettings = getCategorizationSettings()
-  if (catSettings.rules?.useExclusionRules === false) {
-    return false // Exclusion rules disabled
-  }
-
   const exclusions = HAZARD_EXCLUSIONS[category] || []
   return exclusions.some(exclusion => text.includes(exclusion.toLowerCase()))
 }
@@ -809,39 +826,66 @@ export const getObservationAnalysis = (description) => {
 /**
  * 8-Step Context-Aware Hazard Classification System
  *
+ * Classification Modes (controlled by import options):
+ * - trust-excel: Use Excel category if valid, classify blanks/invalid
+ * - reclassify-all: Ignore Excel categories, always use description
+ * - fill-blanks: Keep any Excel category, only classify truly empty ones
+ *
  * STEP 0: Context-Aware Analysis (object → action → outcome)
- * STEP 0.5: Sentence-Aware Parsing (grammatical role weighting) ← NEW
+ * STEP 0.5: Sentence-Aware Parsing (grammatical role weighting)
  * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
- *         - Handles misleading terms like "line of fire" → Mobile Plant, not Fire
- * STEP 2: Trust Excel category if valid (respecting exclusions)
- * STEP 3: Check PHRASES for MAJOR hazards (15 significant hazards)
- * STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (11 lower priority)
- * STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
- * STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards (with exclusion checking)
- * STEP 7: Default fallback → "Work Environment" (never "Others")
- *
- * FULLY AUTOMATED - No manual review required
- *
- * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
- *         - Handles misleading terms like "line of fire" → Mobile Plant, not Fire
- * STEP 2: Trust Excel category if valid (respecting exclusions)
+ * STEP 2: Trust Excel category if valid (respecting exclusions) - mode dependent
  * STEP 3: Check PHRASES for MAJOR hazards (13 significant hazards)
  * STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (17 lower priority)
  * STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
  * STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards (with exclusion checking)
- * STEP 7: Default fallback → "Work Environment" (never "Others")
+ * STEP 7: Default fallback → "General Site Issues" (never "Others")
  *
  * FULLY AUTOMATED - No manual review required
  */
-export const categorizeHazard = (description, existingCategory = '') => {
+export const categorizeHazard = (description, existingCategory = '', mode = 'trust-excel') => {
   const text = (description || '').toLowerCase()
 
-  // Get categorization settings
-  const catSettings = getCategorizationSettings()
-  const confidenceThreshold = (catSettings.confidenceLevel || 0.7) * 100
+  // Get categorization settings - use hardcoded defaults for simplified flow
+  const confidenceThreshold = 70 // Hardcoded 70% confidence threshold
 
   // Strip reference text (after "Ref:", "Reference:", "NEOM-", etc.) - only classify MAIN observation
   const mainText = stripReferenceText(text)
+
+  // ============================================
+  // MODE: fill-blanks - Only classify if blank, "Other", or "Not Specified"
+  // Keep manual categories that are meaningful
+  // ============================================
+  const trimmedCategory = (existingCategory || '').trim().toLowerCase()
+  const isBlank = !trimmedCategory
+  const isOther = trimmedCategory === 'other' || trimmedCategory === 'others'
+  const isGeneric = isBlank || isOther ||
+    trimmedCategory === 'general' ||
+    trimmedCategory === 'not specified' ||
+    trimmedCategory === 'n/a'
+
+  // Helper: Check if category is allowed when source was "Other"
+  // "Other" means the category was generic/unclassified - ALLOW reclassification to Major Hazards
+  // This ensures safety-critical observations get properly identified based on description
+  const isAllowedForOtherSource = (category) => {
+    // Always allow reclassification - "Other" source should enable better classification
+    return true
+  }
+
+  if (mode === 'fill-blanks') {
+    if (!isGeneric) {
+      // Preserve manual selection - normalize but don't reclassify
+      const normalized = normalizeHazardCategory(existingCategory)
+      return normalized || existingCategory.trim()
+    }
+    // Fall through to description-based classification
+  }
+
+  // ============================================
+  // MODE: reclassify-all - Always use description
+  // Skip ALL Excel category trust logic
+  // ============================================
+  // (When mode is reclassify-all, we skip the "trust Excel" step below)
 
   // DEBUG: Check for misclassification issues
   const isDebugTarget = mainText.includes('safety officer') || mainText.includes('scaffold') || mainText.includes('excavat') || mainText.includes('msds') || mainText.includes('chemical')
@@ -853,9 +897,10 @@ export const categorizeHazard = (description, existingCategory = '') => {
   // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
   // These ALWAYS win over location/context words
   // Checks for life-threatening hazards, chemicals, supervision issues, permits
+  // NOTE: If source was "Other", skip Significant Hazards
   // ============================================
   const criticalCategory = checkCriticalKeywords(mainText)
-  if (criticalCategory) {
+  if (criticalCategory && isAllowedForOtherSource(criticalCategory)) {
     if (isDebugTarget) console.log('[DEBUG] STEP 0 CRITICAL_KEYWORD hit:', criticalCategory)
     return criticalCategory
   }
@@ -863,30 +908,57 @@ export const categorizeHazard = (description, existingCategory = '') => {
   // ============================================
   // STEP 1: Check CONTEXT_REDIRECTS (HIGH PRIORITY)
   // Handles misleading terms like "line of fire", "fire extinguisher", etc.
+  // Smart corrections are always enabled (hardcoded default)
+  // NOTE: If source was "Other", skip Significant Hazards
   // ============================================
-  if (catSettings.rules?.useSmartCorrections !== false) {
-    const redirectCategory = checkContextRedirects(mainText)
-    if (redirectCategory) {
-      if (isDebugTarget) console.log('[DEBUG] STEP 1 CONTEXT_REDIRECT hit:', redirectCategory)
-      return redirectCategory // Immediate return - no further checking
-    }
+  const redirectCategory = checkContextRedirects(mainText)
+  if (redirectCategory && isAllowedForOtherSource(redirectCategory)) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 1 CONTEXT_REDIRECT hit:', redirectCategory)
+    return redirectCategory // Immediate return - no further checking
   }
 
   // ============================================
-  // STEP 2: Context-Aware Analysis (Complementary Engine)
-  // Uses Hazard Object → Action → Potential Outcome reasoning
-  // Only overrides when confidence meets settings threshold or disambiguation rule matches
+  // STEP 2: ENSEMBLE VOTING SYSTEM (PRIMARY CLASSIFICATION)
+  // Uses 4 independent strategies that vote on the category:
+  // 1. KEYWORD: Object/action/outcome matching
+  // 2. SENTENCE: WHO/WHAT/WHERE/HOW analysis
+  // 3. CLEAN TEXT: Strip noise, re-classify
+  // 4. CONTROL-LINK: Link control issues to hazards
   // ============================================
   const contextResult = analyzeObservation(description, existingCategory)
 
-  // If context engine found a disambiguation rule or meets confidence threshold, use it
-  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 2 analyzeObservation hit:', contextResult.category)
+  // Use voting result if:
+  // 1. High confidence (shouldOverride) - 85%+ or disambiguation match
+  // 2. OR has valid votes and category is not fallback
+  // 3. OR controlLink strategy found a hazard context (control + hazard)
+  const hasValidVotingResult = contextResult.category &&
+    contextResult.category !== FALLBACK_CATEGORY &&
+    contextResult.validVoteCount > 0
+
+  const controlLinkFound = contextResult.votes?.controlLink?.category &&
+    contextResult.votes?.controlLink?.category !== FALLBACK_CATEGORY &&
+    contextResult.votes?.controlLink?.isControlIssue
+
+  // NOTE: All STEP 2 returns check isAllowedForOtherSource - if source was "Other", skip Significant Hazards
+  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold && isAllowedForOtherSource(contextResult.category)) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 2a analyzeObservation shouldOverride:', contextResult.category, contextResult.confidence)
+    return contextResult.category
+  }
+
+  // If controlLink strategy found a specific hazard, use it (control issues linked to hazards)
+  if (controlLinkFound && contextResult.votes.controlLink.confidence >= 70 && isAllowedForOtherSource(contextResult.votes.controlLink.category)) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 2b controlLink found:', contextResult.votes.controlLink.category)
+    return contextResult.votes.controlLink.category
+  }
+
+  // If voting found a valid category with any consensus, prefer it over keyword matching
+  if (hasValidVotingResult && contextResult.confidence >= 50 && isAllowedForOtherSource(contextResult.category)) {
+    if (isDebugTarget) console.log('[DEBUG] STEP 2c voting consensus:', contextResult.category, contextResult.consensusLevel)
     return contextResult.category
   }
 
   // ============================================
-  // STEP 3: SENTENCE-AWARE PARSING
+  // STEP 3: SENTENCE-AWARE PARSING (FALLBACK)
   // Analyzes grammatical structure to identify:
   // - WHO (actor), WHAT (object), WHERE (location), WHY (cause)
   // - Assigns weights based on grammatical role (subject > object > location)
@@ -894,9 +966,10 @@ export const categorizeHazard = (description, existingCategory = '') => {
   const sentenceResult = classifyWithSentenceAwareness(text)
 
   // If sentence parsing found a high-confidence match with clear subject, use it
+  // NOTE: Check isAllowedForOtherSource - if source was "Other", skip Significant Hazards
   if (sentenceResult.category && sentenceResult.confidence >= 0.7 && sentenceResult.isMainSubject) {
     // Verify the category is valid and not excluded
-    if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category)) {
+    if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category) && isAllowedForOtherSource(sentenceResult.category)) {
       if (isDebugTarget) console.log('[DEBUG] STEP 3 sentenceAwareness hit:', sentenceResult.category)
       return sentenceResult.category
     }
@@ -907,17 +980,18 @@ export const categorizeHazard = (description, existingCategory = '') => {
   // Trust the Excel source category unless:
   // - It's explicitly excluded by the description (contradiction)
   // - The description clearly indicates a DIFFERENT major hazard
+  // NOTE: This step is SKIPPED when mode is 'reclassify-all'
   // ============================================
-  if (existingCategory && existingCategory.trim() !== '') {
+  if (mode === 'trust-excel' && existingCategory && existingCategory.trim() !== '') {
     const normalized = normalizeHazardCategory(existingCategory)
-    if (normalized && normalized !== 'Work Environment') {
+    if (normalized && normalized !== FALLBACK_CATEGORY) {
       // Check if this category is explicitly excluded by the description
       if (isExcludedTerm(text, normalized)) {
         // Description contradicts the Excel category - fall through to description-based
       } else if (MAJOR_HAZARDS.includes(normalized)) {
         // For MAJOR hazards from Excel:
         // Trust the source unless description EXPLICITLY supports a DIFFERENT major hazard
-        // This prevents "Energised Systems" being changed to "Work Environment" when description is empty
+        // This prevents "Energised Systems" being changed to "General Site Issues" when description is empty
 
         // Check if description clearly indicates a different major hazard
         let descriptionSupportsDifferentMajor = false
@@ -944,18 +1018,21 @@ export const categorizeHazard = (description, existingCategory = '') => {
   }
 
   // No valid category from Excel - classify by description
-  if (!text) return 'Work Environment'
+  if (!text) return FALLBACK_CATEGORY
 
   // ============================================
   // STEP 3: Check PHRASES for MAJOR hazards first (13 significant)
+  // NOTE: Skip entirely if source was "Other" - respect that classification
   // ============================================
-  for (const category of MAJOR_HAZARDS) {
-    if (isExcludedTerm(text, category)) continue // Skip if excluded
+  if (!isOther) {
+    for (const category of MAJOR_HAZARDS) {
+      if (isExcludedTerm(text, category)) continue // Skip if excluded
 
-    const phrases = HAZARD_PHRASES[category] || []
-    for (const phrase of phrases) {
-      if (text.includes(phrase.toLowerCase())) {
-        return category // Phrase match wins immediately
+      const phrases = HAZARD_PHRASES[category] || []
+      for (const phrase of phrases) {
+        if (text.includes(phrase.toLowerCase())) {
+          return category // Phrase match wins immediately
+        }
       }
     }
   }
@@ -977,14 +1054,17 @@ export const categorizeHazard = (description, existingCategory = '') => {
 
   // ============================================
   // STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
+  // NOTE: Skip entirely if source was "Other" - respect that classification
   // ============================================
-  for (const category of MAJOR_HAZARDS) {
-    if (isExcludedTerm(text, category)) continue // Skip if excluded
+  if (!isOther) {
+    for (const category of MAJOR_HAZARDS) {
+      if (isExcludedTerm(text, category)) continue // Skip if excluded
 
-    const keywords = HAZARD_PATTERNS[category] || []
-    for (const keyword of keywords) {
-      if (text.includes(keyword.toLowerCase())) {
-        return category // First keyword match wins
+      const keywords = HAZARD_PATTERNS[category] || []
+      for (const keyword of keywords) {
+        if (text.includes(keyword.toLowerCase())) {
+          return category // First keyword match wins
+        }
       }
     }
   }
@@ -1011,9 +1091,9 @@ export const categorizeHazard = (description, existingCategory = '') => {
   }
 
   // ============================================
-  // STEP 7: DEFAULT fallback → Work Environment (never "Others")
+  // STEP 7: DEFAULT fallback → General Site Issues (never "Others")
   // ============================================
-  return 'Work Environment'
+  return FALLBACK_CATEGORY
 }
 
 // Status mapping
@@ -1258,10 +1338,19 @@ const isPositiveObservation = (type, classification, description) => {
  * @param {Object} columnMappings - Column index mappings
  * @param {string} projectId - Project ID to assign
  * @param {Array} existingIncidents - Optional existing incidents for contractor normalization
+ * @param {Object} importOptions - Import options including classificationMode
  */
 const MAX_DATA_ROWS = 2000
 
-export const transformRows = (rows, headers, columnMappings, projectId, existingIncidents = []) => {
+export const transformRows = (rows, headers, columnMappings, projectId, existingIncidents = [], importOptions = {}) => {
+  // DEBUG: Log detected column mappings
+  console.log('[Import] Column mappings:', JSON.stringify(columnMappings, null, 2))
+  console.log('[Import] Classification column index:', columnMappings['classification'])
+
+  // Get classification mode from import options (default: trust-excel)
+  const classificationMode = importOptions.classificationMode || 'trust-excel'
+  // Get fileId from import options if provided (for IndexedDB file tracking)
+  const fileId = importOptions.fileId || null
   const incidents = []
   const needsMapping = []
   const warnings = {
@@ -1285,7 +1374,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
   // Get current settings for processing
   const settings = getSettings()
-  const categorizationSettings = getCategorizationSettings()
 
   dataRows.forEach((row, index) => {
     const getValue = (field) => {
@@ -1295,7 +1383,17 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
     const eventId = getValue('eventId') || `imported-${Date.now()}-${index}`
     const rawType = getValue('type') || ''
-    const classification = getValue('classification') || ''
+    const classification = (getValue('classification') || '').toString().trim()
+
+    // DEBUG: Comprehensive classification tracing
+    const rawClassValue = getValue('classification')
+    console.log(`[Import] Row ${index + 1}: rawClassValue="${rawClassValue}" (type: ${typeof rawClassValue})`)
+    console.log(`[Import] Row ${index + 1}: classification after trim="${classification}" (length: ${classification.length})`)
+    if (classification) {
+      // Check for hidden characters
+      const charCodes = [...classification].map(c => c.charCodeAt(0))
+      console.log(`[Import] Row ${index + 1}: charCodes=[${charCodes.join(',')}]`)
+    }
 
     // DEBUG: Log when Type column contains "Incident"
     if (rawType && rawType.toString().toLowerCase().trim() === 'incident') {
@@ -1376,7 +1474,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
     // Always categorize using the new 29-category system (eliminates "Others")
     // Pass existing category for normalization, falls back to description-based classification
-    const hazardCategory = categorizeHazard(description, rawHazardCategory)
+    const hazardCategory = categorizeHazard(description, rawHazardCategory, classificationMode)
 
     // Track hazard auto-classification (when original was blank or generic like "Other")
     const genericHazards = ['other', 'others', 'general', 'general safety', 'not specified', '']
@@ -1415,7 +1513,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     // Context-Aware Analysis - stores reasoning and confidence for UI display
     const contextAnalysis = analyzeObservation(description, rawHazardCategory)
 
-    if (wasAutoClassified && hazardCategory !== 'Work Environment') {
+    if (wasAutoClassified && hazardCategory !== FALLBACK_CATEGORY) {
       warnings.hazardIssues.push({
         row: index + 2,
         original: rawHazardCategory || '(blank)',
@@ -1553,6 +1651,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       incidents.push({
         externalId: eventId,
         projectId,
+        fileId, // Link to source file for file management
         date: parsedDate,
         eventTime, // Store time separately for hour-of-day analysis
         type: 'positive',
@@ -1575,7 +1674,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
         hazardCategorySource,
         hazardCategoryValidated,
         dataQualityIssue,
-        // Context-Aware Classification Analysis
+        // Context-Aware Classification Analysis (Ensemble Voting System)
         contextAnalysis: {
           hazardObject: contextAnalysis.hazardObject,
           hazardObjects: contextAnalysis.hazardObjects,
@@ -1584,9 +1683,15 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
           potentialOutcome: contextAnalysis.potentialOutcome,
           outcomeSource: contextAnalysis.outcomeSource,
           confidence: contextAnalysis.confidence,
+          consensusLevel: contextAnalysis.consensusLevel,
           reasoning: contextAnalysis.reasoning,
           subHazard: contextAnalysis.subHazard,
-          disambiguation: contextAnalysis.disambiguation
+          // Voting details
+          votes: contextAnalysis.votes,
+          voteCounts: contextAnalysis.voteCounts,
+          dissent: contextAnalysis.dissent,
+          tiebreaker: contextAnalysis.tiebreaker,
+          needsReview: contextAnalysis.needsReview
         }
       })
       return
@@ -1609,22 +1714,48 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     // PRIORITY: Check Type column first for "Incident", then Classification
     let mapping = null
 
-    // DIRECT CHECK: If Type column is exactly "Incident" (case-insensitive), force FAC mapping
-    const normalizedType = (type || '').toString().toLowerCase().trim()
-    if (normalizedType === 'incident') {
-      mapping = { type: 'incident', incidentType: 'fac', autoClassified: false }
-      console.log(`[Import] Row: Type="${type}" → Forced mapping to FAC (incidentType: 'fac')`)
-    } else {
-      const typeMapping = findMapping(type)
-      const classMapping = findMapping(classification)
+    // PRIORITY: Classification column takes precedence over Type column
+    // Check Classification first for specific values (Unsafe Act, Unsafe Condition, etc.)
+    let classMapping = findMapping(classification)
+    const typeMapping = findMapping(type)
 
-      // If Type column has a valid mapping, use it
-      if (typeMapping && !typeMapping.needsMapping) {
-        mapping = typeMapping
-      } else if (classMapping && !classMapping.needsMapping) {
-        mapping = classMapping
+    // DEBUG: Log mapping lookup results
+    console.log(`[Import] Row ${index + 1}: findMapping("${classification}") =`, classMapping)
+    console.log(`[Import] Row ${index + 1}: findMapping("${type}") =`, typeMapping)
+
+    // FALLBACK: Direct case-insensitive match if findMapping failed
+    if (!classMapping && classification) {
+      const lowerClass = classification.toLowerCase()
+      if (lowerClass === 'unsafe act') {
+        classMapping = { type: 'incident', incidentType: 'unsafe-act' }
+        console.log(`[Import] Row ${index + 1}: Direct match for "Unsafe Act" → unsafe-act`)
+      } else if (lowerClass === 'unsafe condition') {
+        classMapping = { type: 'incident', incidentType: 'unsafe-condition' }
+        console.log(`[Import] Row ${index + 1}: Direct match for "Unsafe Condition" → unsafe-condition`)
+      } else if (lowerClass === 'near miss') {
+        classMapping = { type: 'incident', incidentType: 'near-miss' }
+        console.log(`[Import] Row ${index + 1}: Direct match for "Near Miss" → near-miss`)
+      } else if (lowerClass === 'positive observation' || lowerClass === 'positive') {
+        classMapping = { type: 'incident', incidentType: 'positive' }
+        console.log(`[Import] Row ${index + 1}: Direct match for "Positive" → positive`)
+      }
+    }
+
+    // Classification takes priority when it has a specific (non-generic) mapping
+    if (classMapping && !classMapping.needsMapping) {
+      mapping = classMapping
+      console.log(`[Import] Row ${index + 1}: Using Classification mapping → ${classMapping.incidentType}`)
+    } else if (typeMapping && !typeMapping.needsMapping) {
+      // Type column has a valid mapping
+      mapping = typeMapping
+    } else {
+      // Fallback: If Type column is exactly "Incident" (case-insensitive), map to FAC
+      const normalizedType = (type || '').toString().toLowerCase().trim()
+      if (normalizedType === 'incident') {
+        mapping = { type: 'incident', incidentType: 'fac', autoClassified: false }
+        console.log(`[Import] Row ${index + 1}: Type="${type}" → Fallback mapping to FAC`)
       } else {
-        // Try type again as fallback
+        // Try any available mapping
         mapping = typeMapping || classMapping
       }
     }
@@ -1635,9 +1766,13 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       mapping = { type: 'incident', incidentType: autoClassifiedType, autoClassified: true }
     }
 
+    // DEBUG: Log final mapping result
+    console.log(`[Import] Row ${index + 1}: FINAL type="${mapping.incidentType}" (autoClassified: ${mapping.autoClassified || false})`)
+
     incidents.push({
       externalId: eventId,
       projectId,
+      fileId, // Link to source file for file management
       date: parsedDate,
       eventTime, // Store time separately for hour-of-day analysis
       type: mapping.incidentType,
@@ -1660,7 +1795,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       hazardCategorySource,
       hazardCategoryValidated,
       dataQualityIssue,
-      // Context-Aware Classification Analysis
+      // Context-Aware Classification Analysis (Ensemble Voting System)
       contextAnalysis: {
         hazardObject: contextAnalysis.hazardObject,
         hazardObjects: contextAnalysis.hazardObjects,
@@ -1669,9 +1804,15 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
         potentialOutcome: contextAnalysis.potentialOutcome,
         outcomeSource: contextAnalysis.outcomeSource,
         confidence: contextAnalysis.confidence,
+        consensusLevel: contextAnalysis.consensusLevel,
         reasoning: contextAnalysis.reasoning,
         subHazard: contextAnalysis.subHazard,
-        disambiguation: contextAnalysis.disambiguation
+        // Voting details
+        votes: contextAnalysis.votes,
+        voteCounts: contextAnalysis.voteCounts,
+        dissent: contextAnalysis.dissent,
+        tiebreaker: contextAnalysis.tiebreaker,
+        needsReview: contextAnalysis.needsReview
       }
     })
   })
@@ -1681,65 +1822,49 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
 /**
  * Check for duplicates against existing data
- * Now uses settings for duplicate detection behavior
+ * Simplified - uses import options for duplicate handling
+ *
+ * @param {Array} newItems - New items to check
+ * @param {Array} existingItems - Existing items to check against
+ * @param {string} matchField - Field to match on (default: externalId)
+ * @param {string} duplicateHandling - How to handle duplicates: 'skip' | 'update' | 'allow'
  */
-export const checkDuplicates = (newItems, existingItems, matchField = 'externalId') => {
-  const settings = getSettings()
-  const dupSettings = settings.duplicates || {}
-
+export const checkDuplicates = (newItems, existingItems, matchField = 'externalId', duplicateHandling = 'skip') => {
   const newRecords = []
   const updates = []
   const skipped = []
-  const flaggedDuplicates = []
 
   newItems.forEach(item => {
-    // First check by exact ID match
+    // Check by exact ID match
     const existingById = existingItems.find(e => e[matchField] === item[matchField])
 
     if (existingById) {
-      // Exact ID match - check for updates
-      if (existingById.actionStatus !== item.actionStatus) {
+      // Exact ID match found
+      if (duplicateHandling === 'allow') {
+        // Import anyway - add as new record
+        newRecords.push(item)
+      } else if (duplicateHandling === 'update') {
+        // Update existing record with new data
         updates.push({
           existing: existingById,
           new: item,
-          changes: { actionStatus: item.actionStatus }
+          changes: {
+            ...item,
+            id: existingById.id // Keep the existing internal ID
+          }
         })
       } else {
+        // Skip duplicates (default)
         skipped.push(item)
       }
       return
     }
 
-    // If duplicate detection enabled, do fuzzy duplicate check
-    if (dupSettings.enabled) {
-      for (const existing of existingItems) {
-        const dupResult = checkDuplicate(item, existing)
-        if (dupResult.isDuplicate) {
-          const action = dupSettings.whenFound?.action || 'flag'
-
-          if (action === 'skip') {
-            skipped.push({ ...item, duplicateOf: existing.externalId })
-          } else if (action === 'flag') {
-            flaggedDuplicates.push({
-              new: item,
-              existing: existing,
-              similarity: dupResult.similarity
-            })
-            // Still add to newRecords but mark as potential duplicate
-            newRecords.push({ ...item, _potentialDuplicate: true, _duplicateOf: existing.externalId })
-          } else if (action === 'importAnyway') {
-            newRecords.push(item)
-          }
-          return
-        }
-      }
-    }
-
-    // No duplicate found
+    // No duplicate found - add as new record
     newRecords.push(item)
   })
 
-  return { newRecords, updates, skipped, flaggedDuplicates }
+  return { newRecords, updates, skipped }
 }
 
 /**
