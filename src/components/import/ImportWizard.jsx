@@ -181,6 +181,8 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
         incidentsAdded,
         incidentsUpdated,
         skipped: duplicateResults.skipped.length,
+        skippedRecords: duplicateResults.skipped, // Pass full skipped records with duplicate info
+        duplicateDetails: duplicateResults.duplicateDetails || [], // Pass detailed duplicate info
         failed,
         fileName: displayFileName,
         fileNames, // Include all file names

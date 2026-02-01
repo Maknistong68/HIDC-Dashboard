@@ -3,6 +3,7 @@ import { AlertCircle, Eye, Copy, Check, X } from 'lucide-react'
 import { NEGATIVE_TYPES, detectContributingFactors } from '../../utils/rootCauseEngine'
 import { getFactorDailyData } from '../../utils/insightsCalculations'
 import HazardTrendChart from './HazardTrendChart'
+import WhatIfSection from './WhatIfSection'
 
 // Category styling
 const CATEGORY_STYLES = {
@@ -318,6 +319,14 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
           />
         )}
       </div>
+
+      {/* What-If Simulation Section */}
+      <WhatIfSection
+        factor={factor}
+        factorData={factorData}
+        incidents={incidents}
+        timePeriod={timePeriod}
+      />
 
       {/* Drill-down modal */}
       <DrillDownModal

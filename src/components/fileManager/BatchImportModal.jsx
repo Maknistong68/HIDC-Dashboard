@@ -6,6 +6,7 @@ import {
   validateNEOMFormat,
   mapNEOMColumns,
   transformRows,
+  checkDuplicates,
 } from '../../utils/excelParser'
 
 /**
@@ -112,19 +113,33 @@ const BatchImportModal = ({ onClose }) => {
           { classificationMode: 'trust-excel' }
         )
 
-        // Save to database
-        const result = await addIncidentsWithFile(
+        // Check for duplicates (skip duplicates by default)
+        const duplicateResults = checkDuplicates(
           transformedIncidents,
-          { fileName: file.name, fileSize: file.size },
-          { classificationMode: 'trust-excel' }
+          incidents,
+          'externalId',
+          'skip'
         )
+
+        // Only save new records (non-duplicates)
+        let result = { recordCount: 0 }
+        if (duplicateResults.newRecords.length > 0) {
+          result = await addIncidentsWithFile(
+            duplicateResults.newRecords,
+            { fileName: file.name, fileSize: file.size },
+            { classificationMode: 'trust-excel' }
+          )
+        }
+
+        const skippedCount = duplicateResults.skipped.length
 
         // Update status to success
         setSelectedFiles(prev => prev.map((f, idx) =>
           idx === i ? {
             ...f,
             status: 'success',
-            recordCount: result.recordCount
+            recordCount: result.recordCount,
+            skippedCount
           } : f
         ))
 
@@ -132,6 +147,7 @@ const BatchImportModal = ({ onClose }) => {
           fileName: file.name,
           success: true,
           recordCount: result.recordCount,
+          skippedCount,
           warnings
         })
       } catch (error) {
@@ -199,6 +215,7 @@ const BatchImportModal = ({ onClose }) => {
   // Summary stats
   const successCount = results.filter(r => r.success).length
   const totalRecords = results.reduce((sum, r) => sum + (r.recordCount || 0), 0)
+  const totalSkipped = results.reduce((sum, r) => sum + (r.skippedCount || 0), 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -336,8 +353,15 @@ const BatchImportModal = ({ onClose }) => {
                             {item.file.name}
                           </p>
                           <p className="text-xs text-surface-500">
-                            {item.status === 'success' && item.recordCount ?
-                              `${item.recordCount.toLocaleString()} records imported` :
+                            {item.status === 'success' ?
+                              <>
+                                {item.recordCount?.toLocaleString() || 0} records imported
+                                {item.skippedCount > 0 && (
+                                  <span className="text-amber-600 ml-1">
+                                    ({item.skippedCount} duplicates skipped)
+                                  </span>
+                                )}
+                              </> :
                             item.status === 'error' ?
                               <span className="text-red-600">{item.error}</span> :
                             item.status === 'processing' ?
@@ -382,7 +406,7 @@ const BatchImportModal = ({ onClose }) => {
                 Import Complete
               </h3>
 
-              <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto mb-6">
+              <div className={`grid gap-4 max-w-md mx-auto mb-6 ${totalSkipped > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-2xl font-bold text-green-600">{successCount}</p>
                   <p className="text-sm text-green-700">Files imported</p>
@@ -391,6 +415,12 @@ const BatchImportModal = ({ onClose }) => {
                   <p className="text-2xl font-bold text-primary-600">{totalRecords.toLocaleString()}</p>
                   <p className="text-sm text-primary-700">Records added</p>
                 </div>
+                {totalSkipped > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-4">
+                    <p className="text-2xl font-bold text-amber-600">{totalSkipped.toLocaleString()}</p>
+                    <p className="text-sm text-amber-700">Duplicates skipped</p>
+                  </div>
+                )}
               </div>
 
               {/* Individual results */}
@@ -410,10 +440,18 @@ const BatchImportModal = ({ onClose }) => {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-surface-800 truncate">{result.fileName}</p>
                       <p className="text-xs text-surface-600">
-                        {result.success ?
-                          `${result.recordCount?.toLocaleString()} records` :
+                        {result.success ? (
+                          <>
+                            {result.recordCount?.toLocaleString() || 0} records added
+                            {result.skippedCount > 0 && (
+                              <span className="text-amber-600 ml-1">
+                                ({result.skippedCount} duplicates skipped)
+                              </span>
+                            )}
+                          </>
+                        ) : (
                           result.error
-                        }
+                        )}
                       </p>
                     </div>
                   </div>

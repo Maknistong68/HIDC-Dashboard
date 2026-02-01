@@ -1822,41 +1822,48 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
 /**
  * Check for duplicates against existing data
- * Simplified - uses import options for duplicate handling
+ * Uses both exact ID matching and smart similarity detection
  *
  * @param {Array} newItems - New items to check
  * @param {Array} existingItems - Existing items to check against
- * @param {string} matchField - Field to match on (default: externalId)
+ * @param {string} matchField - Field to match on for exact matching (default: externalId)
  * @param {string} duplicateHandling - How to handle duplicates: 'skip' | 'update' | 'allow'
  */
 export const checkDuplicates = (newItems, existingItems, matchField = 'externalId', duplicateHandling = 'skip') => {
   const newRecords = []
   const updates = []
   const skipped = []
+  const duplicateDetails = [] // Track detailed duplicate info
 
   newItems.forEach(item => {
-    // Check by exact ID match
-    const existingById = existingItems.find(e => e[matchField] === item[matchField])
+    // Step 1: Check by exact ID match first (fast path)
+    const existingById = existingItems.find(e =>
+      e[matchField] && item[matchField] && e[matchField] === item[matchField]
+    )
 
     if (existingById) {
       // Exact ID match found
-      if (duplicateHandling === 'allow') {
-        // Import anyway - add as new record
-        newRecords.push(item)
-      } else if (duplicateHandling === 'update') {
-        // Update existing record with new data
-        updates.push({
-          existing: existingById,
-          new: item,
-          changes: {
-            ...item,
-            id: existingById.id // Keep the existing internal ID
-          }
-        })
-      } else {
-        // Skip duplicates (default)
-        skipped.push(item)
+      handleDuplicate(item, existingById, duplicateHandling, newRecords, updates, skipped, duplicateDetails, 'exact_id')
+      return
+    }
+
+    // Step 2: Use smart similarity matching (date + contractor + description)
+    // This catches duplicates even when IDs are different or missing
+    let foundSimilar = null
+    let similarityResult = null
+
+    for (const existing of existingItems) {
+      const result = checkDuplicate(item, existing)
+      if (result.isDuplicate) {
+        foundSimilar = existing
+        similarityResult = result
+        break
       }
+    }
+
+    if (foundSimilar) {
+      // Similar record found via smart matching
+      handleDuplicate(item, foundSimilar, duplicateHandling, newRecords, updates, skipped, duplicateDetails, 'similarity', similarityResult)
       return
     }
 
@@ -1864,7 +1871,49 @@ export const checkDuplicates = (newItems, existingItems, matchField = 'externalI
     newRecords.push(item)
   })
 
-  return { newRecords, updates, skipped }
+  return { newRecords, updates, skipped, duplicateDetails }
+}
+
+/**
+ * Handle a detected duplicate based on the handling mode
+ */
+const handleDuplicate = (item, existing, duplicateHandling, newRecords, updates, skipped, duplicateDetails, matchType, similarityResult = null) => {
+  const detail = {
+    item,
+    existing,
+    matchType,
+    similarity: similarityResult?.similarity || 1.0
+  }
+
+  if (duplicateHandling === 'allow') {
+    // Import anyway - add as new record
+    newRecords.push(item)
+    detail.action = 'imported_anyway'
+  } else if (duplicateHandling === 'update') {
+    // Update existing record with new data
+    updates.push({
+      existing,
+      new: item,
+      changes: {
+        ...item,
+        id: existing.id // Keep the existing internal ID
+      },
+      matchType,
+      similarity: similarityResult?.similarity
+    })
+    detail.action = 'update'
+  } else {
+    // Skip duplicates (default)
+    skipped.push({
+      ...item,
+      _duplicateOf: existing.externalId || existing.id,
+      _matchType: matchType,
+      _similarity: similarityResult?.similarity
+    })
+    detail.action = 'skipped'
+  }
+
+  duplicateDetails.push(detail)
 }
 
 /**
