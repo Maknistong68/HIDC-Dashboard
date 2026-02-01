@@ -86,7 +86,7 @@ const ColumnMapper = ({ headers, mappings, onMappingChange, previewData }) => {
                   >
                     <option value="">-- Select column --</option>
                     {headers.map((header, index) => (
-                      <option key={index} value={index}>
+                      <option key={header || `col-${index}`} value={index}>
                         {header || `Column ${index + 1}`}
                       </option>
                     ))}
@@ -107,7 +107,7 @@ const ColumnMapper = ({ headers, mappings, onMappingChange, previewData }) => {
               <thead className="bg-surface-50">
                 <tr>
                   {headers.map((header, i) => (
-                    <th key={i} className="px-3 py-2 text-left font-medium text-surface-600 whitespace-nowrap">
+                    <th key={header || `col-${i}`} className="px-3 py-2 text-left font-medium text-surface-600 whitespace-nowrap">
                       {header || `Col ${i + 1}`}
                     </th>
                   ))}

@@ -15,7 +15,7 @@ import useFileTimelineData from './useFileTimelineData'
  * - Mobile-responsive card-based alternative view
  * - Clear axis labels and legend
  */
-const DataTimeline = ({ files = [], incidents = [] }) => {
+const DataTimelineComponent = ({ files = [], incidents = [] }) => {
   const { fileData, timelineStart, timelineEnd, totalDays } = useFileTimelineData(files, incidents)
   const [tooltip, setTooltip] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -281,9 +281,9 @@ const DataTimeline = ({ files = [], incidents = [] }) => {
       <div className="p-6" ref={containerRef}>
         {/* X-axis labels */}
         <div className="relative h-10 mb-4 ml-56 mr-20 border-b border-surface-200">
-          {monthMarkers.map((marker, i) => (
+          {monthMarkers.map((marker) => (
             <div
-              key={i}
+              key={marker.label}
               className="absolute transform -translate-x-1/2 flex flex-col items-center"
               style={{ left: `${marker.percent}%` }}
             >
@@ -292,6 +292,17 @@ const DataTimeline = ({ files = [], incidents = [] }) => {
               </span>
               <div className="w-px h-2 bg-surface-300 mt-1" />
             </div>
+          ))}
+        </div>
+
+        {/* Grid lines - rendered ONCE as overlay */}
+        <div className="absolute inset-0 ml-56 mr-20 pointer-events-none" style={{ top: '160px' }}>
+          {monthMarkers.map((marker) => (
+            <div
+              key={`grid-${marker.label}`}
+              className="absolute top-0 bottom-0 w-px bg-surface-200"
+              style={{ left: `${marker.percent}%` }}
+            />
           ))}
         </div>
 
@@ -334,15 +345,6 @@ const DataTimeline = ({ files = [], incidents = [] }) => {
 
                 {/* Timeline bar */}
                 <div className="flex-1 relative h-10">
-                  {/* Grid lines */}
-                  {monthMarkers.map((marker, i) => (
-                    <div
-                      key={i}
-                      className="absolute top-0 bottom-0 w-px bg-surface-200"
-                      style={{ left: `${marker.percent}%` }}
-                    />
-                  ))}
-
                   {/* Data bar */}
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 h-7 rounded-lg shadow-sm transition-all cursor-pointer ${
@@ -509,5 +511,8 @@ const DataTimeline = ({ files = [], incidents = [] }) => {
     </Card>
   )
 }
+
+// Memoize to prevent re-renders when parent state changes
+const DataTimeline = React.memo(DataTimelineComponent)
 
 export default DataTimeline

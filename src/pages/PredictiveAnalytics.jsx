@@ -6,7 +6,6 @@ import {
   Activity,
   ListChecks,
   Shield,
-  Target,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
@@ -16,7 +15,9 @@ import {
   Link2,
   Sliders,
   Users,
-  Award
+  Award,
+  Calendar,
+  Target
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import FilterBar from '../components/common/FilterBar'
@@ -38,7 +39,9 @@ import {
   PatternInsightsList,
   WhatIfSimulator,
   SafetyCultureDashboard,
-  ComparativeBenchmark
+  ComparativeBenchmark,
+  SeasonalPatternChart,
+  SeasonalRiskPrediction
 } from '../components/insights'
 import {
   generateRecommendations,
@@ -56,7 +59,9 @@ import {
   runWhatIfSimulation,
   calculateSafetyCultureScore,
   getContractorBenchmark,
-  getOverdueActionAlerts
+  getOverdueActionAlerts,
+  detectSeasonalPatterns,
+  predictSeasonalRisk
 } from '../utils/insightsCalculations'
 import { getObservationsByHour } from '../utils/dataQualityCalculations'
 
@@ -198,7 +203,10 @@ const PredictiveAnalytics = () => {
       },
       // Phase 6: Safety Culture & Benchmarking
       safetyCulture: calculateSafetyCultureScore(filteredIncidents),
-      benchmark: getContractorBenchmark(filteredIncidents)
+      benchmark: getContractorBenchmark(filteredIncidents),
+      // Seasonal Pattern Detection
+      seasonalPatterns: detectSeasonalPatterns(filteredIncidents),
+      seasonalRiskPrediction: predictSeasonalRisk(filteredIncidents, 7)
     }
   }, [filteredIncidents, forecastDays])
 
@@ -373,6 +381,32 @@ const PredictiveAnalytics = () => {
                   <ForecastAlertCard alerts={metrics.forecast.alerts} />
                 </div>
               )}
+            </div>
+          </Section>
+
+          {/* Section: Seasonal Pattern Detection */}
+          <Section
+            title="Seasonal Patterns"
+            icon={Calendar}
+            info="HOW SEASONAL PATTERNS WORK: The system analyzes your historical data to find recurring patterns based on time. DAY-OF-WEEK: Which days have the most/fewest incidents? For example, Mondays might have 25% more incidents than average due to workers returning from weekends. HOUR-OF-DAY: Which hours are highest risk? Morning shifts often show different patterns than night shifts. MONTH-OF-YEAR: Are there seasonal trends? Some hazards increase in summer heat or winter conditions. The RISK INDEX shows how each period compares to average (100% = average, 130% = 30% above average). The 7-DAY FORECAST predicts risk levels for the upcoming week based on these patterns. Use this to plan safety interventions - schedule extra supervision on high-risk days or increase awareness during peak hours."
+            defaultOpen={true}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Seasonal Pattern Chart */}
+              <div>
+                <SeasonalPatternChart
+                  data={metrics.seasonalPatterns}
+                  title="Historical Patterns"
+                />
+              </div>
+
+              {/* 7-Day Risk Prediction */}
+              <div>
+                <SeasonalRiskPrediction
+                  data={metrics.seasonalRiskPrediction}
+                  title="7-Day Risk Forecast"
+                />
+              </div>
             </div>
           </Section>
 

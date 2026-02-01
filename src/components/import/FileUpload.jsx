@@ -168,12 +168,12 @@ const FileUpload = ({ onFileSelect, isLoading, multiple = true }) => {
                   Total: {(totalSize / 1024).toFixed(1)} KB
                 </p>
                 <div className="mt-3 max-h-32 overflow-y-auto w-full">
-                  {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm py-1 px-2 hover:bg-green-100 rounded">
+                  {selectedFiles.map((file) => (
+                    <div key={file.name} className="flex items-center justify-between text-sm py-1 px-2 hover:bg-green-100 rounded">
                       <span className="text-surface-700 truncate flex-1">{file.name}</span>
                       {!isLoading && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                          onClick={(e) => { e.stopPropagation(); removeFile(selectedFiles.indexOf(file)); }}
                           className="ml-2 text-red-500 hover:text-red-700"
                         >
                           <X size={14} />

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Table } from 'lucide-react'
 
 /**
@@ -33,10 +33,11 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
     return 'bg-surface-100 text-surface-600'
   }
 
-  // Find max count for color scaling
-  const maxCount = Math.max(
-    ...matrix.flatMap(row => rootCauses.map(rc => row[rc] || 0))
-  )
+  // Memoize max count calculation to avoid recalculating on every render
+  const maxCount = useMemo(() => {
+    if (!matrix || !rootCauses || matrix.length === 0) return 1
+    return Math.max(...matrix.flatMap(row => rootCauses.map(rc => row[rc] || 0)))
+  }, [matrix, rootCauses])
 
   return (
     <div className="overflow-x-auto">

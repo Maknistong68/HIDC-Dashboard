@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { CheckCircle2, Lightbulb } from 'lucide-react'
 import RecommendationCard from './RecommendationCard'
 
@@ -21,9 +21,16 @@ const RecommendationsList = ({ recommendations, onItemClick }) => {
     )
   }
 
-  const highPriority = recommendations.filter(r => r.priority === 'HIGH')
-  const mediumPriority = recommendations.filter(r => r.priority === 'MEDIUM')
-  const lowPriority = recommendations.filter(r => r.priority === 'LOW')
+  // Single-pass filtering instead of 3 separate filter operations
+  const { highPriority, mediumPriority, lowPriority } = useMemo(() => {
+    const grouped = { highPriority: [], mediumPriority: [], lowPriority: [] }
+    for (const rec of recommendations) {
+      if (rec.priority === 'HIGH') grouped.highPriority.push(rec)
+      else if (rec.priority === 'MEDIUM') grouped.mediumPriority.push(rec)
+      else grouped.lowPriority.push(rec)
+    }
+    return grouped
+  }, [recommendations])
 
   return (
     <div className="space-y-4">

@@ -989,6 +989,345 @@ export const detectForecastAlerts = (forecast, avgDaily) => {
 }
 
 // ============================================================================
+// INCIDENT PREDICTION (Weekly/Monthly Forecasting + Type Probability)
+// ============================================================================
+
+/**
+ * Forecast incidents by period (week or month)
+ * Aggregates daily forecasts into weekly (7-day) or monthly (30-day) periods
+ * Returns predicted counts with confidence ranges
+ */
+export const forecastIncidentsByPeriod = (incidents, period = 'week', periodsAhead = 1) => {
+  const daysPerPeriod = period === 'week' ? 7 : 30
+  const forecastDays = daysPerPeriod * periodsAhead
+
+  // Get the base daily forecast
+  const baseForecast = forecastIncidents(incidents, forecastDays)
+
+  if (baseForecast.error || !baseForecast.forecast || baseForecast.forecast.length === 0) {
+    return {
+      period,
+      periodsAhead,
+      predictions: [],
+      error: baseForecast.error || 'Insufficient data for forecasting'
+    }
+  }
+
+  const { forecast, historical, model, summary } = baseForecast
+
+  // Calculate historical averages for comparison
+  const historicalTotal = historical.reduce((sum, h) => sum + h.value, 0)
+  const historicalAvgPerPeriod = (historicalTotal / historical.length) * daysPerPeriod
+
+  // Aggregate forecasts into periods
+  const predictions = []
+  for (let p = 0; p < periodsAhead; p++) {
+    const periodStart = p * daysPerPeriod
+    const periodEnd = Math.min((p + 1) * daysPerPeriod, forecast.length)
+    const periodForecasts = forecast.slice(periodStart, periodEnd)
+
+    if (periodForecasts.length === 0) continue
+
+    const predictedTotal = periodForecasts.reduce((sum, f) => sum + f.value, 0)
+    const upperTotal = periodForecasts.reduce((sum, f) => sum + f.upper, 0)
+    const lowerTotal = periodForecasts.reduce((sum, f) => sum + f.lower, 0)
+
+    // Calculate trend vs historical
+    const changeFromHistorical = historicalAvgPerPeriod > 0
+      ? ((predictedTotal - historicalAvgPerPeriod) / historicalAvgPerPeriod) * 100
+      : 0
+
+    let trend = 'stable'
+    if (changeFromHistorical > 10) trend = 'increasing'
+    else if (changeFromHistorical < -10) trend = 'decreasing'
+
+    // Confidence based on R-squared and period distance
+    let confidence = summary?.confidence || 'low'
+    if (p > 1 && confidence === 'high') confidence = 'medium'
+    if (p > 2) confidence = 'low'
+
+    predictions.push({
+      periodIndex: p + 1,
+      periodLabel: period === 'week'
+        ? `Week ${p + 1}`
+        : `Month ${p + 1}`,
+      startDate: periodForecasts[0]?.date,
+      endDate: periodForecasts[periodForecasts.length - 1]?.date,
+      predicted: Math.round(predictedTotal),
+      upper: Math.round(upperTotal),
+      lower: Math.round(lowerTotal),
+      historical: Math.round(historicalAvgPerPeriod),
+      changePercent: Math.round(changeFromHistorical),
+      trend,
+      confidence,
+      daysIncluded: periodForecasts.length
+    })
+  }
+
+  return {
+    period,
+    periodsAhead,
+    predictions,
+    model,
+    summary: {
+      ...summary,
+      historicalAvgPerPeriod: Math.round(historicalAvgPerPeriod * 10) / 10
+    }
+  }
+}
+
+/**
+ * Predict incident type probabilities using weighted moving average
+ * Uses exponential decay weighting (recent months weighted higher)
+ * Returns LTI/MTI/FAC probability breakdown
+ */
+export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) => {
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length < 10) {
+    return {
+      types: [],
+      hasData: false,
+      error: 'Insufficient data for type prediction'
+    }
+  }
+
+  const endDate = parseISO(dates[dates.length - 1])
+  const alpha = 0.4 // Exponential decay factor
+
+  // Define incident types with severity weights
+  const typeConfig = {
+    'lti': { label: 'LTI (Lost Time Injury)', severity: 10, color: '#dc2626' },
+    'mti': { label: 'MTI (Medical Treatment)', severity: 5, color: '#f59e0b' },
+    'fac': { label: 'FAC (First Aid Case)', severity: 2, color: '#22c55e' },
+    'near-miss': { label: 'Near Miss', severity: 1, color: '#3b82f6' }
+  }
+
+  // Calculate monthly type counts
+  const monthlyTypeCounts = []
+  for (let m = 0; m < lookbackMonths; m++) {
+    const monthStart = startOfMonth(subMonths(endDate, m))
+    const monthEnd = endOfMonth(monthStart)
+    const monthStr = format(monthStart, 'yyyy-MM')
+
+    const monthIncidents = incidents.filter(i => {
+      if (!i.date) return false
+      return i.date.substring(0, 7) === monthStr
+    })
+
+    const typeCounts = {}
+    Object.keys(typeConfig).forEach(type => {
+      typeCounts[type] = monthIncidents.filter(i => i.type === type).length
+    })
+
+    monthlyTypeCounts.push({
+      month: monthStr,
+      monthsAgo: m,
+      weight: Math.pow(1 - alpha, m), // Exponential decay
+      total: monthIncidents.length,
+      ...typeCounts
+    })
+  }
+
+  if (monthlyTypeCounts.every(m => m.total === 0)) {
+    return {
+      types: [],
+      hasData: false,
+      error: 'No incident type data available'
+    }
+  }
+
+  // Calculate weighted averages for each type
+  const totalWeight = monthlyTypeCounts.reduce((sum, m) => sum + m.weight, 0)
+  const weightedCounts = {}
+
+  Object.keys(typeConfig).forEach(type => {
+    weightedCounts[type] = monthlyTypeCounts.reduce((sum, m) => {
+      return sum + (m[type] * m.weight)
+    }, 0) / totalWeight
+  })
+
+  // Calculate total weighted count
+  const totalWeightedCount = Object.values(weightedCounts).reduce((a, b) => a + b, 0)
+
+  // Detect trends per type (compare first half vs second half of period)
+  const midPoint = Math.floor(lookbackMonths / 2)
+  const recentMonths = monthlyTypeCounts.filter(m => m.monthsAgo < midPoint)
+  const olderMonths = monthlyTypeCounts.filter(m => m.monthsAgo >= midPoint)
+
+  const typeTrends = {}
+  Object.keys(typeConfig).forEach(type => {
+    const recentAvg = recentMonths.reduce((sum, m) => sum + m[type], 0) / recentMonths.length
+    const olderAvg = olderMonths.reduce((sum, m) => sum + m[type], 0) / Math.max(1, olderMonths.length)
+
+    const change = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : (recentAvg > 0 ? 100 : 0)
+
+    typeTrends[type] = {
+      recentAvg: Math.round(recentAvg * 10) / 10,
+      olderAvg: Math.round(olderAvg * 10) / 10,
+      changePercent: Math.round(change),
+      trend: change > 15 ? 'increasing' : change < -15 ? 'decreasing' : 'stable'
+    }
+  })
+
+  // Build result with probabilities
+  const types = Object.entries(typeConfig)
+    .map(([type, config]) => {
+      const probability = totalWeightedCount > 0
+        ? (weightedCounts[type] / totalWeightedCount) * 100
+        : 0
+
+      return {
+        type,
+        label: config.label,
+        severity: config.severity,
+        color: config.color,
+        probability: Math.round(probability * 10) / 10,
+        weightedCount: Math.round(weightedCounts[type] * 10) / 10,
+        trend: typeTrends[type].trend,
+        trendChange: typeTrends[type].changePercent
+      }
+    })
+    .filter(t => t.probability > 0 || t.type === 'lti') // Always include LTI even if 0
+    .sort((a, b) => b.probability - a.probability)
+
+  // Normalize probabilities to sum to 100%
+  const totalProbability = types.reduce((sum, t) => sum + t.probability, 0)
+  if (totalProbability > 0 && totalProbability !== 100) {
+    types.forEach(t => {
+      t.probability = Math.round((t.probability / totalProbability) * 1000) / 10
+    })
+  }
+
+  // Find most likely type
+  const mostLikely = types[0] || null
+
+  return {
+    types,
+    mostLikely,
+    hasData: types.length > 0,
+    lookbackMonths,
+    monthlyData: monthlyTypeCounts
+  }
+}
+
+/**
+ * Calculate risk scores for each incident type
+ * Formula: risk_score = probability × severity_weight × trend_multiplier
+ */
+export const calculateIncidentTypeRisk = (probabilityData) => {
+  if (!probabilityData || !probabilityData.hasData || !probabilityData.types) {
+    return {
+      risks: [],
+      highestRisk: null,
+      hasData: false
+    }
+  }
+
+  // Trend multipliers
+  const trendMultipliers = {
+    increasing: 1.2,
+    stable: 1.0,
+    decreasing: 0.8
+  }
+
+  const risks = probabilityData.types.map(typeData => {
+    const trendMultiplier = trendMultipliers[typeData.trend] || 1.0
+
+    // Risk score formula
+    const riskScore = (typeData.probability / 100) * typeData.severity * trendMultiplier
+
+    // Normalize to 0-100 scale (max possible = 100% × 10 × 1.2 = 12)
+    const normalizedRisk = Math.min(100, Math.round((riskScore / 12) * 100))
+
+    // Determine risk level
+    let riskLevel = 'low'
+    let alertType = null
+
+    if (normalizedRisk >= 50) {
+      riskLevel = 'high'
+      alertType = 'critical'
+    } else if (normalizedRisk >= 25) {
+      riskLevel = 'medium'
+      alertType = typeData.trend === 'increasing' ? 'warning' : null
+    }
+
+    // Generate alert if increasing trend on high severity type
+    let alert = null
+    if (typeData.trend === 'increasing' && typeData.severity >= 5) {
+      alert = {
+        type: alertType || 'warning',
+        message: `${typeData.label.split(' ')[0]} incidents trending up ${typeData.trendChange}%`
+      }
+    }
+
+    return {
+      ...typeData,
+      riskScore: normalizedRisk,
+      rawRiskScore: Math.round(riskScore * 100) / 100,
+      riskLevel,
+      trendMultiplier,
+      alert
+    }
+  }).sort((a, b) => b.riskScore - a.riskScore)
+
+  const highestRisk = risks[0] || null
+
+  return {
+    risks,
+    highestRisk,
+    hasData: risks.length > 0,
+    alerts: risks.filter(r => r.alert).map(r => r.alert)
+  }
+}
+
+/**
+ * Get combined incident prediction summary for UI
+ * Returns weekly/monthly forecasts and type probability breakdown
+ */
+export const getIncidentPredictionSummary = (incidents) => {
+  // Get weekly forecast (next 1 week)
+  const weeklyForecast = forecastIncidentsByPeriod(incidents, 'week', 1)
+
+  // Get monthly forecast (next 1 month)
+  const monthlyForecast = forecastIncidentsByPeriod(incidents, 'month', 1)
+
+  // Get incident type probabilities
+  const typeProbability = predictIncidentTypeProbability(incidents, 6)
+
+  // Calculate risk scores
+  const typeRisk = calculateIncidentTypeRisk(typeProbability)
+
+  // Build summary
+  const weekPrediction = weeklyForecast.predictions?.[0] || null
+  const monthPrediction = monthlyForecast.predictions?.[0] || null
+
+  return {
+    weekly: weekPrediction ? {
+      predicted: weekPrediction.predicted,
+      range: { min: weekPrediction.lower, max: weekPrediction.upper },
+      trend: weekPrediction.trend,
+      confidence: weekPrediction.confidence,
+      changePercent: weekPrediction.changePercent
+    } : null,
+    monthly: monthPrediction ? {
+      predicted: monthPrediction.predicted,
+      range: { min: monthPrediction.lower, max: monthPrediction.upper },
+      trend: monthPrediction.trend,
+      confidence: monthPrediction.confidence,
+      changePercent: monthPrediction.changePercent
+    } : null,
+    typeProbability,
+    typeRisk,
+    hasData: (weekPrediction || monthPrediction) || typeProbability.hasData,
+    methodology: {
+      countForecast: 'Linear regression with 95% confidence intervals',
+      typeProbability: 'Exponential weighted moving average (α=0.4, 6-month lookback)',
+      riskScore: 'Probability × Severity × Trend Multiplier'
+    }
+  }
+}
+
+// ============================================================================
 // PHASE 2: ANOMALY DETECTION
 // ============================================================================
 
@@ -2556,4 +2895,615 @@ const getRootCauseColor = (rootCause) => {
     'Other': '#64748b'
   }
   return colors[rootCause] || '#94a3b8'
+}
+
+// ============================================================================
+// SEASONAL PATTERN DETECTION
+// ============================================================================
+
+/**
+ * Detect seasonal patterns in incident data
+ * Analyzes day-of-week, hour-of-day, and month-of-year patterns
+ * Returns patterns with statistical significance
+ */
+export const detectSeasonalPatterns = (incidents) => {
+  if (!incidents || incidents.length < 30) {
+    return {
+      hasData: false,
+      error: 'Insufficient data for seasonal analysis (need at least 30 incidents)',
+      dayOfWeek: null,
+      hourOfDay: null,
+      monthOfYear: null,
+      riskFactors: null
+    }
+  }
+
+  const dayOfWeek = getDayOfWeekPatterns(incidents)
+  const hourOfDay = getHourlyPatterns(incidents)
+  const monthOfYear = getMonthlySeasonality(incidents)
+  const riskFactors = calculateSeasonalRiskFactors(dayOfWeek, hourOfDay, monthOfYear)
+
+  return {
+    hasData: true,
+    dayOfWeek,
+    hourOfDay,
+    monthOfYear,
+    riskFactors,
+    summary: generateSeasonalSummary(dayOfWeek, hourOfDay, monthOfYear)
+  }
+}
+
+/**
+ * Analyze day-of-week patterns with statistical analysis
+ * Returns patterns with risk indices and confidence
+ */
+export const getDayOfWeekPatterns = (incidents) => {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const shortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const counts = [0, 0, 0, 0, 0, 0, 0]
+  const severityCounts = Array(7).fill(null).map(() => ({ high: 0, medium: 0, low: 0 }))
+
+  incidents.forEach(incident => {
+    if (!incident.date) return
+    try {
+      const date = parseISO(incident.date.substring(0, 10))
+      const dayIndex = date.getDay()
+      counts[dayIndex]++
+
+      // Track severity by day
+      const type = (incident.type || '').toLowerCase()
+      if (type.includes('lti') || type.includes('lost time')) {
+        severityCounts[dayIndex].high++
+      } else if (type.includes('mti') || type.includes('medical')) {
+        severityCounts[dayIndex].medium++
+      } else {
+        severityCounts[dayIndex].low++
+      }
+    } catch (e) { /* skip invalid dates */ }
+  })
+
+  const total = counts.reduce((a, b) => a + b, 0)
+  if (total === 0) return { patterns: [], insights: [], hasData: false }
+
+  const expectedPerDay = total / 7
+  const variance = counts.reduce((sum, c) => sum + Math.pow(c - expectedPerDay, 2), 0) / 7
+  const stdDev = Math.sqrt(variance)
+
+  // Calculate chi-square for statistical significance
+  const chiSquare = counts.reduce((sum, observed) => {
+    return sum + Math.pow(observed - expectedPerDay, 2) / expectedPerDay
+  }, 0)
+  const isSignificant = chiSquare > 12.59 // p < 0.05 with df=6
+
+  const patterns = dayNames.map((day, index) => {
+    const count = counts[index]
+    const percentage = (count / total) * 100
+    const deviation = stdDev > 0 ? (count - expectedPerDay) / stdDev : 0
+    const riskIndex = expectedPerDay > 0 ? (count / expectedPerDay) * 100 : 100
+
+    let riskLevel = 'normal'
+    if (riskIndex > 130) riskLevel = 'high'
+    else if (riskIndex > 115) riskLevel = 'elevated'
+    else if (riskIndex < 70) riskLevel = 'low'
+
+    return {
+      day,
+      shortName: shortNames[index],
+      dayIndex: index,
+      count,
+      percentage: Math.round(percentage * 10) / 10,
+      expected: Math.round(expectedPerDay * 10) / 10,
+      deviation: Math.round(deviation * 100) / 100,
+      riskIndex: Math.round(riskIndex),
+      riskLevel,
+      isWeekend: index === 0 || index === 6,
+      severity: severityCounts[index]
+    }
+  })
+
+  // Find peak and low days
+  const sortedByCount = [...patterns].sort((a, b) => b.count - a.count)
+  const peakDay = sortedByCount[0]
+  const lowDay = sortedByCount[sortedByCount.length - 1]
+
+  // Generate insights
+  const insights = []
+  if (isSignificant) {
+    insights.push({
+      type: 'significant',
+      message: `Day-of-week pattern is statistically significant (χ² = ${chiSquare.toFixed(1)})`,
+      confidence: 'high'
+    })
+  }
+  if (peakDay.riskIndex > 130) {
+    insights.push({
+      type: 'peak',
+      message: `${peakDay.day} has ${peakDay.riskIndex - 100}% more incidents than average`,
+      day: peakDay.day,
+      riskIndex: peakDay.riskIndex
+    })
+  }
+  if (lowDay.riskIndex < 70) {
+    insights.push({
+      type: 'low',
+      message: `${lowDay.day} has ${100 - lowDay.riskIndex}% fewer incidents than average`,
+      day: lowDay.day,
+      riskIndex: lowDay.riskIndex
+    })
+  }
+
+  // Weekend vs weekday analysis
+  const weekendCount = counts[0] + counts[6]
+  const weekdayCount = total - weekendCount
+  const weekendExpected = (total / 7) * 2
+  const weekdayExpected = (total / 7) * 5
+  const weekendRatio = weekendExpected > 0 ? weekendCount / weekendExpected : 1
+
+  if (weekendRatio > 1.2) {
+    insights.push({
+      type: 'weekend_high',
+      message: `Weekend incidents are ${Math.round((weekendRatio - 1) * 100)}% higher than expected`,
+      ratio: weekendRatio
+    })
+  } else if (weekendRatio < 0.8) {
+    insights.push({
+      type: 'weekend_low',
+      message: `Weekend incidents are ${Math.round((1 - weekendRatio) * 100)}% lower than expected`,
+      ratio: weekendRatio
+    })
+  }
+
+  return {
+    patterns,
+    insights,
+    hasData: true,
+    isSignificant,
+    chiSquare: Math.round(chiSquare * 10) / 10,
+    peakDay: peakDay.day,
+    lowDay: lowDay.day,
+    weekendRatio: Math.round(weekendRatio * 100) / 100
+  }
+}
+
+/**
+ * Analyze hourly patterns (time-of-day analysis)
+ * Returns patterns grouped by shift and with peak/off-peak identification
+ */
+export const getHourlyPatterns = (incidents) => {
+  const hourCounts = Array(24).fill(0)
+  const severityByHour = Array(24).fill(null).map(() => ({ high: 0, medium: 0, low: 0 }))
+  let hasTimeData = false
+
+  incidents.forEach(incident => {
+    let hour = null
+
+    // Try eventTime first
+    if (incident.eventTime) {
+      const match = incident.eventTime.match(/(\d{1,2}):?(\d{2})?/)
+      if (match) {
+        hour = parseInt(match[1], 10)
+        if (hour >= 0 && hour < 24) hasTimeData = true
+      }
+    }
+
+    // Fallback to date if it includes time (ISO format)
+    if (hour === null && incident.date && incident.date.includes('T')) {
+      const timePart = incident.date.split('T')[1]
+      if (timePart) {
+        const match = timePart.match(/(\d{2}):(\d{2})/)
+        if (match) {
+          hour = parseInt(match[1], 10)
+          if (hour >= 0 && hour < 24) hasTimeData = true
+        }
+      }
+    }
+
+    if (hour !== null && hour >= 0 && hour < 24) {
+      hourCounts[hour]++
+
+      // Track severity
+      const type = (incident.type || '').toLowerCase()
+      if (type.includes('lti') || type.includes('lost time')) {
+        severityByHour[hour].high++
+      } else if (type.includes('mti') || type.includes('medical')) {
+        severityByHour[hour].medium++
+      } else {
+        severityByHour[hour].low++
+      }
+    }
+  })
+
+  const total = hourCounts.reduce((a, b) => a + b, 0)
+  if (total === 0 || !hasTimeData) {
+    return { patterns: [], shifts: [], insights: [], hasData: false }
+  }
+
+  const expectedPerHour = total / 24
+
+  // Define shifts
+  const shiftDefinitions = {
+    morning: { start: 6, end: 12, label: 'Morning (6AM-12PM)', color: '#f59e0b' },
+    afternoon: { start: 12, end: 18, label: 'Afternoon (12PM-6PM)', color: '#ef4444' },
+    evening: { start: 18, end: 22, label: 'Evening (6PM-10PM)', color: '#8b5cf6' },
+    night: { start: 22, end: 6, label: 'Night (10PM-6AM)', color: '#3b82f6' }
+  }
+
+  const patterns = hourCounts.map((count, hour) => {
+    const percentage = (count / total) * 100
+    const riskIndex = expectedPerHour > 0 ? (count / expectedPerHour) * 100 : 100
+
+    let shift = 'night'
+    if (hour >= 6 && hour < 12) shift = 'morning'
+    else if (hour >= 12 && hour < 18) shift = 'afternoon'
+    else if (hour >= 18 && hour < 22) shift = 'evening'
+
+    let riskLevel = 'normal'
+    if (riskIndex > 150) riskLevel = 'high'
+    else if (riskIndex > 120) riskLevel = 'elevated'
+    else if (riskIndex < 50) riskLevel = 'low'
+
+    return {
+      hour,
+      hourLabel: `${hour.toString().padStart(2, '0')}:00`,
+      hour12: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
+      count,
+      percentage: Math.round(percentage * 10) / 10,
+      expected: Math.round(expectedPerHour * 10) / 10,
+      riskIndex: Math.round(riskIndex),
+      riskLevel,
+      shift,
+      shiftLabel: shiftDefinitions[shift].label,
+      severity: severityByHour[hour]
+    }
+  })
+
+  // Calculate shift totals
+  const shifts = Object.entries(shiftDefinitions).map(([key, def]) => {
+    let shiftTotal = 0
+    let hoursInShift = 0
+
+    for (let h = 0; h < 24; h++) {
+      const inShift = key === 'night'
+        ? (h >= def.start || h < def.end)
+        : (h >= def.start && h < def.end)
+      if (inShift) {
+        shiftTotal += hourCounts[h]
+        hoursInShift++
+      }
+    }
+
+    const expectedForShift = (total / 24) * hoursInShift
+    const riskIndex = expectedForShift > 0 ? (shiftTotal / expectedForShift) * 100 : 100
+
+    return {
+      key,
+      label: def.label,
+      color: def.color,
+      count: shiftTotal,
+      hours: hoursInShift,
+      percentage: Math.round((shiftTotal / total) * 100 * 10) / 10,
+      riskIndex: Math.round(riskIndex),
+      riskLevel: riskIndex > 130 ? 'high' : riskIndex > 115 ? 'elevated' : riskIndex < 70 ? 'low' : 'normal'
+    }
+  })
+
+  // Find peak hours (top 3)
+  const sortedByCount = [...patterns].sort((a, b) => b.count - a.count)
+  const peakHours = sortedByCount.slice(0, 3).filter(p => p.count > 0)
+
+  // Generate insights
+  const insights = []
+  if (peakHours.length > 0) {
+    const peakHoursList = peakHours.map(p => p.hour12).join(', ')
+    insights.push({
+      type: 'peak_hours',
+      message: `Peak incident hours: ${peakHoursList}`,
+      hours: peakHours.map(p => p.hour)
+    })
+  }
+
+  const highRiskShift = shifts.find(s => s.riskIndex > 130)
+  if (highRiskShift) {
+    insights.push({
+      type: 'high_risk_shift',
+      message: `${highRiskShift.label} has ${highRiskShift.riskIndex - 100}% more incidents than expected`,
+      shift: highRiskShift.key,
+      riskIndex: highRiskShift.riskIndex
+    })
+  }
+
+  return {
+    patterns,
+    shifts,
+    insights,
+    hasData: true,
+    peakHours: peakHours.map(p => p.hour),
+    totalWithTime: total
+  }
+}
+
+/**
+ * Analyze monthly seasonality patterns
+ * Returns month-over-month patterns and yearly trends
+ */
+export const getMonthlySeasonality = (incidents) => {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const monthCounts = Array(12).fill(0)
+  const monthYearCounts = {} // Track by year-month for trend analysis
+
+  incidents.forEach(incident => {
+    if (!incident.date) return
+    try {
+      const date = parseISO(incident.date.substring(0, 10))
+      const monthIndex = date.getMonth()
+      monthCounts[monthIndex]++
+
+      const yearMonth = format(date, 'yyyy-MM')
+      monthYearCounts[yearMonth] = (monthYearCounts[yearMonth] || 0) + 1
+    } catch (e) { /* skip invalid dates */ }
+  })
+
+  const total = monthCounts.reduce((a, b) => a + b, 0)
+  if (total === 0) return { patterns: [], insights: [], hasData: false }
+
+  const expectedPerMonth = total / 12
+
+  // Calculate chi-square for significance
+  const chiSquare = monthCounts.reduce((sum, observed) => {
+    return sum + Math.pow(observed - expectedPerMonth, 2) / expectedPerMonth
+  }, 0)
+  const isSignificant = chiSquare > 19.68 // p < 0.05 with df=11
+
+  const patterns = monthNames.map((month, index) => {
+    const count = monthCounts[index]
+    const percentage = (count / total) * 100
+    const riskIndex = expectedPerMonth > 0 ? (count / expectedPerMonth) * 100 : 100
+
+    let riskLevel = 'normal'
+    if (riskIndex > 140) riskLevel = 'high'
+    else if (riskIndex > 120) riskLevel = 'elevated'
+    else if (riskIndex < 60) riskLevel = 'low'
+
+    // Determine season
+    let season = 'winter'
+    if (index >= 2 && index <= 4) season = 'spring'
+    else if (index >= 5 && index <= 7) season = 'summer'
+    else if (index >= 8 && index <= 10) season = 'fall'
+
+    return {
+      month,
+      fullName: fullMonthNames[index],
+      monthIndex: index,
+      count,
+      percentage: Math.round(percentage * 10) / 10,
+      expected: Math.round(expectedPerMonth * 10) / 10,
+      riskIndex: Math.round(riskIndex),
+      riskLevel,
+      season
+    }
+  })
+
+  // Find peak and low months
+  const sortedByCount = [...patterns].sort((a, b) => b.count - a.count)
+  const peakMonths = sortedByCount.slice(0, 3).filter(p => p.riskIndex > 100)
+  const lowMonths = sortedByCount.slice(-3).filter(p => p.riskIndex < 100)
+
+  // Seasonal analysis
+  const seasonCounts = { winter: 0, spring: 0, summer: 0, fall: 0 }
+  patterns.forEach(p => { seasonCounts[p.season] += p.count })
+
+  const seasonPatterns = Object.entries(seasonCounts).map(([season, count]) => ({
+    season,
+    label: season.charAt(0).toUpperCase() + season.slice(1),
+    count,
+    percentage: Math.round((count / total) * 100 * 10) / 10,
+    riskIndex: Math.round((count / (total / 4)) * 100)
+  }))
+
+  // Generate insights
+  const insights = []
+  if (isSignificant) {
+    insights.push({
+      type: 'significant',
+      message: `Monthly pattern is statistically significant (χ² = ${chiSquare.toFixed(1)})`,
+      confidence: 'high'
+    })
+  }
+
+  if (peakMonths.length > 0 && peakMonths[0].riskIndex > 130) {
+    insights.push({
+      type: 'peak_months',
+      message: `Highest incidents in ${peakMonths.map(p => p.fullName).join(', ')}`,
+      months: peakMonths.map(p => p.monthIndex)
+    })
+  }
+
+  const peakSeason = seasonPatterns.reduce((a, b) => a.riskIndex > b.riskIndex ? a : b)
+  if (peakSeason.riskIndex > 120) {
+    insights.push({
+      type: 'peak_season',
+      message: `${peakSeason.label} season has ${peakSeason.riskIndex - 100}% more incidents than average`,
+      season: peakSeason.season,
+      riskIndex: peakSeason.riskIndex
+    })
+  }
+
+  // Year-over-year trend
+  const yearMonthEntries = Object.entries(monthYearCounts).sort((a, b) => a[0].localeCompare(b[0]))
+  const trend = yearMonthEntries.map(([yearMonth, count]) => ({
+    period: yearMonth,
+    label: format(parseISO(`${yearMonth}-01`), 'MMM yy'),
+    count
+  }))
+
+  return {
+    patterns,
+    seasonPatterns,
+    trend,
+    insights,
+    hasData: true,
+    isSignificant,
+    chiSquare: Math.round(chiSquare * 10) / 10,
+    peakMonth: patterns.reduce((a, b) => a.count > b.count ? a : b).fullName,
+    lowMonth: patterns.reduce((a, b) => a.count < b.count ? a : b).fullName
+  }
+}
+
+/**
+ * Calculate seasonal risk factors for predictive scoring
+ * Returns combined risk multiplier based on current time factors
+ */
+export const calculateSeasonalRiskFactors = (dayOfWeek, hourOfDay, monthOfYear) => {
+  const now = new Date()
+  const currentDayIndex = now.getDay()
+  const currentHour = now.getHours()
+  const currentMonth = now.getMonth()
+
+  let dayRisk = 1.0
+  let hourRisk = 1.0
+  let monthRisk = 1.0
+
+  // Day of week risk
+  if (dayOfWeek?.patterns) {
+    const todayPattern = dayOfWeek.patterns.find(p => p.dayIndex === currentDayIndex)
+    if (todayPattern) {
+      dayRisk = todayPattern.riskIndex / 100
+    }
+  }
+
+  // Hour of day risk
+  if (hourOfDay?.patterns) {
+    const hourPattern = hourOfDay.patterns.find(p => p.hour === currentHour)
+    if (hourPattern) {
+      hourRisk = hourPattern.riskIndex / 100
+    }
+  }
+
+  // Month risk
+  if (monthOfYear?.patterns) {
+    const monthPattern = monthOfYear.patterns.find(p => p.monthIndex === currentMonth)
+    if (monthPattern) {
+      monthRisk = monthPattern.riskIndex / 100
+    }
+  }
+
+  // Combined risk (geometric mean to avoid extreme values)
+  const combinedRisk = Math.pow(dayRisk * hourRisk * monthRisk, 1/3)
+
+  let riskLevel = 'normal'
+  if (combinedRisk > 1.3) riskLevel = 'high'
+  else if (combinedRisk > 1.15) riskLevel = 'elevated'
+  else if (combinedRisk < 0.7) riskLevel = 'low'
+
+  return {
+    current: {
+      dayRisk: Math.round(dayRisk * 100),
+      hourRisk: Math.round(hourRisk * 100),
+      monthRisk: Math.round(monthRisk * 100),
+      combinedRisk: Math.round(combinedRisk * 100),
+      riskLevel
+    },
+    today: dayOfWeek?.patterns?.find(p => p.dayIndex === currentDayIndex),
+    thisHour: hourOfDay?.patterns?.find(p => p.hour === currentHour),
+    thisMonth: monthOfYear?.patterns?.find(p => p.monthIndex === currentMonth)
+  }
+}
+
+/**
+ * Generate natural language summary of seasonal patterns
+ */
+const generateSeasonalSummary = (dayOfWeek, hourOfDay, monthOfYear) => {
+  const summaryPoints = []
+
+  // Day of week summary
+  if (dayOfWeek?.hasData && dayOfWeek.peakDay) {
+    const peakPattern = dayOfWeek.patterns.find(p => p.day === dayOfWeek.peakDay)
+    if (peakPattern && peakPattern.riskIndex > 115) {
+      summaryPoints.push(`${dayOfWeek.peakDay}s have the highest incident rate (${peakPattern.riskIndex}% of average)`)
+    }
+  }
+
+  // Hour summary
+  if (hourOfDay?.hasData && hourOfDay.peakHours?.length > 0) {
+    const peakHourPatterns = hourOfDay.patterns.filter(p => hourOfDay.peakHours.includes(p.hour))
+    const peakTimeRange = peakHourPatterns.map(p => p.hour12).join(', ')
+    summaryPoints.push(`Peak incident times: ${peakTimeRange}`)
+  }
+
+  // Month summary
+  if (monthOfYear?.hasData && monthOfYear.peakMonth) {
+    const peakPattern = monthOfYear.patterns.find(p => p.fullName === monthOfYear.peakMonth)
+    if (peakPattern && peakPattern.riskIndex > 120) {
+      summaryPoints.push(`${monthOfYear.peakMonth} historically has the most incidents (${peakPattern.riskIndex}% of average)`)
+    }
+  }
+
+  return summaryPoints
+}
+
+/**
+ * Predict risk for upcoming periods based on seasonal patterns
+ * Returns predictions for next 7 days with risk levels
+ */
+export const predictSeasonalRisk = (incidents, daysAhead = 7) => {
+  const seasonalData = detectSeasonalPatterns(incidents)
+
+  if (!seasonalData.hasData) {
+    return {
+      predictions: [],
+      hasData: false,
+      error: seasonalData.error
+    }
+  }
+
+  const predictions = []
+  const today = new Date()
+
+  for (let i = 0; i < daysAhead; i++) {
+    const targetDate = new Date(today.getTime() + i * 24 * 60 * 60 * 1000)
+    const dayIndex = targetDate.getDay()
+    const monthIndex = targetDate.getMonth()
+
+    // Get base risks from patterns
+    const dayPattern = seasonalData.dayOfWeek?.patterns?.find(p => p.dayIndex === dayIndex)
+    const monthPattern = seasonalData.monthOfYear?.patterns?.find(p => p.monthIndex === monthIndex)
+
+    const dayRisk = dayPattern?.riskIndex || 100
+    const monthRisk = monthPattern?.riskIndex || 100
+
+    // Combined risk
+    const combinedRisk = Math.round(Math.sqrt(dayRisk * monthRisk))
+
+    let riskLevel = 'normal'
+    if (combinedRisk > 125) riskLevel = 'high'
+    else if (combinedRisk > 110) riskLevel = 'elevated'
+    else if (combinedRisk < 80) riskLevel = 'low'
+
+    predictions.push({
+      date: format(targetDate, 'yyyy-MM-dd'),
+      dateLabel: format(targetDate, 'EEE, MMM d'),
+      dayName: dayPattern?.day || format(targetDate, 'EEEE'),
+      dayRisk,
+      monthRisk,
+      combinedRisk,
+      riskLevel,
+      isToday: i === 0,
+      isWeekend: dayIndex === 0 || dayIndex === 6
+    })
+  }
+
+  // Find highest risk day
+  const highestRiskDay = predictions.reduce((a, b) => a.combinedRisk > b.combinedRisk ? a : b)
+
+  return {
+    predictions,
+    hasData: true,
+    highestRiskDay,
+    summary: {
+      highRiskDays: predictions.filter(p => p.riskLevel === 'high').length,
+      elevatedDays: predictions.filter(p => p.riskLevel === 'elevated').length,
+      averageRisk: Math.round(predictions.reduce((sum, p) => sum + p.combinedRisk, 0) / predictions.length)
+    }
+  }
 }

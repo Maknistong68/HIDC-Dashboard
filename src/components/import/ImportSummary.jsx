@@ -157,8 +157,8 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
               <tbody className="divide-y divide-surface-100 bg-white">
                 {(skippedRecords.length > 0 ? skippedRecords : duplicateDetails.filter(d => d.action === 'skipped').map(d => d.item))
                   .slice(0, 100)
-                  .map((record, index) => (
-                    <tr key={index} className="hover:bg-surface-50 transition-colors">
+                  .map((record) => (
+                    <tr key={record.externalId || record.id || `${record.date}-${record.contractor}`} className="hover:bg-surface-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <span className="font-mono text-sm text-surface-800 truncate max-w-md">

@@ -28,3 +28,13 @@ export { default as ScenarioImpactCard } from './ScenarioImpactCard'
 // Phase 6: Safety Culture & Benchmarking
 export { default as SafetyCultureDashboard } from './SafetyCultureDashboard'
 export { default as ComparativeBenchmark } from './ComparativeBenchmark'
+
+// Incident Prediction
+export { default as IncidentPredictionCard } from './IncidentPredictionCard'
+export { default as IncidentTypeProbabilityChart } from './IncidentTypeProbabilityChart'
+export { default as IncidentTypeRiskIndicator } from './IncidentTypeRiskIndicator'
+export { default as PredictionMethodologyDisclosure } from './PredictionMethodologyDisclosure'
+
+// Seasonal Pattern Detection
+export { default as SeasonalPatternChart } from './SeasonalPatternChart'
+export { default as SeasonalRiskPrediction } from './SeasonalRiskPrediction'

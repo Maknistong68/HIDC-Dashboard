@@ -425,9 +425,9 @@ const BatchImportModal = ({ onClose }) => {
 
               {/* Individual results */}
               <div className="text-left space-y-2 max-h-60 overflow-y-auto">
-                {results.map((result, index) => (
+                {results.map((result) => (
                   <div
-                    key={index}
+                    key={result.fileName}
                     className={`flex items-center gap-3 p-3 rounded-lg ${
                       result.success ? 'bg-green-50' : 'bg-red-50'
                     }`}

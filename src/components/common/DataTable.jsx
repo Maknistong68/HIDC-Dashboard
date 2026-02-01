@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react'
+import { useDebounce } from '../../hooks/useDebounce'
 import { List } from 'react-window'
 import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Eye, ChevronsLeft, ChevronsRight, Building2, MapPin, Calendar } from 'lucide-react'
@@ -34,11 +35,14 @@ const DataTable = ({
   mobileCardConfig = null,
   enableVirtualization = true, // New prop to control virtualization
 }) => {
-  const [searchTerm, setSearchTerm] = useState('')
+  const [inputValue, setInputValue] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const tableRef = useRef(null)
+
+  // Debounce search input for better performance with large datasets
+  const searchTerm = useDebounce(inputValue, 300)
 
   // Determine if we should virtualize based on data size
   const shouldVirtualize = enableVirtualization && data.length > VIRTUALIZATION_THRESHOLD
@@ -229,9 +233,9 @@ const DataTable = ({
             <input
               type="text"
               placeholder={searchPlaceholder}
-              value={searchTerm}
+              value={inputValue}
               onChange={(e) => {
-                setSearchTerm(e.target.value)
+                setInputValue(e.target.value)
                 setCurrentPage(1)
               }}
               className={`
@@ -246,7 +250,7 @@ const DataTable = ({
           {/* Show record count when virtualized */}
           {shouldVirtualize && (
             <p className="text-xs text-surface-500 mt-2">
-              {sortedData.length.toLocaleString()} records {searchTerm && `matching "${searchTerm}"`}
+              {sortedData.length.toLocaleString()} records {inputValue && `matching "${inputValue}"`}
             </p>
           )}
         </div>

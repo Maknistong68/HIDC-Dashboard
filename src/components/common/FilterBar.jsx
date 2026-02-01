@@ -6,7 +6,7 @@ import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
  * FilterBar - Consistent filter controls with animations
  * Mobile-optimized: Collapsible on mobile, larger touch targets
  */
-const FilterBar = ({
+const FilterBarComponent = ({
   filters,
   activeFilters,
   onFilterChange,
@@ -179,5 +179,8 @@ const FilterBar = ({
     </div>
   )
 }
+
+// Memoize to prevent re-renders on every filter change
+const FilterBar = React.memo(FilterBarComponent)
 
 export default FilterBar

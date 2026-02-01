@@ -66,8 +66,8 @@ const DuplicateReview = ({ results, onProceed }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100">
-                {updates.slice(0, 20).map((update, index) => (
-                  <tr key={index} className="hover:bg-surface-50">
+                {updates.slice(0, 20).map((update) => (
+                  <tr key={update.existing.externalId || update.existing.id} className="hover:bg-surface-50">
                     <td className="px-4 py-2 font-mono text-surface-700">
                       {update.existing.externalId?.substring(0, 30) || update.existing.id}
                     </td>
@@ -123,8 +123,8 @@ const DuplicateReview = ({ results, onProceed }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100">
-                {newRecords.slice(0, 20).map((record, index) => (
-                  <tr key={index} className="hover:bg-surface-50">
+                {newRecords.slice(0, 20).map((record) => (
+                  <tr key={record.externalId || record.id || `${record.date}-${record.description?.substring(0, 20)}`} className="hover:bg-surface-50">
                     <td className="px-4 py-2 text-surface-700">{record.date}</td>
                     <td className="px-4 py-2">
                       <span className="px-2 py-0.5 text-xs bg-surface-100 text-surface-700 rounded">

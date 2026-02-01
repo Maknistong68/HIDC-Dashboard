@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { format, subDays, startOfWeek, addDays } from 'date-fns'
 
-const ActivityHeatmap = ({ data, title = 'Activity Heatmap', period = null }) => {
+const ActivityHeatmapComponent = ({ data, title = 'Activity Heatmap', period = null }) => {
   const today = new Date()
 
   // Calculate weeks to show based on period (max 12 columns)
@@ -124,9 +124,9 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap', period = null }) =>
           <div className="flex mb-0.5">
             <div className="w-6 flex-shrink-0"></div>
             <div className="flex gap-0.5 relative">
-              {monthLabels.map((label, index) => (
+              {monthLabels.map((label) => (
                 <div
-                  key={index}
+                  key={`${label.week}-${label.label}`}
                   className="text-xs text-surface-400 absolute"
                   style={{
                     left: `${label.week * (cellPixelSize + 1)}px`,
@@ -203,5 +203,8 @@ const ActivityHeatmap = ({ data, title = 'Activity Heatmap', period = null }) =>
     </div>
   )
 }
+
+// Memoize to prevent unnecessary re-renders (renders 84+ cells)
+const ActivityHeatmap = React.memo(ActivityHeatmapComponent)
 
 export default ActivityHeatmap
