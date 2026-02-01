@@ -1,13 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
-import { Target, AlertTriangle, AlertCircle } from 'lucide-react'
+import { Target, AlertTriangle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
 import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel } from '../components/outlook'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import { getHazardTrendingByPeriod } from '../utils/insightsCalculations'
+import { getHazardTrendingByPeriod, getIncidentPredictionSummary } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, NEGATIVE_TYPES } from '../utils/rootCauseEngine'
+import {
+  IncidentPredictionCard,
+  IncidentTypeProbabilityChart,
+  IncidentTypeRiskIndicator,
+  PredictionMethodologyDisclosure
+} from '../components/insights'
 
 /**
  * TrendSummary - Compact inline summary for Hazards tab
@@ -102,6 +108,7 @@ const SafetyOutlook = () => {
   const [activeView, setActiveView] = useState('hazards') // 'hazards' | 'factors'
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
+  const [isPredictionOpen, setIsPredictionOpen] = useState(true)
 
   // Get unique contractors from incidents
   const uniqueContractors = useMemo(() => {
@@ -173,6 +180,11 @@ const SafetyOutlook = () => {
   // Count total negative observations (for factor coverage calculation)
   const totalNegativeObservations = useMemo(() => {
     return filteredIncidents.filter(i => NEGATIVE_TYPES.includes(i.type)).length
+  }, [filteredIncidents])
+
+  // Calculate incident prediction data
+  const incidentPrediction = useMemo(() => {
+    return getIncidentPredictionSummary(filteredIncidents)
   }, [filteredIncidents])
 
   // Auto-select first hazard when data loads, or update selection if current hazard no longer exists
@@ -422,6 +434,78 @@ const SafetyOutlook = () => {
               timePeriod={period}
             />
           </div>
+        </div>
+      )}
+
+      {/* Incident Prediction Section */}
+      {incidentPrediction && (
+        <div className="mt-4 border border-dashed border-surface-300 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setIsPredictionOpen(!isPredictionOpen)}
+            className="w-full flex items-center justify-between p-4 hover:bg-surface-50 transition-colors bg-white"
+          >
+            <div className="flex items-center gap-2">
+              <Target size={18} className="text-primary-600" />
+              <h2 className="font-semibold text-surface-800">Incident Prediction</h2>
+            </div>
+            {isPredictionOpen ? (
+              <ChevronUp size={20} className="text-surface-400" />
+            ) : (
+              <ChevronDown size={20} className="text-surface-400" />
+            )}
+          </button>
+          {isPredictionOpen && (
+            <div className="p-4 pt-0 border-t border-surface-100 bg-white">
+              <div className="space-y-4">
+                {/* Predicted Counts Grid */}
+                {(incidentPrediction.weekly || incidentPrediction.monthly) ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {incidentPrediction.weekly && (
+                      <IncidentPredictionCard
+                        period="week"
+                        predicted={incidentPrediction.weekly.predicted}
+                        range={incidentPrediction.weekly.range}
+                        trend={incidentPrediction.weekly.trend}
+                        confidence={incidentPrediction.weekly.confidence}
+                        changePercent={incidentPrediction.weekly.changePercent}
+                      />
+                    )}
+                    {incidentPrediction.monthly && (
+                      <IncidentPredictionCard
+                        period="month"
+                        predicted={incidentPrediction.monthly.predicted}
+                        range={incidentPrediction.monthly.range}
+                        trend={incidentPrediction.monthly.trend}
+                        confidence={incidentPrediction.monthly.confidence}
+                        changePercent={incidentPrediction.monthly.changePercent}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-surface-50 rounded-lg border border-dashed border-surface-300 text-center">
+                    <p className="text-sm text-surface-500">
+                      Insufficient historical data for count prediction (need at least 7 days of data)
+                    </p>
+                  </div>
+                )}
+
+                {/* Type Probability and Risk Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <IncidentTypeProbabilityChart
+                    data={incidentPrediction.typeProbability}
+                  />
+                  <IncidentTypeRiskIndicator
+                    data={incidentPrediction.typeRisk}
+                  />
+                </div>
+
+                {/* Methodology Disclosure */}
+                <PredictionMethodologyDisclosure
+                  methodology={incidentPrediction.methodology}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
