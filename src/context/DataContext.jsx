@@ -179,7 +179,8 @@ export const DataProvider = ({ children }) => {
       // Save to IndexedDB with file tracking
       const result = await saveIncidentsWithFile(incidentsWithIds, {
         fileName: fileInfo.fileName,
-        fileSize: fileInfo.fileSize || 0
+        fileSize: fileInfo.fileSize || 0,
+        fileHash: fileInfo.fileHash || null
       })
 
       // Clear caches since data changed

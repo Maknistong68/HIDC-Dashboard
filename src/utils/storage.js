@@ -13,6 +13,7 @@ import {
   addRecords,
   createFile,
   getAllFiles,
+  getFileByHash,
   deleteFile as idbDeleteFile,
   getStorageStats,
   clearAllData as idbClearAllData,
@@ -264,7 +265,7 @@ export const saveIncidents = async (incidents) => {
 /**
  * Save incidents with file tracking (for imports)
  * @param {Array} incidents - Array of incident records
- * @param {Object} fileInfo - { fileName, fileSize }
+ * @param {Object} fileInfo - { fileName, fileSize, fileHash }
  * @returns {Promise<{ fileId: number, recordCount: number }>}
  */
 export const saveIncidentsWithFile = async (incidents, fileInfo) => {
@@ -274,6 +275,7 @@ export const saveIncidentsWithFile = async (incidents, fileInfo) => {
       const fileId = await createFile({
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize || 0,
+        fileHash: fileInfo.fileHash || null,
         recordCount: incidents.length,
         status: 'active'
       })
@@ -291,6 +293,24 @@ export const saveIncidentsWithFile = async (incidents, fileInfo) => {
   } catch (error) {
     console.error('Error saving incidents with file:', error)
     throw error
+  }
+}
+
+/**
+ * Check if a file with the given hash already exists
+ * @param {string} hash - SHA-256 hash of the file
+ * @returns {Promise<Object|undefined>} - The file record if found
+ */
+export const checkFileHashExists = async (hash) => {
+  try {
+    if (await shouldUseIndexedDB()) {
+      return await getFileByHash(hash)
+    }
+    // No hash tracking in localStorage
+    return undefined
+  } catch (error) {
+    console.error('Error checking file hash:', error)
+    return undefined
   }
 }
 

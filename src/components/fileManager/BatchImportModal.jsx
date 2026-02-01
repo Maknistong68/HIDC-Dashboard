@@ -8,6 +8,8 @@ import {
   transformRows,
   checkDuplicates,
 } from '../../utils/excelParser'
+import { calculateFileHash } from '../../utils/fileHashUtils'
+import { checkFileHashExists } from '../../utils/storage'
 
 /**
  * BatchImportModal - Import multiple files at once
@@ -91,7 +93,37 @@ const BatchImportModal = ({ onClose }) => {
       const { file } = selectedFiles[i]
 
       try {
-        // Parse file
+        // Step 1: Calculate file hash and check for duplicates
+        const fileHash = await calculateFileHash(file)
+        const existingFile = await checkFileHashExists(fileHash)
+
+        if (existingFile) {
+          // File already imported - skip with informative message
+          const importDate = existingFile.importedAt
+            ? new Date(existingFile.importedAt).toLocaleDateString()
+            : 'unknown date'
+
+          setSelectedFiles(prev => prev.map((f, idx) =>
+            idx === i ? {
+              ...f,
+              status: 'duplicate',
+              error: `Already imported on ${importDate}`,
+              originalFileName: existingFile.fileName
+            } : f
+          ))
+
+          newResults.push({
+            fileName: file.name,
+            success: false,
+            isFileDuplicate: true,
+            error: `Already imported on ${importDate}`,
+            originalFileName: existingFile.fileName
+          })
+
+          continue // Skip to next file
+        }
+
+        // Step 2: Parse file
         const data = await parseExcelFile(file)
 
         // Validate format
@@ -126,7 +158,7 @@ const BatchImportModal = ({ onClose }) => {
         if (duplicateResults.newRecords.length > 0) {
           result = await addIncidentsWithFile(
             duplicateResults.newRecords,
-            { fileName: file.name, fileSize: file.size },
+            { fileName: file.name, fileSize: file.size, fileHash },
             { classificationMode: 'trust-excel' }
           )
         }
@@ -214,6 +246,7 @@ const BatchImportModal = ({ onClose }) => {
 
   // Summary stats
   const successCount = results.filter(r => r.success).length
+  const fileDuplicateCount = results.filter(r => r.isFileDuplicate).length
   const totalRecords = results.reduce((sum, r) => sum + (r.recordCount || 0), 0)
   const totalSkipped = results.reduce((sum, r) => sum + (r.skippedCount || 0), 0)
 
@@ -335,6 +368,7 @@ const BatchImportModal = ({ onClose }) => {
                         item.status === 'processing' ? 'bg-blue-50 border border-blue-200' :
                         item.status === 'success' ? 'bg-green-50 border border-green-200' :
                         item.status === 'error' ? 'bg-red-50 border border-red-200' :
+                        item.status === 'duplicate' ? 'bg-amber-50 border border-amber-200' :
                         'bg-surface-50'
                       }`}
                     >
@@ -344,6 +378,7 @@ const BatchImportModal = ({ onClose }) => {
                           className={
                             item.status === 'success' ? 'text-green-600' :
                             item.status === 'error' ? 'text-red-600' :
+                            item.status === 'duplicate' ? 'text-amber-600' :
                             item.status === 'processing' ? 'text-blue-600' :
                             'text-surface-400'
                           }
@@ -364,6 +399,8 @@ const BatchImportModal = ({ onClose }) => {
                               </> :
                             item.status === 'error' ?
                               <span className="text-red-600">{item.error}</span> :
+                            item.status === 'duplicate' ?
+                              <span className="text-amber-600">{item.error}</span> :
                             item.status === 'processing' ?
                               'Processing...' :
                               `${(item.file.size / 1024).toFixed(1)} KB`
@@ -380,6 +417,9 @@ const BatchImportModal = ({ onClose }) => {
                         )}
                         {item.status === 'error' && (
                           <AlertTriangle size={20} className="text-red-600" />
+                        )}
+                        {item.status === 'duplicate' && (
+                          <AlertTriangle size={20} className="text-amber-600" />
                         )}
                         {item.status === 'pending' && !isProcessing && (
                           <button
@@ -406,7 +446,11 @@ const BatchImportModal = ({ onClose }) => {
                 Import Complete
               </h3>
 
-              <div className={`grid gap-4 max-w-md mx-auto mb-6 ${totalSkipped > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <div className={`grid gap-4 max-w-md mx-auto mb-6 ${
+                (totalSkipped > 0 && fileDuplicateCount > 0) ? 'grid-cols-4' :
+                (totalSkipped > 0 || fileDuplicateCount > 0) ? 'grid-cols-3' :
+                'grid-cols-2'
+              }`}>
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-2xl font-bold text-green-600">{successCount}</p>
                   <p className="text-sm text-green-700">Files imported</p>
@@ -415,10 +459,16 @@ const BatchImportModal = ({ onClose }) => {
                   <p className="text-2xl font-bold text-primary-600">{totalRecords.toLocaleString()}</p>
                   <p className="text-sm text-primary-700">Records added</p>
                 </div>
+                {fileDuplicateCount > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-4">
+                    <p className="text-2xl font-bold text-amber-600">{fileDuplicateCount}</p>
+                    <p className="text-sm text-amber-700">Files already imported</p>
+                  </div>
+                )}
                 {totalSkipped > 0 && (
                   <div className="bg-amber-50 rounded-lg p-4">
                     <p className="text-2xl font-bold text-amber-600">{totalSkipped.toLocaleString()}</p>
-                    <p className="text-sm text-amber-700">Duplicates skipped</p>
+                    <p className="text-sm text-amber-700">Record duplicates</p>
                   </div>
                 )}
               </div>
@@ -429,11 +479,15 @@ const BatchImportModal = ({ onClose }) => {
                   <div
                     key={result.fileName}
                     className={`flex items-center gap-3 p-3 rounded-lg ${
-                      result.success ? 'bg-green-50' : 'bg-red-50'
+                      result.success ? 'bg-green-50' :
+                      result.isFileDuplicate ? 'bg-amber-50' :
+                      'bg-red-50'
                     }`}
                   >
                     {result.success ? (
                       <Check size={18} className="text-green-600 flex-shrink-0" />
+                    ) : result.isFileDuplicate ? (
+                      <AlertTriangle size={18} className="text-amber-600 flex-shrink-0" />
                     ) : (
                       <AlertTriangle size={18} className="text-red-600 flex-shrink-0" />
                     )}
@@ -449,8 +503,10 @@ const BatchImportModal = ({ onClose }) => {
                               </span>
                             )}
                           </>
+                        ) : result.isFileDuplicate ? (
+                          <span className="text-amber-600">{result.error}</span>
                         ) : (
-                          result.error
+                          <span className="text-red-600">{result.error}</span>
                         )}
                       </p>
                     </div>

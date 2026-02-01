@@ -13,7 +13,7 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'hse_dashboard'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 // Database schema definition
 const STORES = {
@@ -35,6 +35,15 @@ const initDB = async () => {
         fileStore.createIndex('fileName', 'fileName', { unique: false })
         fileStore.createIndex('importedAt', 'importedAt', { unique: false })
         fileStore.createIndex('status', 'status', { unique: false })
+        fileStore.createIndex('fileHash', 'fileHash', { unique: false })
+      }
+
+      // Version 2: Add fileHash index to existing files store
+      if (oldVersion < 2 && db.objectStoreNames.contains(STORES.FILES)) {
+        const fileStore = transaction.objectStore(STORES.FILES)
+        if (!fileStore.indexNames.contains('fileHash')) {
+          fileStore.createIndex('fileHash', 'fileHash', { unique: false })
+        }
       }
 
       // Records store - all incident records
@@ -79,7 +88,7 @@ const getDB = async () => {
 
 /**
  * Create a new file record
- * @param {Object} fileData - { fileName, fileSize, recordCount, status }
+ * @param {Object} fileData - { fileName, fileSize, recordCount, status, fileHash }
  * @returns {Promise<number>} - The generated file ID
  */
 export const createFile = async (fileData) => {
@@ -148,6 +157,17 @@ export const deleteFile = async (fileId) => {
   await tx.done
 
   return { deletedRecords: records.length }
+}
+
+/**
+ * Get file by hash (for duplicate file detection)
+ * @param {string} hash - The SHA-256 hash of the file
+ * @returns {Promise<Object|undefined>} - The file record if found
+ */
+export const getFileByHash = async (hash) => {
+  const db = await getDB()
+  const index = db.transaction(STORES.FILES).store.index('fileHash')
+  return index.get(hash)
 }
 
 /**
