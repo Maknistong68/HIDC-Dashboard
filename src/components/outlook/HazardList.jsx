@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Target, ChevronRight } from 'lucide-react'
+import { Target, ChevronRight, AlertTriangle } from 'lucide-react'
 
 // Static mapping for trend configs - defined outside component to avoid recreation
 const TREND_CONFIGS = {
@@ -27,6 +27,7 @@ const getTrendConfig = (trendLevel) => {
 /**
  * HazardList - Left panel showing sortable list of hazard categories
  * Fixed height with scroll, sort filter, simplified styling
+ * Now includes absolute counts and confidence indicators for data integrity
  */
 const HazardList = ({ hazards, selected, onSelect }) => {
   const [sortBy, setSortBy] = useState('count')
@@ -40,21 +41,23 @@ const HazardList = ({ hazards, selected, onSelect }) => {
       // Sort by observation count (highest first)
       sorted.sort((a, b) => (b.totalCount || 0) - (a.totalCount || 0))
     } else if (sortBy === 'change') {
-      // Sort by % change (highest first), items without change data go to bottom
+      // Sort by % change (highest first)
+      // NEW: Include new hazards (isNew) with their effective change of 100%
       sorted.sort((a, b) => {
-        const aHasChange = !a.isNew && a.changePercent !== undefined && a.changePercent !== null
-        const bHasChange = !b.isNew && b.changePercent !== undefined && b.changePercent !== null
+        // Get effective change percent (new hazards treated as +100%)
+        const aEffective = a.isNew ? 100 : (a.changePercent ?? -Infinity)
+        const bEffective = b.isNew ? 100 : (b.changePercent ?? -Infinity)
 
-        // Items with change data come first
-        if (aHasChange && !bHasChange) return -1
-        if (!aHasChange && bHasChange) return 1
+        // No-data hazards go to bottom
+        if (a.hasNoData && !b.hasNoData) return 1
+        if (!a.hasNoData && b.hasNoData) return -1
 
-        // If both have change data, sort by change percent descending
-        if (aHasChange && bHasChange) {
-          return (b.changePercent || 0) - (a.changePercent || 0)
+        // Sort by effective change descending
+        if (bEffective !== aEffective) {
+          return bEffective - aEffective
         }
 
-        // If neither has change data, sort by count as fallback
+        // Tie-breaker: higher count first
         return (b.totalCount || 0) - (a.totalCount || 0)
       })
     }
@@ -74,23 +77,47 @@ const HazardList = ({ hazards, selected, onSelect }) => {
     )
   }
 
+  /**
+   * Format percentage with absolute counts for context
+   * Shows "(prev→curr)" alongside percentage for transparency
+   */
+  const formatPercentWithCounts = (hazard) => {
+    if (hazard.hasNoData) return { percent: '--', counts: null }
 
-  const formatPercent = (hazard) => {
-    // Show "--" for no-data or new hazards
-    if (hazard.hasNoData) return '--'
-    if (hazard.isNew) return '--'
-    if (hazard.changePercent === undefined || hazard.changePercent === null) return '--'
+    // For new hazards, show as "New" with count
+    if (hazard.isNew) {
+      return {
+        percent: '+100%',
+        counts: `(0→${hazard.currentCount})`,
+        isNew: true
+      }
+    }
+
+    if (hazard.changePercent === undefined || hazard.changePercent === null) {
+      return { percent: '--', counts: null }
+    }
+
     const percent = Math.round(hazard.changePercent)
-    // Cap extreme percentages for readability
-    if (percent > 500) return '>500%'
-    if (percent < -80) return '<-80%'
-    const sign = percent >= 0 ? '+' : ''
-    return `${sign}${percent}%`
+    let percentStr
+    // Cap extreme percentages for readability but preserve info in tooltip
+    if (percent > 500) {
+      percentStr = '>500%'
+    } else if (percent < -80) {
+      percentStr = '<-80%'
+    } else {
+      const sign = percent >= 0 ? '+' : ''
+      percentStr = `${sign}${percent}%`
+    }
+
+    // Include absolute counts for context
+    const counts = `(${hazard.previousCount}→${hazard.currentCount})`
+
+    return { percent: percentStr, counts }
   }
 
   const getPercentColor = (hazard) => {
     if (hazard.hasNoData) return 'text-surface-300'
-    if (hazard.isNew) return 'text-primary-500'
+    if (hazard.isNew) return 'text-blue-600'
     const percent = hazard.changePercent
     if (percent === undefined || percent === null) return 'text-surface-500'
     if (percent > 30) return 'text-safety-critical'
@@ -98,6 +125,23 @@ const HazardList = ({ hazards, selected, onSelect }) => {
     if (percent > -10) return 'text-surface-500'
     if (percent > -30) return 'text-emerald-500'
     return 'text-safety-success'
+  }
+
+  /**
+   * Get confidence indicator based on sample size
+   * Returns null if confidence is high enough
+   */
+  const getConfidenceIndicator = (hazard) => {
+    if (hazard.hasNoData) return null
+    // Show warning for low sample sizes
+    if (hazard.confidence?.level === 'low') {
+      return {
+        icon: '⚠',
+        tooltip: 'Low sample size - trend may be unreliable',
+        color: 'text-amber-500'
+      }
+    }
+    return null
   }
 
   return (
@@ -120,6 +164,8 @@ const HazardList = ({ hazards, selected, onSelect }) => {
         {sortedHazards.map((hazard) => {
           const trendConfig = getTrendConfig(hazard.trendLevel)
           const isSelected = selected?.name === hazard.name
+          const { percent, counts, isNew } = formatPercentWithCounts(hazard)
+          const confidenceIndicator = getConfidenceIndicator(hazard)
 
           return (
             <button
@@ -133,6 +179,7 @@ const HazardList = ({ hazards, selected, onSelect }) => {
                   : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200'
                 }
               `}
+              title={hazard.confidence?.description || ''}
             >
               {/* Trend indicator badge */}
               <span className={`flex-shrink-0 w-6 h-6 rounded ${trendConfig.bg} ${trendConfig.text} flex items-center justify-center text-xs font-bold`}>
@@ -141,23 +188,48 @@ const HazardList = ({ hazards, selected, onSelect }) => {
 
               {/* Name and count */}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
-                  {hazard.name}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+                    {hazard.name}
+                  </p>
+                  {/* Confidence warning indicator */}
+                  {confidenceIndicator && (
+                    <span
+                      className={`text-xs ${confidenceIndicator.color}`}
+                      title={confidenceIndicator.tooltip}
+                    >
+                      {confidenceIndicator.icon}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-surface-500">
                   {hazard.totalCount} observations
+                  {/* Show major hazard badge */}
+                  {hazard.isMajor && (
+                    <span className="ml-1.5 px-1 py-0.5 bg-red-100 text-red-600 rounded text-2xs font-medium">
+                      Major
+                    </span>
+                  )}
                 </p>
               </div>
 
-              {/* Change percent + arrow */}
-              <div className="flex items-center gap-1">
-                <span className={`text-xs font-bold ${getPercentColor(hazard)}`}>
-                  {formatPercent(hazard)}
-                </span>
-                <ChevronRight
-                  size={16}
-                  className={`transition-transform ${isSelected ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
-                />
+              {/* Change percent with absolute counts */}
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex items-center gap-1">
+                  <span className={`text-xs font-bold ${getPercentColor(hazard)}`}>
+                    {isNew ? 'New' : percent}
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    className={`transition-transform ${isSelected ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
+                  />
+                </div>
+                {/* Absolute counts for context */}
+                {counts && (
+                  <span className="text-2xs text-surface-400">
+                    {counts}
+                  </span>
+                )}
               </div>
             </button>
           )

@@ -90,14 +90,29 @@ const HazardDetailPanel = ({ hazard, incidents, timePeriod }) => {
     )
   }
 
+  // Check if sample size is low for reliability warning
+  const hasLowSampleSize = hazard.totalCount < 5
+  const hasMediumSampleSize = hazard.totalCount >= 5 && hazard.totalCount < 20
+
   return (
     <div className="h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden">
-      {/* Header with observation type indicator */}
+      {/* Header with observation type indicator and data quality warning */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         {obsTypeStats && obsTypeStats.total > 0 ? (
           <ObservationTypeIndicator stats={obsTypeStats} />
         ) : (
           <div />
+        )}
+        {/* Data quality warning for low sample sizes */}
+        {hasLowSampleSize && (
+          <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1" title="Low sample size - trends may be unreliable">
+            <span>⚠</span> Low data
+          </span>
+        )}
+        {hasMediumSampleSize && (
+          <span className="text-2xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded" title="Moderate sample size - trends should be verified">
+            Moderate data
+          </span>
         )}
       </div>
 

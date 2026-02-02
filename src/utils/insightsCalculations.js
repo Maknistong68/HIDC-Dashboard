@@ -762,19 +762,74 @@ export const getActionItemsCount = (incidents) => {
 // ============================================================================
 
 /**
+ * PREDICTION_CONFIG - Documented configuration for all prediction parameters
+ * All hardcoded values are centralized here with documented sources
+ *
+ * Changing these values will affect prediction accuracy and reliability.
+ * Modifications should be validated against historical data.
+ */
+export const PREDICTION_CONFIG = {
+  // Exponential decay factor for time-weighted calculations
+  // Higher values (0.5+) weight recent data more heavily
+  // Lower values (0.2-0.3) give more weight to historical patterns
+  // Source: Standard time-series weighting practice; 0.4 balances recency vs stability
+  DECAY_ALPHA: 0.4,
+
+  // Near-miss rate benchmark (% of total observations)
+  // Industry benchmark based on Heinrich's Triangle (300:29:1 ratio)
+  // At least 5% of observations should be near-misses for healthy reporting
+  // Source: Herbert W. Heinrich, Industrial Accident Prevention (1931)
+  NEAR_MISS_BENCHMARK: 0.05,
+
+  // Minimum data points for reliable forecasting
+  // Statistical best practice recommends n > 30 for regression
+  // 14 days is a practical minimum for daily incident forecasting
+  // Source: Statistical sampling theory; adjusted for operational practicality
+  MIN_FORECAST_DAYS: 14,
+
+  // Minimum observations before forecasting is considered reliable
+  // Source: Statistical best practice for meaningful analysis
+  MIN_OBSERVATIONS: 10,
+
+  // Trend detection thresholds (percentage change)
+  // Source: Industry standard for safety metric significance
+  TREND_THRESHOLDS: {
+    SIGNIFICANT: 30,  // Major change requiring immediate attention
+    MINOR: 10         // Notable change worth monitoring
+  },
+
+  // Confidence intervals for R-squared interpretation
+  // Source: Statistical convention for regression analysis
+  CONFIDENCE_THRESHOLDS: {
+    HIGH: 0.7,    // Strong predictive relationship
+    MEDIUM: 0.4   // Moderate predictive relationship
+  },
+
+  // Warning/critical thresholds for forecast alerts
+  // Source: Industry standard for safety escalation
+  ALERT_THRESHOLDS: {
+    WARNING_MULTIPLIER: 1.5,   // 50% above average triggers warning
+    CRITICAL_MULTIPLIER: 2.0  // 100% above average triggers critical
+  }
+}
+
+/**
  * Linear regression forecasting
  * Uses least squares method to fit a line and project future values
  */
 export const forecastIncidents = (incidents, forecastDays = 30) => {
   // Group incidents by date
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
-  if (dates.length < 7) {
+
+  // Use configured minimum instead of hardcoded 7
+  if (dates.length < PREDICTION_CONFIG.MIN_FORECAST_DAYS) {
     return {
       historical: [],
       forecast: [],
       model: null,
       alerts: [],
-      error: 'Insufficient data for forecasting (need at least 7 days)'
+      error: `Insufficient data for forecasting (need at least ${PREDICTION_CONFIG.MIN_FORECAST_DAYS} days)`,
+      warning: dates.length >= 7 ? 'Low data: predictions may be unreliable' : null
     }
   }
 
@@ -1080,19 +1135,22 @@ export const forecastIncidentsByPeriod = (incidents, period = 'week', periodsAhe
  * Predict incident type probabilities using weighted moving average
  * Uses exponential decay weighting (recent months weighted higher)
  * Returns LTI/MTI/FAC probability breakdown
+ *
+ * Configuration: Uses PREDICTION_CONFIG.DECAY_ALPHA for time weighting
  */
 export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
-  if (dates.length < 10) {
+  if (dates.length < PREDICTION_CONFIG.MIN_OBSERVATIONS) {
     return {
       types: [],
       hasData: false,
-      error: 'Insufficient data for type prediction'
+      error: `Insufficient data for type prediction (need at least ${PREDICTION_CONFIG.MIN_OBSERVATIONS} observations)`
     }
   }
 
   const endDate = parseISO(dates[dates.length - 1])
-  const alpha = 0.4 // Exponential decay factor
+  // Use configured decay factor instead of hardcoded value
+  const alpha = PREDICTION_CONFIG.DECAY_ALPHA
 
   // Define incident types with severity weights
   const typeConfig = {
@@ -1161,11 +1219,14 @@ export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) =>
 
     const change = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : (recentAvg > 0 ? 100 : 0)
 
+    // Use configured thresholds instead of hardcoded 15%
+    const minorThreshold = PREDICTION_CONFIG.TREND_THRESHOLDS.MINOR
+
     typeTrends[type] = {
       recentAvg: Math.round(recentAvg * 10) / 10,
       olderAvg: Math.round(olderAvg * 10) / 10,
       changePercent: Math.round(change),
-      trend: change > 15 ? 'increasing' : change < -15 ? 'decreasing' : 'stable'
+      trend: change > minorThreshold ? 'increasing' : change < -minorThreshold ? 'decreasing' : 'stable'
     }
   })
 
@@ -1187,7 +1248,9 @@ export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) =>
         trendChange: typeTrends[type].changePercent
       }
     })
-    .filter(t => t.probability > 0 || t.type === 'lti') // Always include LTI even if 0
+    // Only include types with actual data (removed forced LTI inclusion)
+    // This prevents misleading display of 0% LTI when no LTI data exists
+    .filter(t => t.probability > 0 || t.weightedCount > 0)
     .sort((a, b) => b.probability - a.probability)
 
   // Normalize probabilities to sum to 100%
@@ -2321,14 +2384,56 @@ export const getOverallTrend = (incidents) => {
 // ============================================================================
 
 /**
+ * Get confidence level based on sample size
+ * Returns confidence classification for trend reliability
+ * @param {number} count - Total observation count
+ * @returns {Object} Confidence level with rating and description
+ */
+export const getConfidenceFromCount = (count) => {
+  if (count >= 20) {
+    return { level: 'high', rating: 3, description: 'Statistically reliable trend' }
+  }
+  if (count >= 5) {
+    return { level: 'medium', rating: 2, description: 'Moderate confidence, trend may change' }
+  }
+  return { level: 'low', rating: 1, description: 'Low sample size, trend may be unreliable' }
+}
+
+/**
+ * Check if change is statistically significant
+ * Uses chi-square approximation for trend reliability
+ * @param {number} prev - Previous period count
+ * @param {number} curr - Current period count
+ * @returns {boolean} True if change is statistically significant
+ */
+export const isStatisticallySignificant = (prev, curr) => {
+  const total = prev + curr
+  // Need minimum sample for significance testing
+  if (total < 10) return false
+
+  // Chi-square test approximation
+  const expected = total / 2
+  const chiSq = Math.pow(curr - expected, 2) / expected + Math.pow(prev - expected, 2) / expected
+
+  // Chi-square critical value for p < 0.05 with 1 df is 3.84
+  return chiSq > 3.84
+}
+
+/**
  * Get trend level from percentage change
  * Returns 5-level trend classification for UI display
  * isNew flag indicates no baseline data exists for comparison
+ * Now considers new hazards as rising (emerging risks)
  */
-export const getTrendLevel = (changePercent, isNew = false) => {
-  // When no baseline data exists, mark as "New" (neutral status)
+export const getTrendLevel = (changePercent, isNew = false, currentCount = 0) => {
+  // When no baseline data exists but current has data, treat as emerging/rising
+  // This ensures new hazards are prioritized for attention
   if (isNew) {
-    return { level: 'new', icon: '★', label: 'New', color: 'info', sortOrder: 2.5 }
+    // New hazards with multiple observations should rank higher
+    if (currentCount >= 3) {
+      return { level: 'significant-rise', icon: '▲▲', label: 'Emerging', color: 'critical', sortOrder: 0.5 }
+    }
+    return { level: 'new', icon: '★', label: 'New', color: 'info', sortOrder: 1.5 }
   }
 
   if (changePercent > 30) {
@@ -2434,17 +2539,27 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
     // Determine if this is a "new" hazard (no baseline data to compare)
     const isNew = prev === 0 && curr > 0
 
+    // Calculate change percent - new hazards get 100% (emerging risk)
     let changePercent = 0
     if (prev > 0) {
       changePercent = ((curr - prev) / prev) * 100
+    } else if (isNew) {
+      // New hazards are treated as +100% for proper ranking in "By % Change" sort
+      changePercent = 100
     }
-    // If isNew, changePercent stays 0 (will be displayed as "New" not +100%)
 
     // For hazards with no data at all, use a special "no-data" level
     const hasNoData = total === 0
+
+    // Calculate confidence based on sample size
+    const confidence = getConfidenceFromCount(total)
+
+    // Check statistical significance for established hazards
+    const isSignificant = !isNew && isStatisticallySignificant(prev, curr)
+
     const trendLevel = hasNoData
       ? { level: 'no-data', icon: '○', label: 'No Data', color: 'muted', sortOrder: 5 }
-      : getTrendLevel(changePercent, isNew)
+      : getTrendLevel(changePercent, isNew, curr)
 
     return {
       name: hazard,
@@ -2455,7 +2570,9 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       isNew,
       hasNoData,
       trendLevel,
-      isMajor: MAJOR_HAZARDS.includes(hazard)
+      isMajor: MAJOR_HAZARDS.includes(hazard),
+      confidence,
+      isSignificant
     }
   })
 

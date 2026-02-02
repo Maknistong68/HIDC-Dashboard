@@ -267,11 +267,37 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
             <span className={`text-xs font-medium ${categoryStyle.text}`}>
               {factor.category || 'Uncategorized'}
             </span>
+            {/* Confidence indicator */}
+            {factor.confidence && (
+              <span className={`ml-2 text-2xs px-1.5 py-0.5 rounded ${
+                factor.confidence === 'high' ? 'bg-green-100 text-green-700' :
+                factor.confidence === 'medium' ? 'bg-amber-100 text-amber-700' :
+                'bg-red-100 text-red-600'
+              }`}>
+                {factor.confidence === 'low' && '⚠ '}
+                {factor.confidence} confidence
+              </span>
+            )}
           </div>
           <span className="text-xs text-surface-600">
             {factor.count} observation{factor.count !== 1 ? 's' : ''}
           </span>
         </div>
+        {/* Show top keywords that triggered detection (for transparency) */}
+        {factor.topKeywords && factor.topKeywords.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            <span className="text-2xs text-surface-500">Detected by:</span>
+            {factor.topKeywords.map(({ keyword, count }) => (
+              <span
+                key={keyword}
+                className="text-2xs bg-white/60 text-surface-600 px-1.5 py-0.5 rounded"
+                title={`Matched ${count} time${count !== 1 ? 's' : ''}`}
+              >
+                "{keyword}"
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tab buttons */}

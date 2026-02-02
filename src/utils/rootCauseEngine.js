@@ -7,6 +7,197 @@
  * to detect and categorize issues accurately.
  */
 
+// ============================================================================
+// NEGATION DETECTION
+// Prevents false positives from phrases like "No defects found"
+// ============================================================================
+
+/**
+ * Patterns that indicate negation context before a keyword
+ * Used to filter out false positive detections
+ */
+const NEGATION_PATTERNS = [
+  /\bno\s+$/i,
+  /\bnot\s+$/i,
+  /\bwithout\s+$/i,
+  /\bfree\s+from\s*$/i,
+  /\babsence\s+of\s*$/i,
+  /\bnone\s*$/i,
+  /\bproperly\s+$/i,
+  /\bcorrectly\s+$/i,
+  /\badequate\s+$/i,
+  /\bappropriate\s+$/i,
+  /\bcompliant\s+$/i,
+  /\bin\s+place\s*$/i,
+  /\bfound\s+no\s*$/i,
+  /\bzero\s+$/i,
+  /\bn\/a\s*$/i,
+  /\bnot\s+a\s+$/i,
+  /\bno\s+issues?\s+with\s*$/i,
+  /\ball\s+$/i,
+  /\bgood\s+$/i,
+  /\bproper\s+$/i
+]
+
+/**
+ * Patterns after a keyword that indicate positive/compliant context
+ */
+const POSITIVE_SUFFIX_PATTERNS = [
+  /^\s*(?:in\s+place|available|present|installed|provided|worn|used|completed|done|checked|inspected|found|ok|good|compliant|secured|attached)/i,
+  /^\s*(?:is\s+)?(?:ok|good|fine|adequate|proper|correct|complete|available)/i
+]
+
+/**
+ * Check if keyword match has negation context
+ * @param {string} text - Full description text (lowercase)
+ * @param {number} keywordIndex - Position where keyword was found
+ * @param {number} keywordLength - Length of the keyword
+ * @returns {boolean} True if negation context detected
+ */
+const hasNegationContext = (text, keywordIndex, keywordLength) => {
+  // Check prefix (20 chars before keyword)
+  const prefixStart = Math.max(0, keywordIndex - 25)
+  const prefix = text.substring(prefixStart, keywordIndex)
+
+  // Check if any negation pattern matches the end of prefix
+  for (const pattern of NEGATION_PATTERNS) {
+    if (pattern.test(prefix)) {
+      return true
+    }
+  }
+
+  // Check suffix (30 chars after keyword)
+  const suffixEnd = Math.min(text.length, keywordIndex + keywordLength + 30)
+  const suffix = text.substring(keywordIndex + keywordLength, suffixEnd)
+
+  // Check for positive suffix patterns
+  for (const pattern of POSITIVE_SUFFIX_PATTERNS) {
+    if (pattern.test(suffix)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+// ============================================================================
+// FACTOR SYNONYM CONSOLIDATION
+// Groups related factors for clearer aggregated analysis
+// ============================================================================
+
+/**
+ * FACTOR_SYNONYMS - Maps factor groups to their member factors
+ * Used to consolidate similar factors at aggregation time for cleaner insights
+ *
+ * Benefits:
+ * - Reduces fragmentation in factor reports
+ * - Provides actionable categories instead of granular distinctions
+ * - Maintains detail when drilling down
+ */
+export const FACTOR_SYNONYMS = {
+  // Fall-related hazards group
+  'Fall Hazards': [
+    'Fall Protection Issue',
+    'Scaffold Issue',
+    'Ladder/Stairs Issue',
+    'Edge Protection Issue'
+  ],
+
+  // Equipment-related problems group
+  'Equipment Problems': [
+    'Equipment Issue',
+    'Tool Safety Issue',
+    'Vehicle/Plant Safety'
+  ],
+
+  // Communication-related gaps group
+  'Communication Gaps': [
+    'Communication Issue',
+    'Signage Issue',
+    'Training & Competency'
+  ],
+
+  // Administrative/documentation group
+  'Administrative Controls': [
+    'Permit Issue',
+    'Planning Issue',
+    'Documentation Issue',
+    'Inspection Issue'
+  ],
+
+  // Human factors group
+  'Human Factors': [
+    'Human Factors - Complacency',
+    'Human Factors - Distraction',
+    'Human Factors - Rushing',
+    'Human Factors - Fatigue',
+    'Human Factors - Overconfidence',
+    'Human Factors - Body Position'
+  ],
+
+  // Organizational factors group
+  'Organizational Factors': [
+    'Organizational - Pressure',
+    'Organizational - Resources',
+    'Organizational - Culture',
+    'Organizational - Contractor',
+    'Supervision Issue'
+  ],
+
+  // Environmental hazards group
+  'Environmental Hazards': [
+    'Heat/Weather Issue',
+    'Environmental Issue',
+    'Housekeeping',
+    'Ventilation Issue'
+  ],
+
+  // Physical hazards group
+  'Physical Hazards': [
+    'Sharp/Protruding Hazard',
+    'Struck-by Hazard',
+    'Slip/Trip Hazard',
+    'Machine Guarding Issue'
+  ],
+
+  // Special hazards group
+  'Special Operations': [
+    'Electrical Hazard',
+    'Fire/Hot Work Issue',
+    'Confined Space Issue',
+    'Lifting/Rigging Issue'
+  ]
+}
+
+/**
+ * Get consolidated factor group for a given factor name
+ * Returns the group name if factor belongs to a synonym group, otherwise returns the factor itself
+ * @param {string} factorName - The individual factor name
+ * @returns {string} The consolidated group name or original factor name
+ */
+export const getConsolidatedFactor = (factorName) => {
+  for (const [group, members] of Object.entries(FACTOR_SYNONYMS)) {
+    if (members.includes(factorName)) {
+      return group
+    }
+  }
+  // If not in any synonym group, return as-is
+  return factorName
+}
+
+/**
+ * Expand a consolidated group to its member factors
+ * Returns array of member factors if groupName is a synonym group, otherwise returns [groupName]
+ * @param {string} groupName - The consolidated group name
+ * @returns {Array} Array of factor names in this group
+ */
+export const expandFactorGroup = (groupName) => {
+  if (FACTOR_SYNONYMS[groupName]) {
+    return [...FACTOR_SYNONYMS[groupName]]
+  }
+  return [groupName]
+}
+
 /**
  * COMMON_MISSPELLINGS
  * Database of frequently misspelled safety terms
@@ -2306,16 +2497,20 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
 
   'Inspection Issue': [
     'inspection', 'inspected', 'not inspected', 'pre-use check', 'preuse', 'pre use',
-    'daily check', 'checklist', 'defect', 'defective', 'vehicle inspection',
+    'daily check', 'checklist', 'vehicle inspection',
     'equipment inspection', 'tool inspection', 'crane inspection', 'testing',
-    'verification', 'verified', 'audit', 'monitoring', 'not checked', 'uninspected'
+    'verification', 'verified', 'audit', 'monitoring', 'not checked', 'uninspected',
+    'inspection failed', 'inspection missed', 'overdue inspection'
+    // Note: 'defect', 'defective' moved to Equipment Issue to avoid double-counting
   ],
 
   'Communication Issue': [
     'communication', 'miscommunication', 'not communicated', 'not informed',
     'toolbox talk', 'tbt', 'briefing', 'safety briefing', 'not briefed',
-    'handover', 'shift handover', 'poor handover', 'warning', 'not warned',
-    'signal', 'no signal', 'radio', 'unclear', 'misunderstood', 'language barrier'
+    'handover', 'shift handover', 'poor handover', 'not warned',
+    'signal failure', 'no signal', 'radio failure', 'unclear instruction', 'misunderstood', 'language barrier',
+    'poor communication', 'communication breakdown', 'communication failure'
+    // Note: 'warning' removed (too generic, conflicts with signage); 'signal' made more specific
   ],
 
   'Supervision Issue': [
@@ -2356,8 +2551,9 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
   ],
 
   'Pedestrian Safety': [
-    'pedestrian', 'walkway', 'footpath', 'crossing', 'segregation',
-    'pedestrian route', 'foot traffic', 'walking', 'pedestrian interface'
+    'pedestrian', 'walkway', 'footpath', 'pedestrian crossing',
+    'pedestrian route', 'foot traffic', 'pedestrian interface', 'pedestrian segregation'
+    // Note: 'crossing', 'segregation', 'walking' removed (too generic/ambiguous)
   ],
 
   'Security Issue': [
@@ -2367,10 +2563,11 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
 
   // ============ FALL HAZARDS ============
   'Fall Protection Issue': [
-    'guardrail', 'guard rail', 'handrail', 'safety net', 'toe board', 'toeboard',
-    'kick board', 'opening', 'floor opening', 'hole', 'uncovered', 'unprotected edge',
-    'edge protection', 'fall from height', 'unguarded', 'mid rail', 'top rail',
-    'perimeter protection', 'void', 'penetration', 'shaft'
+    'guardrail', 'guard rail', 'safety net', 'toe board', 'toeboard',
+    'kick board', 'floor opening', 'uncovered hole', 'unprotected edge',
+    'edge protection', 'fall from height', 'unguarded edge', 'mid rail', 'top rail',
+    'perimeter protection', 'void', 'penetration', 'shaft', 'missing guardrail'
+    // Note: 'handrail' moved to Ladder/Stairs; 'opening', 'hole' made more specific to avoid false positives
   ],
 
   'Scaffold Issue': [
@@ -2388,11 +2585,13 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
 
   // ============ ELECTRICAL/ENERGY ============
   'Electrical Hazard': [
-    'electrical', 'electric', 'electricity', 'electrocution', 'shock',
-    'live', 'energized', 'energised', 'loto', 'lockout', 'tagout', 'lock out',
-    'isolation', 'isolated', 'de-energize', 'exposed wire', 'wiring', 'cable',
-    'panel', 'enclosure', 'grounding', 'earthing', 'residual energy',
-    're-energization', 'multiple energy', 'stored energy'
+    'electrical', 'electric', 'electricity', 'electrocution', 'electric shock',
+    'live wire', 'live electrical', 'energized', 'energised', 'loto', 'lockout', 'tagout', 'lock out',
+    'electrical isolation', 'not isolated', 'de-energize', 'exposed wire', 'exposed wiring',
+    'electrical panel', 'electrical enclosure', 'grounding', 'earthing', 'residual energy',
+    're-energization', 'multiple energy', 'stored energy', 'arc flash'
+    // Note: 'live' made more specific ('live wire', 'live electrical') to avoid false positives
+    // 'cable', 'wiring', 'panel' made more specific to avoid overlap with housekeeping/structural
   ],
 
   // ============ PHYSICAL HAZARDS ============
@@ -2408,9 +2607,10 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
   ],
 
   'Machine Guarding Issue': [
-    'guard', 'guarding', 'machine guard', 'safety guard', 'pinch point',
-    'pinch', 'crush', 'crushing', 'rotating', 'moving parts', 'nip point',
-    'caught between', 'caught in', 'emergency stop', 'e-stop', 'interlock'
+    'machine guard', 'safety guard', 'guard missing', 'guard removed', 'pinch point',
+    'pinch hazard', 'crush hazard', 'crushing', 'rotating parts', 'moving parts', 'nip point',
+    'caught between', 'caught in', 'emergency stop', 'e-stop', 'interlock', 'guarding missing'
+    // Note: 'guard' alone removed (too generic - conflicts with guard rail, fire guard, etc.)
   ],
 
   'Slip/Trip Hazard': [
@@ -2428,10 +2628,11 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
 
   // ============ EQUIPMENT/MATERIALS ============
   'Storage Issue': [
-    'storage', 'stored', 'storing', 'stacking', 'stacked', 'pile', 'piled',
-    'stockpile', 'laydown', 'material storage', 'chemical storage',
-    'flammable storage', 'cylinder storage', 'incompatible', 'segregation',
-    'containment', 'bund', 'secondary containment', 'spill containment'
+    'improper storage', 'poor storage', 'stacking issue', 'unstable stack', 'overstacked',
+    'stockpile', 'laydown area', 'material storage', 'chemical storage',
+    'flammable storage', 'cylinder storage', 'incompatible materials', 'material segregation',
+    'containment', 'bund', 'secondary containment', 'spill containment', 'storage area'
+    // Note: 'storage', 'stored', 'pile' removed (too generic); 'segregation' made specific
   ],
 
   'Lifting/Rigging Issue': [
@@ -2469,9 +2670,10 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
   ],
 
   'Housekeeping': [
-    'housekeeping', 'clean', 'cleaning', 'tidy', 'untidy', 'mess', 'messy',
-    'debris', 'rubbish', 'trash', 'waste', 'clutter', 'scattered', 'disorganized',
-    'cable management', 'trailing cable', 'hose across', 'obstruction'
+    'housekeeping', 'poor housekeeping', 'untidy', 'messy area',
+    'debris', 'rubbish', 'trash', 'waste on floor', 'clutter', 'scattered material', 'disorganized',
+    'cable management', 'trailing cable', 'hose across', 'walkway obstruction', 'work area blocked'
+    // Note: 'clean', 'cleaning', 'tidy', 'mess' removed (too short/generic, cause false positives)
   ],
 
   'Ventilation Issue': [
@@ -2487,10 +2689,11 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
   ],
 
   'Heat/Weather Issue': [
-    'heat', 'hot', 'heat stress', 'heat stroke', 'hydration', 'water',
-    'shade', 'shelter', 'rest break', 'cooling', 'temperature', 'weather',
-    'wind', 'windy', 'rain', 'storm', 'visibility', 'lighting', 'dark',
-    'cold', 'freezing', 'humidity', 'dust storm', 'sandstorm'
+    'heat stress', 'heat stroke', 'hydration issue', 'dehydration',
+    'working in heat', 'rest break', 'cooling station', 'extreme temperature', 'weather condition',
+    'high wind', 'windy conditions', 'heavy rain', 'storm warning', 'poor visibility', 'poor lighting',
+    'extreme cold', 'freezing conditions', 'high humidity', 'dust storm', 'sandstorm', 'adverse weather'
+    // Note: 'heat', 'hot', 'wind', 'water', 'shade', 'rain', 'dark', 'cold' removed (too short/generic)
   ],
 
   'Environmental Issue': [
@@ -3923,11 +4126,16 @@ export const UNIVERSAL_CONTRIBUTING_FACTORS = {
 /**
  * Detect contributing factors from observation description
  * Uses CONSOLIDATED_FACTOR_KEYWORDS for comprehensive detection
+ * Includes negation detection to prevent false positives
  *
  * @param {string} description - The observation description text
- * @returns {Array} Array of detected factors with category, factor name, and matched keyword
+ * @param {Object} options - Detection options
+ * @param {boolean} options.includeNegated - Include negated matches with isNegated flag (default: false)
+ * @returns {Array} Array of detected factors with category, factor name, matched keyword, and confidence
  */
-export const detectContributingFactors = (description) => {
+export const detectContributingFactors = (description, options = {}) => {
+  const { includeNegated = false } = options
+
   if (!description || typeof description !== 'string') {
     return []
   }
@@ -3941,24 +4149,58 @@ export const detectContributingFactors = (description) => {
     if (seenFactors.has(factor)) continue
 
     for (const keyword of keywords) {
+      let matched = false
+      let matchIndex = -1
+
       // Use word boundary matching for short keywords to avoid false positives
       if (keyword.length <= 5) {
         // Short keyword - use word boundary regex
-        const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
-        if (regex.test(text)) {
-          const category = CONSOLIDATED_FACTOR_CATEGORIES[factor] || 'Other'
-          detected.push({ category, factor, keyword })
-          seenFactors.add(factor)
-          break // One match per factor is enough
+        const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')
+        const match = regex.exec(text)
+        if (match) {
+          matched = true
+          matchIndex = match.index
         }
       } else {
         // Longer keyword - simple includes is fine
-        if (text.includes(keyword)) {
-          const category = CONSOLIDATED_FACTOR_CATEGORIES[factor] || 'Other'
-          detected.push({ category, factor, keyword })
-          seenFactors.add(factor)
-          break // One match per factor is enough
+        matchIndex = text.indexOf(keyword)
+        if (matchIndex !== -1) {
+          matched = true
         }
+      }
+
+      if (matched) {
+        // Check for negation context
+        const isNegated = hasNegationContext(text, matchIndex, keyword.length)
+
+        // Skip negated matches unless explicitly requested
+        if (isNegated && !includeNegated) {
+          continue // Try next keyword for this factor
+        }
+
+        const category = CONSOLIDATED_FACTOR_CATEGORIES[factor] || 'Other'
+
+        // Determine confidence based on keyword characteristics
+        // - Long, specific keywords = high confidence
+        // - Medium keywords = medium confidence
+        // - Short/common keywords = low confidence
+        let confidence = 'medium'
+        if (keyword.length >= 12 || keyword.includes(' ')) {
+          confidence = 'high'
+        } else if (keyword.length <= 5) {
+          confidence = 'low'
+        }
+
+        detected.push({
+          category,
+          factor,
+          keyword,
+          confidence,
+          isNegated: isNegated || false,
+          matchIndex
+        })
+        seenFactors.add(factor)
+        break // One match per factor is enough
       }
     }
   }
@@ -3969,17 +4211,23 @@ export const detectContributingFactors = (description) => {
 /**
  * Aggregate contributing factors across multiple incidents
  * Returns breakdown by category and by individual factor
+ * Now tracks matched keywords for transparency
  *
  * @param {Array} incidents - Array of incidents/observations
  * @param {string} observationType - 'negative', 'positive', or 'all' (default: 'all')
+ * @param {Object} options - Additional options
+ * @param {boolean} options.consolidate - Whether to consolidate synonymous factors (default: false)
  * @returns {Object} Aggregated factor data with byFactor and byCategory breakdowns
  */
-export const aggregateContributingFactors = (incidents, observationType = 'all') => {
+export const aggregateContributingFactors = (incidents, observationType = 'all', options = {}) => {
+  const { consolidate = false } = options
+
   if (!incidents || !Array.isArray(incidents) || incidents.length === 0) {
     return {
       byFactor: [],
       byCategory: [],
       byFactorHazard: {},
+      factorKeywords: {},
       total: 0,
       analyzed: 0
     }
@@ -3997,6 +4245,8 @@ export const aggregateContributingFactors = (incidents, observationType = 'all')
   const categoryCounts = {}
   const factorToCategory = {}
   const factorHazardMatrix = {}
+  const factorKeywords = {} // Track which keywords triggered each factor
+  const factorConfidence = {} // Track confidence distribution per factor
   let analyzedCount = 0
 
   filtered.forEach(incident => {
@@ -4015,18 +4265,33 @@ export const aggregateContributingFactors = (incidents, observationType = 'all')
     const seenFactors = new Set()
     const seenCategories = new Set()
 
-    factors.forEach(({ category, factor }) => {
+    factors.forEach(({ category, factor, keyword, confidence }) => {
+      // Optionally consolidate factors using synonym mapping
+      const effectiveFactor = consolidate ? getConsolidatedFactor(factor) : factor
+
       // Count each factor only once per incident
-      if (!seenFactors.has(factor)) {
-        seenFactors.add(factor)
-        factorCounts[factor] = (factorCounts[factor] || 0) + 1
-        factorToCategory[factor] = category
+      if (!seenFactors.has(effectiveFactor)) {
+        seenFactors.add(effectiveFactor)
+        factorCounts[effectiveFactor] = (factorCounts[effectiveFactor] || 0) + 1
+        factorToCategory[effectiveFactor] = category
+
+        // Track which keywords trigger this factor (for transparency)
+        if (!factorKeywords[effectiveFactor]) {
+          factorKeywords[effectiveFactor] = {}
+        }
+        factorKeywords[effectiveFactor][keyword] = (factorKeywords[effectiveFactor][keyword] || 0) + 1
+
+        // Track confidence distribution
+        if (!factorConfidence[effectiveFactor]) {
+          factorConfidence[effectiveFactor] = { high: 0, medium: 0, low: 0 }
+        }
+        factorConfidence[effectiveFactor][confidence] = (factorConfidence[effectiveFactor][confidence] || 0) + 1
 
         // Track which hazards this factor affects
-        if (!factorHazardMatrix[factor]) {
-          factorHazardMatrix[factor] = {}
+        if (!factorHazardMatrix[effectiveFactor]) {
+          factorHazardMatrix[effectiveFactor] = {}
         }
-        factorHazardMatrix[factor][hazard] = (factorHazardMatrix[factor][hazard] || 0) + 1
+        factorHazardMatrix[effectiveFactor][hazard] = (factorHazardMatrix[effectiveFactor][hazard] || 0) + 1
       }
 
       // Count each category only once per incident
@@ -4041,12 +4306,31 @@ export const aggregateContributingFactors = (incidents, observationType = 'all')
 
   return {
     byFactor: Object.entries(factorCounts)
-      .map(([name, count]) => ({
-        name,
-        count,
-        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0',
-        category: factorToCategory[name]
-      }))
+      .map(([name, count]) => {
+        // Get top keywords that triggered this factor (for transparency)
+        const keywords = factorKeywords[name] || {}
+        const topKeywords = Object.entries(keywords)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([kw, cnt]) => ({ keyword: kw, count: cnt }))
+
+        // Calculate overall confidence for this factor
+        const conf = factorConfidence[name] || { high: 0, medium: 0, low: 0 }
+        const totalConf = conf.high + conf.medium + conf.low
+        const overallConfidence = totalConf > 0
+          ? (conf.high >= conf.medium && conf.high >= conf.low ? 'high'
+            : conf.medium >= conf.low ? 'medium' : 'low')
+          : 'medium'
+
+        return {
+          name,
+          count,
+          percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0',
+          category: factorToCategory[name],
+          topKeywords, // For transparency: shows which keywords triggered detection
+          confidence: overallConfidence
+        }
+      })
       .sort((a, b) => b.count - a.count),
     byCategory: Object.entries(categoryCounts)
       .map(([name, count]) => ({
@@ -4056,6 +4340,7 @@ export const aggregateContributingFactors = (incidents, observationType = 'all')
       }))
       .sort((a, b) => b.count - a.count),
     byFactorHazard: factorHazardMatrix,
+    factorKeywords, // Full keyword tracking for drill-down
     total,
     analyzed: analyzedCount
   }
