@@ -2043,6 +2043,7 @@ export const aggregateContributingFactors = (incidents, observationType = 'all',
   const factors = Object.entries(factorCounts)
     .map(([name, count]) => ({
       name,
+      factor: name, // Backward compatibility alias
       count,
       percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0',
       type: factorTypes[name],
