@@ -324,73 +324,302 @@ export const HAZARD_SPECIFIC_FACTORS = {
 
   'Working at Height': {
     'Scaffold deficiency': [
-      'scaffold', 'scaffolds', 'scaffolding', 'scafold', 'scaffhold',
-      'scaffold tag', 'incomplete scaffold', 'unsafe scaffold',
-      'scaffold board', 'scaffold plank', 'putlog', 'tube and fitting',
-      'scaffold erection', 'scaffold dismantling', 'scaffold incomplete',
-      'scaffold damage', 'scaffold overload'
+      // Core terms
+      'scaffold', 'scaffolds', 'scaffolding', 'scaffolded', 'scaffolder', 'scaffolders',
+      // Misspellings
+      'scafold', 'scaffhold', 'scafolding', 'scaffoldin', 'scafholding', 'scaffoling',
+      'scaffoding', 'scafolld', 'scaffoldig', 'scaffolding', 'scaffoldin', 'scafffold',
+      // Types
+      'tube scaffold', 'system scaffold', 'frame scaffold', 'mobile scaffold',
+      'suspended scaffold', 'cantilever scaffold', 'independent scaffold',
+      'birdcage scaffold', 'tower scaffold', 'rolling scaffold', 'kwikstage',
+      'cuplock', 'ringlock', 'layher', 'aluminium scaffold', 'aluminum scaffold',
+      // Components
+      'scaffold tag', 'scafftag', 'scaffold board', 'scaffold boards', 'scaffold plank',
+      'scaffold planks', 'toe board', 'toeboard', 'kick board', 'kickboard',
+      'putlog', 'putlogs', 'transom', 'transoms', 'ledger', 'ledgers',
+      'standard', 'standards', 'brace', 'braces', 'bracing', 'diagonal brace',
+      'base plate', 'base plates', 'sole plate', 'sole plates', 'jack', 'jacks',
+      'adjustable jack', 'scaffold tube', 'scaffold tubes', 'coupler', 'couplers',
+      'swivel coupler', 'right angle coupler', 'sleeve coupler',
+      // Issues
+      'incomplete scaffold', 'unsafe scaffold', 'scaffold incomplete', 'scaffold unsafe',
+      'scaffold damage', 'scaffold damaged', 'scaffold overload', 'scaffold overloaded',
+      'scaffold erection', 'scaffold dismantling', 'scaffold alteration',
+      'scaffold not tagged', 'scaffold tag missing', 'red tag', 'green tag',
+      'scaffold inspection', 'scaffold uninspected', 'scaffold not inspected',
+      'scaffold gap', 'scaffold opening', 'scaffold hole', 'scaffold defect',
+      'scaffold defective', 'scaffold failure', 'scaffold collapse', 'scaffold bent',
+      'scaffold rusty', 'scaffold corroded', 'scaffold unstable', 'scaffold wobbly',
+      'scaffold inadequate', 'scaffold insufficient', 'scaffold improper'
     ],
     'MEWP malfunction': [
-      'mewp', 'cherry picker', 'boom lift', 'scissor lift', 'aerial platform',
-      'elevated work platform', 'ewp', 'access platform', 'mewp defect',
-      'mewp inspection', 'platform malfunction', 'lift malfunction'
+      // Core terms
+      'mewp', 'mewps', 'm.e.w.p', 'mobile elevating work platform',
+      // Misspellings
+      'mwep', 'meep', 'mewep', 'mwp',
+      // Types
+      'cherry picker', 'cherry-picker', 'cherrypicker', 'boom lift', 'boomlift',
+      'scissor lift', 'scissorlift', 'aerial platform', 'aerial lift',
+      'elevated work platform', 'ewp', 'awp', 'aerial work platform',
+      'access platform', 'man lift', 'manlift', 'personnel lift',
+      'articulating boom', 'telescopic boom', 'straight boom', 'jlg', 'genie',
+      'skyjack', 'haulotte', 'niftylift', 'snorkel', 'manitou',
+      'spider lift', 'truck mounted', 'trailer mounted', 'self propelled',
+      // Issues
+      'mewp defect', 'mewp defective', 'mewp malfunction', 'mewp malfunctioning',
+      'mewp inspection', 'mewp uninspected', 'mewp not inspected', 'mewp overdue',
+      'platform malfunction', 'lift malfunction', 'boom malfunction',
+      'mewp failure', 'mewp breakdown', 'mewp not working', 'mewp stuck',
+      'mewp unstable', 'mewp overloaded', 'mewp tipped', 'mewp collision',
+      'mewp certificate', 'mewp certification', 'mewp expired', 'mewp overdue',
+      'outrigger', 'outriggers', 'outrigger not deployed', 'stabilizer', 'stabilizers',
+      'guardrail mewp', 'mewp guardrail', 'lanyard mewp', 'harness mewp',
+      'mewp controls', 'controls malfunction', 'mewp hydraulic', 'hydraulic leak'
     ],
     'Ladder positioning': [
-      'ladder', 'ladders', 'step ladder', 'stepladder', 'extension ladder',
-      'a-frame', 'ladder not secured', 'unsecured ladder', 'leaning ladder',
-      'damaged ladder', 'defective ladder', 'broken ladder', 'ladder angle',
-      'ladder footing', 'ladder extending', 'three points contact'
+      // Core terms
+      'ladder', 'ladders', 'laddering',
+      // Misspellings
+      'lader', 'laddar', 'ladar', 'laddr', 'laddder', 'ladde', 'ladeer',
+      // Types
+      'step ladder', 'stepladder', 'step-ladder', 'extension ladder', 'extending ladder',
+      'a-frame', 'a frame', 'aframe', 'combination ladder', 'multi-purpose ladder',
+      'platform ladder', 'podium ladder', 'fixed ladder', 'portable ladder',
+      'roof ladder', 'access ladder', 'industrial ladder', 'fiberglass ladder',
+      'fibreglass ladder', 'aluminum ladder', 'aluminium ladder', 'wooden ladder',
+      'single section', 'double section', 'triple section', 'telescopic ladder',
+      'attic ladder', 'loft ladder', 'folding ladder',
+      // Issues
+      'ladder not secured', 'unsecured ladder', 'ladder unsecured', 'ladder loose',
+      'leaning ladder', 'ladder leaning', 'ladder angle', 'wrong angle', '75 degree',
+      'ladder footing', 'ladder feet', 'ladder base', 'ladder slip', 'ladder slipped',
+      'ladder extending', 'ladder overreach', 'overreaching', 'over reaching',
+      'three points contact', 'three point contact', '3 point contact', '3 points',
+      'damaged ladder', 'ladder damaged', 'defective ladder', 'ladder defective',
+      'broken ladder', 'ladder broken', 'bent ladder', 'ladder bent',
+      'missing rung', 'rung missing', 'broken rung', 'rung broken', 'rung damaged',
+      'ladder inspection', 'ladder uninspected', 'ladder not inspected',
+      'ladder stile', 'stile damage', 'stile bent', 'ladder spreader',
+      'spreader bar', 'ladder feet worn', 'anti-slip', 'ladder tie', 'ladder secured'
     ],
     'Guardrail/edge gap': [
-      'guardrail', 'guard rail', 'handrail', 'mid rail', 'top rail',
-      'edge protection', 'perimeter protection', 'unguarded edge',
-      'guardrail missing', 'guardrail damaged', 'guardrail gap',
-      'edge unprotected', 'open edge'
+      // Core terms
+      'guardrail', 'guardrails', 'guard rail', 'guard rails', 'guard-rail',
+      // Misspellings
+      'gaurd rail', 'gaurdrail', 'guardrails', 'guardriale', 'guadrail', 'guarrail',
+      // Types
+      'handrail', 'handrails', 'hand rail', 'hand rails', 'hand-rail',
+      'mid rail', 'midrail', 'mid-rail', 'middle rail', 'knee rail',
+      'top rail', 'toprail', 'top-rail', 'upper rail',
+      'edge protection', 'edge-protection', 'perimeter protection', 'fall protection',
+      'temporary guardrail', 'permanent guardrail', 'removable guardrail',
+      'mesh guardrail', 'panel guardrail', 'tube guardrail', 'wire guardrail',
+      // Issues
+      'unguarded edge', 'edge unguarded', 'open edge', 'exposed edge',
+      'guardrail missing', 'missing guardrail', 'no guardrail', 'guardrail absent',
+      'guardrail damaged', 'damaged guardrail', 'guardrail bent', 'guardrail broken',
+      'guardrail gap', 'gap in guardrail', 'guardrail opening', 'guardrail hole',
+      'edge unprotected', 'unprotected edge', 'leading edge', 'roof edge',
+      'floor edge', 'platform edge', 'stairway edge', 'ramp edge', 'mezzanine edge',
+      'guardrail loose', 'guardrail wobbly', 'guardrail unstable', 'guardrail inadequate',
+      'guardrail height', 'guardrail too low', 'guardrail insufficient',
+      'guardrail removed', 'guardrail not installed', 'guardrail not replaced'
     ],
     'Safety net missing': [
-      'safety net', 'catch net', 'debris net', 'net missing', 'fall net',
-      'no safety net', 'missing net', 'net inadequate'
+      // Core terms
+      'safety net', 'safety nets', 'safetynet', 'safety-net',
+      // Misspellings
+      'saftey net', 'safty net', 'safetey net', 'saftey nett',
+      // Types
+      'catch net', 'catch nets', 'debris net', 'debris nets', 'fall net', 'fall nets',
+      'personnel net', 'construction net', 'scaffold net', 'edge net',
+      'horizontal net', 'vertical net', 'system net', 'fan net',
+      // Issues
+      'net missing', 'missing net', 'no safety net', 'no net', 'net absent',
+      'net inadequate', 'inadequate net', 'net damaged', 'damaged net',
+      'net hole', 'hole in net', 'net torn', 'torn net', 'net gap',
+      'net not installed', 'net removed', 'net inspection', 'net overdue',
+      'net sagging', 'sagging net', 'net loose', 'loose net', 'net unsecured',
+      'border rope', 'tie rope', 'net attachment', 'attachment point'
     ],
     'Anchor point issue': [
-      'anchor', 'anchorage', 'anchor point', 'tie off', 'tie-off',
-      'attachment point', 'anchor inadequate', 'no anchor', 'weak anchor',
-      'anchor not tested', 'lanyard anchor'
+      // Core terms
+      'anchor', 'anchors', 'anchorage', 'anchorages', 'anchor point', 'anchor points',
+      // Misspellings
+      'ancher', 'anchour', 'ancor', 'ankor', 'anchorpoint', 'anchorage point',
+      // Types
+      'tie off', 'tie-off', 'tieoff', 'tie off point', 'attachment point',
+      'fall arrest anchor', 'personal anchor', 'temporary anchor', 'permanent anchor',
+      'roof anchor', 'beam anchor', 'concrete anchor', 'structural anchor',
+      'engineered anchor', 'certified anchor', 'mobile anchor', 'trolley anchor',
+      'horizontal lifeline', 'vertical lifeline', 'static line', 'inertia reel',
+      // Issues
+      'anchor inadequate', 'inadequate anchor', 'anchor weak', 'weak anchor',
+      'no anchor', 'anchor missing', 'missing anchor', 'anchor absent',
+      'anchor not tested', 'untested anchor', 'anchor uncertified', 'anchor expired',
+      'lanyard anchor', 'anchor capacity', 'anchor strength', 'anchor load',
+      'anchor location', 'anchor height', 'anchor too low', 'anchor overhead',
+      'anchor damaged', 'damaged anchor', 'anchor corroded', 'corroded anchor',
+      'anchor loose', 'loose anchor', 'anchor unstable', 'anchor failure',
+      'anchor inspection', 'anchor not inspected', 'anchor overdue'
     ],
     'Opening unprotected': [
-      'opening', 'floor opening', 'hole', 'uncovered hole', 'open hole',
-      'penetration', 'shaft', 'void', 'unprotected opening', 'uncovered opening',
-      'opening cover', 'hole cover missing'
+      // Core terms
+      'opening', 'openings', 'floor opening', 'floor openings',
+      // Misspellings
+      'opning', 'openning', 'oppening', 'openiing', 'opeining',
+      // Types
+      'hole', 'holes', 'floor hole', 'roof hole', 'wall opening', 'slab opening',
+      'penetration', 'penetrations', 'pipe penetration', 'duct penetration',
+      'shaft', 'shafts', 'elevator shaft', 'lift shaft', 'stairwell shaft',
+      'void', 'voids', 'floor void', 'service void', 'atrium void',
+      'skylight', 'skylights', 'roof light', 'roof hatch', 'access hatch',
+      'manhole', 'manholes', 'inspection opening', 'service opening',
+      // Issues
+      'unprotected opening', 'opening unprotected', 'uncovered opening', 'open hole',
+      'uncovered hole', 'hole uncovered', 'opening exposed', 'exposed opening',
+      'opening cover', 'hole cover', 'cover missing', 'missing cover', 'no cover',
+      'cover inadequate', 'cover damaged', 'cover loose', 'cover unsecured',
+      'opening barrier', 'barrier missing', 'guardrail missing', 'fall hazard',
+      'fall through', 'step through', 'walk into', 'trip hazard'
     ]
   },
 
   'Lifting': {
     'Rigging deficiency': [
-      'rigging', 'sling', 'slings', 'shackle', 'shackles', 'hook', 'hooks',
-      'lifting gear', 'chain', 'wire rope', 'webbing', 'rigging defect',
-      'sling damage', 'rigging inspection', 'swl exceeded', 'wll exceeded'
+      // Core terms
+      'rigging', 'rigged', 'rigger', 'riggers', 'rig', 'rigs',
+      // Misspellings
+      'riging', 'riggng', 'riging', 'riggin', 'riggger', 'riggging',
+      // Slings
+      'sling', 'slings', 'slinging', 'slinged', 'round sling', 'flat sling',
+      'web sling', 'webbing sling', 'chain sling', 'wire sling', 'rope sling',
+      'synthetic sling', 'nylon sling', 'polyester sling', 'endless sling',
+      'sling leg', 'sling legs', 'multi-leg sling', 'single leg sling',
+      // Shackles
+      'shackle', 'shackles', 'shackled', 'bow shackle', 'd-shackle', 'dee shackle',
+      'anchor shackle', 'chain shackle', 'screw pin', 'bolt type',
+      // Hooks
+      'hook', 'hooks', 'hooked', 'hooking', 'crane hook', 'safety hook',
+      'swivel hook', 'grab hook', 'slip hook', 'eye hook', 'sorting hook',
+      'hook latch', 'latch missing', 'latch broken', 'latch open',
+      // Other hardware
+      'lifting gear', 'lifting equipment', 'lifting tackle', 'below the hook',
+      'chain', 'chains', 'chained', 'grade 80', 'grade 100', 'alloy chain',
+      'wire rope', 'wire ropes', 'cable', 'steel cable', 'wire cable',
+      'webbing', 'webbings', 'turnbuckle', 'turnbuckles', 'eye bolt', 'eyebolt',
+      'master link', 'connecting link', 'swivel', 'swivels', 'thimble', 'thimbles',
+      'load binder', 'lever hoist', 'chain block', 'come along', 'grip',
+      // Issues
+      'rigging defect', 'defective rigging', 'rigging damaged', 'damaged rigging',
+      'sling damage', 'damaged sling', 'sling cut', 'sling worn', 'sling frayed',
+      'rigging inspection', 'rigging uninspected', 'rigging not inspected',
+      'rigging overdue', 'color code', 'colour code', 'inspection tag',
+      'swl exceeded', 'wll exceeded', 'rated capacity', 'capacity exceeded',
+      'rigging inadequate', 'improper rigging', 'wrong rigging', 'incorrect rigging'
     ],
     'Lift plan inadequate': [
-      'lift plan', 'lifting plan', 'method statement', 'lift study',
-      'lifting procedure', 'no plan', 'without plan', 'plan inadequate',
-      'lift assessment', 'critical lift'
+      // Core terms
+      'lift plan', 'lifting plan', 'lift plans', 'lifting plans',
+      // Misspellings
+      'liftplan', 'lift plann', 'lifing plan', 'lift paln', 'lift pln',
+      // Types
+      'method statement', 'method statements', 'lift method', 'lifting method',
+      'lift study', 'lifting study', 'lift procedure', 'lifting procedure',
+      'lift assessment', 'lifting assessment', 'lift risk assessment',
+      'critical lift', 'critical lift plan', 'tandem lift', 'tandem lift plan',
+      'engineered lift', 'complex lift', 'non-routine lift', 'heavy lift',
+      'crane lift plan', 'rigging plan', 'load plan', 'pick plan',
+      // Issues
+      'no plan', 'no lift plan', 'plan missing', 'missing plan', 'without plan',
+      'plan inadequate', 'inadequate plan', 'plan incomplete', 'incomplete plan',
+      'plan not followed', 'deviated from plan', 'plan not approved',
+      'plan outdated', 'plan not reviewed', 'plan not signed',
+      'radius', 'boom length', 'load weight', 'load chart', 'configuration',
+      'ground conditions', 'outrigger setup', 'wind speed', 'weather conditions'
     ],
     'Crane defect': [
-      'crane', 'tower crane', 'mobile crane', 'crawler crane', 'hoist',
-      'crane defect', 'crane inspection', 'crane overload', 'lmi',
-      'load moment indicator', 'crane malfunction', 'crane certificate'
+      // Core terms
+      'crane', 'cranes', 'craned', 'craning',
+      // Misspellings
+      'crain', 'craine', 'craen', 'cran', 'cranee',
+      // Types
+      'tower crane', 'tower cranes', 'mobile crane', 'mobile cranes',
+      'crawler crane', 'crawler cranes', 'rough terrain', 'all terrain',
+      'truck crane', 'truck mounted', 'carry deck', 'pick and carry',
+      'overhead crane', 'gantry crane', 'portal crane', 'jib crane',
+      'hammerhead crane', 'luffing crane', 'derrick crane', 'hoist',
+      'hoists', 'chain hoist', 'electric hoist', 'manual hoist',
+      'liebherr', 'tadano', 'grove', 'terex', 'kobelco', 'potain',
+      // Issues
+      'crane defect', 'defective crane', 'crane defective', 'crane damage',
+      'crane damaged', 'crane malfunction', 'crane malfunctioning',
+      'crane inspection', 'crane uninspected', 'crane not inspected',
+      'crane overload', 'crane overloaded', 'overloading crane',
+      'lmi', 'load moment indicator', 'lmi bypass', 'lmi disabled',
+      'anti two block', 'two block', 'atb', 'limit switch',
+      'crane certificate', 'crane certification', 'crane expired',
+      'crane operator', 'operator error', 'operator competency',
+      'boom', 'jib', 'counterweight', 'outrigger', 'stabilizer',
+      'slew', 'slewing', 'hoist rope', 'pendant', 'wire rope'
     ],
     'Tag line missing': [
-      'tag line', 'tagline', 'guide rope', 'tag rope', 'no tag line',
-      'missing tag line', 'load control', 'load swing'
+      // Core terms
+      'tag line', 'tagline', 'tag lines', 'taglines', 'tag-line',
+      // Misspellings
+      'taglin', 'tag lin', 'tage line', 'taglien', 'tag lien',
+      // Types
+      'guide rope', 'guide ropes', 'tag rope', 'tag ropes', 'guide line',
+      'control line', 'control rope', 'steadying line', 'restraint line',
+      'snub line', 'drift line', 'trail line',
+      // Issues
+      'no tag line', 'no tagline', 'tag line missing', 'missing tag line',
+      'tagline absent', 'tagline not used', 'without tag line', 'lacks tag line',
+      'load control', 'load uncontrolled', 'load swing', 'swinging load',
+      'load spinning', 'load rotation', 'load drift', 'drifting load',
+      'load not controlled', 'uncontrolled load', 'free swinging',
+      'tag line length', 'tag line too short', 'tag line inadequate'
     ],
     'Overload': [
-      'overload', 'overloaded', 'over capacity', 'swl', 'wll',
-      'safe working load', 'capacity exceeded', 'weight exceeded',
-      'load limit', 'load chart'
+      // Core terms
+      'overload', 'overloads', 'overloaded', 'overloading', 'over load',
+      // Misspellings
+      'overlaod', 'overlaoded', 'overlod', 'overloard', 'over loaded',
+      // Capacity terms
+      'over capacity', 'overcapacity', 'exceeded capacity', 'capacity exceeded',
+      'swl', 's.w.l', 'safe working load', 'wll', 'w.l.l', 'working load limit',
+      'rated capacity', 'maximum capacity', 'max capacity', 'load rating',
+      'weight exceeded', 'exceeds weight', 'too heavy', 'excess weight',
+      'load limit', 'limit exceeded', 'above limit', 'over limit',
+      // Load chart
+      'load chart', 'load charts', 'capacity chart', 'crane chart',
+      'radius', 'boom radius', 'working radius', 'lift radius',
+      'boom angle', 'boom length', 'configuration', 'setup',
+      // Issues
+      'crane overload', 'hoist overload', 'sling overload', 'rigging overload',
+      'structural overload', 'platform overload', 'scaffold overload',
+      'weight limit', 'load exceeded', 'grossly overloaded', 'severely overloaded'
     ],
     'Load shifting': [
-      'load shift', 'shifting load', 'load unsecured', 'load unstable',
-      'unbalanced load', 'center of gravity', 'cog', 'load movement'
+      // Core terms
+      'load shift', 'load shifting', 'shifting load', 'load shifted',
+      // Misspellings
+      'load shifte', 'laod shift', 'load shfit', 'laod shifting',
+      // Movement
+      'load unsecured', 'unsecured load', 'load unstable', 'unstable load',
+      'load loose', 'loose load', 'load movement', 'moving load',
+      'load swing', 'swinging load', 'load spin', 'spinning load',
+      'load tilt', 'tilting load', 'load tip', 'tipping load',
+      // Balance
+      'unbalanced load', 'load unbalanced', 'off balance', 'imbalanced',
+      'center of gravity', 'centre of gravity', 'cog', 'c.o.g',
+      'pick point', 'pick points', 'lift point', 'lift points',
+      'balance point', 'balance issue', 'weight distribution',
+      // Issues
+      'load slipped', 'slipped load', 'load dropped', 'dropped load',
+      'load fell', 'falling load', 'load failure', 'rigging failure',
+      'inadequate securing', 'securing inadequate', 'improperly secured'
     ]
   },
 
