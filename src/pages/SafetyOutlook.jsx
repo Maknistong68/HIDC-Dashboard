@@ -3,7 +3,8 @@ import { Target, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, PredictiveAnalysisSection } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel } from '../components/outlook'
+import { UnifiedPredictivePanel } from '../components/insights'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getIncidentPredictionSummary } from '../utils/insightsCalculations'
@@ -430,13 +431,13 @@ const SafetyOutlook = () => {
         </div>
       )}
 
-      {/* Predictive Analysis Section - Unified What-If + Prediction */}
-      <PredictiveAnalysisSection
-        incidents={filteredIncidents}
-        incidentPrediction={incidentPrediction}
-        selectedHazard={selectedHazard}
-        selectedFactor={selectedFactor}
-      />
+      {/* Unified Predictive Analysis Panel */}
+      {filteredIncidents.length > 0 && incidentPrediction.hasData && (
+        <UnifiedPredictivePanel
+          incidentPrediction={incidentPrediction}
+          filteredIncidents={filteredIncidents}
+        />
+      )}
     </div>
   )
 }

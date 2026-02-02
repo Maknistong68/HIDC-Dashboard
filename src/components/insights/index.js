@@ -36,6 +36,9 @@ export { default as IncidentTypeRiskIndicator } from './IncidentTypeRiskIndicato
 export { default as PredictionMethodologyDisclosure } from './PredictionMethodologyDisclosure'
 export { default as IncidentPredictionPanel } from './IncidentPredictionPanel'
 
+// Unified Predictive Panel (combines forecasting + scenario simulation)
+export { default as UnifiedPredictivePanel } from './UnifiedPredictivePanel'
+
 // Seasonal Pattern Detection
 export { default as SeasonalPatternChart } from './SeasonalPatternChart'
 export { default as SeasonalRiskPrediction } from './SeasonalRiskPrediction'

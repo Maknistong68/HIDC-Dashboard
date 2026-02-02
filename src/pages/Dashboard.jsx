@@ -36,7 +36,7 @@ import {
   getOpenActionsCount,
 } from '../utils/calculations'
 import { getIncidentPredictionSummary } from '../utils/insightsCalculations'
-import { IncidentPredictionPanel } from '../components/insights'
+import { UnifiedPredictivePanel } from '../components/insights'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -999,9 +999,9 @@ const Dashboard = () => {
       </div>
       {/* End of dashboardContentRef wrapper */}
 
-      {/* Incident Prediction Panel - Collapsible */}
+      {/* Unified Predictive Analysis Panel - Collapsible */}
       {filteredIncidents.length > 0 && incidentPrediction.hasData && (
-        <IncidentPredictionPanel
+        <UnifiedPredictivePanel
           incidentPrediction={incidentPrediction}
           filteredIncidents={filteredIncidents}
         />
