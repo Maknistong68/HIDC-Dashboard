@@ -11,284 +11,139 @@ import {
   LabelList
 } from 'recharts'
 import { Target, X, Copy, Check, ThumbsUp, AlertTriangle } from 'lucide-react'
-import { detectAllCausesUnified } from '../../utils/rootCauseEngine'
+import { detectAllCausesUnified, FACTOR_TYPE } from '../../utils/rootCauseEngine'
 
-import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
-
-// Category colors for Common vs Specific factors
-const CATEGORY_COLORS = {
-  // ===== COMMON FACTORS (Teal theme) =====
-  'Common Factor': '#0d9488',
+// Simplified color system - Common vs Specific factors
+const FACTOR_TYPE_COLORS = {
+  // Common Factors - Teal palette
   'common': '#0d9488',
-  'Permit to Work': '#0d9488',
-  'PPE': '#14b8a6',
-  'Barriers & Signage': '#0f766e',
-  'Training & Competency': '#10b981',
-  'Housekeeping': '#059669',
-  'Supervision': '#047857',
-  'Site Access & Security': '#065f46',
+  'Common Factor': '#0d9488',
+  [FACTOR_TYPE.COMMON]: '#0d9488',
 
-  // ===== SPECIFIC FACTORS (Violet/Purple theme) =====
-  'Specific Factor': '#7c3aed',
+  // Specific Factors - Violet palette
   'specific': '#7c3aed',
+  'Specific Factor': '#7c3aed',
+  [FACTOR_TYPE.SPECIFIC]: '#7c3aed',
 
-  // Working at Height
-  'Scaffold deficiency': '#8b5cf6',
-  'MEWP malfunction': '#7c3aed',
-  'Ladder positioning': '#6d28d9',
-  'Guardrail/edge gap': '#5b21b6',
-  'Safety net missing': '#4c1d95',
-  'Anchor point issue': '#7e22ce',
-  'Opening unprotected': '#9333ea',
-
-  // Lifting
-  'Rigging deficiency': '#a855f7',
-  'Lift plan inadequate': '#9333ea',
-  'Crane defect': '#7e22ce',
-  'Tag line missing': '#6b21a8',
-  'Overload': '#581c87',
-  'Load shifting': '#4c1d95',
-
-  // Confined Spaces
-  'Atmospheric hazard': '#dc2626',
-  'Rescue plan missing': '#b91c1c',
-  'Attendant absent': '#991b1b',
-  'Ventilation inadequate': '#7f1d1d',
-  'Isolation failure': '#ef4444',
-
-  // Energized System
-  'LOTO not applied': '#fbbf24',
-  'Live exposure': '#f59e0b',
-  'Exposed conductor': '#d97706',
-  'Panel/enclosure open': '#b45309',
-  'Grounding fault': '#92400e',
-
-  // Hot Work
-  'Fire watch absent': '#ef4444',
-  'Welding screen missing': '#dc2626',
-  'Spark escape': '#b91c1c',
-  'Cylinder unsecured': '#991b1b',
-  'Combustible nearby': '#7f1d1d',
-
-  // Fire
-  'Extinguisher missing/expired': '#f97316',
-  'Exit blocked': '#ea580c',
-  'Alarm failure': '#c2410c',
-  'Ignition source': '#9a3412',
-  'Fire door propped': '#7c2d12',
-
-  // Mobile Plant & Equipment
-  'Banksman absent': '#3b82f6',
-  'Exclusion zone breach': '#2563eb',
-  'Blind spot': '#1d4ed8',
-  'Equipment defect': '#1e40af',
-  'Pedestrian conflict': '#1e3a8a',
-
-  // Breaking Ground & Excavation
-  'Services not located': '#78716c',
-  'Shoring inadequate': '#57534e',
-  'Collapse risk': '#44403c',
-  'Spoil too close': '#292524',
-  'Water ingress': '#1c1917',
-
-  // Temporary Works
-  'Design inadequate': '#6366f1',
-  'Overloaded': '#4f46e5',
-  'Bracing missing': '#4338ca',
-  'Foundation unstable': '#3730a3',
-  'Strike damage': '#312e81',
-
-  // Driving
-  'Speeding': '#ec4899',
-  'Seatbelt not worn': '#db2777',
-  'Phone use': '#be185d',
-  'Driver fatigue': '#9d174d',
-  'Vehicle defect': '#831843',
-
-  // Working in Heat
-  'Dehydration': '#f59e0b',
-  'No rest breaks': '#d97706',
-  'No shade': '#b45309',
-  'Heat illness signs': '#92400e',
-  'Not acclimatized': '#78350f',
-
-  // Working on or Near Water
-  'Life jacket missing': '#0ea5e9',
-  'Rescue equipment absent': '#0284c7',
-  'Strong current': '#0369a1',
-  'Vessel defect': '#075985',
-  'Lone working': '#0c4a6e',
-
-  // Working on or Near Live Roads
-  'Traffic controller absent': '#84cc16',
-  'Vehicle incursion risk': '#65a30d',
-  'Poor visibility': '#4d7c0f',
-  'Inadequate separation': '#3f6212',
-
-  // Explosives & Blasting
-  'Shot firer absent': '#dc2626',
-  'Misfire risk': '#b91c1c',
-  'Blast radius breach': '#991b1b',
-  'Flyrock hazard': '#7f1d1d',
-  'Warning failure': '#ef4444',
-
-  // Physical Hazard
-  'Exposed rebar': '#f97316',
-  'Sharp edge': '#ea580c',
-  'Struck-by risk': '#c2410c',
-  'Pinch point': '#9a3412',
-  'Protruding object': '#7c2d12',
-
-  // Mechanical Hazard
-  'Guard missing': '#64748b',
-  'Rotating parts exposed': '#475569',
-  'E-stop absent': '#334155',
-  'Unexpected startup': '#1e293b',
-
-  // COSHH (Chemical)
-  'SDS missing': '#22c55e',
-  'Unlabeled container': '#16a34a',
-  'Incompatible storage': '#15803d',
-  'Spill uncontained': '#166534',
-
-  // Respiratory Hazard
-  'Dust/fume exposure': '#a3a3a3',
-  'Wrong RPE type': '#737373',
-  'Fit test overdue': '#525252',
-  'LEV not working': '#404040',
-
-  // Slip and Trip
-  'Wet surface': '#06b6d4',
-  'Uneven ground': '#0891b2',
-  'Cable across path': '#0e7490',
-  'Poor lighting': '#155e75',
-
-  // Tools
-  'Tool defective': '#f472b6',
-  'Wrong tool for job': '#ec4899',
-  'Guard bypassed': '#db2777',
-  'Inspection overdue': '#be185d',
-
-  // Traffic Management
-  'Route confusion': '#fbbf24',
-  'Pedestrian mixing': '#f59e0b',
-  'Speed not controlled': '#d97706',
-  'Crossing unsafe': '#b45309',
-
-  // Environmental
-  'Spill/leak': '#14b8a6',
-  'Dust emission': '#0d9488',
-  'Noise excessive': '#0f766e',
-  'Waste improper': '#115e59',
-
-  // Access
-  'Route blocked': '#6366f1',
-  'Stair defect': '#4f46e5',
-  'Lighting inadequate': '#4338ca',
-  'Overcrowded': '#3730a3',
-
-  // Worker Welfare
-  'Water unavailable': '#0ea5e9',
-  'Toilet unclean': '#0284c7',
-  'Rest area missing': '#0369a1',
-  'First aid kit empty': '#075985',
-
-  // Noise
-  'Hearing zone unmarked': '#a855f7',
-  'Source uncontrolled': '#9333ea',
-  'Exposure excessive': '#7e22ce',
-
-  // General/Unclassified
-  'Unclassified': '#64748b',
-  'Multiple factors': '#475569',
-  'Not Specified': '#94a3b8'
+  // Unclassified
+  'Not Specified': '#94a3b8',
+  'Unclassified': '#64748b'
 }
 
-// Color palette for negative (site issues) - fallback
+// Color palettes for factors
+const COMMON_FACTOR_PALETTE = [
+  '#0d9488', '#14b8a6', '#0f766e', '#10b981', '#059669', '#047857', '#065f46'
+]
+
+const SPECIFIC_FACTOR_PALETTE = [
+  '#7c3aed', '#8b5cf6', '#6d28d9', '#5b21b6', '#4c1d95', '#9333ea', '#a855f7',
+  '#6366f1', '#4f46e5', '#4338ca', '#3b82f6', '#2563eb', '#1d4ed8'
+]
+
+// Negative colors fallback
 const NEGATIVE_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6',
   '#ec4899', '#14b8a6', '#6366f1', '#dc2626', '#64748b',
   '#22c55e', '#06b6d4', '#a855f7', '#f59e0b', '#84cc16'
 ]
 
-// Color palette for positive (good practices)
+// Positive colors
 const POSITIVE_COLORS = [
   '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#3b82f6',
   '#8b5cf6', '#a855f7', '#ec4899', '#f59e0b', '#64748b'
 ]
 
-// Negative observation types
+// Observation type constants
 const NEGATIVE_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
-
-// Positive observation types
 const POSITIVE_TYPES = ['positive']
 
 /**
- * BarChartTooltip - Extracted outside component to prevent recreation on each render
+ * Get color for a factor based on its type
  */
-const BarChartTooltip = ({ active, payload, isPositive }) => {
-  if (active && payload && payload.length) {
-    const item = payload[0].payload
-    const isCommon = item.type === FACTOR_TYPE.COMMON || item.type === 'common'
-    const isSpecific = item.type === FACTOR_TYPE.SPECIFIC || item.type === 'specific'
-
-    return (
-      <div className="bg-white p-3 rounded-lg shadow-lg border border-surface-200">
-        <p className="text-sm font-semibold text-surface-800 mb-1">{item.name}</p>
-        {/* Factor type badge */}
-        <div className="flex items-center gap-2 mb-1">
-          {isCommon && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 font-medium">
-              Common Factor
-            </span>
-          )}
-          {isSpecific && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
-              Hazard-Specific
-            </span>
-          )}
-          {!isCommon && !isSpecific && item.category && item.category !== 'Unclassified' && (
-            <span className="text-xs text-surface-500">{item.category}</span>
-          )}
-        </div>
-        <p className="text-sm text-surface-600">
-          <span className="font-medium">{item.count}</span> occurrences
-        </p>
-        <p className="text-xs text-surface-400">{item.percentage}% of total</p>
-        <p className={`text-xs mt-1 ${isPositive ? 'text-green-500' : 'text-primary-500'}`}>Click to view observations</p>
-      </div>
-    )
+const getFactorColor = (item, index, isPositive) => {
+  // Check for direct type-based color first
+  if (FACTOR_TYPE_COLORS[item.type]) {
+    // Use palette variation based on index
+    if (item.type === FACTOR_TYPE.COMMON || item.type === 'common') {
+      return COMMON_FACTOR_PALETTE[index % COMMON_FACTOR_PALETTE.length]
+    }
+    if (item.type === FACTOR_TYPE.SPECIFIC || item.type === 'specific') {
+      return SPECIFIC_FACTOR_PALETTE[index % SPECIFIC_FACTOR_PALETTE.length]
+    }
+    return FACTOR_TYPE_COLORS[item.type]
   }
-  return null
+
+  // Check for name-based color
+  if (FACTOR_TYPE_COLORS[item.name]) {
+    return FACTOR_TYPE_COLORS[item.name]
+  }
+
+  // Fallback to palette
+  const palette = isPositive ? POSITIVE_COLORS : NEGATIVE_COLORS
+  return palette[index % palette.length]
 }
 
 /**
- * DrillDownModal - Shows observations for a selected root cause with rich copy
+ * BarChartTooltip - Shows factor details on hover
  */
-const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, colorScheme }) => {
+const BarChartTooltip = React.memo(({ active, payload, isPositive }) => {
+  if (!active || !payload || !payload.length) return null
+
+  const item = payload[0].payload
+  const isCommon = item.type === FACTOR_TYPE.COMMON || item.type === 'common'
+  const isSpecific = item.type === FACTOR_TYPE.SPECIFIC || item.type === 'specific'
+
+  return (
+    <div className="bg-white p-3 rounded-lg shadow-lg border border-surface-200">
+      <p className="text-sm font-semibold text-surface-800 mb-1">{item.name}</p>
+      {/* Factor type badge */}
+      <div className="flex items-center gap-2 mb-1">
+        {isCommon && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 font-medium">
+            Common Factor
+          </span>
+        )}
+        {isSpecific && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
+            Hazard-Specific
+          </span>
+        )}
+        {!isCommon && !isSpecific && item.category && item.category !== 'Unclassified' && (
+          <span className="text-xs text-surface-500">{item.category}</span>
+        )}
+      </div>
+      <p className="text-sm text-surface-600">
+        <span className="font-medium">{item.count}</span> occurrences
+      </p>
+      <p className="text-xs text-surface-400">{item.percentage}% of total</p>
+      <p className={`text-xs mt-1 ${isPositive ? 'text-green-500' : 'text-primary-500'}`}>
+        Click to view observations
+      </p>
+    </div>
+  )
+})
+
+BarChartTooltip.displayName = 'BarChartTooltip'
+
+/**
+ * DrillDownModal - Shows observations for a selected root cause
+ */
+const DrillDownModal = React.memo(({ isOpen, onClose, rootCause, observations, hazardName, colorScheme }) => {
   const [copied, setCopied] = useState(false)
 
-  // Handle keyboard escape to close modal
   useEffect(() => {
     if (!isOpen) return
-
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
+      if (e.key === 'Escape') onClose()
     }
-
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
   const isPositive = colorScheme === 'green'
   const reportType = isPositive ? 'POSITIVE OBSERVATION' : 'FACTORS'
 
-  const handleCopyAll = () => {
-    // Build rich context header
+  const handleCopyAll = useCallback(() => {
     const header = [
       '══════════════════════════════════════════════════════════════',
       `${reportType} REPORT`,
@@ -302,7 +157,6 @@ const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, 
       ''
     ].join('\n')
 
-    // Build detailed observation list
     const observationsList = observations.map((obs, i) => {
       return [
         `[${i + 1}] ─────────────────────────────────────────────────────`,
@@ -315,21 +169,18 @@ const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, 
       ].join('\n')
     }).join('\n')
 
-    // Build summary footer
     const footer = [
       '══════════════════════════════════════════════════════════════',
       `END OF REPORT - ${observations.length} observations for "${rootCause}"`,
       '══════════════════════════════════════════════════════════════'
     ].join('\n')
 
-    const fullText = header + observationsList + footer
-    navigator.clipboard.writeText(fullText)
+    navigator.clipboard.writeText(header + observationsList + footer)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
+  }, [rootCause, hazardName, observations, isPositive, reportType])
 
-  // Copy single observation with context
-  const handleCopySingle = (obs, index) => {
+  const handleCopySingle = useCallback((obs, index) => {
     const text = [
       `── ${isPositive ? 'Positive Observation' : 'Factor'} #${index + 1} ──`,
       `Issue/Practice: ${rootCause}`,
@@ -341,7 +192,9 @@ const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, 
       `${obs.description}`
     ].join('\n')
     navigator.clipboard.writeText(text)
-  }
+  }, [rootCause, hazardName, isPositive])
+
+  if (!isOpen) return null
 
   const Icon = isPositive ? ThumbsUp : AlertTriangle
   const headerColor = isPositive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
@@ -368,7 +221,7 @@ const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, 
               className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white rounded-lg transition-colors ${buttonColor}`}
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? 'Copied!' : 'Copy All with Context'}
+              {copied ? 'Copied!' : 'Copy All'}
             </button>
             <button
               onClick={onClose}
@@ -419,21 +272,22 @@ const DrillDownModal = ({ isOpen, onClose, rootCause, observations, hazardName, 
           </div>
         </div>
 
-        {/* Footer with copy hint */}
+        {/* Footer */}
         <div className={`px-4 py-2 border-t ${isPositive ? 'border-green-100 bg-green-50' : 'border-red-100 bg-red-50'} rounded-b-xl`}>
           <p className="text-xs text-surface-500 text-center">
-            Hover over an observation to copy individually, or use "Copy All with Context" for full report
+            Hover over an observation to copy individually
           </p>
         </div>
       </div>
     </div>
   )
-}
+})
+
+DrillDownModal.displayName = 'DrillDownModal'
 
 /**
  * RootCausePanel - Root cause analysis for selected hazard
- * Shows bar chart of root cause distribution with counts and percentages
- * Click on bars to see drill-down of observations
+ * Optimized with memoization and simplified color system
  */
 const RootCausePanel = ({
   data,
@@ -448,21 +302,16 @@ const RootCausePanel = ({
   const [selectedRootCause, setSelectedRootCause] = useState(null)
 
   const isPositive = colorScheme === 'green' || observationType === 'positive'
-  const colors = isPositive ? POSITIVE_COLORS : NEGATIVE_COLORS
   const typeFilter = isPositive ? POSITIVE_TYPES : NEGATIVE_TYPES
 
-  // Get observations grouped by root cause for drill-down (UNIFIED detection)
+  // Get observations grouped by root cause for drill-down
   const observationsByRootCause = useMemo(() => {
     if (!incidents || !hazardName) return {}
 
-    // Filter by hazard AND observation type
-    // Include observations where type matches filter OR type is undefined (unclassified)
     const hazardIncidents = incidents.filter(i => {
       if (i.location !== hazardName) return false
-      // Include if type matches filter, or if type is missing and we're looking at negative observations
-      // (unclassified observations are typically issues that need attention)
       if (i.type && typeFilter.includes(i.type)) return true
-      if (!i.type && !isPositive) return true // Include untyped in negative view
+      if (!i.type && !isPositive) return true
       return false
     })
 
@@ -472,15 +321,11 @@ const RootCausePanel = ({
       const description = incident.description || ''
       if (!description.trim()) return
 
-      // Use UNIFIED detection - gets BOTH physical issues AND contributing factors
       const allCauses = detectAllCausesUnified(description, hazardName)
 
       if (allCauses.length > 0) {
-        // Group by each detected cause
         allCauses.forEach(({ name }) => {
-          if (!grouped[name]) {
-            grouped[name] = []
-          }
+          if (!grouped[name]) grouped[name] = []
           grouped[name].push({
             description,
             date: incident.date || incident.observationDate,
@@ -488,10 +333,7 @@ const RootCausePanel = ({
           })
         })
       } else {
-        // No causes detected
-        if (!grouped['Not Specified']) {
-          grouped['Not Specified'] = []
-        }
+        if (!grouped['Not Specified']) grouped['Not Specified'] = []
         grouped['Not Specified'].push({
           description,
           date: incident.date || incident.observationDate,
@@ -501,7 +343,7 @@ const RootCausePanel = ({
     })
 
     return grouped
-  }, [incidents, hazardName, typeFilter])
+  }, [incidents, hazardName, typeFilter, isPositive])
 
   const EmptyIcon = isPositive ? ThumbsUp : Target
 
@@ -524,24 +366,19 @@ const RootCausePanel = ({
 
   const { breakdown, total, topCause, matchedPercent } = data
 
-  // Prepare chart data - show up to 15 items with category colors
-  // Look up color by name first (for consolidated factors), then by category, then fallback
+  // Prepare chart data with colors based on factor type
   const chartData = breakdown
     .filter(item => breakdown.length === 1 || item.name !== 'Not Specified')
     .slice(0, 15)
     .map((item, index) => ({
       ...item,
-      color: CATEGORY_COLORS[item.name] || CATEGORY_COLORS[item.category] || colors[index % colors.length]
+      color: getFactorColor(item, index, isPositive)
     }))
 
-  // Handle bar click
   const handleBarClick = useCallback((data) => {
-    if (data && data.name) {
-      setSelectedRootCause(data.name)
-    }
+    if (data && data.name) setSelectedRootCause(data.name)
   }, [])
 
-  // Memoized tooltip renderer
   const renderTooltip = useCallback((props) => (
     <BarChartTooltip {...props} isPositive={isPositive} />
   ), [isPositive])
@@ -550,7 +387,7 @@ const RootCausePanel = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with coverage stats */}
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
           <h3 className="text-base font-semibold text-surface-800">{title}</h3>
@@ -574,7 +411,7 @@ const RootCausePanel = ({
         </div>
       </div>
 
-      {/* Chart with bar labels */}
+      {/* Chart */}
       <div className="flex-1 min-h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

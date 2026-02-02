@@ -1,54 +1,83 @@
 import React, { useState, useMemo } from 'react'
-import { AlertCircle, ChevronRight } from 'lucide-react'
+import { AlertCircle, ChevronRight, Info } from 'lucide-react'
 import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
 
-// Type badge configs - similar to trend configs in HazardList
+// Type badge configs - matches HazardList trend indicator pattern
 const TYPE_CONFIGS = {
-  'common': { bg: 'bg-teal-500', text: 'text-white', label: 'C' },
-  'specific': { bg: 'bg-violet-500', text: 'text-white', label: 'S' },
-  'default': { bg: 'bg-surface-400', text: 'text-white', label: '?' }
+  'common': { bg: 'bg-teal-500', text: 'text-white', label: 'C', fullLabel: 'Common' },
+  'specific': { bg: 'bg-violet-500', text: 'text-white', label: 'S', fullLabel: 'Specific' },
+  'default': { bg: 'bg-surface-400', text: 'text-white', label: '?', fullLabel: 'Unknown' }
 }
 
+// Helper to check if factor is common type
+const isCommonType = (type) => type === FACTOR_TYPE.COMMON || type === 'common'
+const isSpecificType = (type) => type === FACTOR_TYPE.SPECIFIC || type === 'specific'
+
 const getTypeConfig = (factor) => {
-  if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') {
-    return TYPE_CONFIGS.common
-  }
-  if (factor.type === FACTOR_TYPE.SPECIFIC || factor.type === 'specific') {
-    return TYPE_CONFIGS.specific
-  }
+  if (isCommonType(factor.type)) return TYPE_CONFIGS.common
+  if (isSpecificType(factor.type)) return TYPE_CONFIGS.specific
   return TYPE_CONFIGS.default
 }
 
 /**
+ * Get confidence level based on sample size
+ */
+const getConfidence = (count) => {
+  if (count >= 10) return { level: 'high', color: 'text-green-600' }
+  if (count >= 5) return { level: 'medium', color: 'text-amber-600' }
+  return { level: 'low', color: 'text-red-500', icon: '⚠' }
+}
+
+/**
  * FactorList - Left panel showing contributing factors sorted by count
- * Matches HazardList UI pattern
+ * Matches HazardList UI pattern with optimized performance
  */
 const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount, totalNegative }) => {
   const [sortBy, setSortBy] = useState('count')
 
-  // Sort factors based on selected criteria
+  // Use totalNegative as the base for percentage (factor coverage)
+  const baseCount = totalNegative || totalIncidents || 1
+
+  // Sort factors based on selected criteria - memoized for performance
   const sortedFactors = useMemo(() => {
-    if (!factors) return []
+    if (!factors || factors.length === 0) return []
     const sorted = [...factors]
 
-    if (sortBy === 'count') {
-      sorted.sort((a, b) => b.count - a.count)
-    } else if (sortBy === 'name') {
-      sorted.sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'type') {
-      // Sort by type: Common first, then Specific
-      sorted.sort((a, b) => {
-        const aIsCommon = a.type === FACTOR_TYPE.COMMON || a.type === 'common'
-        const bIsCommon = b.type === FACTOR_TYPE.COMMON || b.type === 'common'
-        if (aIsCommon && !bIsCommon) return -1
-        if (!aIsCommon && bIsCommon) return 1
-        return b.count - a.count
-      })
+    switch (sortBy) {
+      case 'count':
+        sorted.sort((a, b) => b.count - a.count)
+        break
+      case 'name':
+        sorted.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      case 'type':
+        // Common factors first, then Specific, then by count within type
+        sorted.sort((a, b) => {
+          const aIsCommon = isCommonType(a.type)
+          const bIsCommon = isCommonType(b.type)
+          if (aIsCommon && !bIsCommon) return -1
+          if (!aIsCommon && bIsCommon) return 1
+          return b.count - a.count
+        })
+        break
+      default:
+        break
     }
 
     return sorted
   }, [factors, sortBy])
 
+  // Count common vs specific factors for summary
+  const typeCounts = useMemo(() => {
+    if (!factors) return { common: 0, specific: 0 }
+    return factors.reduce((acc, f) => {
+      if (isCommonType(f.type)) acc.common++
+      else if (isSpecificType(f.type)) acc.specific++
+      return acc
+    }, { common: 0, specific: 0 })
+  }, [factors])
+
+  // Empty state
   if (!factors || factors.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center p-4">
@@ -82,10 +111,10 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
         {sortedFactors.map((factor) => {
           const typeConfig = getTypeConfig(factor)
           const isSelected = selected?.name === factor.name
-          const percentage = totalIncidents > 0
-            ? ((factor.count / totalIncidents) * 100).toFixed(1)
-            : 0
-          const isCommon = factor.type === FACTOR_TYPE.COMMON || factor.type === 'common'
+          const percentage = baseCount > 0
+            ? ((factor.count / baseCount) * 100).toFixed(1)
+            : '0.0'
+          const confidence = getConfidence(factor.count)
 
           return (
             <button
@@ -99,20 +128,28 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
                   : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200'
                 }
               `}
-              title={isCommon ? 'Common Factor - applies to all hazards' : `Specific to ${factor.category || 'this hazard'}`}
+              title={`${typeConfig.fullLabel} Factor - ${factor.count} occurrences (${percentage}% of negative observations)`}
             >
               {/* Type indicator badge */}
               <span className={`flex-shrink-0 w-6 h-6 rounded ${typeConfig.bg} ${typeConfig.text} flex items-center justify-center text-xs font-bold`}>
                 {typeConfig.label}
               </span>
 
-              {/* Name and type */}
+              {/* Name and count */}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
-                  {factor.name}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+                    {factor.name}
+                  </p>
+                  {/* Low confidence warning */}
+                  {confidence.level === 'low' && (
+                    <span className={`text-xs ${confidence.color}`} title="Low sample size - may be unreliable">
+                      {confidence.icon}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-surface-500">
-                  {factor.count} occurrences
+                  {factor.count} occurrence{factor.count !== 1 ? 's' : ''}
                 </p>
               </div>
 
@@ -133,9 +170,22 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
         })}
       </div>
 
-      {/* Footer with coverage stats */}
-      {totalNegative > 0 && (
-        <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2">
+      {/* Footer with coverage stats and legend */}
+      <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2 space-y-2">
+        {/* Type legend */}
+        <div className="flex items-center justify-center gap-3 text-xs">
+          <div className="flex items-center gap-1" title="Common Factors apply to all hazard types">
+            <span className="w-4 h-4 rounded bg-teal-500 text-white flex items-center justify-center text-2xs font-bold">C</span>
+            <span className="text-surface-500">Common ({typeCounts.common})</span>
+          </div>
+          <div className="flex items-center gap-1" title="Specific Factors are unique to certain hazard types">
+            <span className="w-4 h-4 rounded bg-violet-500 text-white flex items-center justify-center text-2xs font-bold">S</span>
+            <span className="text-surface-500">Specific ({typeCounts.specific})</span>
+          </div>
+        </div>
+
+        {/* Coverage stats */}
+        {totalNegative > 0 && (
           <div className="flex items-center justify-center gap-2 text-xs">
             <span className="text-surface-400">Coverage:</span>
             <span className={`font-semibold ${
@@ -151,8 +201,8 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
               {((analyzedCount / totalNegative) * 100).toFixed(1)}%
             </span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

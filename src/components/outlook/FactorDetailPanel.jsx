@@ -1,39 +1,67 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { AlertCircle, Eye, Copy, Check, X } from 'lucide-react'
-import { NEGATIVE_TYPES, detectContributingFactors } from '../../utils/rootCauseEngine'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { AlertCircle, Eye, Copy, Check, X, TrendingUp } from 'lucide-react'
+import { NEGATIVE_TYPES, FACTOR_TYPE } from '../../utils/rootCauseEngine'
 import { getFactorDailyData } from '../../utils/insightsCalculations'
 import HazardTrendChart from './HazardTrendChart'
 
-// Category styling
+// Category styling - optimized for Common vs Specific factor types
 const CATEGORY_STYLES = {
-  'Planning & Procedures': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', bar: 'bg-indigo-500' },
-  'Equipment Management': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', bar: 'bg-blue-500' },
-  'PPE': { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', bar: 'bg-cyan-500' },
-  'Fall Protection': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', bar: 'bg-red-500' },
-  'Human Factors': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', bar: 'bg-orange-500' },
-  'Training & Competency': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', bar: 'bg-amber-500' },
-  'Supervision': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', bar: 'bg-purple-500' },
-  'Organizational': { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', bar: 'bg-rose-500' },
-  'Communication': { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', bar: 'bg-teal-500' },
-  'Environmental': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', bar: 'bg-green-500' },
-  'Lifting & Rigging': { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', bar: 'bg-yellow-500' },
-  'Hazardous Materials': { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700', bar: 'bg-pink-500' },
-  'Electrical': { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', bar: 'bg-violet-500' },
-  'Excavation': { bg: 'bg-stone-50', border: 'border-stone-200', text: 'text-stone-700', bar: 'bg-stone-500' },
-  'Fire Safety': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', bar: 'bg-red-500' },
-  'Traffic Management': { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', bar: 'bg-slate-500' },
-  'Access': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', bar: 'bg-gray-500' },
+  // Primary factor types
+  'Common Factor': { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', bar: 'bg-teal-500' },
+  'common': { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', bar: 'bg-teal-500' },
+  'Specific Factor': { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', bar: 'bg-violet-500' },
+  'specific': { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', bar: 'bg-violet-500' },
+
+  // Hazard-specific categories (for specific factors)
+  'Working at Height': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', bar: 'bg-red-500' },
+  'Lifting': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', bar: 'bg-amber-500' },
+  'Confined Spaces': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', bar: 'bg-orange-500' },
+  'Energized System': { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', bar: 'bg-yellow-500' },
+  'Hot Work': { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', bar: 'bg-rose-500' },
+  'Fire': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', bar: 'bg-red-500' },
+  'Mobile Plant & Equipment': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', bar: 'bg-blue-500' },
+  'Breaking Ground & Excavation': { bg: 'bg-stone-50', border: 'border-stone-200', text: 'text-stone-700', bar: 'bg-stone-500' },
+  'Temporary Works': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', bar: 'bg-indigo-500' },
+  'Driving': { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700', bar: 'bg-pink-500' },
+  'Working in Heat': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', bar: 'bg-orange-500' },
+  'Working on or Near Water': { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', bar: 'bg-cyan-500' },
+  'Working on or Near Live Roads': { bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-700', bar: 'bg-lime-500' },
+  'Explosives & Blasting': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', bar: 'bg-red-600' },
+  'Physical Hazard': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', bar: 'bg-orange-500' },
+  'Mechanical Hazard': { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', bar: 'bg-slate-500' },
+  'COSHH (Chemical)': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', bar: 'bg-green-500' },
+  'Respiratory Hazard': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', bar: 'bg-gray-500' },
+  'Slip and Trip': { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700', bar: 'bg-sky-500' },
+  'Tools': { bg: 'bg-fuchsia-50', border: 'border-fuchsia-200', text: 'text-fuchsia-700', bar: 'bg-fuchsia-500' },
+  'Traffic Management': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', bar: 'bg-amber-500' },
+  'Environmental': { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', bar: 'bg-emerald-500' },
+  'Access': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', bar: 'bg-indigo-500' },
+  'Worker Welfare': { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700', bar: 'bg-sky-500' },
+  'Noise': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', bar: 'bg-purple-500' },
+  'General Site Issues': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', bar: 'bg-gray-500' },
+
+  // Default fallback
   'default': { bg: 'bg-surface-50', border: 'border-surface-200', text: 'text-surface-700', bar: 'bg-surface-500' }
 }
 
-const getCategoryStyle = (category) => {
-  return CATEGORY_STYLES[category] || CATEGORY_STYLES.default
+// Get style based on factor type first, then category
+const getCategoryStyle = (factor) => {
+  // For Common factors, use teal theme
+  if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') {
+    return CATEGORY_STYLES['Common Factor']
+  }
+  // For Specific factors, try category-specific or violet default
+  if (factor.type === FACTOR_TYPE.SPECIFIC || factor.type === 'specific') {
+    return CATEGORY_STYLES[factor.category] || CATEGORY_STYLES['Specific Factor']
+  }
+  // Fallback to category lookup
+  return CATEGORY_STYLES[factor.category] || CATEGORY_STYLES.default
 }
 
 /**
  * HazardBar - Clickable horizontal bar showing hazard affected by this factor
  */
-const HazardBar = ({ hazardName, count, maxCount, onClick, barColor }) => {
+const HazardBar = React.memo(({ hazardName, count, maxCount, onClick, barColor }) => {
   const width = maxCount > 0 ? (count / maxCount) * 100 : 0
 
   return (
@@ -57,12 +85,14 @@ const HazardBar = ({ hazardName, count, maxCount, onClick, barColor }) => {
       </div>
     </button>
   )
-}
+})
+
+HazardBar.displayName = 'HazardBar'
 
 /**
  * DrillDownModal - Shows observations for a specific factor + hazard combination
  */
-const DrillDownModal = ({ isOpen, onClose, factor, hazard, observations }) => {
+const DrillDownModal = React.memo(({ isOpen, onClose, factor, hazard, observations }) => {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -74,34 +104,41 @@ const DrillDownModal = ({ isOpen, onClose, factor, hazard, observations }) => {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
-  const handleCopyAll = () => {
+  const handleCopyAll = useCallback(() => {
     const lines = [
-      `FACTORS REPORT`,
+      `══════════════════════════════════════════════════════════════`,
+      `FACTOR ANALYSIS REPORT`,
+      `══════════════════════════════════════════════════════════════`,
       `Factor: ${factor}`,
       `Hazard: ${hazard}`,
       `Total Observations: ${observations.length}`,
-      `Generated: ${new Date().toLocaleDateString()}`,
-      '',
-      '─'.repeat(50),
+      `Generated: ${new Date().toLocaleString()}`,
+      `══════════════════════════════════════════════════════════════`,
       ''
     ]
 
     observations.forEach((obs, index) => {
-      lines.push(`── Observation #${index + 1} ──`)
+      lines.push(`[${index + 1}] ─────────────────────────────────────────────────────`)
       lines.push(`Date: ${obs.date || 'N/A'}`)
       lines.push(`Contractor: ${obs.contractor || 'N/A'}`)
       lines.push(`Site: ${obs.site || 'N/A'}`)
       lines.push(`Type: ${obs.type || 'N/A'}`)
-      lines.push(`Description: ${obs.description || 'N/A'}`)
+      lines.push(``)
+      lines.push(`Description:`)
+      lines.push(`${obs.description || 'N/A'}`)
       lines.push('')
     })
+
+    lines.push(`══════════════════════════════════════════════════════════════`)
+    lines.push(`END OF REPORT`)
+    lines.push(`══════════════════════════════════════════════════════════════`)
 
     navigator.clipboard.writeText(lines.join('\n'))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
+  }, [factor, hazard, observations])
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -128,30 +165,38 @@ const DrillDownModal = ({ isOpen, onClose, factor, hazard, observations }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {observations.map((obs, index) => (
-            <div key={obs.id || index} className="p-3 bg-surface-50 rounded-lg border border-surface-100">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-xs font-medium text-surface-500">#{index + 1}</span>
-                <span className="text-xs text-surface-400">{obs.date}</span>
-              </div>
-              <p className="text-sm text-surface-700 leading-relaxed">{obs.description}</p>
-              <div className="flex items-center gap-3 mt-2 text-xs text-surface-500">
-                <span>{obs.contractor || 'Unknown Contractor'}</span>
-                <span className="text-surface-300">|</span>
-                <span>{obs.site || 'Unknown Site'}</span>
-              </div>
+          {observations.length === 0 ? (
+            <div className="text-center py-8 text-surface-500">
+              <p>No observations found for this combination</p>
             </div>
-          ))}
+          ) : (
+            observations.map((obs, index) => (
+              <div key={obs.id || index} className="p-3 bg-surface-50 rounded-lg border border-surface-100">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-xs font-medium text-surface-500">#{index + 1}</span>
+                  <span className="text-xs text-surface-400">{obs.date}</span>
+                </div>
+                <p className="text-sm text-surface-700 leading-relaxed">{obs.description}</p>
+                <div className="flex items-center gap-3 mt-2 text-xs text-surface-500">
+                  <span>{obs.contractor || 'Unknown Contractor'}</span>
+                  <span className="text-surface-300">|</span>
+                  <span>{obs.site || 'Unknown Site'}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
   )
-}
+})
+
+DrillDownModal.displayName = 'DrillDownModal'
 
 /**
  * HazardsAffectedPanel - Shows hazards affected by the factor
  */
-const HazardsAffectedPanel = ({ factor, hazardsAffected, maxCount, categoryStyle, onHazardClick }) => {
+const HazardsAffectedPanel = React.memo(({ factor, hazardsAffected, maxCount, categoryStyle, onHazardClick }) => {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       <div className="flex items-center justify-between mb-3">
@@ -162,8 +207,12 @@ const HazardsAffectedPanel = ({ factor, hazardsAffected, maxCount, categoryStyle
       </div>
 
       {hazardsAffected.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-center">
-          <p className="text-sm text-surface-500">No hazard data available for this factor</p>
+        <div className="flex-1 flex items-center justify-center text-center p-4">
+          <div>
+            <AlertCircle size={32} className="text-surface-300 mx-auto mb-2" />
+            <p className="text-sm text-surface-500">No hazard data available</p>
+            <p className="text-xs text-surface-400 mt-1">This factor wasn't detected in any specific hazard category</p>
+          </div>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto space-y-1">
@@ -188,22 +237,32 @@ const HazardsAffectedPanel = ({ factor, hazardsAffected, maxCount, categoryStyle
       </div>
     </div>
   )
-}
+})
+
+HazardsAffectedPanel.displayName = 'HazardsAffectedPanel'
 
 /**
  * FactorDetailPanel - Right panel showing factor details with tabs
+ * Optimized with memoization and efficient data handling
  */
 const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
   const [activeTab, setActiveTab] = useState('chart')
   const [selectedDrillDown, setSelectedDrillDown] = useState(null)
 
-  // Calculate chart data for factor trend
+  // Pre-compute factor detection function once
+  const detectFn = useMemo(() => {
+    // Dynamic import to avoid circular dependency
+    const { detectContributingFactors } = require('../../utils/rootCauseEngine')
+    return detectContributingFactors
+  }, [])
+
+  // Calculate chart data for factor trend - memoized
   const chartData = useMemo(() => {
     if (!factor || !incidents) return null
-    return getFactorDailyData(incidents, factor.name, timePeriod, detectContributingFactors)
-  }, [factor, incidents, timePeriod])
+    return getFactorDailyData(incidents, factor.name, timePeriod, detectFn)
+  }, [factor, incidents, timePeriod, detectFn])
 
-  // Get hazards affected by this factor
+  // Get hazards affected by this factor - memoized
   const hazardsAffected = useMemo(() => {
     if (!factor || !factorData?.byFactorHazard) return []
     const hazardCounts = factorData.byFactorHazard[factor.name] || {}
@@ -212,32 +271,57 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
       .sort((a, b) => b.count - a.count)
   }, [factor, factorData])
 
-  // Get max count for bar scaling
+  // Get max count for bar scaling - memoized
   const maxCount = useMemo(() => {
     if (hazardsAffected.length === 0) return 0
     return Math.max(...hazardsAffected.map(h => h.count))
   }, [hazardsAffected])
 
-  // Get observations for drill-down
-  const getDrillDownObservations = (hazardName) => {
-    if (!incidents || !factor) return []
-    return incidents.filter(i => {
-      if (i.location !== hazardName) return false
-      if (!NEGATIVE_TYPES.includes(i.type)) return false
-      const detectedFactors = detectContributingFactors(i.description)
-      return detectedFactors.some(f => f.factor === factor.name)
+  // Pre-compute observations by hazard for fast drill-down
+  const observationsByHazard = useMemo(() => {
+    if (!incidents || !factor) return {}
+
+    const grouped = {}
+    incidents.forEach(i => {
+      if (!NEGATIVE_TYPES.includes(i.type)) return
+
+      const detectedFactors = detectFn(i.description)
+      const hasThisFactor = detectedFactors.some(f => f.factor === factor.name || f.name === factor.name)
+
+      if (hasThisFactor && i.location) {
+        if (!grouped[i.location]) grouped[i.location] = []
+        grouped[i.location].push(i)
+      }
     })
-  }
+    return grouped
+  }, [incidents, factor, detectFn])
 
-  const handleHazardClick = (hazardName) => {
-    const observations = getDrillDownObservations(hazardName)
+  // Fast drill-down using pre-computed data
+  const handleHazardClick = useCallback((hazardName) => {
+    const observations = observationsByHazard[hazardName] || []
     setSelectedDrillDown({ hazard: hazardName, observations })
-  }
+  }, [observationsByHazard])
 
-  const closeDrillDown = () => setSelectedDrillDown(null)
+  const closeDrillDown = useCallback(() => setSelectedDrillDown(null), [])
+
+  // Determine factor type label
+  const factorTypeLabel = useMemo(() => {
+    if (!factor) return ''
+    if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') return 'Common Factor'
+    if (factor.type === FACTOR_TYPE.SPECIFIC || factor.type === 'specific') return 'Specific Factor'
+    return factor.category || 'Factor'
+  }, [factor])
+
+  // Get confidence based on count
+  const confidence = useMemo(() => {
+    if (!factor) return null
+    if (factor.count >= 20) return { level: 'high', label: 'High confidence', color: 'bg-green-100 text-green-700' }
+    if (factor.count >= 10) return { level: 'medium', label: 'Medium confidence', color: 'bg-amber-100 text-amber-700' }
+    return { level: 'low', label: 'Low confidence', color: 'bg-red-100 text-red-600', icon: '⚠' }
+  }, [factor])
 
   const tabs = [
-    { id: 'chart', label: 'Trend' },
+    { id: 'chart', label: 'Trend', icon: TrendingUp },
     { id: 'hazards', label: 'Hazards', count: hazardsAffected.length }
   ]
 
@@ -256,48 +340,40 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
     )
   }
 
-  const categoryStyle = getCategoryStyle(factor.category)
+  const categoryStyle = getCategoryStyle(factor)
 
   return (
     <div className="h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden">
       {/* Header with factor info */}
-      <div className={`px-3 pt-3 pb-2 ${categoryStyle.bg} border-b ${categoryStyle.border}`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className={`text-xs font-medium ${categoryStyle.text}`}>
-              {factor.category || 'Uncategorized'}
+      <div className={`px-4 pt-3 pb-2 ${categoryStyle.bg} border-b ${categoryStyle.border}`}>
+        {/* Factor name - prominent */}
+        <h2 className="text-lg font-bold text-surface-900 mb-1">{factor.name}</h2>
+
+        {/* Meta info row */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            {/* Factor type badge */}
+            <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+              factor.type === FACTOR_TYPE.COMMON || factor.type === 'common'
+                ? 'bg-teal-100 text-teal-700'
+                : 'bg-violet-100 text-violet-700'
+            }`}>
+              {factorTypeLabel}
             </span>
+
             {/* Confidence indicator */}
-            {factor.confidence && (
-              <span className={`ml-2 text-2xs px-1.5 py-0.5 rounded ${
-                factor.confidence === 'high' ? 'bg-green-100 text-green-700' :
-                factor.confidence === 'medium' ? 'bg-amber-100 text-amber-700' :
-                'bg-red-100 text-red-600'
-              }`}>
-                {factor.confidence === 'low' && '⚠ '}
-                {factor.confidence} confidence
+            {confidence && (
+              <span className={`text-xs px-1.5 py-0.5 rounded ${confidence.color}`}>
+                {confidence.icon && `${confidence.icon} `}{confidence.label}
               </span>
             )}
           </div>
-          <span className="text-xs text-surface-600">
-            {factor.count} observation{factor.count !== 1 ? 's' : ''}
+
+          {/* Count */}
+          <span className="text-xs text-surface-600 font-medium">
+            {factor.count} occurrence{factor.count !== 1 ? 's' : ''}
           </span>
         </div>
-        {/* Show top keywords that triggered detection (for transparency) */}
-        {factor.topKeywords && factor.topKeywords.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            <span className="text-2xs text-surface-500">Detected by:</span>
-            {factor.topKeywords.map(({ keyword, count }) => (
-              <span
-                key={keyword}
-                className="text-2xs bg-white/60 text-surface-600 px-1.5 py-0.5 rounded"
-                title={`Matched ${count} time${count !== 1 ? 's' : ''}`}
-              >
-                "{keyword}"
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Tab buttons */}
@@ -309,16 +385,21 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                flex items-center gap-1.5 px-3 py-2 text-sm transition-all duration-150
+                flex items-center gap-1.5 px-4 py-2.5 text-sm transition-all duration-150
                 ${isActive
-                  ? 'text-primary-600 border-b-2 border-primary-500 font-medium'
-                  : 'text-surface-500 hover:text-surface-700'
+                  ? 'text-primary-600 border-b-2 border-primary-500 font-medium bg-primary-50/50'
+                  : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
                 }
               `}
             >
+              {tab.icon && <tab.icon size={14} />}
               <span>{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="text-xs text-surface-400">· {tab.count}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-surface-500'
+                }`}>
+                  {tab.count}
+                </span>
               )}
             </button>
           )
