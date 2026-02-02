@@ -1,63 +1,53 @@
 import React, { useState, useMemo } from 'react'
 import { AlertCircle, ChevronRight } from 'lucide-react'
+import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
 
-// Category color mapping for visual distinction
-const CATEGORY_COLORS = {
-  'Human Factors': { bg: 'bg-orange-100', border: 'border-orange-300', dot: 'bg-orange-500' },
-  'Equipment': { bg: 'bg-blue-100', border: 'border-blue-300', dot: 'bg-blue-500' },
-  'Process': { bg: 'bg-purple-100', border: 'border-purple-300', dot: 'bg-purple-500' },
-  'Environmental': { bg: 'bg-green-100', border: 'border-green-300', dot: 'bg-green-500' },
-  'Documentation': { bg: 'bg-indigo-100', border: 'border-indigo-300', dot: 'bg-indigo-500' },
-  'Management': { bg: 'bg-red-100', border: 'border-red-300', dot: 'bg-red-500' },
-  'Training': { bg: 'bg-amber-100', border: 'border-amber-300', dot: 'bg-amber-500' },
-  'default': { bg: 'bg-surface-100', border: 'border-surface-300', dot: 'bg-surface-500' }
+// Type badge configs - similar to trend configs in HazardList
+const TYPE_CONFIGS = {
+  'common': { bg: 'bg-teal-500', text: 'text-white', label: 'C' },
+  'specific': { bg: 'bg-violet-500', text: 'text-white', label: 'S' },
+  'default': { bg: 'bg-surface-400', text: 'text-white', label: '?' }
 }
 
-const getCategoryColors = (category) => {
-  return CATEGORY_COLORS[category] || CATEGORY_COLORS.default
+const getTypeConfig = (factor) => {
+  if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') {
+    return TYPE_CONFIGS.common
+  }
+  if (factor.type === FACTOR_TYPE.SPECIFIC || factor.type === 'specific') {
+    return TYPE_CONFIGS.specific
+  }
+  return TYPE_CONFIGS.default
 }
 
 /**
  * FactorList - Left panel showing contributing factors sorted by count
- * Similar layout to HazardList but displays factors instead
+ * Matches HazardList UI pattern
  */
 const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount, totalNegative }) => {
   const [sortBy, setSortBy] = useState('count')
-  const [filterCategory, setFilterCategory] = useState('all')
 
-  // Extract unique categories
-  const categories = useMemo(() => {
-    if (!factors || factors.length === 0) return []
-    const uniqueCats = [...new Set(factors.map(f => f.category).filter(Boolean))]
-    return uniqueCats.sort()
-  }, [factors])
-
-  // Filter and sort factors
-  const displayedFactors = useMemo(() => {
+  // Sort factors based on selected criteria
+  const sortedFactors = useMemo(() => {
     if (!factors) return []
+    const sorted = [...factors]
 
-    let filtered = [...factors]
-
-    // Apply category filter
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(f => f.category === filterCategory)
-    }
-
-    // Sort
     if (sortBy === 'count') {
-      filtered.sort((a, b) => b.count - a.count)
+      sorted.sort((a, b) => b.count - a.count)
     } else if (sortBy === 'name') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'category') {
-      filtered.sort((a, b) => {
-        const catCompare = (a.category || '').localeCompare(b.category || '')
-        if (catCompare !== 0) return catCompare
+      sorted.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy === 'type') {
+      // Sort by type: Common first, then Specific
+      sorted.sort((a, b) => {
+        const aIsCommon = a.type === FACTOR_TYPE.COMMON || a.type === 'common'
+        const bIsCommon = b.type === FACTOR_TYPE.COMMON || b.type === 'common'
+        if (aIsCommon && !bIsCommon) return -1
+        if (!aIsCommon && bIsCommon) return 1
         return b.count - a.count
       })
     }
 
-    return filtered
-  }, [factors, sortBy, filterCategory])
+    return sorted
+  }, [factors, sortBy])
 
   if (!factors || factors.length === 0) {
     return (
@@ -73,44 +63,29 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header with filters */}
-      <div className="flex flex-col gap-2 mb-2 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-surface-500">Select to explore</p>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-300"
-          >
-            <option value="count">By Count</option>
-            <option value="name">By Name</option>
-            <option value="category">By Category</option>
-          </select>
-        </div>
-
-        {/* Category filter */}
-        {categories.length > 1 && (
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 w-full focus:outline-none focus:ring-1 focus:ring-primary-300"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        )}
+      {/* Header with sort */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <p className="text-xs text-surface-500">Select to explore</p>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-300"
+        >
+          <option value="count">By Count</option>
+          <option value="name">By Name</option>
+          <option value="type">By Type</option>
+        </select>
       </div>
 
       {/* Factor list - scrollable */}
       <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-        {displayedFactors.map((factor) => {
+        {sortedFactors.map((factor) => {
+          const typeConfig = getTypeConfig(factor)
           const isSelected = selected?.name === factor.name
-          const colors = getCategoryColors(factor.category)
           const percentage = totalIncidents > 0
             ? ((factor.count / totalIncidents) * 100).toFixed(1)
             : 0
+          const isCommon = factor.type === FACTOR_TYPE.COMMON || factor.type === 'common'
 
           return (
             <button
@@ -124,46 +99,43 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
                   : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200'
                 }
               `}
+              title={isCommon ? 'Common Factor - applies to all hazards' : `Specific to ${factor.category || 'this hazard'}`}
             >
-              {/* Category indicator */}
-              <span className={`flex-shrink-0 w-2 h-8 rounded-full ${colors.dot}`} />
+              {/* Type indicator badge */}
+              <span className={`flex-shrink-0 w-6 h-6 rounded ${typeConfig.bg} ${typeConfig.text} flex items-center justify-center text-xs font-bold`}>
+                {typeConfig.label}
+              </span>
 
-              {/* Name and category */}
+              {/* Name and type */}
               <div className="flex-1 min-w-0">
                 <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
                   {factor.name}
                 </p>
-                <p className="text-xs text-surface-400 truncate">
-                  {factor.category || 'Uncategorized'}
+                <p className="text-xs text-surface-500">
+                  {factor.count} occurrences
                 </p>
               </div>
 
-              {/* Count and percentage */}
+              {/* Percentage and arrow */}
               <div className="flex flex-col items-end gap-0.5">
-                <span className={`text-sm font-bold ${isSelected ? 'text-primary-700' : 'text-surface-700'}`}>
-                  {factor.count}
-                </span>
-                <span className="text-xs text-surface-400">
-                  {percentage}%
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`text-xs font-bold ${isSelected ? 'text-primary-700' : 'text-surface-600'}`}>
+                    {percentage}%
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    className={`transition-transform ${isSelected ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
+                  />
+                </div>
               </div>
-
-              {/* Arrow */}
-              <ChevronRight
-                size={16}
-                className={`flex-shrink-0 transition-transform ${isSelected ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
-              />
             </button>
           )
         })}
       </div>
 
-      {/* Footer with count and coverage */}
-      <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2 space-y-1">
-        <p className="text-xs text-surface-500 text-center">
-          {displayedFactors.length} of {factors.length} factors
-        </p>
-        {totalNegative > 0 && (
+      {/* Footer with coverage stats */}
+      {totalNegative > 0 && (
+        <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2">
           <div className="flex items-center justify-center gap-2 text-xs">
             <span className="text-surface-400">Coverage:</span>
             <span className={`font-semibold ${
@@ -179,8 +151,8 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
               {((analyzedCount / totalNegative) * 100).toFixed(1)}%
             </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

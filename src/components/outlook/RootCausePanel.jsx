@@ -13,83 +13,195 @@ import {
 import { Target, X, Copy, Check, ThumbsUp, AlertTriangle } from 'lucide-react'
 import { detectAllCausesUnified } from '../../utils/rootCauseEngine'
 
-// Category colors for unified/consolidated causes (~30 categories)
+import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
+
+// Category colors for Common vs Specific factors
 const CATEGORY_COLORS = {
-  // Original categories (fallback)
-  'Physical/Technical': '#ef4444',
-  'Human Factors': '#f97316',
-  'Supervision': '#eab308',
-  'Training & Competency': '#16a34a',
-  'Planning & Procedures': '#3b82f6',
-  'Communication': '#06b6d4',
-  'Organizational': '#8b5cf6',
-  'Environmental': '#14b8a6',
+  // ===== COMMON FACTORS (Teal theme) =====
+  'Common Factor': '#0d9488',
+  'common': '#0d9488',
+  'Permit to Work': '#0d9488',
+  'PPE': '#14b8a6',
+  'Barriers & Signage': '#0f766e',
+  'Training & Competency': '#10b981',
+  'Housekeeping': '#059669',
+  'Supervision': '#047857',
+  'Site Access & Security': '#065f46',
+
+  // ===== SPECIFIC FACTORS (Violet/Purple theme) =====
+  'Specific Factor': '#7c3aed',
+  'specific': '#7c3aed',
+
+  // Working at Height
+  'Scaffold deficiency': '#8b5cf6',
+  'MEWP malfunction': '#7c3aed',
+  'Ladder positioning': '#6d28d9',
+  'Guardrail/edge gap': '#5b21b6',
+  'Safety net missing': '#4c1d95',
+  'Anchor point issue': '#7e22ce',
+  'Opening unprotected': '#9333ea',
+
+  // Lifting
+  'Rigging deficiency': '#a855f7',
+  'Lift plan inadequate': '#9333ea',
+  'Crane defect': '#7e22ce',
+  'Tag line missing': '#6b21a8',
+  'Overload': '#581c87',
+  'Load shifting': '#4c1d95',
+
+  // Confined Spaces
+  'Atmospheric hazard': '#dc2626',
+  'Rescue plan missing': '#b91c1c',
+  'Attendant absent': '#991b1b',
+  'Ventilation inadequate': '#7f1d1d',
+  'Isolation failure': '#ef4444',
+
+  // Energized System
+  'LOTO not applied': '#fbbf24',
+  'Live exposure': '#f59e0b',
+  'Exposed conductor': '#d97706',
+  'Panel/enclosure open': '#b45309',
+  'Grounding fault': '#92400e',
+
+  // Hot Work
+  'Fire watch absent': '#ef4444',
+  'Welding screen missing': '#dc2626',
+  'Spark escape': '#b91c1c',
+  'Cylinder unsecured': '#991b1b',
+  'Combustible nearby': '#7f1d1d',
+
+  // Fire
+  'Extinguisher missing/expired': '#f97316',
+  'Exit blocked': '#ea580c',
+  'Alarm failure': '#c2410c',
+  'Ignition source': '#9a3412',
+  'Fire door propped': '#7c2d12',
+
+  // Mobile Plant & Equipment
+  'Banksman absent': '#3b82f6',
+  'Exclusion zone breach': '#2563eb',
+  'Blind spot': '#1d4ed8',
+  'Equipment defect': '#1e40af',
+  'Pedestrian conflict': '#1e3a8a',
+
+  // Breaking Ground & Excavation
+  'Services not located': '#78716c',
+  'Shoring inadequate': '#57534e',
+  'Collapse risk': '#44403c',
+  'Spoil too close': '#292524',
+  'Water ingress': '#1c1917',
+
+  // Temporary Works
+  'Design inadequate': '#6366f1',
+  'Overloaded': '#4f46e5',
+  'Bracing missing': '#4338ca',
+  'Foundation unstable': '#3730a3',
+  'Strike damage': '#312e81',
+
+  // Driving
+  'Speeding': '#ec4899',
+  'Seatbelt not worn': '#db2777',
+  'Phone use': '#be185d',
+  'Driver fatigue': '#9d174d',
+  'Vehicle defect': '#831843',
+
+  // Working in Heat
+  'Dehydration': '#f59e0b',
+  'No rest breaks': '#d97706',
+  'No shade': '#b45309',
+  'Heat illness signs': '#92400e',
+  'Not acclimatized': '#78350f',
+
+  // Working on or Near Water
+  'Life jacket missing': '#0ea5e9',
+  'Rescue equipment absent': '#0284c7',
+  'Strong current': '#0369a1',
+  'Vessel defect': '#075985',
+  'Lone working': '#0c4a6e',
+
+  // Working on or Near Live Roads
+  'Traffic controller absent': '#84cc16',
+  'Vehicle incursion risk': '#65a30d',
+  'Poor visibility': '#4d7c0f',
+  'Inadequate separation': '#3f6212',
+
+  // Explosives & Blasting
+  'Shot firer absent': '#dc2626',
+  'Misfire risk': '#b91c1c',
+  'Blast radius breach': '#991b1b',
+  'Flyrock hazard': '#7f1d1d',
+  'Warning failure': '#ef4444',
+
+  // Physical Hazard
+  'Exposed rebar': '#f97316',
+  'Sharp edge': '#ea580c',
+  'Struck-by risk': '#c2410c',
+  'Pinch point': '#9a3412',
+  'Protruding object': '#7c2d12',
+
+  // Mechanical Hazard
+  'Guard missing': '#64748b',
+  'Rotating parts exposed': '#475569',
+  'E-stop absent': '#334155',
+  'Unexpected startup': '#1e293b',
+
+  // COSHH (Chemical)
+  'SDS missing': '#22c55e',
+  'Unlabeled container': '#16a34a',
+  'Incompatible storage': '#15803d',
+  'Spill uncontained': '#166534',
+
+  // Respiratory Hazard
+  'Dust/fume exposure': '#a3a3a3',
+  'Wrong RPE type': '#737373',
+  'Fit test overdue': '#525252',
+  'LEV not working': '#404040',
+
+  // Slip and Trip
+  'Wet surface': '#06b6d4',
+  'Uneven ground': '#0891b2',
+  'Cable across path': '#0e7490',
+  'Poor lighting': '#155e75',
+
+  // Tools
+  'Tool defective': '#f472b6',
+  'Wrong tool for job': '#ec4899',
+  'Guard bypassed': '#db2777',
+  'Inspection overdue': '#be185d',
+
+  // Traffic Management
+  'Route confusion': '#fbbf24',
+  'Pedestrian mixing': '#f59e0b',
+  'Speed not controlled': '#d97706',
+  'Crossing unsafe': '#b45309',
+
+  // Environmental
+  'Spill/leak': '#14b8a6',
+  'Dust emission': '#0d9488',
+  'Noise excessive': '#0f766e',
+  'Waste improper': '#115e59',
+
+  // Access
+  'Route blocked': '#6366f1',
+  'Stair defect': '#4f46e5',
+  'Lighting inadequate': '#4338ca',
+  'Overcrowded': '#3730a3',
+
+  // Worker Welfare
+  'Water unavailable': '#0ea5e9',
+  'Toilet unclean': '#0284c7',
+  'Rest area missing': '#0369a1',
+  'First aid kit empty': '#075985',
+
+  // Noise
+  'Hearing zone unmarked': '#a855f7',
+  'Source uncontrolled': '#9333ea',
+  'Exposure excessive': '#7e22ce',
+
+  // General/Unclassified
   'Unclassified': '#64748b',
-
-  // ===== CONSOLIDATED FACTORS =====
-  // Administrative/Management
-  'Permit Issue': '#dc2626',
-  'Planning Issue': '#3b82f6',
-  'Documentation Issue': '#6366f1',
-  'Inspection Issue': '#ca8a04',
-  'Communication Issue': '#06b6d4',
-  'Supervision Issue': '#eab308',
-  'Signage Issue': '#a855f7',
-
-  // People
-  'PPE Issue': '#ea580c',
-  'Welfare Issue': '#10b981',
-  'Pedestrian Safety': '#0891b2',
-  'Security Issue': '#64748b',
-
-  // Physical Hazards
-  'Fall Protection Issue': '#dc2626',
-  'Scaffold Issue': '#b91c1c',
-  'Ladder/Stairs Issue': '#ef4444',
-  'Electrical Hazard': '#fbbf24',
-  'Sharp/Protruding Hazard': '#f97316',
-  'Struck-by Hazard': '#ea580c',
-  'Machine Guarding Issue': '#d97706',
-  'Slip/Trip Hazard': '#84cc16',
-  'Structural Issue': '#78716c',
-
-  // Equipment & Materials
-  'Storage Issue': '#0d9488',
-  'Lifting/Rigging Issue': '#7c3aed',
-  'Equipment Issue': '#ec4899',
-  'Tool Safety Issue': '#f472b6',
-  'Vehicle/Plant Safety': '#2563eb',
-
-  // Work Environment
-  'Barrier/Zone Issue': '#7c3aed',
-  'Housekeeping': '#0891b2',
-  'Ventilation Issue': '#0d9488',
-  'Access/Egress Issue': '#2563eb',
-  'Heat/Weather Issue': '#f59e0b',
-  'Environmental Issue': '#14b8a6',
-
-  // Special Hazards
-  'Fire/Hot Work Issue': '#ef4444',
-  'Confined Space Issue': '#7c2d12',
-  'Pressure System Issue': '#be185d',
-  'Biological Hazard': '#65a30d',
-  'Marine Safety Issue': '#0284c7',
-  'Radiation Issue': '#fcd34d',
-  'Emergency Response Issue': '#dc2626',
-
-  // Human Factors sub-categories
-  'Human Factors - Complacency': '#f97316',
-  'Human Factors - Distraction': '#fb923c',
-  'Human Factors - Rushing': '#fdba74',
-  'Human Factors - Fatigue': '#c2410c',
-  'Human Factors - Overconfidence': '#ea580c',
-  'Human Factors - Body Position': '#9a3412',
-
-  // Organizational sub-categories
-  'Organizational - Pressure': '#8b5cf6',
-  'Organizational - Resources': '#a78bfa',
-  'Organizational - Culture': '#c4b5fd',
-  'Organizational - Contractor': '#7c3aed'
+  'Multiple factors': '#475569',
+  'Not Specified': '#94a3b8'
 }
 
 // Color palette for negative (site issues) - fallback
@@ -117,12 +229,28 @@ const POSITIVE_TYPES = ['positive']
 const BarChartTooltip = ({ active, payload, isPositive }) => {
   if (active && payload && payload.length) {
     const item = payload[0].payload
+    const isCommon = item.type === FACTOR_TYPE.COMMON || item.type === 'common'
+    const isSpecific = item.type === FACTOR_TYPE.SPECIFIC || item.type === 'specific'
+
     return (
       <div className="bg-white p-3 rounded-lg shadow-lg border border-surface-200">
         <p className="text-sm font-semibold text-surface-800 mb-1">{item.name}</p>
-        {item.category && item.category !== 'Unclassified' && (
-          <p className="text-xs text-surface-500 mb-1">{item.category}</p>
-        )}
+        {/* Factor type badge */}
+        <div className="flex items-center gap-2 mb-1">
+          {isCommon && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 font-medium">
+              Common Factor
+            </span>
+          )}
+          {isSpecific && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
+              Hazard-Specific
+            </span>
+          )}
+          {!isCommon && !isSpecific && item.category && item.category !== 'Unclassified' && (
+            <span className="text-xs text-surface-500">{item.category}</span>
+          )}
+        </div>
         <p className="text-sm text-surface-600">
           <span className="font-medium">{item.count}</span> occurrences
         </p>
