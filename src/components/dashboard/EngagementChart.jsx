@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import {
   BarChart,
   Bar,
@@ -16,7 +16,11 @@ const colors = [
   '#14b8a6', '#f59e0b', '#6366f1', '#84cc16', '#06b6d4'
 ]
 
-const EngagementChart = ({ data, onBarClick, activeBar }) => {
+/**
+ * EngagementChart - Horizontal bar chart showing engagement types
+ * Wrapped in React.memo to prevent unnecessary re-renders when parent context changes
+ */
+const EngagementChart = memo(({ data, onBarClick, activeBar }) => {
   // Transform data for chart
   const chartData = ENGAGEMENT_TYPES.map((type, index) => ({
     name: type.label.split(' / ')[0].split(' ').slice(0, 2).join(' '),
@@ -93,6 +97,8 @@ const EngagementChart = ({ data, onBarClick, activeBar }) => {
       </p>
     </div>
   )
-}
+})
+
+EngagementChart.displayName = 'EngagementChart'
 
 export default EngagementChart

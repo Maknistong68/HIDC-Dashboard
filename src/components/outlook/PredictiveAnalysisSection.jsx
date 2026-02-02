@@ -101,6 +101,190 @@ const InterventionSlider = ({ id, label, value, min, max, step = 1, unit = '', o
 }
 
 /**
+ * PredictionInsightSummary - Plain-English summary of prediction data
+ * Makes complex analytics accessible to non-technical users
+ */
+const PredictionInsightSummary = ({ incidentPrediction, baselineData, contextIncidents }) => {
+  // Don't render if no prediction data
+  if (!incidentPrediction?.weekly && !incidentPrediction?.typeProbability?.hasData) {
+    return null
+  }
+
+  // Extract key data points
+  const weekly = incidentPrediction.weekly
+  const monthly = incidentPrediction.monthly
+  const typeProbability = incidentPrediction.typeProbability
+  const typeRisk = incidentPrediction.typeRisk
+  const incidentCount = contextIncidents?.length || 0
+
+  // Most likely type
+  const mostLikelyType = typeProbability?.types?.[0]
+
+  // Highest risk type
+  const highestRisk = typeRisk?.highestRisk
+
+  // Determine trend direction text
+  const getTrendText = (changePercent) => {
+    if (changePercent > 10) return 'higher'
+    if (changePercent < -10) return 'lower'
+    return 'similar to'
+  }
+
+  // Get trend action recommendation
+  const getTrendRecommendation = (changePercent) => {
+    if (changePercent > 20) return 'Extra vigilance is strongly recommended.'
+    if (changePercent > 10) return 'Some additional attention may be warranted.'
+    if (changePercent < -10) return 'Current efforts appear to be effective.'
+    return ''
+  }
+
+  // Format type name for display
+  const formatTypeName = (type) => {
+    if (!type) return 'Unknown'
+    switch (type.toLowerCase()) {
+      case 'near-miss': return 'Near-Miss'
+      case 'fac': return 'FAC (First Aid Case)'
+      case 'mti': return 'MTI (Medical Treatment)'
+      case 'lti': return 'LTI (Lost Time Injury)'
+      default: return type
+    }
+  }
+
+  // Get confidence explanation
+  const getConfidenceExplanation = (confidence) => {
+    switch (confidence) {
+      case 'high':
+        return 'High confidence means your data is consistent and predictions are reliable.'
+      case 'medium':
+        return 'Medium confidence means there is some variation in your data.'
+      case 'low':
+        return '"Low confidence" appears because there is significant variation in your data - actual results may differ from predictions.'
+      default:
+        return ''
+    }
+  }
+
+  return (
+    <div className="px-4 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100">
+      <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+        <Info size={14} className="text-blue-600" />
+        What This Means
+      </h3>
+
+      <div className="space-y-4 text-sm text-surface-700">
+        {/* Data basis */}
+        <p className="text-surface-600 italic">
+          Based on {incidentCount} incident{incidentCount !== 1 ? 's' : ''} recorded in the selected period:
+        </p>
+
+        {/* FORECAST Section */}
+        {(weekly || monthly) && (
+          <div>
+            <p className="font-semibold text-surface-800 mb-1.5">FORECAST</p>
+            <p>
+              {weekly && (
+                <>
+                  Your site is projected to have around <span className="font-bold text-surface-900">{weekly.predicted}</span> incident{weekly.predicted !== 1 ? 's' : ''} next week
+                  {monthly && (
+                    <> and <span className="font-bold text-surface-900">{monthly.predicted}</span> next month</>
+                  )}
+                  .
+                  {weekly.changePercent !== undefined && weekly.changePercent !== 0 && (
+                    <> This is about <span className={`font-semibold ${weekly.changePercent > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {Math.abs(weekly.changePercent)}%
+                    </span> {getTrendText(weekly.changePercent)} your recent averages. {getTrendRecommendation(weekly.changePercent)}</>
+                  )}
+                  {weekly.range && (
+                    <> The range could be anywhere from {weekly.range.min} to {weekly.range.max} depending on conditions.</>
+                  )}
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* INCIDENT TYPES Section */}
+        {(mostLikelyType || highestRisk) && (
+          <div>
+            <p className="font-semibold text-surface-800 mb-1.5">INCIDENT TYPES</p>
+            <p>
+              {mostLikelyType && (
+                <>
+                  <span className="font-bold text-surface-900">{formatTypeName(mostLikelyType.type)}</span> is the most common type ({Math.round(mostLikelyType.probability)}% of incidents)
+                  {highestRisk && highestRisk.type !== mostLikelyType.type && (
+                    <>, but <span className="font-bold text-surface-900">{formatTypeName(highestRisk.type)}</span> is your highest concern right now
+                  </>
+                  )}
+                  {highestRisk && highestRisk.trendChange > 0 && (
+                    <> - {highestRisk.type === mostLikelyType.type ? 'it has' : 'it has'} increased <span className="font-semibold text-amber-600">{highestRisk.trendChange}%</span> compared to the previous period</>
+                  )}
+                  .
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* TOP CONTRIBUTING FACTOR Section */}
+        {baselineData?.topFactors?.[0] && (
+          <div>
+            <p className="font-semibold text-surface-800 mb-1.5">TOP CONTRIBUTING FACTOR</p>
+            <p>
+              <span className="font-bold text-surface-900">{baselineData.topFactors[0].name}</span> accounts for{' '}
+              <span className="font-semibold text-amber-600">
+                {baselineData.totalNegative > 0
+                  ? Math.round((baselineData.topFactors[0].count / baselineData.totalNegative) * 100)
+                  : 0}%
+              </span> of incidents in this period. Addressing this factor could have the greatest impact on reducing incidents.
+            </p>
+          </div>
+        )}
+
+        {/* HOW WE CALCULATED THIS Section */}
+        <div>
+          <p className="font-semibold text-surface-800 mb-1.5">HOW WE CALCULATED THIS</p>
+          <p>
+            These predictions are based on patterns in your last 90 days of recorded incidents.
+            We use statistical methods (linear regression) to project future counts, and weight
+            recent months more heavily when predicting incident types.
+            {weekly?.confidence && (
+              <> {getConfidenceExplanation(weekly.confidence)}</>
+            )}
+          </p>
+        </div>
+
+        {/* WHAT TO CONSIDER Section */}
+        {(highestRisk?.trend === 'increasing' || baselineData?.topFactors?.[0]) && (
+          <div>
+            <p className="font-semibold text-surface-800 mb-1.5">WHAT TO CONSIDER</p>
+            <ul className="list-disc list-inside space-y-1 text-surface-600">
+              {highestRisk?.trend === 'increasing' && (
+                <li>
+                  Focus on reducing <span className="font-semibold text-surface-700">{formatTypeName(highestRisk.type)}</span> incidents - they are trending up
+                </li>
+              )}
+              {baselineData?.topFactors?.[0] && (
+                <li>
+                  The top contributing factor ({baselineData.topFactors[0].name}) accounts for{' '}
+                  {baselineData.totalNegative > 0
+                    ? Math.round((baselineData.topFactors[0].count / baselineData.totalNegative) * 100)
+                    : 0}% of incidents
+                </li>
+              )}
+              {weekly?.changePercent > 15 && (
+                <li>
+                  Weekly incidents are trending upward - consider reviewing recent changes in operations or conditions
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
  * RiskBar - Visual risk level indicator
  */
 const RiskBar = ({ level, label }) => {
@@ -520,6 +704,13 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
           )}
         </div>
       </div>
+
+      {/* Plain-English Summary Section */}
+      <PredictionInsightSummary
+        incidentPrediction={incidentPrediction}
+        baselineData={baselineData}
+        contextIncidents={contextIncidents}
+      />
 
       {/* Methodology disclosure */}
       <div className="border-t border-surface-200">

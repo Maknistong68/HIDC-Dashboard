@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { FileSpreadsheet, Lightbulb } from 'lucide-react'
 import ImportWizard from '../import/ImportWizard'
 import { Card } from '../ui'
 
 /**
  * EmptyState - Dashboard placeholder when no data is loaded
+ * Wrapped in React.memo to prevent unnecessary re-renders
  */
-const EmptyState = ({ onImportComplete }) => {
+const EmptyState = memo(({ onImportComplete }) => {
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Helpful Tip */}
@@ -44,6 +45,8 @@ const EmptyState = ({ onImportComplete }) => {
       </Card>
     </div>
   )
-}
+})
+
+EmptyState.displayName = 'EmptyState'
 
 export default EmptyState

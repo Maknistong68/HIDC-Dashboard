@@ -186,9 +186,15 @@ export const DataProvider = ({ children }) => {
       // Clear caches since data changed
       clearAllCaches()
 
-      // Reload data to get the updated state
-      await reloadIncidents()
+      // Incremental state update: merge new records directly instead of full reload
+      // This avoids fetching all records from IndexedDB after every import
+      setIncidents(prev => [...prev, ...incidentsWithIds])
+
+      // Only reload files list (lightweight) to update the file management UI
       await reloadFiles()
+
+      // Update storage stats in background
+      getStorageStatistics().then(stats => setStorageStats(stats)).catch(console.error)
 
       return {
         fileId: result.fileId,

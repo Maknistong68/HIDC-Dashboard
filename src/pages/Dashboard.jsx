@@ -12,6 +12,11 @@ import {
   ChevronUp,
   Database,
   Download,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Info,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
@@ -36,6 +41,13 @@ import {
   getIncidentsByMonth,
   getOpenActionsCount,
 } from '../utils/calculations'
+import { getIncidentPredictionSummary } from '../utils/insightsCalculations'
+import {
+  IncidentPredictionCard,
+  IncidentTypeProbabilityChart,
+  IncidentTypeRiskIndicator,
+  PredictionMethodologyDisclosure
+} from '../components/insights'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -407,6 +419,11 @@ const Dashboard = () => {
 
   const positiveCount = useMemo(() => {
     return filteredIncidents.filter(i => i.type === 'positive').length
+  }, [filteredIncidents])
+
+  // Incident prediction data for forecasting panel
+  const incidentPrediction = useMemo(() => {
+    return getIncidentPredictionSummary(filteredIncidents)
   }, [filteredIncidents])
 
   // Approval status counts (from original approval column)
@@ -992,6 +1009,167 @@ const Dashboard = () => {
       )}
       </div>
       {/* End of dashboardContentRef wrapper */}
+
+      {/* Incident Prediction Panel */}
+      {incidentPrediction?.hasData && (
+        <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-50 to-amber-50 border-b border-surface-200">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-primary-600" />
+              <h3 className="text-sm font-semibold text-surface-800">Incident Prediction</h3>
+              <InfoTooltip text="HOW PREDICTIONS ARE CALCULATED: The system analyzes your historical incident data to forecast future incidents. Weekly and monthly predictions use linear regression on your data patterns. Type probability shows which incident types are most likely based on recent trends. Risk assessment combines probability with severity to highlight where to focus attention." />
+            </div>
+            <span className="text-xs font-semibold px-2 py-1 rounded bg-amber-100 text-amber-700 uppercase tracking-wide">
+              Projected
+            </span>
+          </div>
+
+          {/* Prediction Content */}
+          <div className="p-4">
+            {/* Weekly & Monthly Predictions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {incidentPrediction.weekly && (
+                <IncidentPredictionCard
+                  period="week"
+                  predicted={incidentPrediction.weekly.predicted}
+                  range={incidentPrediction.weekly.range}
+                  trend={incidentPrediction.weekly.trend}
+                  confidence={incidentPrediction.weekly.confidence}
+                  changePercent={incidentPrediction.weekly.changePercent}
+                />
+              )}
+              {incidentPrediction.monthly && (
+                <IncidentPredictionCard
+                  period="month"
+                  predicted={incidentPrediction.monthly.predicted}
+                  range={incidentPrediction.monthly.range}
+                  trend={incidentPrediction.monthly.trend}
+                  confidence={incidentPrediction.monthly.confidence}
+                  changePercent={incidentPrediction.monthly.changePercent}
+                />
+              )}
+            </div>
+
+            {/* Type Probability & Risk Assessment */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {incidentPrediction.typeProbability?.hasData && (
+                <IncidentTypeProbabilityChart data={incidentPrediction.typeProbability} />
+              )}
+              {incidentPrediction.typeRisk?.hasData && (
+                <IncidentTypeRiskIndicator data={incidentPrediction.typeRisk} />
+              )}
+            </div>
+
+            {/* What This Means - Plain English Summary */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+              <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                <Info size={14} className="text-blue-600" />
+                What This Means
+              </h4>
+
+              <div className="space-y-3 text-sm text-surface-700">
+                <p className="text-surface-600 italic">
+                  Based on {filteredIncidents.length} observation{filteredIncidents.length !== 1 ? 's' : ''} in the selected period:
+                </p>
+
+                {/* Forecast Summary */}
+                {(incidentPrediction.weekly || incidentPrediction.monthly) && (
+                  <div>
+                    <p className="font-semibold text-surface-800 mb-1">FORECAST</p>
+                    <p>
+                      {incidentPrediction.weekly && (
+                        <>
+                          Your site is projected to have around <span className="font-bold text-surface-900">{incidentPrediction.weekly.predicted}</span> incident{incidentPrediction.weekly.predicted !== 1 ? 's' : ''} next week
+                          {incidentPrediction.monthly && (
+                            <> and <span className="font-bold text-surface-900">{incidentPrediction.monthly.predicted}</span> next month</>
+                          )}.
+                          {incidentPrediction.weekly.changePercent !== undefined && incidentPrediction.weekly.changePercent !== 0 && (
+                            <> This is about <span className={`font-semibold ${incidentPrediction.weekly.changePercent > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                              {Math.abs(incidentPrediction.weekly.changePercent)}%
+                            </span> {incidentPrediction.weekly.changePercent > 10 ? 'higher than' : incidentPrediction.weekly.changePercent < -10 ? 'lower than' : 'similar to'} your recent averages.
+                            {incidentPrediction.weekly.changePercent > 20 && ' Extra vigilance is recommended.'}
+                            {incidentPrediction.weekly.changePercent < -10 && ' Current efforts appear effective.'}
+                            </>
+                          )}
+                          {incidentPrediction.weekly.range && (
+                            <> The range could be anywhere from {incidentPrediction.weekly.range.min} to {incidentPrediction.weekly.range.max} depending on conditions.</>
+                          )}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {/* Incident Types Summary */}
+                {incidentPrediction.typeProbability?.types?.[0] && (
+                  <div>
+                    <p className="font-semibold text-surface-800 mb-1">INCIDENT TYPES</p>
+                    <p>
+                      <span className="font-bold text-surface-900">
+                        {incidentPrediction.typeProbability.types[0].type === 'near-miss' ? 'Near-Miss' :
+                         incidentPrediction.typeProbability.types[0].type === 'fac' ? 'FAC (First Aid Case)' :
+                         incidentPrediction.typeProbability.types[0].type === 'mti' ? 'MTI (Medical Treatment)' :
+                         incidentPrediction.typeProbability.types[0].type === 'lti' ? 'LTI (Lost Time Injury)' :
+                         incidentPrediction.typeProbability.types[0].type}
+                      </span> is the most common type ({Math.round(incidentPrediction.typeProbability.types[0].probability)}% of incidents)
+                      {incidentPrediction.typeRisk?.highestRisk && incidentPrediction.typeRisk.highestRisk.type !== incidentPrediction.typeProbability.types[0].type && (
+                        <>, but <span className="font-bold text-surface-900">
+                          {incidentPrediction.typeRisk.highestRisk.type === 'near-miss' ? 'Near-Miss' :
+                           incidentPrediction.typeRisk.highestRisk.type === 'fac' ? 'FAC' :
+                           incidentPrediction.typeRisk.highestRisk.type === 'mti' ? 'MTI' :
+                           incidentPrediction.typeRisk.highestRisk.type === 'lti' ? 'LTI' :
+                           incidentPrediction.typeRisk.highestRisk.type}
+                        </span> is your highest concern right now</>
+                      )}
+                      {incidentPrediction.typeRisk?.highestRisk?.trendChange > 0 && (
+                        <> - it has increased <span className="font-semibold text-amber-600">{incidentPrediction.typeRisk.highestRisk.trendChange}%</span> compared to the previous period</>
+                      )}.
+                    </p>
+                  </div>
+                )}
+
+                {/* Methodology Note */}
+                <div>
+                  <p className="font-semibold text-surface-800 mb-1">HOW WE CALCULATED THIS</p>
+                  <p className="text-surface-600">
+                    These predictions are based on patterns in your recorded incidents. We use statistical methods (linear regression) to project future counts, and weight recent months more heavily when predicting incident types.
+                    {incidentPrediction.weekly?.confidence === 'low' && (
+                      <> "Low confidence" appears because there is significant variation in your data - actual results may differ from predictions.</>
+                    )}
+                  </p>
+                </div>
+
+                {/* Action Items */}
+                {(incidentPrediction.typeRisk?.highestRisk?.trend === 'increasing' || incidentPrediction.weekly?.changePercent > 15) && (
+                  <div>
+                    <p className="font-semibold text-surface-800 mb-1">WHAT TO CONSIDER</p>
+                    <ul className="list-disc list-inside space-y-1 text-surface-600">
+                      {incidentPrediction.typeRisk?.highestRisk?.trend === 'increasing' && (
+                        <li>
+                          Focus on reducing <span className="font-semibold text-surface-700">
+                            {incidentPrediction.typeRisk.highestRisk.type === 'near-miss' ? 'Near-Miss' :
+                             incidentPrediction.typeRisk.highestRisk.type === 'fac' ? 'FAC' :
+                             incidentPrediction.typeRisk.highestRisk.type === 'mti' ? 'MTI' :
+                             incidentPrediction.typeRisk.highestRisk.type === 'lti' ? 'LTI' :
+                             incidentPrediction.typeRisk.highestRisk.type}
+                          </span> incidents - they are trending up
+                        </li>
+                      )}
+                      {incidentPrediction.weekly?.changePercent > 15 && (
+                        <li>Weekly incidents are trending upward - consider reviewing recent changes in operations</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Methodology Disclosure */}
+          <PredictionMethodologyDisclosure methodology={incidentPrediction.methodology} />
+        </div>
+      )}
 
       {/* All Records Section - Collapsible */}
       <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">

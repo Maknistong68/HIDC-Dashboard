@@ -1821,8 +1821,37 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 }
 
 /**
+ * Build a hash index for fast duplicate lookup
+ * Uses composite key: date_contractor (normalized)
+ */
+const buildDuplicateIndex = (items, matchField = 'externalId') => {
+  const idIndex = new Map() // For exact ID matching
+  const hashIndex = new Map() // For date+contractor lookup
+
+  items.forEach(item => {
+    // Index by ID for fast exact matching
+    if (item[matchField]) {
+      idIndex.set(item[matchField], item)
+    }
+
+    // Index by date+contractor for similarity pre-filtering
+    const date = item.date || ''
+    const contractor = (item.contractor || '').toLowerCase().trim()
+    if (date && contractor) {
+      const key = `${date}_${contractor}`
+      if (!hashIndex.has(key)) {
+        hashIndex.set(key, [])
+      }
+      hashIndex.get(key).push(item)
+    }
+  })
+
+  return { idIndex, hashIndex }
+}
+
+/**
  * Check for duplicates against existing data
- * Uses both exact ID matching and smart similarity detection
+ * Uses hash-based lookup for O(n) performance instead of O(n*m)
  *
  * @param {Array} newItems - New items to check
  * @param {Array} existingItems - Existing items to check against
@@ -1835,24 +1864,29 @@ export const checkDuplicates = (newItems, existingItems, matchField = 'externalI
   const skipped = []
   const duplicateDetails = [] // Track detailed duplicate info
 
-  newItems.forEach(item => {
-    // Step 1: Check by exact ID match first (fast path)
-    const existingById = existingItems.find(e =>
-      e[matchField] && item[matchField] && e[matchField] === item[matchField]
-    )
+  // Build hash index once for O(1) lookups
+  const { idIndex, hashIndex } = buildDuplicateIndex(existingItems, matchField)
 
-    if (existingById) {
-      // Exact ID match found
+  newItems.forEach(item => {
+    // Step 1: Check by exact ID match first (O(1) hash lookup)
+    if (item[matchField] && idIndex.has(item[matchField])) {
+      const existingById = idIndex.get(item[matchField])
       handleDuplicate(item, existingById, duplicateHandling, newRecords, updates, skipped, duplicateDetails, 'exact_id')
       return
     }
 
-    // Step 2: Use smart similarity matching (date + contractor + description)
-    // This catches duplicates even when IDs are different or missing
+    // Step 2: Use hash-based pre-filtering for similarity matching
+    // Only check candidates with same date+contractor (reduces comparisons dramatically)
+    const date = item.date || ''
+    const contractor = (item.contractor || '').toLowerCase().trim()
+    const hashKey = `${date}_${contractor}`
+
     let foundSimilar = null
     let similarityResult = null
 
-    for (const existing of existingItems) {
+    // Check candidates from hash bucket (typically 0-5 items instead of thousands)
+    const candidates = hashIndex.get(hashKey) || []
+    for (const existing of candidates) {
       const result = checkDuplicate(item, existing)
       if (result.isDuplicate) {
         foundSimilar = existing

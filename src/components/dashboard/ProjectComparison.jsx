@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import {
   BarChart,
   Bar,
@@ -11,7 +11,11 @@ import {
   ReferenceLine,
 } from 'recharts'
 
-const ProjectComparison = ({ data }) => {
+/**
+ * ProjectComparison - Safety scores by project chart
+ * Wrapped in React.memo to prevent unnecessary re-renders when parent context changes
+ */
+const ProjectComparison = memo(({ data }) => {
   const getBarColor = (score) => {
     if (score >= 80) return '#22c55e'
     if (score >= 60) return '#f97316'
@@ -81,6 +85,8 @@ const ProjectComparison = ({ data }) => {
       </div>
     </div>
   )
-}
+})
+
+ProjectComparison.displayName = 'ProjectComparison'
 
 export default ProjectComparison

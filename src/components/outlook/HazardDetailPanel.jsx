@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { Target } from 'lucide-react'
 import HazardTrendChart from './HazardTrendChart'
 import RootCausePanel from './RootCausePanel'
-import WhatIfSection from './WhatIfSection'
 import { getHazardDailyData } from '../../utils/insightsCalculations'
 import { aggregateRootCausesForHazard, getObservationTypeStats } from '../../utils/rootCauseEngine'
 
@@ -163,13 +162,6 @@ const HazardDetailPanel = ({ hazard, incidents, timePeriod }) => {
           />
         )}
       </div>
-
-      {/* What-If Simulation Section */}
-      <WhatIfSection
-        hazard={hazard}
-        incidents={incidents}
-        timePeriod={timePeriod}
-      />
     </div>
   )
 }
