@@ -625,220 +625,791 @@ export const HAZARD_SPECIFIC_FACTORS = {
 
   'Confined Spaces': {
     'Atmospheric hazard': [
-      'atmospheric', 'atmosphere', 'gas test', 'gas detection', 'oxygen',
-      'toxic gas', 'h2s', 'hydrogen sulfide', 'co', 'carbon monoxide',
-      'lel', 'lower explosive limit', 'toxic atmosphere', 'oxygen deficient',
-      'gas monitor', 'four gas', '4 gas'
+      // Core terms
+      'atmospheric', 'atmospherics', 'atmosphere', 'atmospheres', 'atmo',
+      // Misspellings
+      'atmosferic', 'atmosphric', 'atmopheric', 'atmospher', 'atmosphear',
+      // Gas testing
+      'gas test', 'gas tests', 'gas testing', 'gas tested', 'gas tester',
+      'gas detection', 'gas detector', 'gas detectors', 'gas monitoring',
+      'gas monitor', 'gas monitors', 'continuous monitoring', 'bump test',
+      'calibration', 'calibrated', 'four gas', '4 gas', 'multi gas', 'single gas',
+      // Oxygen
+      'oxygen', 'o2', 'oxygen level', 'oxygen deficient', 'oxygen enriched',
+      'low oxygen', 'high oxygen', 'hypoxia', 'asphyxiation', 'asphyxiant',
+      'oxygen depletion', 'oxygen concentration', '19.5%', '23.5%',
+      // Toxic gases
+      'toxic gas', 'toxic gases', 'toxic atmosphere', 'toxic fumes',
+      'h2s', 'hydrogen sulfide', 'hydrogen sulphide', 'sour gas',
+      'co', 'carbon monoxide', 'carbon dioxide', 'co2', 'methane', 'ch4',
+      'ammonia', 'nh3', 'chlorine', 'cl2', 'so2', 'sulfur dioxide',
+      'nitrogen', 'n2', 'argon', 'inert gas', 'inert atmosphere',
+      // Explosive
+      'lel', 'l.e.l', 'lower explosive limit', 'uel', 'upper explosive limit',
+      'flammable atmosphere', 'explosive atmosphere', 'combustible gas',
+      '%lel', 'percent lel', 'explosive range', 'flash point',
+      // Issues
+      'gas alarm', 'alarm activation', 'high reading', 'abnormal reading',
+      'test not done', 'test overdue', 'continuous testing', 'pre-entry test'
     ],
     'Rescue plan missing': [
-      'rescue plan', 'rescue equipment', 'rescue team', 'emergency rescue',
-      'tripod', 'davit', 'retrieval system', 'rescue winch', 'no rescue plan',
-      'rescue procedure', 'self rescue'
+      // Core terms
+      'rescue plan', 'rescue plans', 'rescue', 'rescuer', 'rescuers',
+      // Misspellings
+      'resuce plan', 'resque plan', 'recue plan', 'rescue pln', 'resue plan',
+      // Equipment
+      'rescue equipment', 'rescue gear', 'rescue team', 'rescue standby',
+      'emergency rescue', 'rescue capability', 'rescue provisions',
+      'tripod', 'tripods', 'rescue tripod', 'entry tripod',
+      'davit', 'davits', 'davit arm', 'davit base',
+      'retrieval system', 'retrieval systems', 'retrieval line', 'retrieval device',
+      'rescue winch', 'winch', 'man riding winch', 'fall arrest winch',
+      'breathing apparatus', 'ba', 'scba', 'escape set', 'emergency breathing',
+      'stretcher', 'basket stretcher', 'rescue basket', 'spine board',
+      // Procedure
+      'rescue procedure', 'rescue procedures', 'self rescue', 'self-rescue',
+      'emergency procedure', 'evacuation procedure', 'entry procedure',
+      // Issues
+      'no rescue plan', 'rescue plan missing', 'missing rescue plan',
+      'rescue plan inadequate', 'inadequate rescue', 'no rescue equipment',
+      'rescue equipment missing', 'rescue team not available', 'no standby'
     ],
     'Attendant absent': [
-      'attendant', 'hole watch', 'top man', 'entry attendant', 'standby person',
-      'no attendant', 'attendant absent', 'watchman', 'safety watch'
+      // Core terms
+      'attendant', 'attendants', 'attend', 'attended', 'attending',
+      // Misspellings
+      'attendent', 'attendnet', 'attendat', 'atendant', 'attendand',
+      // Roles
+      'hole watch', 'holewatch', 'hole watcher', 'top man', 'topman',
+      'entry attendant', 'confined space attendant', 'csa',
+      'standby person', 'standby man', 'standby', 'stand-by',
+      'watchman', 'watch man', 'safety watch', 'safety watcher',
+      'entry supervisor', 'entry controller', 'permit holder',
+      'outside attendant', 'exterior attendant',
+      // Issues
+      'no attendant', 'attendant absent', 'attendant missing', 'missing attendant',
+      'attendant not present', 'attendant left', 'unattended entry',
+      'attendant distracted', 'attendant away', 'no one watching',
+      'lone entry', 'solo entry', 'entered alone', 'working alone'
     ],
     'Ventilation inadequate': [
-      'ventilation', 'forced air', 'blower', 'fan', 'air supply',
-      'air circulation', 'no ventilation', 'inadequate ventilation',
-      'ventilation failure', 'fresh air'
+      // Core terms
+      'ventilation', 'ventilate', 'ventilated', 'ventilating', 'vent',
+      // Misspellings
+      'ventilaton', 'ventillation', 'ventilaiton', 'ventialtion', 'ventlation',
+      // Types
+      'forced air', 'forced ventilation', 'mechanical ventilation',
+      'natural ventilation', 'continuous ventilation', 'local ventilation',
+      'blower', 'blowers', 'fan', 'fans', 'air mover', 'air movers',
+      'ducting', 'ductwork', 'flexible duct', 'ventilation duct',
+      'air supply', 'fresh air supply', 'supply air', 'inlet air',
+      'exhaust', 'exhaust air', 'extraction', 'air extraction',
+      // Issues
+      'air circulation', 'poor circulation', 'stagnant air', 'dead air',
+      'no ventilation', 'ventilation missing', 'missing ventilation',
+      'inadequate ventilation', 'insufficient ventilation', 'poor ventilation',
+      'ventilation failure', 'ventilation failed', 'fan not working',
+      'fresh air', 'no fresh air', 'air quality', 'poor air quality',
+      'air change', 'air changes', 'cfm', 'air flow', 'airflow'
     ],
     'Isolation failure': [
-      'isolation', 'isolate', 'isolated', 'lockout', 'lock out', 'loto',
-      'energy isolation', 'not isolated', 'isolation failure', 'blind',
-      'blank flange', 'double block', 'bleed'
+      // Core terms
+      'isolation', 'isolate', 'isolated', 'isolating', 'isolator',
+      // Misspellings
+      'isolaton', 'isolaiton', 'isloation', 'isolatoin', 'isolatioin',
+      // Methods
+      'lockout', 'lock out', 'lock-out', 'loto', 'lototo',
+      'tagout', 'tag out', 'tag-out', 'lockout tagout', 'lock out tag out',
+      'energy isolation', 'electrical isolation', 'mechanical isolation',
+      'process isolation', 'pipeline isolation', 'system isolation',
+      'blind', 'blinds', 'blinding', 'spectacle blind', 'spade', 'paddle',
+      'blank flange', 'blank flanges', 'blanking plate', 'blanked',
+      'double block', 'double block and bleed', 'dbb', 'block and bleed',
+      'valve isolation', 'valve closed', 'valve locked', 'valve tagged',
+      // Issues
+      'not isolated', 'isolation failure', 'isolation failed', 'failed isolation',
+      'partial isolation', 'incomplete isolation', 'inadequate isolation',
+      'isolation breached', 'isolation bypassed', 'isolation removed',
+      'isolation not verified', 'zero energy', 'stored energy', 'residual energy'
     ]
   },
 
   'Energized System': {
     'LOTO not applied': [
-      'loto', 'lockout', 'lock out', 'tagout', 'tag out', 'lockout tagout',
-      'energy isolation', 'no lockout', 'loto missing', 'lock missing',
-      'isolation not applied', 'stored energy'
+      // Core terms
+      'loto', 'l.o.t.o', 'lototo', 'lockout', 'lock out', 'lock-out',
+      // Misspellings
+      'loto', 'lockou', 'lok out', 'lockot', 'lock outt', 'lockouttag',
+      // Tagout
+      'tagout', 'tag out', 'tag-out', 'tagging', 'tagged',
+      'lockout tagout', 'lock out tag out', 'lockout/tagout',
+      // Energy isolation
+      'energy isolation', 'energy control', 'hazardous energy',
+      'control of hazardous energy', 'cohe', 'safe isolation',
+      // Issues
+      'no lockout', 'lockout missing', 'missing lockout', 'without lockout',
+      'loto missing', 'loto not applied', 'loto not performed',
+      'lock missing', 'no lock', 'tag missing', 'no tag',
+      'isolation not applied', 'not isolated', 'live work',
+      'stored energy', 'residual energy', 'potential energy',
+      'capacitor', 'spring', 'gravity', 'hydraulic', 'pneumatic',
+      'try out', 'try-out', 'verification', 'verification not done',
+      'personal lock', 'group lock', 'lock box', 'hasp', 'multi lock'
     ],
     'Live exposure': [
-      'live', 'energized', 'energised', 'live work', 'working live',
-      'live conductor', 'live wire', 'live circuit', 'live parts',
-      'electrical exposure', 'shock hazard', 'arc flash'
+      // Core terms
+      'live', 'energized', 'energised', 'powered', 'active',
+      // Misspellings
+      'enrgized', 'energzed', 'energied', 'energiezd', 'engerized',
+      // Work types
+      'live work', 'live working', 'working live', 'hot work',
+      'live line', 'live line work', 'barehand', 'bare hand',
+      // Exposure
+      'live conductor', 'live wire', 'live wires', 'live circuit',
+      'live parts', 'live components', 'exposed live', 'live exposed',
+      'electrical exposure', 'contact with live', 'touch live',
+      // Hazards
+      'shock hazard', 'electric shock', 'electrical shock', 'electrocution',
+      'arc flash', 'arc blast', 'arc hazard', 'flash hazard',
+      'arc rated', 'arc flash boundary', 'incident energy',
+      'voltage', 'high voltage', 'hv', 'low voltage', 'lv', 'medium voltage', 'mv',
+      'current', 'amperage', 'amps', 'danger of death', 'fatal'
     ],
     'Exposed conductor': [
-      'exposed wire', 'exposed conductor', 'bare wire', 'damaged cable',
-      'insulation damage', 'cable damage', 'frayed wire', 'conductor exposed'
+      // Core terms
+      'exposed wire', 'exposed wires', 'exposed conductor', 'exposed conductors',
+      // Misspellings
+      'exposd wire', 'exposed wier', 'exopsed', 'expossed', 'expoed conductor',
+      // Types
+      'bare wire', 'bare wires', 'bare conductor', 'naked wire',
+      'uninsulated', 'uninsulated wire', 'uninsulated conductor',
+      'stripped wire', 'stripped conductor', 'wire stripping',
+      // Cable issues
+      'damaged cable', 'cable damage', 'cable damaged', 'damaged cord',
+      'insulation damage', 'insulation damaged', 'damaged insulation',
+      'insulation cut', 'insulation torn', 'insulation worn',
+      'frayed wire', 'frayed cable', 'frayed cord', 'fraying',
+      'conductor exposed', 'copper exposed', 'wire showing',
+      'cable sheath', 'outer sheath', 'inner insulation',
+      'pinched cable', 'crushed cable', 'burnt cable', 'melted insulation',
+      'cable deterioration', 'cable degradation', 'cable aging'
     ],
     'Panel/enclosure open': [
-      'panel open', 'enclosure open', 'switchboard', 'distribution board',
-      'mcc', 'panel cover', 'panel door', 'electrical panel', 'junction box',
-      'cover missing', 'enclosure unsecured'
+      // Core terms
+      'panel open', 'panel opened', 'open panel', 'enclosure open',
+      // Misspellings
+      'pannel open', 'panal open', 'pnel open', 'encloser open', 'enlosure open',
+      // Types
+      'switchboard', 'switchboards', 'distribution board', 'db',
+      'mcc', 'motor control center', 'motor control centre',
+      'electrical panel', 'panel board', 'panelboard', 'breaker panel',
+      'junction box', 'j-box', 'jb', 'pull box', 'terminal box',
+      'control panel', 'control cabinet', 'electrical enclosure',
+      'transformer', 'transformer enclosure', 'substation',
+      'vfd', 'variable frequency drive', 'starter', 'motor starter',
+      // Issues
+      'panel cover', 'panel door', 'cover missing', 'door missing',
+      'cover open', 'door open', 'cover removed', 'door removed',
+      'enclosure unsecured', 'panel unsecured', 'not closed', 'left open',
+      'knockout missing', 'knockout open', 'cable entry', 'gland missing',
+      'dead front', 'live front', 'finger safe', 'ip rating'
     ],
     'Grounding fault': [
-      'ground', 'grounding', 'earthing', 'earth', 'ground fault',
-      'grounding missing', 'no ground', 'earth connection', 'bonding',
-      'equipotential', 'ground cable'
+      // Core terms
+      'ground', 'grounding', 'grounded', 'grounds',
+      'earth', 'earthing', 'earthed', 'earths',
+      // Misspellings
+      'grouding', 'grouning', 'gronduing', 'earthign', 'eathing', 'erth',
+      // Types
+      'ground fault', 'earth fault', 'ground-fault', 'earth-fault',
+      'gfci', 'gfi', 'rcd', 'residual current', 'elcb', 'rcbo',
+      'equipment grounding', 'system grounding', 'protective earth',
+      'ground connection', 'earth connection', 'ground wire', 'earth wire',
+      'bonding', 'bonded', 'equipotential', 'equipotential bonding',
+      'grounding conductor', 'earth conductor', 'ground cable', 'earth cable',
+      'ground rod', 'earth rod', 'ground electrode', 'earth electrode',
+      // Issues
+      'grounding missing', 'no ground', 'no grounding', 'ground missing',
+      'earthing missing', 'no earth', 'no earthing', 'earth missing',
+      'ground disconnected', 'earth disconnected', 'ground broken',
+      'inadequate grounding', 'insufficient earthing', 'poor ground',
+      'ground continuity', 'earth continuity', 'ground resistance', 'earth loop'
     ]
   },
 
   'Hot Work': {
     'Fire watch absent': [
-      'fire watch', 'firewatch', 'fire watcher', 'fire patrol',
+      // Core terms
+      'fire watch', 'firewatch', 'fire-watch', 'fire watcher', 'fire watchers',
+      // Misspellings
+      'fier watch', 'fire wach', 'fire wtach', 'firewtch', 'firewatcher',
+      // Types
+      'fire patrol', 'fire patrolman', 'hot work watch', 'hot work watcher',
+      'spark watch', 'spark watcher', 'watch person', 'watchman',
+      'fire safety watch', 'fire guard', 'fire sentry', 'fire duty',
+      // Timing
+      'fire watch during', 'fire watch after', 'post-weld watch',
+      '30 minute watch', '60 minute watch', 'continuous watch',
+      // Issues
       'no fire watch', 'fire watch absent', 'fire watch missing',
-      'hot work watch', 'spark watch'
+      'missing fire watch', 'without fire watch', 'fire watch not present',
+      'fire watch left', 'fire watch departed', 'abandoned fire watch',
+      'fire watch inadequate', 'insufficient fire watch'
     ],
     'Welding screen missing': [
-      'welding screen', 'weld screen', 'flash screen', 'welding curtain',
-      'flash curtain', 'screen missing', 'no screen', 'weld shield'
+      // Core terms
+      'welding screen', 'weld screen', 'welding screens', 'weld screens',
+      // Misspellings
+      'weding screen', 'weldin screen', 'weld screan', 'welding scren',
+      // Types
+      'flash screen', 'flash screens', 'welding curtain', 'welding curtains',
+      'flash curtain', 'flash curtains', 'weld shield', 'welding shield',
+      'spatter screen', 'spatter curtain', 'protective screen', 'spark screen',
+      'welding blanket', 'fire blanket', 'welding mat', 'fire mat',
+      // Issues
+      'screen missing', 'missing screen', 'no screen', 'screen absent',
+      'curtain missing', 'missing curtain', 'no curtain', 'shield missing',
+      'screen not installed', 'screen removed', 'screen inadequate',
+      'screen damaged', 'screen hole', 'screen torn', 'screen gap'
     ],
     'Spark escape': [
-      'spark', 'sparks', 'spatter', 'slag', 'spark containment',
-      'spark escape', 'flying sparks', 'hot slag', 'molten metal'
+      // Core terms
+      'spark', 'sparks', 'sparking', 'sparked',
+      // Misspellings
+      'sparks', 'sprk', 'sparkes', 'sparkz', 'spatk',
+      // Types
+      'spatter', 'spatters', 'spattered', 'spattering', 'weld spatter',
+      'slag', 'slags', 'hot slag', 'flying slag', 'molten slag',
+      'molten metal', 'molten', 'hot metal', 'burning metal',
+      'grinding sparks', 'cutting sparks', 'welding sparks',
+      // Issues
+      'spark containment', 'spark control', 'spark escape', 'spark escaped',
+      'flying sparks', 'sparks flying', 'sparks escaping', 'loose sparks',
+      'uncontained sparks', 'spark spread', 'spark travel', 'spark drift',
+      'hot particle', 'hot particles', 'incandescent', 'ember', 'embers',
+      'spark ignition', 'spark fire', 'spark started fire'
     ],
     'Cylinder unsecured': [
-      'cylinder', 'gas cylinder', 'bottle', 'oxygen cylinder', 'acetylene',
-      'cylinder unsecured', 'cylinder not chained', 'cylinder storage',
-      'cylinder handling', 'regulator', 'flashback arrestor'
+      // Core terms
+      'cylinder', 'cylinders', 'gas cylinder', 'gas cylinders',
+      // Misspellings
+      'cylindar', 'cylander', 'cilinder', 'cylindr', 'cylindre', 'clinder',
+      // Types
+      'bottle', 'bottles', 'gas bottle', 'gas bottles',
+      'oxygen cylinder', 'oxygen bottle', 'o2 cylinder', 'o2 bottle',
+      'acetylene', 'acetylene cylinder', 'acetylene bottle', 'c2h2',
+      'propane', 'propane cylinder', 'lpg', 'lpg cylinder',
+      'argon', 'argon cylinder', 'co2 cylinder', 'nitrogen cylinder',
+      'shielding gas', 'fuel gas', 'inert gas cylinder',
+      // Security
+      'cylinder unsecured', 'unsecured cylinder', 'cylinder loose',
+      'cylinder not chained', 'unchained', 'cylinder not secured',
+      'cylinder not strapped', 'cylinder fallen', 'cylinder tipped',
+      'cylinder storage', 'cylinder stand', 'cylinder trolley', 'cylinder cart',
+      'cylinder handling', 'cylinder transport', 'cylinder moving',
+      // Components
+      'regulator', 'regulators', 'pressure regulator', 'flow regulator',
+      'flashback arrestor', 'flashback arrestors', 'flash arrestor',
+      'check valve', 'hose', 'hoses', 'gas hose', 'twin hose',
+      'valve', 'cylinder valve', 'valve cap', 'cap missing'
     ],
     'Combustible nearby': [
-      'combustible', 'flammable', 'flammable material', 'combustible material',
-      'fuel', 'solvent', 'paint', 'wood', 'cardboard', 'paper',
-      'combustible nearby', 'flammable nearby', 'fire load'
+      // Core terms
+      'combustible', 'combustibles', 'flammable', 'flammables',
+      // Misspellings
+      'combustable', 'combusible', 'flamable', 'flameable', 'flamible',
+      // Materials
+      'flammable material', 'flammable materials', 'combustible material',
+      'combustible materials', 'flammable substance', 'combustible substance',
+      'fuel', 'fuels', 'petrol', 'gasoline', 'diesel', 'kerosene',
+      'solvent', 'solvents', 'thinner', 'thinners', 'acetone',
+      'paint', 'paints', 'lacquer', 'varnish', 'coating', 'coatings',
+      'oil', 'oils', 'grease', 'lubricant', 'lubricants',
+      'wood', 'wooden', 'timber', 'lumber', 'plywood', 'mdf', 'osb',
+      'cardboard', 'paper', 'papers', 'packaging', 'pallet', 'pallets',
+      'plastic', 'plastics', 'foam', 'insulation', 'polystyrene',
+      'rags', 'oily rags', 'cloth', 'fabric', 'textile',
+      // Proximity
+      'combustible nearby', 'flammable nearby', 'near combustible',
+      'near flammable', 'close to', 'adjacent to', 'in proximity',
+      'fire load', 'fuel load', 'clearance', 'safe distance',
+      '35 feet', '35 foot', '11 meters', '11 metres', 'hot work radius'
     ]
   },
 
   'Fire': {
     'Extinguisher missing/expired': [
-      'extinguisher', 'fire extinguisher', 'extinguisher missing',
-      'extinguisher expired', 'no extinguisher', 'extinguisher inspection',
-      'extinguisher service', 'fire fighting equipment'
+      // Core terms
+      'extinguisher', 'extinguishers', 'fire extinguisher', 'fire extinguishers',
+      // Misspellings
+      'extingusher', 'extinghisher', 'extinguiser', 'extingisher', 'extingiusher',
+      'extinguishr', 'extiguisher', 'extingisher', 'fire extinghisher',
+      // Types
+      'abc extinguisher', 'co2 extinguisher', 'water extinguisher',
+      'foam extinguisher', 'powder extinguisher', 'wet chemical',
+      'class a', 'class b', 'class c', 'class d', 'class k',
+      // Issues
+      'extinguisher missing', 'missing extinguisher', 'no extinguisher',
+      'extinguisher expired', 'expired extinguisher', 'extinguisher out of date',
+      'extinguisher overdue', 'extinguisher inspection', 'extinguisher service',
+      'fire fighting equipment', 'firefighting equipment',
+      'extinguisher empty', 'extinguisher discharged', 'extinguisher used',
+      'extinguisher damaged', 'extinguisher tampered', 'seal broken',
+      'pressure low', 'gauge red', 'pin missing', 'nozzle missing',
+      'extinguisher obstructed', 'extinguisher blocked', 'not accessible'
     ],
     'Exit blocked': [
-      'exit blocked', 'emergency exit', 'fire exit', 'egress blocked',
-      'escape route', 'exit obstruction', 'blocked exit', 'exit door',
-      'evacuation route', 'means of escape'
+      // Core terms
+      'exit blocked', 'blocked exit', 'exit obstruction', 'exit obstructed',
+      // Misspellings
+      'exti blocked', 'exit bloked', 'exit block', 'exitblocked', 'blockd exit',
+      // Types
+      'emergency exit', 'fire exit', 'escape exit', 'egress',
+      'escape route', 'escape routes', 'evacuation route', 'evacuation routes',
+      'exit door', 'exit doors', 'fire door', 'fire doors',
+      'means of escape', 'means of egress', 'escape path', 'escape paths',
+      'stairway', 'stairwell', 'fire stair', 'emergency stair',
+      'corridor', 'corridors', 'hallway', 'hallways', 'passageway',
+      // Issues
+      'egress blocked', 'blocked egress', 'route blocked', 'blocked route',
+      'obstruction', 'obstructed', 'blocked', 'congested', 'impassable',
+      'materials blocking', 'equipment blocking', 'storage blocking',
+      'door locked', 'door stuck', 'door jammed', 'door blocked',
+      'exit sign', 'exit sign missing', 'exit sign not lit', 'exit sign obscured'
     ],
     'Alarm failure': [
-      'fire alarm', 'alarm', 'smoke detector', 'heat detector',
-      'alarm failure', 'alarm disabled', 'detector', 'alarm not working',
-      'fire detection', 'alarm system'
+      // Core terms
+      'fire alarm', 'fire alarms', 'alarm', 'alarms',
+      // Misspellings
+      'alram', 'alrm', 'alarrm', 'fier alarm', 'fire alram',
+      // Types
+      'smoke detector', 'smoke detectors', 'smoke alarm', 'smoke alarms',
+      'heat detector', 'heat detectors', 'thermal detector',
+      'flame detector', 'flame detectors', 'uv detector', 'ir detector',
+      'manual call point', 'mcp', 'pull station', 'break glass',
+      'fire detection', 'fire detection system', 'alarm system',
+      'sounder', 'sounders', 'bell', 'bells', 'siren', 'sirens',
+      'strobe', 'strobes', 'beacon', 'beacons', 'visual alarm',
+      'annunciator', 'fire panel', 'control panel',
+      // Issues
+      'alarm failure', 'alarm failed', 'alarm not working', 'alarm faulty',
+      'alarm disabled', 'alarm silenced', 'alarm isolated', 'alarm bypassed',
+      'detector', 'detector faulty', 'detector covered', 'detector dirty',
+      'detector missing', 'detector damaged', 'detector obstructed',
+      'false alarm', 'nuisance alarm', 'unwanted alarm', 'test overdue'
     ],
     'Ignition source': [
-      'ignition', 'ignition source', 'spark source', 'hot surface',
-      'naked flame', 'open flame', 'heat source', 'pilot light',
-      'electrical ignition'
+      // Core terms
+      'ignition', 'ignitions', 'ignited', 'igniting', 'ignite',
+      // Misspellings
+      'igntion', 'igniton', 'ignission', 'ingnition', 'ignishon',
+      // Sources
+      'ignition source', 'ignition sources', 'source of ignition',
+      'spark source', 'spark', 'sparks', 'sparking', 'electrical spark',
+      'hot surface', 'hot surfaces', 'hot work', 'heat source', 'heat sources',
+      'naked flame', 'open flame', 'open fire', 'flame', 'flames',
+      'pilot light', 'pilot flame', 'burner', 'burners', 'torch',
+      'lighter', 'matches', 'match', 'smoking', 'cigarette', 'smoke',
+      // Electrical
+      'electrical ignition', 'electrical spark', 'arc', 'arcing',
+      'short circuit', 'electrical fault', 'overheated', 'overheating',
+      'static', 'static electricity', 'static discharge', 'esd',
+      // Other sources
+      'friction', 'impact spark', 'mechanical spark', 'exhaust',
+      'engine', 'motor', 'heater', 'heating element', 'light bulb'
     ],
     'Fire door propped': [
-      'fire door', 'fire door propped', 'door propped', 'fire door open',
-      'fire door wedged', 'fire separation', 'compartmentation'
+      // Core terms
+      'fire door', 'fire doors', 'firedoor', 'fire-door',
+      // Misspellings
+      'fier door', 'fire dor', 'fire dorr', 'firedorr', 'fire doar',
+      // Actions
+      'fire door propped', 'door propped', 'propped open', 'propped door',
+      'fire door open', 'fire door left open', 'fire door ajar',
+      'fire door wedged', 'wedged open', 'door wedge', 'doorstop',
+      'fire door held', 'held open', 'fire door tied', 'tied back',
+      // Components
+      'door closer', 'self closing', 'automatic closer', 'closer failed',
+      'closer missing', 'closer disabled', 'closer bypassed',
+      'intumescent', 'intumescent strip', 'smoke seal', 'seal damaged',
+      // Fire safety
+      'fire separation', 'fire compartment', 'compartmentation',
+      'fire rating', 'fire rated', '30 minute', '60 minute', '90 minute',
+      'fire barrier', 'fire stop', 'fire stopping', 'breach'
     ]
   },
 
   'Mobile Plant & Equipment': {
     'Banksman absent': [
-      'banksman', 'banks man', 'spotter', 'signaller', 'signaler',
-      'signal man', 'no banksman', 'banksman absent', 'guide',
-      'flagman', 'traffic marshal', 'no spotter'
+      // Core terms
+      'banksman', 'banksmen', 'banks man', 'banks-man', 'bankswoman',
+      // Misspellings
+      'bankman', 'bankmans', 'banksmn', 'bansman', 'banksmen', 'bacnksman',
+      // Alternative roles
+      'spotter', 'spotters', 'spot man', 'no spotter', 'spotter absent',
+      'signaller', 'signallers', 'signaler', 'signalers', 'signal man',
+      'signalman', 'signalmen', 'signalperson',
+      'guide', 'guides', 'guiding', 'guided', 'no guide', 'guide absent',
+      'flagman', 'flagmen', 'flag man', 'flagger', 'flaggers',
+      'traffic marshal', 'traffic controller', 'traffic management',
+      // Issues
+      'no banksman', 'banksman absent', 'banksman missing', 'missing banksman',
+      'without banksman', 'banksman not present', 'banksman left',
+      'reversing without', 'unsupervised reversing', 'unguided',
+      'no signals', 'signals not used', 'hand signals', 'radio communication'
     ],
     'Exclusion zone breach': [
-      'exclusion zone', 'danger zone', 'swing radius', 'swing zone',
-      'drop zone', 'zone breach', 'entered zone', 'exclusion area',
-      'no exclusion zone', 'zone not established'
+      // Core terms
+      'exclusion zone', 'exclusion zones', 'exclusion area', 'exclusion areas',
+      // Misspellings
+      'exlusion zone', 'excluson zone', 'eclusion zone', 'exculison zone',
+      // Types
+      'danger zone', 'danger zones', 'hazard zone', 'hazard area',
+      'swing radius', 'swing zone', 'slew zone', 'tail swing', 'counterweight swing',
+      'drop zone', 'drop area', 'lift zone', 'crane zone', 'working zone',
+      'safety zone', 'keep out zone', 'restricted zone', 'no go zone',
+      'operating radius', 'machine radius', 'equipment radius',
+      // Issues
+      'zone breach', 'breached zone', 'entered zone', 'in zone',
+      'zone incursion', 'zone violation', 'inside zone', 'within zone',
+      'no exclusion zone', 'zone not established', 'zone not marked',
+      'zone inadequate', 'zone too small', 'zone barriers', 'zone demarcation'
     ],
     'Blind spot': [
-      'blind spot', 'blind area', 'visibility', 'cannot see',
-      'obstructed view', 'mirror', 'camera', 'reversing camera',
-      'rear view', 'view blocked'
+      // Core terms
+      'blind spot', 'blind spots', 'blindspot', 'blindspots', 'blind-spot',
+      // Misspellings
+      'blnd spot', 'blind sopt', 'blidspot', 'blind spott',
+      // Visibility
+      'blind area', 'blind areas', 'visibility', 'poor visibility',
+      'cannot see', 'can not see', 'could not see', 'no visibility',
+      'obstructed view', 'view obstructed', 'blocked view', 'view blocked',
+      'limited visibility', 'restricted view', 'sight line', 'line of sight',
+      // Equipment
+      'mirror', 'mirrors', 'side mirror', 'rear mirror', 'wing mirror',
+      'camera', 'cameras', 'reversing camera', 'rear camera', 'backup camera',
+      'rear view', 'rearview', 'rear-view', 'reverse view',
+      'monitor', 'display', 'screen', 'cctv',
+      // Issues
+      'mirror missing', 'mirror broken', 'mirror dirty', 'mirror adjusted',
+      'camera not working', 'camera obscured', 'camera dirty'
     ],
     'Equipment defect': [
-      'defect', 'defective', 'fault', 'faulty', 'broken', 'damaged',
-      'malfunction', 'not working', 'out of order', 'inoperable',
-      'equipment failure', 'mechanical failure'
+      // Core terms
+      'defect', 'defects', 'defective', 'deficiency', 'deficiencies',
+      // Misspellings
+      'defct', 'deffect', 'defet', 'defecte', 'defetive', 'deffective',
+      // Issues
+      'fault', 'faults', 'faulty', 'faulted', 'malfunction', 'malfunctioning',
+      'broken', 'broke', 'breaking', 'damaged', 'damage', 'damaging',
+      'not working', 'doesn\'t work', 'won\'t work', 'stopped working',
+      'out of order', 'out of service', 'inoperable', 'inoperative',
+      'equipment failure', 'mechanical failure', 'hydraulic failure',
+      'engine failure', 'brake failure', 'steering failure',
+      // Inspection
+      'pre-use check', 'preuse', 'daily check', 'daily inspection',
+      'defect report', 'defect reported', 'defect tag', 'quarantine',
+      'machine defect', 'plant defect', 'vehicle defect'
     ],
     'Pedestrian conflict': [
-      'pedestrian', 'pedestrian conflict', 'pedestrian interface',
-      'pedestrian crossing', 'pedestrian route', 'foot traffic',
-      'pedestrian separation', 'pedestrian walkway', 'pedestrian struck'
+      // Core terms
+      'pedestrian', 'pedestrians', 'pedestrain', 'pedestiran',
+      // Misspellings
+      'pedetrian', 'pedestrien', 'pedistrian', 'pedestrain', 'pedestrianss',
+      // Conflict types
+      'pedestrian conflict', 'pedestrian interface', 'pedestrian interaction',
+      'pedestrian crossing', 'pedestrian crossings', 'people crossing',
+      'pedestrian route', 'pedestrian routes', 'pedestrian path',
+      'foot traffic', 'foot traffic area', 'walking area',
+      'pedestrian separation', 'segregation', 'no segregation',
+      'pedestrian walkway', 'walkway', 'walkways', 'footpath',
+      // Incidents
+      'pedestrian struck', 'struck pedestrian', 'hit pedestrian',
+      'pedestrian injury', 'pedestrian near miss', 'close call',
+      'pedestrian in path', 'people in way', 'workers nearby'
     ]
   },
 
   'Breaking Ground & Excavation': {
     'Services not located': [
-      'service strike', 'underground service', 'utility', 'cable strike',
-      'pipe strike', 'cat scan', 'cable avoidance', 'gpr', 'ground penetrating',
-      'service location', 'utility location', 'buried service', 'dial before dig'
+      // Core terms
+      'service strike', 'services strike', 'struck service', 'hit service',
+      // Misspellings
+      'servise strike', 'sevice strike', 'service stike', 'serivce',
+      // Services
+      'underground service', 'underground services', 'buried service',
+      'utility', 'utilities', 'utility strike', 'utility damage',
+      'cable strike', 'cable', 'cables', 'power cable', 'electrical cable',
+      'pipe strike', 'pipe', 'pipes', 'gas pipe', 'water pipe', 'sewer',
+      'fibre', 'fiber', 'fibre optic', 'fiber optic', 'telecom', 'telecoms',
+      // Detection
+      'cat scan', 'cat scanner', 'cable avoidance tool', 'cat and genny',
+      'gpr', 'ground penetrating radar', 'ground radar',
+      'service location', 'locate', 'locator', 'locating', 'located',
+      'utility location', 'utility locator', 'mark out', 'marked out',
+      'dial before dig', 'call before dig', 'one call', '811',
+      'service drawing', 'as built', 'as-built', 'service plan',
+      // Issues
+      'services not located', 'services unknown', 'no service check',
+      'service check not done', 'hand dig', 'trial hole', 'trial pit'
     ],
     'Shoring inadequate': [
-      'shoring', 'trench box', 'trench shield', 'battering', 'benching',
-      'shoring inadequate', 'no shoring', 'support inadequate',
-      'trench support', 'excavation support'
+      // Core terms
+      'shoring', 'shore', 'shores', 'shored', 'shorer',
+      // Misspellings
+      'shoreing', 'shorring', 'shoring', 'shoaring', 'shorng',
+      // Types
+      'trench box', 'trench boxes', 'trench shield', 'trench shields',
+      'hydraulic shores', 'timber shoring', 'steel shoring', 'aluminum shoring',
+      'battering', 'battered', 'batter', 'slope', 'sloped', 'sloping',
+      'benching', 'benched', 'bench', 'stepped', 'stepping',
+      'sheet pile', 'sheet piles', 'sheet piling', 'soldier pile',
+      'waler', 'walers', 'strut', 'struts', 'strutting',
+      // Issues
+      'shoring inadequate', 'inadequate shoring', 'insufficient shoring',
+      'no shoring', 'shoring missing', 'shoring not installed',
+      'support inadequate', 'trench support', 'excavation support',
+      'shoring damaged', 'shoring moved', 'shoring removed'
     ],
     'Collapse risk': [
-      'collapse', 'cave in', 'cave-in', 'trench collapse', 'wall collapse',
-      'soil failure', 'ground movement', 'instability', 'subsidence'
+      // Core terms
+      'collapse', 'collapses', 'collapsed', 'collapsing',
+      // Misspellings
+      'colapse', 'collaspe', 'collapase', 'colapse', 'collaps',
+      // Types
+      'cave in', 'cave-in', 'caved in', 'caving', 'caving in',
+      'trench collapse', 'excavation collapse', 'wall collapse',
+      'side collapse', 'edge collapse', 'bank collapse',
+      'soil failure', 'ground failure', 'earth movement', 'landslip',
+      'ground movement', 'soil movement', 'earth shift',
+      'instability', 'unstable', 'unstable ground', 'unstable soil',
+      'subsidence', 'sinkhole', 'undermining', 'undermine',
+      // Conditions
+      'crack', 'cracks', 'cracking', 'fissure', 'tension crack',
+      'bulging', 'bulge', 'heaving', 'heave', 'sloughing'
     ],
     'Spoil too close': [
-      'spoil', 'excavated material', 'spoil pile', 'spoil heap',
-      'spoil too close', 'material edge', 'surcharge', 'edge loading'
+      // Core terms
+      'spoil', 'spoils', 'excavated material', 'excavated soil',
+      // Misspellings
+      'spoile', 'spoill', 'spiol', 'spoil', 'excvated',
+      // Terms
+      'spoil pile', 'spoil piles', 'spoil heap', 'spoil heaps',
+      'muck pile', 'dirt pile', 'earth pile', 'material pile',
+      'stockpile', 'stockpiled', 'piled material',
+      // Issues
+      'spoil too close', 'too close to edge', 'near edge', 'at edge',
+      'material edge', 'edge loading', 'surcharge', 'surcharging',
+      'overburden', 'loading edge', 'weight on edge',
+      'spoil distance', 'setback', 'setback distance', 'minimum distance',
+      '2 feet', '0.6m', '1 meter', '1 metre', 'clear zone'
     ],
     'Water ingress': [
-      'water ingress', 'water entry', 'flooding', 'groundwater',
-      'dewatering', 'water accumulation', 'pump', 'pumping', 'seepage'
+      // Core terms
+      'water ingress', 'water entry', 'water intrusion', 'water infiltration',
+      // Misspellings
+      'water ingres', 'water ingrees', 'water entery', 'water intress',
+      // Types
+      'flooding', 'flooded', 'flood', 'floods', 'inundation',
+      'groundwater', 'ground water', 'water table', 'high water table',
+      'seepage', 'seeping', 'seep', 'percolation', 'infiltration',
+      'water accumulation', 'water build up', 'water buildup', 'pooling',
+      'standing water', 'water pooled', 'water collected',
+      // Management
+      'dewatering', 'de-watering', 'pumping', 'pump', 'pumps',
+      'sump', 'sumps', 'sump pump', 'well point', 'wellpoint',
+      'drainage', 'drain', 'drains', 'drained', 'undrained'
     ]
   },
 
   'Temporary Works': {
     'Design inadequate': [
-      'design', 'design inadequate', 'calculation', 'engineering',
-      'twc', 'temporary works coordinator', 'design check', 'no design',
-      'design approval', 'design review'
+      // Core terms
+      'design', 'designs', 'designed', 'designing', 'designer',
+      // Misspellings
+      'desgin', 'desgn', 'desing', 'designe', 'deisgn',
+      // Types
+      'design inadequate', 'inadequate design', 'poor design', 'bad design',
+      'calculation', 'calculations', 'calc', 'structural calculation',
+      'engineering', 'engineered', 'engineer', 'structural engineer',
+      'twc', 't.w.c', 'temporary works coordinator', 'tw coordinator',
+      'twp', 'temporary works permit', 'tw permit',
+      'design check', 'design checking', 'checker', 'check engineer',
+      // Issues
+      'no design', 'design missing', 'design not done', 'undesigned',
+      'design approval', 'approval missing', 'not approved', 'unapproved',
+      'design review', 'review not done', 'not reviewed',
+      'design change', 'site modification', 'deviation from design'
     ],
     'Overloaded': [
-      'overload', 'overloaded', 'exceeded capacity', 'over capacity',
-      'load exceeded', 'weight exceeded', 'structural overload'
+      // Core terms
+      'overload', 'overloads', 'overloaded', 'overloading', 'over-load',
+      // Misspellings
+      'overlaod', 'overloard', 'over laoded', 'overloadd', 'overlaoded',
+      // Issues
+      'exceeded capacity', 'capacity exceeded', 'over capacity', 'overcapacity',
+      'load exceeded', 'excessive load', 'too much load', 'excess load',
+      'weight exceeded', 'too heavy', 'excessive weight', 'too much weight',
+      'structural overload', 'platform overload', 'scaffold overload',
+      'formwork overload', 'falsework overload', 'propping overload',
+      'concrete pour', 'pour rate', 'pour sequence'
     ],
     'Bracing missing': [
-      'bracing', 'brace', 'prop', 'propping', 'strut', 'strutting',
-      'bracing missing', 'no bracing', 'lateral support', 'diagonal brace'
+      // Core terms
+      'bracing', 'brace', 'braces', 'braced', 'unbraced',
+      // Misspellings
+      'braceing', 'braicing', 'brcaing', 'bracing', 'bracng',
+      // Types
+      'prop', 'props', 'propping', 'propped', 'acrow prop', 'acrow',
+      'strut', 'struts', 'strutting', 'strutted',
+      'shore', 'shores', 'shoring', 'flying shore',
+      'lateral support', 'lateral bracing', 'cross bracing', 'diagonal bracing',
+      'diagonal brace', 'knee brace', 'tie', 'ties', 'tie rod',
+      // Issues
+      'bracing missing', 'missing bracing', 'no bracing', 'bracing absent',
+      'bracing inadequate', 'inadequate bracing', 'insufficient bracing',
+      'bracing removed', 'bracing damaged', 'bracing loose'
     ],
     'Foundation unstable': [
-      'foundation', 'base', 'base plate', 'sole plate', 'footing',
-      'ground bearing', 'soft ground', 'unstable foundation', 'settlement'
+      // Core terms
+      'foundation', 'foundations', 'founding', 'founded',
+      // Misspellings
+      'foundaton', 'fondation', 'foundaiton', 'foundtion', 'foudnation',
+      // Types
+      'base', 'bases', 'base plate', 'base plates', 'baseplate',
+      'sole plate', 'sole plates', 'soleplate', 'sill', 'sills',
+      'footing', 'footings', 'pad', 'pads', 'bearer', 'bearers',
+      'ground bearing', 'bearing capacity', 'bearing pressure',
+      // Conditions
+      'soft ground', 'soft soil', 'weak ground', 'poor ground',
+      'unstable foundation', 'foundation unstable', 'foundation movement',
+      'settlement', 'settling', 'settled', 'differential settlement',
+      'subsidence', 'sinking', 'heave', 'heaving'
     ],
     'Strike damage': [
-      'struck', 'strike damage', 'vehicle strike', 'impact', 'collision',
-      'hit by vehicle', 'plant damage', 'accidental damage'
+      // Core terms
+      'struck', 'strike', 'strikes', 'striking', 'stricken',
+      // Misspellings
+      'struk', 'stike', 'strick', 'struked', 'striked',
+      // Types
+      'strike damage', 'struck damage', 'impact damage', 'collision damage',
+      'vehicle strike', 'plant strike', 'machine strike', 'equipment strike',
+      'impact', 'impacts', 'impacted', 'collision', 'collided',
+      'hit by vehicle', 'hit by plant', 'hit by equipment', 'knocked',
+      'plant damage', 'equipment damage', 'accidental damage',
+      // Results
+      'bent', 'buckled', 'deformed', 'displaced', 'moved',
+      'cracked', 'broken', 'fractured', 'damaged member'
     ]
   },
 
   'Driving': {
     'Speeding': [
-      'speed', 'speeding', 'excessive speed', 'over speed', 'fast',
-      'speed limit', 'speed violation', 'too fast'
+      // Core terms
+      'speed', 'speeds', 'speeding', 'speeded', 'sped',
+      // Misspellings
+      'speeed', 'speding', 'speediing', 'speedng', 'spedin',
+      // Descriptions
+      'excessive speed', 'excess speed', 'over speed', 'overspeed',
+      'fast', 'too fast', 'driving fast', 'traveling fast', 'travelling fast',
+      'high speed', 'reckless speed', 'unsafe speed', 'inappropriate speed',
+      // Limits
+      'speed limit', 'speed limits', 'posted speed', 'site speed limit',
+      'speed restriction', 'speed zone', 'speed violation', 'speed breach',
+      'over the limit', 'exceeding limit', 'above limit', 'breaking limit',
+      'mph', 'kph', 'km/h', 'kilometers per hour', 'kilometres per hour'
     ],
     'Seatbelt not worn': [
-      'seatbelt', 'seat belt', 'restraint', 'no seatbelt', 'unbuckled',
-      'not wearing seatbelt', 'belt not worn'
+      // Core terms
+      'seatbelt', 'seatbelts', 'seat belt', 'seat belts', 'seat-belt',
+      // Misspellings
+      'seatblet', 'setbelt', 'seatbelt', 'seat blet', 'seatbel',
+      // Types
+      'restraint', 'restraints', 'safety belt', 'safety belts',
+      'lap belt', 'shoulder belt', 'harness', 'three point',
+      // Issues
+      'no seatbelt', 'seatbelt not worn', 'not wearing seatbelt',
+      'unbuckled', 'unbuckled seatbelt', 'belt not worn', 'belt unbuckled',
+      'seatbelt unfastened', 'unfastened', 'seatbelt off',
+      'seatbelt defective', 'seatbelt broken', 'seatbelt damaged',
+      'seatbelt warning', 'seatbelt alarm', 'buckle up', 'belt up'
     ],
     'Phone use': [
-      'phone', 'mobile phone', 'cell phone', 'phone use', 'texting',
-      'distracted driving', 'phone while driving', 'handheld device'
+      // Core terms
+      'phone', 'phones', 'telephone', 'mobile', 'cell', 'cellular',
+      // Misspellings
+      'phoen', 'fone', 'phon', 'mobile fone', 'cel phone',
+      // Types
+      'mobile phone', 'cell phone', 'cellphone', 'smartphone', 'smart phone',
+      'handheld device', 'handheld', 'electronic device', 'device',
+      // Actions
+      'phone use', 'using phone', 'phone while driving', 'on phone',
+      'texting', 'text', 'texted', 'text message', 'sms',
+      'calling', 'making call', 'taking call', 'answering phone',
+      'distracted driving', 'distracted', 'distraction', 'inattention',
+      // Issues
+      'hands free', 'handsfree', 'hands-free', 'bluetooth', 'earpiece',
+      'phone holder', 'phone mount', 'cradle'
     ],
     'Driver fatigue': [
-      'fatigue', 'tired', 'drowsy', 'fatigued driver', 'driver fatigue',
-      'rest break', 'driving hours', 'fatigue management'
+      // Core terms
+      'fatigue', 'fatigued', 'fatiguing',
+      // Misspellings
+      'fatigue', 'fatiqued', 'fatige', 'fatiuge', 'fatiguie',
+      // Descriptions
+      'tired', 'tiredness', 'exhausted', 'exhaustion', 'weary',
+      'drowsy', 'drowsiness', 'sleepy', 'sleepiness', 'dozing',
+      'driver fatigue', 'fatigued driver', 'fatigued driving',
+      'fatigue driving', 'tired driver', 'drowsy driver',
+      // Causes
+      'rest break', 'rest breaks', 'no break', 'without break',
+      'driving hours', 'hours driving', 'long drive', 'continuous driving',
+      'night driving', 'shift work', 'long shift', 'overtime',
+      // Management
+      'fatigue management', 'fatigue risk', 'journey management',
+      'fit for duty', 'fitness for duty', 'work rest', 'work-rest cycle'
     ],
     'Vehicle defect': [
-      'vehicle defect', 'tyre', 'tire', 'brake', 'light', 'defective vehicle',
-      'vehicle inspection', 'pre-trip', 'vehicle check', 'roadworthy'
+      // Core terms
+      'vehicle defect', 'vehicle defects', 'car defect', 'truck defect',
+      // Misspellings
+      'vehical defect', 'vehicel defect', 'vehcile', 'vechile',
+      // Components
+      'tyre', 'tyres', 'tire', 'tires', 'flat tyre', 'bald tyre', 'worn tyre',
+      'brake', 'brakes', 'braking', 'brake failure', 'brake defect',
+      'light', 'lights', 'headlight', 'tail light', 'brake light', 'indicator',
+      'steering', 'suspension', 'wheel', 'wheels', 'windscreen', 'windshield',
+      'wiper', 'wipers', 'horn', 'mirror', 'mirrors',
+      // Issues
+      'defective vehicle', 'vehicle defective', 'vehicle damage',
+      'vehicle inspection', 'pre-trip', 'pre-trip inspection', 'pre-start',
+      'vehicle check', 'daily check', 'walkaround', 'walk around',
+      'roadworthy', 'road worthy', 'unroadworthy', 'cof', 'mot', 'wof'
     ]
   },
 
   'Working in Heat': {
     'Dehydration': [
-      'dehydration', 'dehydrated', 'water', 'fluid', 'hydration',
-      'drinking water', 'water intake', 'fluid intake', 'thirst'
+      // Core terms
+      'dehydration', 'dehydrated', 'dehydrate', 'dehydrating',
+      // Misspellings
+      'dehidration', 'dehdyration', 'dehydraton', 'deydration', 'dehyration',
+      // Hydration
+      'water', 'waters', 'fluid', 'fluids', 'hydration', 'hydrate', 'hydrated',
+      'drinking water', 'potable water', 'water intake', 'fluid intake',
+      'water consumption', 'fluid replacement', 'electrolyte', 'electrolytes',
+      // Symptoms
+      'thirst', 'thirsty', 'dry mouth', 'dark urine', 'no urine',
+      'headache', 'dizziness', 'dizzy', 'fatigue', 'weakness',
+      // Issues
+      'not drinking', 'insufficient water', 'no water available',
+      'water not provided', 'water station', 'hydration station'
     ],
     'No rest breaks': [
-      'rest break', 'break', 'rest period', 'cool down', 'recovery',
-      'no break', 'working continuously', 'no rest', 'work rest cycle'
+      // Core terms
+      'rest break', 'rest breaks', 'rest period', 'rest periods',
+      // Misspellings
+      'rest brak', 'rest braek', 'rest berak', 'restbreak',
     ],
     'No shade': [
       'shade', 'shelter', 'canopy', 'no shade', 'sun exposure',
@@ -1237,10 +1808,9 @@ export const detectAllCausesUnified = (description, hazardName = null) => {
     }
   }
 
-  // STEP 2: Detect HAZARD-SPECIFIC FACTORS (only if hazard is specified)
-  if (hazardName && HAZARD_SPECIFIC_FACTORS[hazardName]) {
-    const specificFactors = HAZARD_SPECIFIC_FACTORS[hazardName]
-
+  // STEP 2: Detect HAZARD-SPECIFIC FACTORS across ALL hazards
+  // Search all hazard categories for matching keywords
+  for (const [hazardCategory, specificFactors] of Object.entries(HAZARD_SPECIFIC_FACTORS)) {
     for (const [factorName, keywords] of Object.entries(specificFactors)) {
       if (seenFactors.has(factorName)) continue
 
@@ -1262,7 +1832,7 @@ export const detectAllCausesUnified = (description, hazardName = null) => {
           detected.push({
             name: factorName,
             type: FACTOR_TYPE.SPECIFIC,
-            category: hazardName
+            category: hazardCategory // Use the hazard category where this factor is defined
           })
           seenFactors.add(factorName)
           break
@@ -1424,6 +1994,7 @@ export const getRootCauseDefinitions = (hazardName) => {
 /**
  * Aggregate contributing factors across all incidents
  * Groups by Common vs Specific
+ * Also builds byFactorHazard mapping for factor-to-hazard drill-down
  */
 export const aggregateContributingFactors = (incidents, observationType = 'all', options = {}) => {
   let filtered = [...incidents]
@@ -1436,6 +2007,7 @@ export const aggregateContributingFactors = (incidents, observationType = 'all',
 
   const factorCounts = {}
   const factorTypes = {}
+  const byFactorHazard = {} // Maps factor -> { hazard -> count }
   let matchedCount = 0
 
   filtered.forEach(incident => {
@@ -1454,6 +2026,14 @@ export const aggregateContributingFactors = (incidents, observationType = 'all',
           seenInThisIncident.add(name)
           factorCounts[name] = (factorCounts[name] || 0) + 1
           factorTypes[name] = type
+
+          // Build factor -> hazard mapping
+          if (hazardName) {
+            if (!byFactorHazard[name]) {
+              byFactorHazard[name] = {}
+            }
+            byFactorHazard[name][hazardName] = (byFactorHazard[name][hazardName] || 0) + 1
+          }
         }
       })
     }
@@ -1481,6 +2061,8 @@ export const aggregateContributingFactors = (incidents, observationType = 'all',
     total,
     matchedCount,
     matchedPercent: total > 0 ? ((matchedCount / total) * 100).toFixed(1) : '0.0',
+    // Factor to hazard mapping for drill-down
+    byFactorHazard,
     // Backward compatibility aliases
     byFactor: factors,
     analyzed: matchedCount
@@ -1555,7 +2137,12 @@ export const UNIVERSAL_CONTRIBUTING_FACTORS = {
 }
 
 export const detectContributingFactors = (description, options = {}) => {
-  return detectAllCausesUnified(description, options.hazardName || null)
+  const causes = detectAllCausesUnified(description, options.hazardName || null)
+  // Add 'factor' property for backward compatibility (some components use f.factor instead of f.name)
+  return causes.map(c => ({
+    ...c,
+    factor: c.name
+  }))
 }
 
 export const analyzeUnmatchedObservations = (incidents, limit = 50) => {
