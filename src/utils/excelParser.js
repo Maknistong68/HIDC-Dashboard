@@ -1821,6 +1821,40 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 }
 
 /**
+ * Remove duplicates within a batch based on Event ID (externalId)
+ * Keeps the first occurrence, marks subsequent as within-batch duplicates
+ */
+export const deduplicateWithinBatch = (items, matchField = 'externalId') => {
+  const seen = new Map()
+  const unique = []
+  const withinBatchDuplicates = []
+
+  items.forEach((item, index) => {
+    const id = item[matchField]
+    if (id && seen.has(id)) {
+      // This is a duplicate within the batch
+      withinBatchDuplicates.push({
+        ...item,
+        _duplicateOf: id,
+        _matchType: 'within_batch',
+        _firstOccurrenceIndex: seen.get(id).index
+      })
+    } else {
+      if (id) {
+        seen.set(id, { item, index })
+      }
+      unique.push(item)
+    }
+  })
+
+  return {
+    unique,
+    withinBatchDuplicates,
+    withinBatchDuplicateCount: withinBatchDuplicates.length
+  }
+}
+
+/**
  * Build a hash index for fast duplicate lookup
  * Uses composite key: date_contractor (normalized)
  */

@@ -134,7 +134,9 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
               <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs font-medium">Exact ID</span>{' '}
               or by{' '}
               <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-xs font-medium">Similarity</span>{' '}
-              (date ±1 day + contractor 70% + description 85%)
+              (date ±1 day + contractor 70% + description 85%) or by{' '}
+              <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-medium">Within Batch</span>{' '}
+              (same Event ID in different files)
             </p>
           </div>
 
@@ -178,10 +180,14 @@ const ImportSummary = ({ results, onGoToDashboard, onImportMore }) => {
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                           record._matchType === 'exact_id'
                             ? 'bg-blue-100 text-blue-800'
+                            : record._matchType === 'within_batch'
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-purple-100 text-purple-800'
                         }`}>
                           {record._matchType === 'exact_id' ? (
                             'Exact ID Match'
+                          ) : record._matchType === 'within_batch' ? (
+                            'Duplicate in Batch'
                           ) : (
                             <>{Math.round((record._similarity || 0.85) * 100)}% Similar</>
                           )}

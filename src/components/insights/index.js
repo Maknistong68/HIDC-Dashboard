@@ -34,6 +34,7 @@ export { default as IncidentPredictionCard } from './IncidentPredictionCard'
 export { default as IncidentTypeProbabilityChart } from './IncidentTypeProbabilityChart'
 export { default as IncidentTypeRiskIndicator } from './IncidentTypeRiskIndicator'
 export { default as PredictionMethodologyDisclosure } from './PredictionMethodologyDisclosure'
+export { default as IncidentPredictionPanel } from './IncidentPredictionPanel'
 
 // Seasonal Pattern Detection
 export { default as SeasonalPatternChart } from './SeasonalPatternChart'

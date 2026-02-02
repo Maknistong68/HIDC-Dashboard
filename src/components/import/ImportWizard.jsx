@@ -10,6 +10,7 @@ import {
   mapNEOMColumns,
   transformRows,
   checkDuplicates,
+  deduplicateWithinBatch,
   NEOM_REQUIRED_COLUMNS,
 } from '../../utils/excelParser'
 
@@ -130,13 +131,20 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
       setImportWarnings(warnings)
       setTransformedData(transformedIncidents)
 
-      // Check for duplicates with selected handling mode
+      // Step 1: Deduplicate within batch first (removes duplicates across files in same import)
+      const { unique: uniqueIncidents, withinBatchDuplicates, withinBatchDuplicateCount } =
+        deduplicateWithinBatch(transformedIncidents, 'externalId')
+
+      // Step 2: Check against existing data (only unique items from batch)
       const duplicateResults = checkDuplicates(
-        transformedIncidents,
+        uniqueIncidents,
         incidents,
         'externalId',
         importOptions.duplicateHandling
       )
+
+      // Combine skip counts from both within-batch and existing data duplicates
+      const allSkippedRecords = [...duplicateResults.skipped, ...withinBatchDuplicates]
 
       let incidentsAdded = 0
       let incidentsUpdated = 0
@@ -177,12 +185,16 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
         ? `${fileNames.length} files`
         : fileNames[0]
 
+      // Total skipped includes both within-batch and existing data duplicates
+      const totalSkipped = duplicateResults.skipped.length + withinBatchDuplicateCount
+
       const results = {
         incidentsAdded,
         incidentsUpdated,
-        skipped: duplicateResults.skipped.length,
-        skippedRecords: duplicateResults.skipped, // Pass full skipped records with duplicate info
+        skipped: totalSkipped,
+        skippedRecords: allSkippedRecords, // Pass full skipped records with duplicate info
         duplicateDetails: duplicateResults.duplicateDetails || [], // Pass detailed duplicate info
+        withinBatchDuplicateCount, // Track within-batch duplicates separately
         failed,
         fileName: displayFileName,
         fileNames, // Include all file names
@@ -198,7 +210,7 @@ const ImportWizard = ({ onComplete, onCancel, mode = 'inline', showHeader = true
       recordImportStats({
         added: incidentsAdded,
         updated: incidentsUpdated,
-        skipped: duplicateResults.skipped.length,
+        skipped: totalSkipped,
         failed,
         warningCount: (warnings?.dateIssues?.length || 0) + (warnings?.hazardIssues?.length || 0),
         fileName: displayFileName,

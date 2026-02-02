@@ -82,6 +82,9 @@ const BatchImportModal = ({ onClose }) => {
     setIsProcessing(true)
     const newResults = []
 
+    // Track Event IDs imported in this batch session (across all files)
+    const batchImportedIds = new Set()
+
     for (let i = 0; i < selectedFiles.length; i++) {
       setCurrentFileIndex(i)
 
@@ -145,9 +148,23 @@ const BatchImportModal = ({ onClose }) => {
           { classificationMode: 'trust-excel' }
         )
 
-        // Check for duplicates (skip duplicates by default)
+        // Step 1: Filter out items whose Event ID was already imported in this batch session
+        const withinBatchSkipped = []
+        const filteredIncidents = transformedIncidents.filter(item => {
+          if (item.externalId && batchImportedIds.has(item.externalId)) {
+            withinBatchSkipped.push({
+              ...item,
+              _duplicateOf: item.externalId,
+              _matchType: 'within_batch'
+            })
+            return false
+          }
+          return true
+        })
+
+        // Step 2: Check against existing data (only items not already in this batch)
         const duplicateResults = checkDuplicates(
-          transformedIncidents,
+          filteredIncidents,
           incidents,
           'externalId',
           'skip'
@@ -161,9 +178,19 @@ const BatchImportModal = ({ onClose }) => {
             { fileName: file.name, fileSize: file.size, fileHash },
             { classificationMode: 'trust-excel' }
           )
+
+          // After successful import, add Event IDs to batch tracker
+          duplicateResults.newRecords.forEach(record => {
+            if (record.externalId) {
+              batchImportedIds.add(record.externalId)
+            }
+          })
         }
 
-        const skippedCount = duplicateResults.skipped.length
+        // Total skipped includes both within-batch and existing data duplicates
+        const withinBatchSkippedCount = withinBatchSkipped.length
+        const existingDataSkippedCount = duplicateResults.skipped.length
+        const skippedCount = existingDataSkippedCount + withinBatchSkippedCount
 
         // Update status to success
         setSelectedFiles(prev => prev.map((f, idx) =>
@@ -171,7 +198,9 @@ const BatchImportModal = ({ onClose }) => {
             ...f,
             status: 'success',
             recordCount: result.recordCount,
-            skippedCount
+            skippedCount,
+            withinBatchSkippedCount,
+            existingDataSkippedCount
           } : f
         ))
 
@@ -180,6 +209,8 @@ const BatchImportModal = ({ onClose }) => {
           success: true,
           recordCount: result.recordCount,
           skippedCount,
+          withinBatchSkippedCount,
+          existingDataSkippedCount,
           warnings
         })
       } catch (error) {
@@ -249,6 +280,8 @@ const BatchImportModal = ({ onClose }) => {
   const fileDuplicateCount = results.filter(r => r.isFileDuplicate).length
   const totalRecords = results.reduce((sum, r) => sum + (r.recordCount || 0), 0)
   const totalSkipped = results.reduce((sum, r) => sum + (r.skippedCount || 0), 0)
+  const totalWithinBatchSkipped = results.reduce((sum, r) => sum + (r.withinBatchSkippedCount || 0), 0)
+  const totalExistingDataSkipped = results.reduce((sum, r) => sum + (r.existingDataSkippedCount || 0), 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -393,7 +426,9 @@ const BatchImportModal = ({ onClose }) => {
                                 {item.recordCount?.toLocaleString() || 0} records imported
                                 {item.skippedCount > 0 && (
                                   <span className="text-amber-600 ml-1">
-                                    ({item.skippedCount} duplicates skipped)
+                                    ({item.existingDataSkippedCount > 0 ? `${item.existingDataSkippedCount} existing` : ''}
+                                    {item.existingDataSkippedCount > 0 && item.withinBatchSkippedCount > 0 ? ', ' : ''}
+                                    {item.withinBatchSkippedCount > 0 ? `${item.withinBatchSkippedCount} in batch` : ''} skipped)
                                   </span>
                                 )}
                               </> :
@@ -446,11 +481,7 @@ const BatchImportModal = ({ onClose }) => {
                 Import Complete
               </h3>
 
-              <div className={`grid gap-4 max-w-md mx-auto mb-6 ${
-                (totalSkipped > 0 && fileDuplicateCount > 0) ? 'grid-cols-4' :
-                (totalSkipped > 0 || fileDuplicateCount > 0) ? 'grid-cols-3' :
-                'grid-cols-2'
-              }`}>
+              <div className="grid gap-4 max-w-lg mx-auto mb-6 grid-cols-2">
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-2xl font-bold text-green-600">{successCount}</p>
                   <p className="text-sm text-green-700">Files imported</p>
@@ -465,10 +496,16 @@ const BatchImportModal = ({ onClose }) => {
                     <p className="text-sm text-amber-700">Files already imported</p>
                   </div>
                 )}
-                {totalSkipped > 0 && (
+                {totalExistingDataSkipped > 0 && (
                   <div className="bg-amber-50 rounded-lg p-4">
-                    <p className="text-2xl font-bold text-amber-600">{totalSkipped.toLocaleString()}</p>
-                    <p className="text-sm text-amber-700">Record duplicates</p>
+                    <p className="text-2xl font-bold text-amber-600">{totalExistingDataSkipped.toLocaleString()}</p>
+                    <p className="text-sm text-amber-700">Duplicates (existing)</p>
+                  </div>
+                )}
+                {totalWithinBatchSkipped > 0 && (
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <p className="text-2xl font-bold text-orange-600">{totalWithinBatchSkipped.toLocaleString()}</p>
+                    <p className="text-sm text-orange-700">Duplicates (within batch)</p>
                   </div>
                 )}
               </div>
@@ -499,7 +536,9 @@ const BatchImportModal = ({ onClose }) => {
                             {result.recordCount?.toLocaleString() || 0} records added
                             {result.skippedCount > 0 && (
                               <span className="text-amber-600 ml-1">
-                                ({result.skippedCount} duplicates skipped)
+                                ({result.existingDataSkippedCount > 0 ? `${result.existingDataSkippedCount} existing` : ''}
+                                {result.existingDataSkippedCount > 0 && result.withinBatchSkippedCount > 0 ? ', ' : ''}
+                                {result.withinBatchSkippedCount > 0 ? `${result.withinBatchSkippedCount} in batch` : ''} skipped)
                               </span>
                             )}
                           </>
