@@ -1982,7 +1982,61 @@ export const HAZARD_ROOT_CAUSES = {
     ]
   },
 
-  // 28. Tools
+  // 28. Explosives & Blasting
+  'Explosives & Blasting': {
+    'Blasting permit missing': [
+      'permit', 'blasting permit', 'no permit', 'shot firing permit', 'authorization',
+      'authorisation', 'approval', 'no approval', 'permission', 'without permit',
+      'permit to blast', 'blast permit', 'missing permit', 'expired permit'
+    ],
+    'Shot firer competency': [
+      'shot firer', 'blaster', 'competent', 'certified', 'qualification',
+      'certificate', 'licensed', 'unlicensed', 'trained blaster', 'competency',
+      'shot firing certificate', 'blasting license', 'not qualified', 'inexperienced'
+    ],
+    'Exclusion zone breach': [
+      'exclusion zone', 'blast zone', 'clearance', 'barrier', 'perimeter',
+      'danger zone', 'safe distance', 'blast radius', 'entered zone', 'breach',
+      'too close', 'within zone', 'zone violation', 'exclusion area'
+    ],
+    'Misfire handling': [
+      'misfire', 'failed to detonate', 'unexploded', 'dud', 'hang fire',
+      'partial detonation', 'incomplete blast', 'failed shot', 'misfire procedure',
+      'unexploded explosive', 'uxo', 'blind hole', 'socket'
+    ],
+    'Explosive storage issue': [
+      'magazine', 'storage', 'segregation', 'temperature', 'humidity',
+      'explosive store', 'detonator storage', 'incompatible storage', 'locked storage',
+      'unlocked', 'storage condition', 'magazine security', 'inventory'
+    ],
+    'Detonator handling': [
+      'detonator', 'initiator', 'blasting cap', 'primer', 'det',
+      'electric detonator', 'non-electric', 'nonel', 'shock tube', 'detonating cord',
+      'det cord', 'handling', 'transport', 'carrying detonator'
+    ],
+    'Blast warning failure': [
+      'warning', 'siren', 'all clear', 'communication', 'blast signal',
+      'horn', 'whistle', 'announcement', 'notification', 'no warning',
+      'warning system', 'alert', 'pre-blast warning', 'post-blast'
+    ],
+    'Flyrock hazard': [
+      'flyrock', 'flying rock', 'debris', 'stemming', 'overcharge',
+      'ejection', 'projectile', 'rock throw', 'insufficient stemming', 'short stemming',
+      'flyrock distance', 'impact', 'flyrock incident'
+    ],
+    'Ground vibration issue': [
+      'vibration', 'ppv', 'seismic', 'monitoring', 'peak particle velocity',
+      'ground shake', 'vibration damage', 'vibration limit', 'seismograph',
+      'vibration monitoring', 'structure damage', 'crack', 'vibration complaint'
+    ],
+    'Timing/sequencing issue': [
+      'timing', 'delay', 'sequence', 'circuit', 'initiation sequence',
+      'delay pattern', 'timing error', 'wrong sequence', 'misfiring sequence',
+      'overlap', 'simultaneous', 'burden', 'spacing'
+    ]
+  },
+
+  // 29. Tools
   'Tools': {
     'Tool inspection': [
       'inspection', 'inspections', 'inspected', 'inspecting', 'inpection',
@@ -2403,7 +2457,7 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
     'vehicle', 'plant', 'mobile plant', 'forklift', 'excavator', 'crane',
     'truck', 'dumper', 'loader', 'banksman', 'spotter', 'signaller',
     'reversing', 'reverse', 'backing', 'speed', 'speeding', 'seatbelt',
-    'seat belt', 'phone', 'mobile phone', 'fatigue', 'drowsy', 'tired',
+    'seat belt', 'phone', 'mobile phone',
     'license', 'driving', 'overtaking', 'tailgating', 'following distance'
   ],
 
@@ -2507,8 +2561,7 @@ export const CONSOLIDATED_FACTOR_KEYWORDS = {
 
   'Human Factors - Rushing': [
     'rushed', 'rushing', 'hurry', 'hurried', 'too fast', 'speeding',
-    'deadline', 'time pressure', 'behind schedule', 'urgent', 'asap',
-    'pressure', 'pushed', 'no time', 'tight schedule'
+    'haste', 'no time', 'asap', 'urgent'
   ],
 
   'Human Factors - Fatigue': [
@@ -2924,6 +2977,55 @@ const getConsolidatedFactorName = (factorName) => {
 }
 
 /**
+ * Factor Precedence Configuration
+ * When both factors are detected, the higher-precedence one takes priority
+ * Key = lower priority factor, Value = higher priority factor that supersedes it
+ */
+const FACTOR_PRECEDENCE = {
+  'Human Factors - Rushing': 'Organizational - Pressure',  // External pressure takes precedence over individual rushing
+  'Inspection Issue': 'Training & Competency',  // Root cause (training) over symptom (inspection)
+}
+
+/**
+ * Mutually Exclusive Factor Groups
+ * Only one factor from each group should be reported per observation
+ */
+const MUTUALLY_EXCLUSIVE_GROUPS = [
+  ['Human Factors - Fatigue', 'Human Factors - Rushing'],  // Exhausted people don't rush
+]
+
+/**
+ * Apply factor precedence and mutual exclusivity rules to deduplicate detected factors
+ * @param {Array} factors - Array of detected factors
+ * @returns {Array} Filtered array with precedence rules applied
+ */
+const applyFactorDeduplication = (factors) => {
+  if (!factors || factors.length <= 1) return factors
+
+  const factorNames = new Set(factors.map(f => f.name))
+  let filtered = [...factors]
+
+  // Apply precedence rules: remove lower-priority factor if higher-priority exists
+  for (const [lowerPriority, higherPriority] of Object.entries(FACTOR_PRECEDENCE)) {
+    if (factorNames.has(lowerPriority) && factorNames.has(higherPriority)) {
+      filtered = filtered.filter(f => f.name !== lowerPriority)
+    }
+  }
+
+  // Apply mutual exclusivity: keep only the first detected factor from each exclusive group
+  for (const group of MUTUALLY_EXCLUSIVE_GROUPS) {
+    const foundInGroup = filtered.filter(f => group.includes(f.name))
+    if (foundInGroup.length > 1) {
+      // Keep only the first one found (order matters - first detected is kept)
+      const toKeep = foundInGroup[0].name
+      filtered = filtered.filter(f => !group.includes(f.name) || f.name === toKeep)
+    }
+  }
+
+  return filtered
+}
+
+/**
  * UNIFIED CAUSE DETECTION
  * Detects BOTH hazard-specific issues AND universal contributing factors
  * Returns all causes with their category (Physical, Behavioral, Organizational, etc.)
@@ -3024,7 +3126,8 @@ export const detectAllCausesUnified = (description, hazardName = null) => {
     }
   }
 
-  return detected
+  // Apply deduplication rules before returning
+  return applyFactorDeduplication(detected)
 }
 
 /**
