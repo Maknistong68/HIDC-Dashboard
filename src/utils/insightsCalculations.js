@@ -256,7 +256,9 @@ export const getOverdueActionAlerts = (incidents, daysThreshold = 30) => {
   // Group by age threshold
   const critical = withAge.filter(o => o.age > 60)
   const warning = withAge.filter(o => o.age > 30 && o.age <= 60)
-  const attention = withAge.filter(o => o.age > daysThreshold && o.age <= 30)
+  // Attention: approaching threshold (14 days to threshold)
+  const attentionThreshold = Math.max(14, daysThreshold - 16)
+  const attention = withAge.filter(o => o.age >= attentionThreshold && o.age <= 30)
 
   if (critical.length > 0) {
     alerts.push({

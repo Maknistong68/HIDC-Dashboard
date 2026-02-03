@@ -11,7 +11,7 @@ import {
   LabelList
 } from 'recharts'
 import { Target, X, Copy, Check, ThumbsUp, AlertTriangle } from 'lucide-react'
-import { detectAllCausesUnified, FACTOR_TYPE } from '../../utils/rootCauseEngine'
+import { detectAllCausesUnified, FACTOR_TYPE, NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
 
 // Simplified color system - Common vs Specific factors
 const FACTOR_TYPE_COLORS = {
@@ -53,8 +53,7 @@ const POSITIVE_COLORS = [
   '#8b5cf6', '#a855f7', '#ec4899', '#f59e0b', '#64748b'
 ]
 
-// Observation type constants
-const NEGATIVE_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
+// Positive observation types (NEGATIVE_TYPES is imported from rootCauseEngine)
 const POSITIVE_TYPES = ['positive']
 
 /**

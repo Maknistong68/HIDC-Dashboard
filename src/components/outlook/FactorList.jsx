@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { AlertCircle, ChevronRight, Info } from 'lucide-react'
+import React, { useState, useMemo, useCallback } from 'react'
+import { AlertCircle, ChevronRight } from 'lucide-react'
 import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
 
 // Type badge configs - matches HazardList trend indicator pattern
@@ -29,14 +29,84 @@ const getConfidence = (count) => {
 }
 
 /**
+ * FactorItem - Individual factor button with smooth transitions
+ */
+const FactorItem = React.memo(({ factor, isSelected, onSelect, baseCount }) => {
+  const typeConfig = getTypeConfig(factor)
+  const percentage = baseCount > 0
+    ? ((factor.count / baseCount) * 100).toFixed(1)
+    : '0.0'
+  const confidence = getConfidence(factor.count)
+
+  return (
+    <button
+      onClick={() => onSelect(factor)}
+      className={`
+        w-full flex items-center gap-2 p-2 rounded-lg
+        text-left group
+        transition-all duration-200 ease-out
+        ${isSelected
+          ? 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm scale-[1.01]'
+          : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
+        }
+      `}
+      title={`${typeConfig.fullLabel} Factor - ${factor.count} occurrences (${percentage}% of negative observations)`}
+    >
+      {/* Type indicator badge */}
+      <span className={`flex-shrink-0 w-6 h-6 rounded ${typeConfig.bg} ${typeConfig.text} flex items-center justify-center text-xs font-bold transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`}>
+        {typeConfig.label}
+      </span>
+
+      {/* Name and count */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+            {factor.name}
+          </p>
+          {/* Low confidence warning */}
+          {confidence.level === 'low' && (
+            <span className={`text-xs ${confidence.color}`} title="Low sample size - may be unreliable">
+              {confidence.icon}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-surface-500">
+          {factor.count} occurrence{factor.count !== 1 ? 's' : ''}
+        </p>
+      </div>
+
+      {/* Percentage and arrow */}
+      <div className="flex flex-col items-end gap-0.5">
+        <div className="flex items-center gap-1">
+          <span className={`text-xs font-bold transition-colors duration-200 ${isSelected ? 'text-primary-700' : 'text-surface-600'}`}>
+            {percentage}%
+          </span>
+          <ChevronRight
+            size={16}
+            className={`transition-all duration-200 ${isSelected ? 'text-primary-600 translate-x-0.5' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
+          />
+        </div>
+      </div>
+    </button>
+  )
+})
+
+FactorItem.displayName = 'FactorItem'
+
+/**
  * FactorList - Left panel showing contributing factors sorted by count
- * Matches HazardList UI pattern with optimized performance
+ * Matches HazardList UI pattern with optimized performance and smooth transitions
  */
 const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount, totalNegative }) => {
   const [sortBy, setSortBy] = useState('count')
 
   // Use totalNegative as the base for percentage (factor coverage)
   const baseCount = totalNegative || totalIncidents || 1
+
+  // Memoized select handler
+  const handleSelect = useCallback((factor) => {
+    onSelect(factor)
+  }, [onSelect])
 
   // Sort factors based on selected criteria - memoized for performance
   const sortedFactors = useMemo(() => {
@@ -98,7 +168,7 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-300"
+          className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-300 transition-colors duration-200"
         >
           <option value="count">By Count</option>
           <option value="name">By Name</option>
@@ -106,79 +176,28 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
         </select>
       </div>
 
-      {/* Factor list - scrollable */}
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-        {sortedFactors.map((factor) => {
-          const typeConfig = getTypeConfig(factor)
-          const isSelected = selected?.name === factor.name
-          const percentage = baseCount > 0
-            ? ((factor.count / baseCount) * 100).toFixed(1)
-            : '0.0'
-          const confidence = getConfidence(factor.count)
-
-          return (
-            <button
-              key={factor.name}
-              onClick={() => onSelect(factor)}
-              className={`
-                w-full flex items-center gap-2 p-2 rounded-lg transition-all duration-150
-                text-left group
-                ${isSelected
-                  ? 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm'
-                  : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200'
-                }
-              `}
-              title={`${typeConfig.fullLabel} Factor - ${factor.count} occurrences (${percentage}% of negative observations)`}
-            >
-              {/* Type indicator badge */}
-              <span className={`flex-shrink-0 w-6 h-6 rounded ${typeConfig.bg} ${typeConfig.text} flex items-center justify-center text-xs font-bold`}>
-                {typeConfig.label}
-              </span>
-
-              {/* Name and count */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <p className={`text-sm truncate ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
-                    {factor.name}
-                  </p>
-                  {/* Low confidence warning */}
-                  {confidence.level === 'low' && (
-                    <span className={`text-xs ${confidence.color}`} title="Low sample size - may be unreliable">
-                      {confidence.icon}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-surface-500">
-                  {factor.count} occurrence{factor.count !== 1 ? 's' : ''}
-                </p>
-              </div>
-
-              {/* Percentage and arrow */}
-              <div className="flex flex-col items-end gap-0.5">
-                <div className="flex items-center gap-1">
-                  <span className={`text-xs font-bold ${isSelected ? 'text-primary-700' : 'text-surface-600'}`}>
-                    {percentage}%
-                  </span>
-                  <ChevronRight
-                    size={16}
-                    className={`transition-transform ${isSelected ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
-                  />
-                </div>
-              </div>
-            </button>
-          )
-        })}
+      {/* Factor list - scrollable with smooth scroll */}
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1 scroll-smooth">
+        {sortedFactors.map((factor) => (
+          <FactorItem
+            key={factor.name}
+            factor={factor}
+            isSelected={selected?.name === factor.name}
+            onSelect={handleSelect}
+            baseCount={baseCount}
+          />
+        ))}
       </div>
 
       {/* Footer with coverage stats and legend */}
       <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2 space-y-2">
         {/* Type legend */}
         <div className="flex items-center justify-center gap-3 text-xs">
-          <div className="flex items-center gap-1" title="Common Factors apply to all hazard types">
+          <div className="flex items-center gap-1 transition-colors duration-200" title="Common Factors apply to all hazard types">
             <span className="w-4 h-4 rounded bg-teal-500 text-white flex items-center justify-center text-2xs font-bold">C</span>
             <span className="text-surface-500">Common ({typeCounts.common})</span>
           </div>
-          <div className="flex items-center gap-1" title="Specific Factors are unique to certain hazard types">
+          <div className="flex items-center gap-1 transition-colors duration-200" title="Specific Factors are unique to certain hazard types">
             <span className="w-4 h-4 rounded bg-violet-500 text-white flex items-center justify-center text-2xs font-bold">S</span>
             <span className="text-surface-500">Specific ({typeCounts.specific})</span>
           </div>
@@ -188,13 +207,13 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
         {totalNegative > 0 && (
           <div className="flex items-center justify-center gap-2 text-xs">
             <span className="text-surface-400">Coverage:</span>
-            <span className={`font-semibold ${
+            <span className={`font-semibold transition-colors duration-200 ${
               analyzedCount / totalNegative >= 0.5 ? 'text-green-600' :
               analyzedCount / totalNegative >= 0.25 ? 'text-amber-600' : 'text-red-500'
             }`}>
               {analyzedCount} / {totalNegative}
             </span>
-            <span className={`font-bold px-1.5 py-0.5 rounded ${
+            <span className={`font-bold px-1.5 py-0.5 rounded transition-colors duration-200 ${
               analyzedCount / totalNegative >= 0.5 ? 'bg-green-100 text-green-700' :
               analyzedCount / totalNegative >= 0.25 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
             }`}>

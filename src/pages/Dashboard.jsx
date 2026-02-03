@@ -35,8 +35,6 @@ import {
   getIncidentsByMonth,
   getOpenActionsCount,
 } from '../utils/calculations'
-import { getIncidentPredictionSummary } from '../utils/insightsCalculations'
-import { UnifiedPredictivePanel } from '../components/insights'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -408,11 +406,6 @@ const Dashboard = () => {
 
   const positiveCount = useMemo(() => {
     return filteredIncidents.filter(i => i.type === 'positive').length
-  }, [filteredIncidents])
-
-  // Incident prediction data for forecasting panel
-  const incidentPrediction = useMemo(() => {
-    return getIncidentPredictionSummary(filteredIncidents)
   }, [filteredIncidents])
 
   // Approval status counts (from original approval column)
@@ -998,14 +991,6 @@ const Dashboard = () => {
       )}
       </div>
       {/* End of dashboardContentRef wrapper */}
-
-      {/* Unified Predictive Analysis Panel - Collapsible */}
-      {filteredIncidents.length > 0 && incidentPrediction.hasData && (
-        <UnifiedPredictivePanel
-          incidentPrediction={incidentPrediction}
-          filteredIncidents={filteredIncidents}
-        />
-      )}
 
       {/* All Records Section - Collapsible */}
       <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">

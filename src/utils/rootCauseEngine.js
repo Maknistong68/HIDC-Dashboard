@@ -1040,7 +1040,7 @@ export const HAZARD_SPECIFIC_FACTORS = {
   },
 
   'Mobile Plant & Equipment': {
-    'Banksman absent': [
+    'Banksman/Flagman absent': [
       // Core terms
       'banksman', 'banksmen', 'banks man', 'banks-man', 'bankswoman',
       // Misspellings
@@ -1050,15 +1050,178 @@ export const HAZARD_SPECIFIC_FACTORS = {
       'signaller', 'signallers', 'signaler', 'signalers', 'signal man',
       'signalman', 'signalmen', 'signalperson',
       'guide', 'guides', 'guiding', 'guided', 'no guide', 'guide absent',
-      'flagman', 'flagmen', 'flag man', 'flagger', 'flaggers',
+      'flagman', 'flagmen', 'flag man', 'flagger', 'flaggers', 'flagman missing',
+      'no flagman', 'flagman absent', 'without flagman', 'missing flagman',
       'traffic marshal', 'traffic controller', 'traffic management',
+      'ground traffic controller', 'gtc',
       // Issues
       'no banksman', 'banksman absent', 'banksman missing', 'missing banksman',
       'without banksman', 'banksman not present', 'banksman left',
       'reversing without', 'unsupervised reversing', 'unguided',
       'no signals', 'signals not used', 'hand signals', 'radio communication'
     ],
-    'Exclusion zone breach': [
+    'Man-Machine Interface': [
+      // Core terms - highly specific
+      'man machine interface', 'man-machine interface', 'mmi', 'm-m-i',
+      'man machine', 'man-machine', 'mepi', 'm.e.p.i',
+      'man and machine interface', 'man & machine interface',
+      // NEOM specific
+      'no boots on ground', 'boots on ground', 'no boots on the ground',
+      'boots on the ground policy', 'boots on ground policy',
+      // Proximity issues
+      'too close to equipment', 'close proximity to equipment', 'near equipment',
+      'close to moving', 'near moving equipment', 'working close to',
+      'standing close to', 'walking close to', 'close to excavator',
+      'close to loader', 'close to plant', 'close to machine',
+      'within the swing', 'swing radius', 'operating area',
+      // Worker position issues
+      'workers in red zone', 'red zone', 'in the line of fire', 'line of fire',
+      'struck by hazard', 'struck-by', 'hit by', 'struck by',
+      'workers very close', 'operative very close', 'person near',
+      'personnel near', 'standing behind', 'walking behind',
+      'behind the truck', 'behind equipment', 'behind the excavator',
+      'in front of equipment', 'in front of excavator',
+      // Interface violations
+      'interface violation', 'interface observed', 'interface issue',
+      'plant and people interface', 'people interface', 'plant interface',
+      'worker interface', 'poor plant and people', 'poor interface',
+      // Separator issues
+      'no separation', 'no segregation', 'without separation',
+      'workers and equipment', 'people and machines'
+    ],
+    'VVS/NEOM Inspection': [
+      // VVS system - primary identifiers
+      'vvs', 'v.v.s', 'vehicle verification system', 'neom vvs',
+      'vvs inspection', 'vvs system', 'vvs status', 'vvs application',
+      'under neom vvs', 'in neom vvs', 'on vvs',
+      // NEOM Veri-Fi - primary identifiers
+      'veri-fi', 'verifi', 'veri fi', 'veri-fy', 'verif-fi',
+      'neom veri-fi', 'neom verifi', 'neom veri fi', 'neom veri-fy',
+      'veri-fi inspection', 'verifi inspection', 'veri fi inspection',
+      'veri-fi status', 'verifi status', 'veri fi status',
+      'neom verification', 'neom verified',
+      // QR Code - equipment specific
+      'qr code', 'qrcode', 'qr-code', 'q.r code', 'qr sticker',
+      'no qr code', 'without qr code', 'qr code missing', 'missing qr code',
+      'qr code red', 'red qr code', 'qr code status', 'qr code expired',
+      'neom qr code', 'neom qr', 'does not have qr', 'does not have neom qr',
+      'without neom qr', 'no neom qr',
+      // Status issues - with context
+      'red status', 'access denied', 'red category', 'denied status',
+      'expired veri-fi', 'expired verifi', 'overdue veri-fi',
+      'green status', 'amber status',
+      // NEOM inspection - equipment specific
+      'neom inspection', 'neom sticker', 'neom inspection sticker',
+      'without neom inspection', 'no neom inspection', 'neom inspection missing',
+      'neom inspection expired', 'neom plant inspection',
+      'neom vehicle inspection', 'neom equipment inspection',
+      'not inspected by neom', 'not subjected to neom',
+      'without being subjected to neom', 'not underwent veri-fi'
+    ],
+    'Equipment checklist missing': [
+      // Daily checklist
+      'daily checklist', 'daily inspection checklist', 'operator checklist',
+      'daily check list', 'pre-use checklist', 'preuse checklist',
+      'checklist missing', 'checklist not available', 'no checklist',
+      'checklist unavailable', 'checklist not filled', 'checklist not updated',
+      'incomplete checklist', 'checklist incomplete', 'checklist not done',
+      // Inspection records
+      'inspection checklist', 'check list', 'equipment checklist',
+      'weekly inspection', 'monthly inspection', 'periodic inspection',
+      'inspection record', 'maintenance record', 'service record',
+      'no inspection record', 'record not available', 'records missing',
+      // Specific equipment
+      'excavator checklist', 'loader checklist', 'truck checklist',
+      'jcb checklist', 'grader checklist', 'compactor checklist',
+      'roller checklist', 'bulldozer checklist', 'plant checklist'
+    ],
+    'PWAS/Camera missing': [
+      // PWAS system
+      'pwas', 'p.w.a.s', 'proximity warning', 'proximity warning system',
+      'proximity alert', 'proximity alarm', 'proximity detection',
+      'pwas missing', 'pwas not installed', 'no pwas', 'without pwas',
+      'pwas not working', 'pwas not functioning', 'pwas defective',
+      // Cameras
+      '360 camera', '360 degree camera', '360-degree', '360 degree',
+      'camera missing', 'camera not installed', 'no camera',
+      'rear camera', 'reversing camera', 'backup camera', 'side camera',
+      'camera not working', 'camera defective', 'camera obscured',
+      // Sensors
+      'proximity sensor', 'sensor missing', 'detection system',
+      'warning system', 'alert system', 'collision avoidance'
+    ],
+    'Operator license/TUV expired': [
+      // SAG License
+      'sag license', 'sag licence', 'sag driving license', 'sag driving licence',
+      'no sag license', 'sag license missing', 'sag license expired',
+      'without sag license', 'sag licence expired', 'sag expired',
+      // TUV certification
+      'tuv', 't.u.v', 'tuv certificate', 'tuv certification',
+      'tuv expired', 'tuv missing', 'no tuv', 'expired tuv',
+      'tuv not valid', 'tuv overdue', 'operator tuv',
+      // KSA License
+      'ksa license', 'ksa licence', 'ksa driving license', 'ksa driving licence',
+      'without ksa', 'no ksa license', 'ksa license expired',
+      // Operator license general
+      'operator license', 'operator licence', 'driving license expired',
+      'license expired', 'licence expired', 'expired license',
+      'no driving license', 'without license', 'license missing',
+      'unlicensed operator', 'unauthorized operator',
+      // Freelancer
+      'freelancer', 'freelance', 'freelance driver', 'freelancer driver',
+      'freelance operator', 'not under company', 'not on ajeer',
+      'ajeer', 'no ajeer', 'ajeer contract', 'ajeer missing'
+    ],
+    'TPC/Third party certification': [
+      // TPC
+      'tpc', 't.p.c', 'third party', 'third-party', '3rd party',
+      'third party certificate', 'third party certification',
+      'tpc expired', 'tpc missing', 'no tpc', 'tpc not available',
+      'expired tpc', 'invalid tpc', 'tpc overdue',
+      // Equipment certification
+      'mvp certificate', 'mvp expired', 'equipment certificate',
+      'valid certification', 'certification expired', 'certificate expired',
+      'plant certification', 'equipment certification', 'vehicle certification',
+      '3rd party inspection', 'third party inspection',
+      // Registration
+      'registration', 'vehicle registration', 'equipment registration',
+      'no registration', 'registration missing', 'registration expired',
+      'insurance', 'insurance expired', 'insurance copy', 'no insurance'
+    ],
+    'Beacon light issue': [
+      // Beacon
+      'beacon', 'beacons', 'beacon light', 'beacon lights',
+      'amber beacon', 'amber light', 'flashing beacon', 'rotating beacon',
+      'warning light', 'warning beacon', 'strobe', 'strobe light',
+      // Issues
+      'beacon missing', 'beacon not working', 'beacon off', 'beacon turned off',
+      'no beacon', 'beacon light missing', 'beacon not functioning',
+      'beacon defective', 'beacon broken', 'blinking light not working',
+      'blinking lights not functioning', 'beacon not switched on'
+    ],
+    'Reverse alarm issue': [
+      // Reverse alarm
+      'reverse alarm', 'reversing alarm', 'backup alarm', 'back up alarm',
+      'reverse horn', 'reversing horn', 'beeper', 'reverse beeper',
+      'audible alarm', 'warning alarm', 'motion alarm',
+      // Issues
+      'no reverse alarm', 'reverse alarm missing', 'alarm not working',
+      'alarm not functioning', 'alarm defective', 'alarm broken',
+      'low audible', 'not audible', 'alarm not heard', 'horn missing',
+      'horn not working', 'horn defective'
+    ],
+    'Wheel chock missing': [
+      // Wheel chock
+      'wheel chock', 'wheel chocks', 'wheel-chock', 'chock', 'chocks',
+      'tyre chock', 'tire chock', 'wheel stopper', 'wheel block',
+      // Issues
+      'no wheel chock', 'wheel chock missing', 'chocks not used',
+      'without wheel chock', 'chock not placed', 'chock missing',
+      'wheel chock not in use', 'no chock', 'chocks not available',
+      // Related
+      'parked without chock', 'stopped without', 'stationary without'
+    ],
+    'Exclusion zone missing': [
       // Core terms
       'exclusion zone', 'exclusion zones', 'exclusion area', 'exclusion areas',
       // Misspellings
@@ -1073,60 +1236,116 @@ export const HAZARD_SPECIFIC_FACTORS = {
       'zone breach', 'breached zone', 'entered zone', 'in zone',
       'zone incursion', 'zone violation', 'inside zone', 'within zone',
       'no exclusion zone', 'zone not established', 'zone not marked',
-      'zone inadequate', 'zone too small', 'zone barriers', 'zone demarcation'
+      'zone inadequate', 'zone too small', 'zone barriers', 'zone demarcation',
+      // Barriers
+      'no barriers', 'no barricades', 'barricades missing', 'barriers missing',
+      'without barricade', 'without barrier', 'not barricaded'
     ],
-    'Blind spot': [
+    'Operator seatbelt': [
+      // Core terms
+      'seatbelt', 'seatbelts', 'seat belt', 'seat belts', 'seat-belt',
+      // Misspellings
+      'seatblet', 'setbelt', 'seatbelt', 'seat blet', 'seatbel',
+      // Issues
+      'no seatbelt', 'seatbelt not worn', 'not wearing seatbelt',
+      'unbuckled', 'unbuckled seatbelt', 'belt not worn', 'belt unbuckled',
+      'seatbelt unfastened', 'unfastened', 'seatbelt off',
+      'seatbelt defective', 'seatbelt broken', 'seatbelt damaged',
+      'seatbelt not fastened', 'operator seatbelt', 'driver seatbelt',
+      'operator not wearing', 'did not fasten'
+    ],
+    'Operator distraction': [
+      // Phone use
+      'phone', 'mobile phone', 'cell phone', 'using phone', 'on phone',
+      'phone while operating', 'phone while driving', 'hand free', 'hands-free',
+      'handsfree', 'using mobile', 'speaking on phone', 'talking on phone',
+      // Headphones
+      'headphone', 'headphones', 'earphone', 'earphones', 'ear phone',
+      'earbuds', 'ear buds', 'wearing headphone', 'using headphone',
+      'wearing earphone', 'headset', 'ear piece', 'earpiece',
+      // Distraction
+      'distracted', 'distraction', 'not paying attention', 'inattentive',
+      'looking away', 'not focused', 'loss of attention'
+    ],
+    'Visibility obstruction': [
       // Core terms
       'blind spot', 'blind spots', 'blindspot', 'blindspots', 'blind-spot',
-      // Misspellings
-      'blnd spot', 'blind sopt', 'blidspot', 'blind spott',
       // Visibility
       'blind area', 'blind areas', 'visibility', 'poor visibility',
       'cannot see', 'can not see', 'could not see', 'no visibility',
       'obstructed view', 'view obstructed', 'blocked view', 'view blocked',
       'limited visibility', 'restricted view', 'sight line', 'line of sight',
+      'restricted vision', '360 degree visibility', 'clear view',
+      // Windscreen issues
+      'windscreen', 'windshield', 'wind screen', 'wind shield',
+      'windscreen dirty', 'windscreen covered', 'curtain', 'curtain covered',
+      'covered windscreen', 'obstructed windscreen', 'sticker on windscreen',
+      'dirt on windscreen', 'dirty windscreen', 'blocked windscreen',
       // Equipment
       'mirror', 'mirrors', 'side mirror', 'rear mirror', 'wing mirror',
-      'camera', 'cameras', 'reversing camera', 'rear camera', 'backup camera',
-      'rear view', 'rearview', 'rear-view', 'reverse view',
-      'monitor', 'display', 'screen', 'cctv',
-      // Issues
       'mirror missing', 'mirror broken', 'mirror dirty', 'mirror adjusted',
       'camera not working', 'camera obscured', 'camera dirty'
     ],
-    'Equipment defect': [
-      // Core terms
-      'defect', 'defects', 'defective', 'deficiency', 'deficiencies',
-      // Misspellings
-      'defct', 'deffect', 'defet', 'defecte', 'defetive', 'deffective',
-      // Issues
-      'fault', 'faults', 'faulty', 'faulted', 'malfunction', 'malfunctioning',
-      'broken', 'broke', 'breaking', 'damaged', 'damage', 'damaging',
-      'not working', 'doesn\'t work', 'won\'t work', 'stopped working',
-      'out of order', 'out of service', 'inoperable', 'inoperative',
-      'equipment failure', 'mechanical failure', 'hydraulic failure',
-      'engine failure', 'brake failure', 'steering failure',
-      // Inspection
-      'pre-use check', 'preuse', 'daily check', 'daily inspection',
-      'defect report', 'defect reported', 'defect tag', 'quarantine',
-      'machine defect', 'plant defect', 'vehicle defect'
+    'Equipment leakage': [
+      // Oil leakage
+      'oil leak', 'oil leakage', 'oil spill', 'oil spillage',
+      'hydraulic leak', 'hydraulic leakage', 'fluid leak', 'fluid leakage',
+      'leaking oil', 'leaking hydraulic', 'leaking fluid',
+      // Fuel leakage
+      'fuel leak', 'fuel leakage', 'diesel leak', 'diesel leakage',
+      'fuel spill', 'fuel spillage', 'leaking fuel', 'leaking diesel',
+      // General
+      'leakage', 'leaking', 'leak observed', 'spill', 'spillage',
+      'drip tray', 'chemical spill', 'spilled', 'oil on ground'
     ],
-    'Pedestrian conflict': [
-      // Core terms
-      'pedestrian', 'pedestrians', 'pedestrain', 'pedestiran',
-      // Misspellings
-      'pedetrian', 'pedestrien', 'pedistrian', 'pedestrain', 'pedestrianss',
-      // Conflict types
-      'pedestrian conflict', 'pedestrian interface', 'pedestrian interaction',
-      'pedestrian crossing', 'pedestrian crossings', 'people crossing',
-      'pedestrian route', 'pedestrian routes', 'pedestrian path',
-      'foot traffic', 'foot traffic area', 'walking area',
-      'pedestrian separation', 'segregation', 'no segregation',
-      'pedestrian walkway', 'walkway', 'walkways', 'footpath',
-      // Incidents
-      'pedestrian struck', 'struck pedestrian', 'hit pedestrian',
-      'pedestrian injury', 'pedestrian near miss', 'close call',
-      'pedestrian in path', 'people in way', 'workers nearby'
+    'Equipment overloading': [
+      // Overloading
+      'overload', 'overloaded', 'overloading', 'over load', 'over-load',
+      'excessive load', 'excess load', 'too much load',
+      'exceeded capacity', 'capacity exceeded', 'over capacity',
+      // Specific
+      'truck overloaded', 'trailer overloaded', 'dump truck overloaded',
+      'loaded beyond', 'beyond capacity', 'exceeding capacity'
+    ],
+    'Parking violation': [
+      // Parking issues
+      'parked', 'parking', 'undesignated area', 'undesignated parking',
+      'not designated', 'designated area', 'designated parking',
+      'improper parking', 'wrong parking', 'parking violation',
+      'parked on road', 'parked on access', 'blocking road', 'blocking access',
+      'obstructing', 'obstruction', 'parked randomly', 'randomly parked',
+      // Specific
+      'equipment parked', 'vehicle parked', 'truck parked',
+      'not in designated', 'outside designated', 'parked in work area',
+      'parked near', 'parked on slope'
+    ],
+    'Equipment emissions': [
+      // Black smoke
+      'black smoke', 'smoke', 'emitting smoke', 'emissions',
+      'exhaust', 'exhaust smoke', 'diesel smoke', 'engine smoke',
+      'excessive smoke', 'visible smoke', 'smoke from exhaust',
+      'releasing smoke', 'smoke releasing', 'pollution'
+    ],
+    'Equipment age/condition': [
+      // Age
+      'older than 15', 'over 15 years', 'more than 15 years',
+      'equipment age', 'old equipment', 'aged equipment',
+      // Condition
+      'poor condition', 'bad condition', 'unsatisfactory condition',
+      'poor tyre', 'poor tire', 'tyre condition', 'tire condition',
+      'worn tyre', 'worn tire', 'bald tyre', 'bald tire',
+      // Maintenance
+      'maintenance', 'poor maintenance', 'lack of maintenance',
+      'maintenance record', 'preventive maintenance', 'service record'
+    ],
+    'Equipment identification': [
+      // Company sticker
+      'company sticker', 'company logo', 'logo sticker', 'identification sticker',
+      'no company sticker', 'sticker missing', 'logo missing',
+      'without company', 'no logo', 'no identification',
+      // Operator details
+      'operator details', 'operator name', 'authorized operator',
+      'details not displayed', 'not displayed', 'identification missing'
     ]
   },
 

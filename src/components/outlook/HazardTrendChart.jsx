@@ -136,7 +136,7 @@ const HazardTrendChart = ({ data, hazardName, timePeriod }) => {
     if (allDays.length > 0 && viewRange.end === null) {
       setViewRange({ start: 0, end: allDays.length - 1 })
     }
-  }, [allDays.length])
+  }, [allDays.length, viewRange.end])
 
   // Get visible data based on view range
   const visibleDays = useMemo(() => {

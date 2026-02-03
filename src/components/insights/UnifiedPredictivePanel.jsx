@@ -7,7 +7,9 @@ import {
   Minus,
   HelpCircle,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Calculator,
+  Target
 } from 'lucide-react'
 import {
   PieChart,
@@ -16,6 +18,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts'
+import CalculationBreakdownModal from './CalculationBreakdownModal'
 
 // Slider styles for scenario simulator
 const sliderStyles = `
@@ -92,6 +95,9 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showMethodology, setShowMethodology] = useState(false)
 
+  // Modal state for calculation breakdown
+  const [breakdownModal, setBreakdownModal] = useState({ isOpen: false, type: null, data: null })
+
   // Scenario simulator slider state
   const [sliders, setSliders] = useState({
     closeActions: 0,
@@ -100,34 +106,67 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
     supervision: 0
   })
 
+  // Selected hazard for focused simulation
+  const [selectedHazard, setSelectedHazard] = useState('all')
+
   const { weekly, monthly, typeProbability, typeRisk } = incidentPrediction || {}
 
-  // Calculate data-driven values for slider labels
+  // Get unique hazards for dropdown
+  const hazardOptions = useMemo(() => {
+    if (!filteredIncidents?.length) return []
+
+    const hazardCounts = {}
+    filteredIncidents.forEach(i => {
+      const hazard = i.location?.trim()
+      if (hazard && hazard !== 'Not Specified' && hazard !== 'Not specified') {
+        hazardCounts[hazard] = (hazardCounts[hazard] || 0) + 1
+      }
+    })
+
+    // Sort by count descending
+    return Object.entries(hazardCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }))
+  }, [filteredIncidents])
+
+  // Filter incidents by selected hazard
+  const hazardFilteredIncidents = useMemo(() => {
+    if (!filteredIncidents?.length) return []
+    if (selectedHazard === 'all') return filteredIncidents
+
+    return filteredIncidents.filter(i =>
+      i.location?.trim() === selectedHazard
+    )
+  }, [filteredIncidents, selectedHazard])
+
+  // Calculate data-driven values for slider labels (based on selected hazard)
   const sliderData = useMemo(() => {
-    if (!filteredIncidents?.length) {
+    const incidents = hazardFilteredIncidents
+    if (!incidents?.length) {
       return {
         openActionsCount: 0,
         trainingPercent: 0,
-        supervisionPercent: 0
+        supervisionPercent: 0,
+        totalIncidents: 0
       }
     }
 
     // Count open actions
-    const openActionsCount = filteredIncidents.filter(
+    const openActionsCount = incidents.filter(
       i => i.actionStatus === 'open' || i.actionStatus === 'Open'
     ).length
 
     // Calculate root cause percentages
-    const totalNegative = filteredIncidents.filter(
+    const totalNegative = incidents.filter(
       i => !['positive', 'leadership'].includes(i.type?.toLowerCase())
     ).length
 
-    const trainingCount = filteredIncidents.filter(
+    const trainingCount = incidents.filter(
       i => i.rootCause?.toLowerCase()?.includes('training') ||
            i.rootCause?.toLowerCase()?.includes('inadequate training')
     ).length
 
-    const supervisionCount = filteredIncidents.filter(
+    const supervisionCount = incidents.filter(
       i => i.rootCause?.toLowerCase()?.includes('supervision') ||
            i.rootCause?.toLowerCase()?.includes('lack of supervision')
     ).length
@@ -146,16 +185,27 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
       supervisionPercent,
       trainingCount,
       supervisionCount,
-      totalNegative
+      totalNegative,
+      totalIncidents: incidents.length
     }
-  }, [filteredIncidents])
+  }, [hazardFilteredIncidents])
 
-  // Calculate projected outcome based on slider values
+  // Calculate projected outcome based on slider values and selected hazard
   const projection = useMemo(() => {
     if (weekly?.predicted === undefined || weekly?.predicted === null) return null
 
-    const basePrediction = weekly.predicted
-    const { openActionsCount, trainingPercent, supervisionPercent } = sliderData
+    // Calculate hazard-specific baseline prediction
+    let basePrediction = weekly.predicted
+    let hazardRatio = 1
+
+    if (selectedHazard !== 'all' && filteredIncidents?.length > 0) {
+      // Calculate what proportion of incidents this hazard represents
+      hazardRatio = hazardFilteredIncidents.length / filteredIncidents.length
+      // Scale the prediction to this hazard's share
+      basePrediction = Math.max(1, Math.round(weekly.predicted * hazardRatio))
+    }
+
+    const { openActionsCount, trainingPercent, supervisionPercent, totalIncidents } = sliderData
 
     // Calculate individual effects
     const effects = {
@@ -186,11 +236,11 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
     // Projected outcome
     const projected = Math.round(basePrediction * (1 + totalEffect / 100))
 
-    // Determine risk level
+    // Determine risk level (check critical first, then high)
     let riskLevel = 'medium'
     if (totalEffect <= -20) riskLevel = 'low'
-    else if (totalEffect >= 20) riskLevel = 'high'
     else if (totalEffect >= 30) riskLevel = 'critical'
+    else if (totalEffect >= 20) riskLevel = 'high'
 
     // Previous risk level (baseline)
     let baseRiskLevel = 'medium'
@@ -205,12 +255,19 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
       riskLevel,
       baseRiskLevel,
       effects,
-      isImproved: totalEffect < 0
+      isImproved: totalEffect < 0,
+      hazardRatio: Math.round(hazardRatio * 100),
+      totalIncidents,
+      isFiltered: selectedHazard !== 'all'
     }
-  }, [weekly, sliders, sliderData])
+  }, [weekly, sliders, sliderData, selectedHazard, hazardFilteredIncidents, filteredIncidents])
 
   const handleSliderChange = useCallback((id, value) => {
     setSliders(prev => ({ ...prev, [id]: value }))
+  }, [])
+
+  const handleHazardChange = useCallback((e) => {
+    setSelectedHazard(e.target.value)
   }, [])
 
   const handleReset = useCallback(() => {
@@ -220,9 +277,38 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
       inspection: 0,
       supervision: 0
     })
+    setSelectedHazard('all')
   }, [])
 
-  const hasChanges = Object.values(sliders).some(v => v !== 0)
+  const openBreakdown = useCallback((type, extraData = {}) => {
+    let data = {}
+    switch (type) {
+      case 'weekly':
+        data = { ...weekly, ...extraData }
+        break
+      case 'monthly':
+        data = { ...monthly, ...extraData }
+        break
+      case 'typeProbability':
+        data = { ...typeProbability, ...extraData }
+        break
+      case 'riskAssessment':
+        data = { ...typeRisk, ...extraData }
+        break
+      case 'scenario':
+        data = { ...projection, sliderData, sliders, selectedHazard, ...extraData }
+        break
+      default:
+        data = extraData
+    }
+    setBreakdownModal({ isOpen: true, type, data })
+  }, [weekly, monthly, typeProbability, typeRisk, projection, sliderData, sliders])
+
+  const closeBreakdown = useCallback(() => {
+    setBreakdownModal({ isOpen: false, type: null, data: null })
+  }, [])
+
+  const hasChanges = Object.values(sliders).some(v => v !== 0) || selectedHazard !== 'all'
 
   // Don't render if no meaningful data
   if (!weekly && !monthly && !typeProbability?.hasData) {
@@ -266,6 +352,7 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
               trend={weekly?.trend}
               confidence={weekly?.confidence}
               changePercent={weekly?.changePercent}
+              onClick={() => openBreakdown('weekly')}
             />
             <PredictionCard
               label="NEXT MONTH"
@@ -274,16 +361,17 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
               trend={monthly?.trend}
               confidence={monthly?.confidence}
               changePercent={monthly?.changePercent}
+              onClick={() => openBreakdown('monthly')}
             />
           </div>
 
           {/* Type Probability & Risk Assessment - Side by Side */}
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-surface-200 border-t border-surface-200">
             {typeProbability?.hasData && (
-              <TypeProbabilitySection data={typeProbability} />
+              <TypeProbabilitySection data={typeProbability} onClick={() => openBreakdown('typeProbability')} />
             )}
             {typeRisk?.hasData && (
-              <RiskAssessmentSection data={typeRisk} />
+              <RiskAssessmentSection data={typeRisk} onClick={() => openBreakdown('riskAssessment')} />
             )}
           </div>
 
@@ -305,6 +393,34 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
             </div>
 
             <div className="p-4 space-y-4">
+              {/* Hazard Selector Dropdown */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Target size={16} className="text-primary-600" />
+                  <span className="text-sm font-medium text-surface-700">Focus on Hazard</span>
+                </div>
+                <select
+                  value={selectedHazard}
+                  onChange={handleHazardChange}
+                  className="w-full px-3 py-2 text-sm border border-surface-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                >
+                  <option value="all">All Hazards ({filteredIncidents?.length || 0} observations)</option>
+                  {hazardOptions.map(({ name, count }) => (
+                    <option key={name} value={name}>
+                      {name} ({count} observations)
+                    </option>
+                  ))}
+                </select>
+                {selectedHazard !== 'all' && (
+                  <p className="text-xs text-primary-600 flex items-center gap-1">
+                    <Target size={12} />
+                    Simulation focused on "{selectedHazard}" - {sliderData.totalIncidents} observations
+                  </p>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-surface-100 pt-2"></div>
               {/* Slider: Close Open Actions */}
               <ScenarioSlider
                 id="closeActions"
@@ -370,6 +486,8 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
                 <ProjectedImpactBox
                   projection={projection}
                   hasChanges={hasChanges}
+                  onClick={() => hasChanges && openBreakdown('scenario')}
+                  selectedHazard={selectedHazard}
                 />
               )}
             </div>
@@ -404,11 +522,14 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
                       <li><strong>Training:</strong> Scaled by training root-cause % (x0.8)</li>
                       <li><strong>Inspection:</strong> +10% inspection = ~1.5% reduction</li>
                       <li><strong>Supervision:</strong> Scaled by supervision root-cause % (x0.8)</li>
+                      <li><strong>Hazard Filter:</strong> Scales prediction by hazard's share of total</li>
                     </ul>
                   </div>
                 </div>
                 <p className="text-surface-400 italic pt-1">
-                  Based on {filteredIncidents?.length || 0} observations. Maximum combined impact capped at -60% to +40%.
+                  Based on {filteredIncidents?.length || 0} observations
+                  {selectedHazard !== 'all' && ` (${hazardFilteredIncidents?.length || 0} for selected hazard)`}.
+                  Maximum combined impact capped at -60% to +40%.
                   Predictions are statistical estimates and may vary from actual outcomes.
                 </p>
               </div>
@@ -416,6 +537,14 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
           </div>
         </div>
       )}
+
+      {/* Calculation Breakdown Modal */}
+      <CalculationBreakdownModal
+        isOpen={breakdownModal.isOpen}
+        onClose={closeBreakdown}
+        type={breakdownModal.type}
+        data={breakdownModal.data}
+      />
     </div>
   )
 }
@@ -423,7 +552,7 @@ const UnifiedPredictivePanel = ({ incidentPrediction, filteredIncidents }) => {
 /**
  * PredictionCard - Individual prediction display (Week/Month)
  */
-const PredictionCard = ({ label, predicted, range, trend, confidence, changePercent }) => {
+const PredictionCard = ({ label, predicted, range, trend, confidence, changePercent, onClick }) => {
   if (predicted === undefined || predicted === null) {
     return (
       <div className="p-4 flex items-center justify-center">
@@ -445,7 +574,15 @@ const PredictionCard = ({ label, predicted, range, trend, confidence, changePerc
   }
 
   return (
-    <div className="p-4 relative">
+    <button
+      onClick={onClick}
+      className="p-4 relative w-full text-left hover:bg-surface-50 transition-colors group"
+    >
+      {/* Click hint */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Calculator size={14} className="text-primary-400" />
+      </div>
+
       {/* Label */}
       <p className="text-xs font-medium text-surface-500 uppercase tracking-wide mb-2">
         {label}
@@ -480,14 +617,14 @@ const PredictionCard = ({ label, predicted, range, trend, confidence, changePerc
           {confidence ? `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} Confidence` : ''}
         </span>
       </div>
-    </div>
+    </button>
   )
 }
 
 /**
  * TypeProbabilitySection - Donut chart with legend
  */
-const TypeProbabilitySection = ({ data }) => {
+const TypeProbabilitySection = ({ data, onClick }) => {
   const { types, mostLikely } = data
 
   // Prepare chart data
@@ -535,7 +672,12 @@ const TypeProbabilitySection = ({ data }) => {
   }
 
   return (
-    <div className="p-4">
+    <button onClick={onClick} className="p-4 w-full text-left hover:bg-surface-50 transition-colors group relative">
+      {/* Click hint */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Calculator size={14} className="text-primary-400" />
+      </div>
+
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-semibold text-surface-700">Type Probability</h4>
       </div>
@@ -577,18 +719,23 @@ const TypeProbabilitySection = ({ data }) => {
           </div>
         </div>
       )}
-    </div>
+    </button>
   )
 }
 
 /**
  * RiskAssessmentSection - Risk bars with trend indicators
  */
-const RiskAssessmentSection = ({ data }) => {
+const RiskAssessmentSection = ({ data, onClick }) => {
   const { risks, highestRisk } = data
 
   return (
-    <div className="p-4">
+    <button onClick={onClick} className="p-4 w-full text-left hover:bg-surface-50 transition-colors group relative">
+      {/* Click hint */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Calculator size={14} className="text-primary-400" />
+      </div>
+
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-surface-700">Risk Assessment</h4>
       </div>
@@ -630,7 +777,7 @@ const RiskAssessmentSection = ({ data }) => {
           </div>
         </div>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -690,8 +837,8 @@ const ScenarioSlider = ({
 /**
  * ProjectedImpactBox - Shows the projected impact of scenario changes
  */
-const ProjectedImpactBox = ({ projection, hasChanges }) => {
-  const { baseline, projected, changePercent, riskLevel, baseRiskLevel, isImproved } = projection
+const ProjectedImpactBox = ({ projection, hasChanges, onClick, selectedHazard }) => {
+  const { baseline, projected, changePercent, riskLevel, baseRiskLevel, isImproved, hazardRatio, isFiltered } = projection
 
   const getRiskColor = (level) => {
     switch (level) {
@@ -713,18 +860,41 @@ const ProjectedImpactBox = ({ projection, hasChanges }) => {
     }
   }
 
+  const Wrapper = hasChanges ? 'button' : 'div'
+  const wrapperProps = hasChanges ? {
+    onClick,
+    className: `w-full text-left p-4 rounded-lg border-2 group relative transition-all ${
+      isImproved
+        ? 'bg-green-50 border-green-200 hover:border-green-300'
+        : 'bg-red-50 border-red-200 hover:border-red-300'
+    }`
+  } : {
+    className: 'p-4 rounded-lg border-2 bg-surface-50 border-surface-200'
+  }
+
   return (
-    <div className={`p-4 rounded-lg border-2 ${
-      hasChanges
-        ? isImproved
-          ? 'bg-green-50 border-green-200'
-          : 'bg-red-50 border-red-200'
-        : 'bg-surface-50 border-surface-200'
-    }`}>
+    <Wrapper {...wrapperProps}>
+      {/* Click hint when has changes */}
+      {hasChanges && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Calculator size={14} className="text-primary-400" />
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold text-surface-600 uppercase tracking-wide">
           Projected Impact
+          {isFiltered && selectedHazard !== 'all' && (
+            <span className="ml-2 text-primary-600 normal-case">
+              for "{selectedHazard}"
+            </span>
+          )}
         </span>
+        {isFiltered && (
+          <span className="text-2xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+            {hazardRatio}% of total
+          </span>
+        )}
       </div>
 
       {hasChanges ? (
@@ -771,6 +941,11 @@ const ProjectedImpactBox = ({ projection, hasChanges }) => {
               </span>
             </div>
           </div>
+
+          {/* Click to see calculation hint */}
+          <p className="text-2xs text-surface-400 mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+            Click to see calculation breakdown
+          </p>
         </>
       ) : (
         <div className="flex items-center gap-2 text-surface-500">
@@ -778,7 +953,7 @@ const ProjectedImpactBox = ({ projection, hasChanges }) => {
           <span className="text-sm">Adjust sliders above to see projected impact</span>
         </div>
       )}
-    </div>
+    </Wrapper>
   )
 }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, startTransition } from 'react'
 import { Target, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
@@ -13,12 +13,12 @@ import { aggregateContributingFactors, NEGATIVE_TYPES } from '../utils/rootCause
 /**
  * TrendSummary - Compact inline summary for Hazards tab
  */
-const TrendSummary = ({ hazards }) => {
+const TrendSummary = React.memo(({ hazards }) => {
   const counts = useMemo(() => {
     const summary = { rising: 0, stable: 0, declining: 0 }
 
     hazards.forEach(h => {
-      switch (h.trendLevel.level) {
+      switch (h.trendLevel?.level) {
         case 'significant-rise':
         case 'rising':
           summary.rising++
@@ -31,6 +31,8 @@ const TrendSummary = ({ hazards }) => {
         case 'significant-decline':
           summary.declining++
           break
+        default:
+          summary.stable++
       }
     })
 
@@ -38,7 +40,7 @@ const TrendSummary = ({ hazards }) => {
   }, [hazards])
 
   return (
-    <div className="flex items-center gap-3 text-xs">
+    <div className="flex items-center gap-3 text-xs transition-all duration-200">
       <span className="text-surface-500">
         <span className="font-medium text-red-500">{counts.rising}</span> Rising
       </span>
@@ -52,12 +54,14 @@ const TrendSummary = ({ hazards }) => {
       </span>
     </div>
   )
-}
+})
+
+TrendSummary.displayName = 'TrendSummary'
 
 /**
  * FactorCoverageSummary - Shows factor detection coverage for Factors tab
  */
-const FactorCoverageSummary = ({ factorData, totalNegative }) => {
+const FactorCoverageSummary = React.memo(({ factorData, totalNegative }) => {
   const coverage = useMemo(() => {
     const analyzed = factorData?.analyzed || 0
     const total = totalNegative || 0
@@ -76,7 +80,7 @@ const FactorCoverageSummary = ({ factorData, totalNegative }) => {
   }
 
   return (
-    <div className="flex items-center gap-3 text-xs">
+    <div className="flex items-center gap-3 text-xs transition-all duration-200">
       <span className="text-surface-500">
         <span className={`font-medium ${getCoverageColor(coverage.percentage)}`}>{coverage.analyzed}</span>
         <span className="text-surface-400">/{coverage.total}</span> with factors
@@ -87,10 +91,13 @@ const FactorCoverageSummary = ({ factorData, totalNegative }) => {
       </span>
     </div>
   )
-}
+})
+
+FactorCoverageSummary.displayName = 'FactorCoverageSummary'
 
 /**
  * SafetyOutlook - Main page component with hazard list view
+ * Optimized with startTransition for smooth selections
  */
 const SafetyOutlook = () => {
   const { incidents } = useData()
@@ -121,7 +128,7 @@ const SafetyOutlook = () => {
   }, [incidents, contractor])
 
   // Filter configuration - Contractor (parent) and Site (child)
-  const filterConfig = [
+  const filterConfig = useMemo(() => [
     {
       key: 'contractor',
       type: 'select',
@@ -136,7 +143,7 @@ const SafetyOutlook = () => {
       placeholder: 'All Sites',
       options: siteOptions
     }
-  ]
+  ], [uniqueContractors, siteOptions])
 
   // Filtered incidents based on contractor, site, and period
   const filteredIncidents = useMemo(() => {
@@ -166,7 +173,7 @@ const SafetyOutlook = () => {
     return getHazardTrendingByPeriod(filteredIncidents, period)
   }, [filteredIncidents, period])
 
-  // Calculate contributing factors data (for Factors tab)
+  // Calculate contributing factors data (for Factors tab) - DEFERRED when not in view
   const factorData = useMemo(() => {
     return aggregateContributingFactors(filteredIncidents, 'negative')
   }, [filteredIncidents])
@@ -184,7 +191,6 @@ const SafetyOutlook = () => {
   // Auto-select first hazard when data loads, or update selection if current hazard no longer exists
   useEffect(() => {
     if (sortedHazards.length === 0) {
-      // No hazards available, clear selection
       if (selectedHazard) {
         setSelectedHazard(null)
       }
@@ -192,16 +198,19 @@ const SafetyOutlook = () => {
     }
 
     if (!selectedHazard) {
-      // No selection, pick first
-      setSelectedHazard(sortedHazards[0])
+      // Use startTransition to prevent blocking
+      startTransition(() => {
+        setSelectedHazard(sortedHazards[0])
+      })
       return
     }
 
     // Check if currently selected hazard still exists in the filtered list
     const stillExists = sortedHazards.some(h => h.name === selectedHazard.name)
     if (!stillExists) {
-      // Selected hazard no longer in list, select first available
-      setSelectedHazard(sortedHazards[0])
+      startTransition(() => {
+        setSelectedHazard(sortedHazards[0])
+      })
     }
   }, [sortedHazards, selectedHazard])
 
@@ -215,18 +224,22 @@ const SafetyOutlook = () => {
     }
 
     if (!selectedFactor) {
-      setSelectedFactor(factorData.byFactor[0])
+      startTransition(() => {
+        setSelectedFactor(factorData.byFactor[0])
+      })
       return
     }
 
     // Check if currently selected factor still exists
     const stillExists = factorData.byFactor.some(f => f.name === selectedFactor.name)
     if (!stillExists) {
-      setSelectedFactor(factorData.byFactor[0])
+      startTransition(() => {
+        setSelectedFactor(factorData.byFactor[0])
+      })
     }
   }, [factorData.byFactor, selectedFactor])
 
-  // Handlers
+  // Handlers - use startTransition for non-urgent updates
   const handleViewChange = useCallback((view) => {
     setActiveView(view)
     // Don't reset selections - preserve them when switching tabs
@@ -234,28 +247,39 @@ const SafetyOutlook = () => {
 
   const handlePeriodChange = useCallback((newPeriod) => {
     setPeriod(newPeriod)
-    setSelectedHazard(null)
-    setSelectedFactor(null)
+    startTransition(() => {
+      setSelectedHazard(null)
+      setSelectedFactor(null)
+    })
   }, [setPeriod])
 
   const handleFilterChange = useCallback((key, value) => {
     setFilter(key, value)
-    setSelectedHazard(null)
-    setSelectedFactor(null)
+    startTransition(() => {
+      setSelectedHazard(null)
+      setSelectedFactor(null)
+    })
   }, [setFilter])
 
   const handleClearFilters = useCallback(() => {
     clearFilters()
-    setSelectedHazard(null)
-    setSelectedFactor(null)
+    startTransition(() => {
+      setSelectedHazard(null)
+      setSelectedFactor(null)
+    })
   }, [clearFilters])
 
+  // CRITICAL: Use startTransition for selection to prevent lag
   const handleHazardSelect = useCallback((hazard) => {
-    setSelectedHazard(hazard)
+    startTransition(() => {
+      setSelectedHazard(hazard)
+    })
   }, [])
 
   const handleFactorSelect = useCallback((factor) => {
-    setSelectedFactor(factor)
+    startTransition(() => {
+      setSelectedFactor(factor)
+    })
   }, [])
 
   // Check if we have data
@@ -334,7 +358,7 @@ const SafetyOutlook = () => {
           <button
             onClick={() => handleViewChange('hazards')}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
+              flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200
               ${activeView === 'hazards'
                 ? 'bg-white text-surface-900 shadow-sm'
                 : 'text-surface-600 hover:text-surface-800 hover:bg-surface-50'
@@ -343,14 +367,14 @@ const SafetyOutlook = () => {
           >
             <Target size={14} />
             Hazards
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeView === 'hazards' ? 'bg-primary-100 text-primary-700' : 'bg-surface-200 text-surface-500'}`}>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full transition-colors duration-200 ${activeView === 'hazards' ? 'bg-primary-100 text-primary-700' : 'bg-surface-200 text-surface-500'}`}>
               {sortedHazards.length}
             </span>
           </button>
           <button
             onClick={() => handleViewChange('factors')}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
+              flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200
               ${activeView === 'factors'
                 ? 'bg-white text-surface-900 shadow-sm'
                 : 'text-surface-600 hover:text-surface-800 hover:bg-surface-50'
@@ -359,7 +383,7 @@ const SafetyOutlook = () => {
           >
             <AlertCircle size={14} />
             Factors
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeView === 'factors' ? 'bg-primary-100 text-primary-700' : 'bg-surface-200 text-surface-500'}`}>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full transition-colors duration-200 ${activeView === 'factors' ? 'bg-primary-100 text-primary-700' : 'bg-surface-200 text-surface-500'}`}>
               {factorData.byFactor.length}
             </span>
           </button>
@@ -372,11 +396,11 @@ const SafetyOutlook = () => {
         </div>
       </div>
 
-      {/* Main content - conditional rendering based on active view */}
+      {/* Main content - conditional rendering based on active view with smooth transitions */}
       {activeView === 'hazards' ? (
-        <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-260px)]">
+        <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-260px)] animate-fade-in">
           {/* Left: Hazard List */}
-          <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col">
+          <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col transition-all duration-200">
             <div className="flex items-center justify-between mb-1 flex-shrink-0">
               <h2 className="text-sm font-semibold text-surface-800">Hazards</h2>
               <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{sortedHazards.length}</span>
@@ -391,7 +415,7 @@ const SafetyOutlook = () => {
           </div>
 
           {/* Right: Hazard Detail Panel */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 transition-all duration-200">
             <HazardDetailPanel
               hazard={selectedHazard}
               incidents={filteredIncidents}
@@ -400,9 +424,9 @@ const SafetyOutlook = () => {
           </div>
         </div>
       ) : (
-        <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-260px)]">
+        <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-260px)] animate-fade-in">
           {/* Left: Factor List */}
-          <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col">
+          <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col transition-all duration-200">
             <div className="flex items-center justify-between mb-1 flex-shrink-0">
               <h2 className="text-sm font-semibold text-surface-800">Factors</h2>
               <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{factorData.byFactor.length}</span>
@@ -420,7 +444,7 @@ const SafetyOutlook = () => {
           </div>
 
           {/* Right: Factor Detail Panel */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 transition-all duration-200">
             <FactorDetailPanel
               factor={selectedFactor}
               factorData={factorData}

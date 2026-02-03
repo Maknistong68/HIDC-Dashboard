@@ -367,6 +367,18 @@ export const clearAllCaches = () => {
 }
 
 /**
+ * Clear only data-dependent caches (use after import)
+ * Keeps normalization caches (contractor, site, text) intact
+ */
+export const clearDataCaches = () => {
+  classificationCache.clear()
+  chartDataCache.clear()
+  aggregationCache.clear()
+  clearFilterCache()
+  console.log('[Cache] Data caches cleared (normalization caches retained)')
+}
+
+/**
  * Get cache statistics
  * @returns {Object}
  */

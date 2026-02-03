@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef, startTransition } from 'react'
 import { AlertCircle, Eye, Copy, Check, X, TrendingUp } from 'lucide-react'
-import { NEGATIVE_TYPES, FACTOR_TYPE } from '../../utils/rootCauseEngine'
+import { NEGATIVE_TYPES, FACTOR_TYPE, detectContributingFactors } from '../../utils/rootCauseEngine'
 import { getFactorDailyData } from '../../utils/insightsCalculations'
 import HazardTrendChart from './HazardTrendChart'
 
@@ -46,6 +46,7 @@ const CATEGORY_STYLES = {
 
 // Get style based on factor type first, then category
 const getCategoryStyle = (factor) => {
+  if (!factor) return CATEGORY_STYLES.default
   // For Common factors, use teal theme
   if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') {
     return CATEGORY_STYLES['Common Factor']
@@ -67,10 +68,10 @@ const HazardBar = React.memo(({ hazardName, count, maxCount, onClick, barColor }
   return (
     <button
       onClick={onClick}
-      className="w-full group hover:bg-surface-50 rounded-lg p-2 transition-colors text-left"
+      className="w-full group hover:bg-surface-50 rounded-lg p-2 transition-all duration-200 text-left"
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium text-surface-700 group-hover:text-primary-600 truncate pr-2">
+        <span className="text-sm font-medium text-surface-700 group-hover:text-primary-600 truncate pr-2 transition-colors duration-200">
           {hazardName}
         </span>
         <span className="text-sm font-bold text-surface-600 flex-shrink-0">
@@ -79,7 +80,7 @@ const HazardBar = React.memo(({ hazardName, count, maxCount, onClick, barColor }
       </div>
       <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+          className={`h-full rounded-full transition-all duration-500 ease-out ${barColor}`}
           style={{ width: `${Math.max(width, 2)}%` }}
         />
       </div>
@@ -141,8 +142,8 @@ const DrillDownModal = React.memo(({ isOpen, onClose, factor, hazard, observatio
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col animate-scale-in">
         <div className="flex items-center justify-between p-4 border-b border-surface-200">
           <div>
             <h3 className="text-lg font-semibold text-surface-900">{factor}</h3>
@@ -153,12 +154,12 @@ const DrillDownModal = React.memo(({ isOpen, onClose, factor, hazard, observatio
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-surface-100 hover:bg-surface-200 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-surface-100 hover:bg-surface-200 rounded-lg transition-colors duration-200"
             >
               {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
               {copied ? 'Copied!' : 'Copy All'}
             </button>
-            <button onClick={onClose} className="p-1.5 hover:bg-surface-100 rounded-lg transition-colors">
+            <button onClick={onClose} className="p-1.5 hover:bg-surface-100 rounded-lg transition-colors duration-200">
               <X size={18} className="text-surface-500" />
             </button>
           </div>
@@ -171,7 +172,7 @@ const DrillDownModal = React.memo(({ isOpen, onClose, factor, hazard, observatio
             </div>
           ) : (
             observations.map((obs, index) => (
-              <div key={obs.id || index} className="p-3 bg-surface-50 rounded-lg border border-surface-100">
+              <div key={obs.id || index} className="p-3 bg-surface-50 rounded-lg border border-surface-100 transition-all duration-200 hover:shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <span className="text-xs font-medium text-surface-500">#{index + 1}</span>
                   <span className="text-xs text-surface-400">{obs.date}</span>
@@ -198,7 +199,7 @@ DrillDownModal.displayName = 'DrillDownModal'
  */
 const HazardsAffectedPanel = React.memo(({ factor, hazardsAffected, maxCount, categoryStyle, onHazardClick }) => {
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 overflow-hidden flex flex-col animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-surface-800">Hazards Affected</h3>
         <span className="text-xs bg-surface-100 text-surface-600 px-2 py-0.5 rounded-full">
@@ -243,74 +244,86 @@ HazardsAffectedPanel.displayName = 'HazardsAffectedPanel'
 
 /**
  * FactorDetailPanel - Right panel showing factor details with tabs
- * Optimized with memoization and efficient data handling
+ * Optimized with memoization, deferred updates, and smooth transitions
  */
 const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
   const [activeTab, setActiveTab] = useState('chart')
   const [selectedDrillDown, setSelectedDrillDown] = useState(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const prevFactorRef = useRef(null)
 
-  // Pre-compute factor detection function once
-  const detectFn = useMemo(() => {
-    // Dynamic import to avoid circular dependency
-    const { detectContributingFactors } = require('../../utils/rootCauseEngine')
-    return detectContributingFactors
-  }, [])
+  // Smooth transition effect when factor changes
+  useEffect(() => {
+    if (prevFactorRef.current?.name !== factor?.name) {
+      setIsTransitioning(true)
+      const timer = setTimeout(() => setIsTransitioning(false), 150)
+      prevFactorRef.current = factor
+      return () => clearTimeout(timer)
+    }
+  }, [factor])
 
-  // Calculate chart data for factor trend - memoized
+  // PERFORMANCE: Defer expensive chart data calculation
   const chartData = useMemo(() => {
     if (!factor || !incidents) return null
-    return getFactorDailyData(incidents, factor.name, timePeriod, detectFn)
-  }, [factor, incidents, timePeriod, detectFn])
+    // Only calculate when needed - use the imported function directly
+    return getFactorDailyData(incidents, factor.name, timePeriod, detectContributingFactors)
+  }, [factor?.name, incidents, timePeriod])
 
-  // Get hazards affected by this factor - memoized
+  // Get hazards affected by this factor - fast lookup from pre-computed data
   const hazardsAffected = useMemo(() => {
     if (!factor || !factorData?.byFactorHazard) return []
     const hazardCounts = factorData.byFactorHazard[factor.name] || {}
     return Object.entries(hazardCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-  }, [factor, factorData])
+  }, [factor?.name, factorData?.byFactorHazard])
 
-  // Get max count for bar scaling - memoized
+  // Get max count for bar scaling
   const maxCount = useMemo(() => {
     if (hazardsAffected.length === 0) return 0
     return Math.max(...hazardsAffected.map(h => h.count))
   }, [hazardsAffected])
 
-  // Pre-compute observations by hazard for fast drill-down
-  const observationsByHazard = useMemo(() => {
-    if (!incidents || !factor) return {}
+  // PERFORMANCE: Lazy compute observations only when drill-down is triggered
+  const getObservationsForHazard = useCallback((hazardName) => {
+    if (!incidents || !factor) return []
 
-    const grouped = {}
-    incidents.forEach(i => {
-      if (!NEGATIVE_TYPES.includes(i.type)) return
+    const results = []
+    const factorName = factor.name
 
-      const detectedFactors = detectFn(i.description)
-      const hasThisFactor = detectedFactors.some(f => f.factor === factor.name || f.name === factor.name)
+    // Optimized loop - early exit patterns
+    for (let i = 0; i < incidents.length; i++) {
+      const incident = incidents[i]
+      if (!NEGATIVE_TYPES.includes(incident.type)) continue
+      if (incident.location !== hazardName) continue
 
-      if (hasThisFactor && i.location) {
-        if (!grouped[i.location]) grouped[i.location] = []
-        grouped[i.location].push(i)
+      const detectedFactors = detectContributingFactors(incident.description)
+      const hasThisFactor = detectedFactors.some(f => f.factor === factorName || f.name === factorName)
+
+      if (hasThisFactor) {
+        results.push(incident)
       }
-    })
-    return grouped
-  }, [incidents, factor, detectFn])
+    }
+    return results
+  }, [incidents, factor?.name])
 
-  // Fast drill-down using pre-computed data
+  // Fast drill-down - compute on demand
   const handleHazardClick = useCallback((hazardName) => {
-    const observations = observationsByHazard[hazardName] || []
-    setSelectedDrillDown({ hazard: hazardName, observations })
-  }, [observationsByHazard])
+    startTransition(() => {
+      const observations = getObservationsForHazard(hazardName)
+      setSelectedDrillDown({ hazard: hazardName, observations })
+    })
+  }, [getObservationsForHazard])
 
   const closeDrillDown = useCallback(() => setSelectedDrillDown(null), [])
 
-  // Determine factor type label
+  // Determine factor type label - simple computation
   const factorTypeLabel = useMemo(() => {
     if (!factor) return ''
     if (factor.type === FACTOR_TYPE.COMMON || factor.type === 'common') return 'Common Factor'
     if (factor.type === FACTOR_TYPE.SPECIFIC || factor.type === 'specific') return 'Specific Factor'
     return factor.category || 'Factor'
-  }, [factor])
+  }, [factor?.type, factor?.category])
 
   // Get confidence based on count
   const confidence = useMemo(() => {
@@ -318,7 +331,7 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
     if (factor.count >= 20) return { level: 'high', label: 'High confidence', color: 'bg-green-100 text-green-700' }
     if (factor.count >= 10) return { level: 'medium', label: 'Medium confidence', color: 'bg-amber-100 text-amber-700' }
     return { level: 'low', label: 'Low confidence', color: 'bg-red-100 text-red-600', icon: '⚠' }
-  }, [factor])
+  }, [factor?.count])
 
   const tabs = [
     { id: 'chart', label: 'Trend', icon: TrendingUp },
@@ -343,17 +356,17 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
   const categoryStyle = getCategoryStyle(factor)
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden">
-      {/* Header with factor info */}
-      <div className={`px-4 pt-3 pb-2 ${categoryStyle.bg} border-b ${categoryStyle.border}`}>
+    <div className={`h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
+      {/* Header with factor info - smooth background transition */}
+      <div className={`px-4 pt-3 pb-2 ${categoryStyle.bg} border-b ${categoryStyle.border} transition-colors duration-300`}>
         {/* Factor name - prominent */}
-        <h2 className="text-lg font-bold text-surface-900 mb-1">{factor.name}</h2>
+        <h2 className="text-lg font-bold text-surface-900 mb-1 transition-all duration-200">{factor.name}</h2>
 
         {/* Meta info row */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             {/* Factor type badge */}
-            <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+            <span className={`text-xs font-medium px-2 py-0.5 rounded transition-colors duration-200 ${
               factor.type === FACTOR_TYPE.COMMON || factor.type === 'common'
                 ? 'bg-teal-100 text-teal-700'
                 : 'bg-violet-100 text-violet-700'
@@ -363,7 +376,7 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
 
             {/* Confidence indicator */}
             {confidence && (
-              <span className={`text-xs px-1.5 py-0.5 rounded ${confidence.color}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded transition-colors duration-200 ${confidence.color}`}>
                 {confidence.icon && `${confidence.icon} `}{confidence.label}
               </span>
             )}
@@ -385,7 +398,7 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                flex items-center gap-1.5 px-4 py-2.5 text-sm transition-all duration-150
+                flex items-center gap-1.5 px-4 py-2.5 text-sm transition-all duration-200
                 ${isActive
                   ? 'text-primary-600 border-b-2 border-primary-500 font-medium bg-primary-50/50'
                   : 'text-surface-500 hover:text-surface-700 hover:bg-surface-50'
@@ -395,7 +408,7 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
               {tab.icon && <tab.icon size={14} />}
               <span>{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                <span className={`text-xs px-1.5 py-0.5 rounded-full transition-colors duration-200 ${
                   isActive ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-surface-500'
                 }`}>
                   {tab.count}
@@ -406,24 +419,26 @@ const FactorDetailPanel = ({ factor, factorData, incidents, timePeriod }) => {
         })}
       </div>
 
-      {/* Tab content */}
+      {/* Tab content with smooth transitions */}
       <div className="flex-1 p-3 overflow-auto">
-        {activeTab === 'chart' && (
-          <HazardTrendChart
-            data={chartData}
-            hazardName={factor?.name}
-            timePeriod={timePeriod}
-          />
-        )}
-        {activeTab === 'hazards' && (
-          <HazardsAffectedPanel
-            factor={factor}
-            hazardsAffected={hazardsAffected}
-            maxCount={maxCount}
-            categoryStyle={categoryStyle}
-            onHazardClick={handleHazardClick}
-          />
-        )}
+        <div className={`h-full transition-opacity duration-200 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+          {activeTab === 'chart' && (
+            <HazardTrendChart
+              data={chartData}
+              hazardName={factor?.name}
+              timePeriod={timePeriod}
+            />
+          )}
+          {activeTab === 'hazards' && (
+            <HazardsAffectedPanel
+              factor={factor}
+              hazardsAffected={hazardsAffected}
+              maxCount={maxCount}
+              categoryStyle={categoryStyle}
+              onHazardClick={handleHazardClick}
+            />
+          )}
+        </div>
       </div>
 
       {/* Drill-down modal */}

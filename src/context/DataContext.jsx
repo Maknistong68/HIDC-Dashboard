@@ -18,7 +18,7 @@ import {
 } from '../utils/indexedDBStorage'
 import { generateId } from '../utils/calculations'
 import { categorizeForImport, runBackgroundCategorization } from '../utils/categorizationManager'
-import { clearAllCaches } from '../utils/memoizedCalculations'
+import { clearAllCaches, clearDataCaches } from '../utils/memoizedCalculations'
 
 const DataContext = createContext()
 
@@ -49,8 +49,8 @@ export const DataProvider = ({ children }) => {
   // Reload incidents from storage
   const reloadIncidents = useCallback(async () => {
     try {
-      // Clear caches before reloading to ensure fresh calculations
-      clearAllCaches()
+      // Clear data caches before reloading (keep normalization caches)
+      clearDataCaches()
 
       const records = await getAllRecords()
       setIncidents(Array.isArray(records) ? records : [])
@@ -183,12 +183,17 @@ export const DataProvider = ({ children }) => {
         fileHash: fileInfo.fileHash || null
       })
 
-      // Clear caches since data changed
-      clearAllCaches()
+      // Clear data caches since data changed (keep normalization caches)
+      clearDataCaches()
 
       // Incremental state update: merge new records directly instead of full reload
       // This avoids fetching all records from IndexedDB after every import
-      setIncidents(prev => [...prev, ...incidentsWithIds])
+      // IMPORTANT: Add fileId to each incident so timeline visualization works
+      const incidentsWithFileId = incidentsWithIds.map(incident => ({
+        ...incident,
+        fileId: result.fileId
+      }))
+      setIncidents(prev => [...prev, ...incidentsWithFileId])
 
       // Only reload files list (lightweight) to update the file management UI
       await reloadFiles()
@@ -231,18 +236,27 @@ export const DataProvider = ({ children }) => {
 
   // Update incident by Event ID
   const updateIncidentByEventId = useCallback(async (eventId, updates) => {
-    setIncidents(prev => prev.map(i => i.eventId === eventId ? { ...i, ...updates } : i))
+    let foundIncident = null
 
-    // Find the record and update in IndexedDB
-    const incident = incidents.find(i => i.eventId === eventId)
-    if (incident) {
+    setIncidents(prev => {
+      return prev.map(i => {
+        if (i.eventId === eventId) {
+          foundIncident = { ...i }  // Capture before update
+          return { ...i, ...updates }
+        }
+        return i
+      })
+    })
+
+    // Use captured incident for IndexedDB update
+    if (foundIncident) {
       try {
-        await updateRecord(incident.id, updates)
+        await updateRecord(foundIncident.id, updates)
       } catch (error) {
         console.error('[DataContext] Error updating record in IndexedDB:', error)
       }
     }
-  }, [incidents])
+  }, [])  // No dependencies - uses functional update
 
   // Delete single incident
   const deleteIncident = useCallback(async (id) => {
@@ -250,7 +264,7 @@ export const DataProvider = ({ children }) => {
 
     try {
       await deleteRecord(id)
-      clearAllCaches()
+      clearDataCaches()
     } catch (error) {
       console.error('[DataContext] Error deleting record from IndexedDB:', error)
     }
@@ -265,8 +279,8 @@ export const DataProvider = ({ children }) => {
     try {
       const result = await deleteImportedFile(fileId)
 
-      // Clear caches since data changed significantly
-      clearAllCaches()
+      // Clear data caches since data changed (keep normalization caches)
+      clearDataCaches()
 
       // Reload data
       await reloadIncidents()
@@ -302,8 +316,8 @@ export const DataProvider = ({ children }) => {
         replacedAt: new Date().toISOString()
       })
 
-      // Clear caches
-      clearAllCaches()
+      // Clear data caches (keep normalization caches)
+      clearDataCaches()
 
       // Reload data
       await reloadIncidents()

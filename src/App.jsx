@@ -21,18 +21,22 @@ const PageLoadingFallback = () => (
   </div>
 )
 
-// Main tabs - conditionally rendered (only active tab mounts)
-// This prevents useMemo calculations from running on inactive tabs
+// Main tabs - always rendered but hidden via CSS display toggle
+// This preserves useMemo calculations across ALL route changes (including /files)
 const MainTabs = () => {
   const { pathname } = useLocation()
 
-  if (!['/', '/data-control', '/outlook'].includes(pathname)) return null
-
   return (
     <>
-      {pathname === '/' && <Dashboard />}
-      {pathname === '/data-control' && <DataQuality />}
-      {pathname === '/outlook' && <SafetyOutlook />}
+      <div style={{ display: pathname === '/' ? 'block' : 'none' }}>
+        <Dashboard />
+      </div>
+      <div style={{ display: pathname === '/data-control' ? 'block' : 'none' }}>
+        <DataQuality />
+      </div>
+      <div style={{ display: pathname === '/outlook' ? 'block' : 'none' }}>
+        <SafetyOutlook />
+      </div>
     </>
   )
 }
