@@ -1,9 +1,40 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs'
+import path from 'path'
+
+// Plugin to save parsing report for Claude to read
+const parsingReportPlugin = () => ({
+  name: 'parsing-report-saver',
+  configureServer(server) {
+    server.middlewares.use('/api/save-parsing-report', (req, res) => {
+      if (req.method === 'POST') {
+        let body = ''
+        req.on('data', chunk => { body += chunk })
+        req.on('end', () => {
+          try {
+            const reportPath = path.join(process.cwd(), 'parsing-report.json')
+            fs.writeFileSync(reportPath, body)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true }))
+            console.log('\n[Parsing Report] Saved to parsing-report.json - Claude can now read it\n')
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, error: err.message }))
+          }
+        })
+      } else {
+        res.writeHead(405)
+        res.end()
+      }
+    })
+  }
+})
 
 export default defineConfig({
   plugins: [
+    parsingReportPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

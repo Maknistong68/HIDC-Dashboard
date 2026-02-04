@@ -3,13 +3,12 @@ import {
   RefreshCw,
   TrendingDown,
   Clock,
-  Target,
   Users,
   ChevronDown,
   ChevronUp,
   Info
 } from 'lucide-react'
-import { detectContributingFactors, NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
+import { NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
 
 // Custom slider styles for better visibility
 const sliderStyles = `
@@ -49,15 +48,6 @@ const sliderStyles = `
   .whatif-slider.amber::-moz-range-thumb {
     background: #f59e0b;
   }
-  .whatif-slider.purple {
-    background: linear-gradient(to right, #f3e8ff, #a855f7);
-  }
-  .whatif-slider.purple::-webkit-slider-thumb {
-    background: #9333ea;
-  }
-  .whatif-slider.purple::-moz-range-thumb {
-    background: #9333ea;
-  }
   .whatif-slider.emerald {
     background: linear-gradient(to right, #d1fae5, #34d399);
   }
@@ -81,58 +71,30 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
     const hazardIncidents = incidents.filter(i => i.location === hazard.name)
     const negativeIncidents = hazardIncidents.filter(i => NEGATIVE_TYPES.includes(i.type))
 
-    const factorCounts = {}
-    negativeIncidents.forEach(i => {
-      const factors = detectContributingFactors(i.description || '')
-      factors.forEach(({ factor }) => {
-        factorCounts[factor] = (factorCounts[factor] || 0) + 1
-      })
-    })
-
-    const topFactors = Object.entries(factorCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-
+    // Calculate weekly average (assuming 12 weeks of data)
     const weeklyAvg = Math.max(1, Math.round(negativeIncidents.length / 12))
 
-    return { total: negativeIncidents.length, weeklyAvg, topFactors, factorCounts }
+    return { total: negativeIncidents.length, weeklyAvg }
   }, [hazard, incidents])
 
   const [params, setParams] = useState({
     actionsToClose: 0,
-    targetFactor: '',
-    factorReduction: 0,
     trainingIncrease: 0
   })
 
   const [showDetails, setShowDetails] = useState(false)
-
-  // Set default target factor
-  useMemo(() => {
-    if (hazardData?.topFactors?.length > 0 && !params.targetFactor) {
-      setParams(prev => ({ ...prev, targetFactor: hazardData.topFactors[0].name }))
-    }
-  }, [hazardData, params.targetFactor])
 
   // Calculate projections
   const projection = useMemo(() => {
     if (!hazardData) return null
 
     let totalReduction = 0
-    const actionEffect = Math.min(30, params.actionsToClose * 2)
+    const actionEffect = Math.min(30, params.actionsToClose * 3)
     totalReduction += actionEffect
 
-    let factorEffect = 0
-    if (params.targetFactor && params.factorReduction > 0) {
-      const factorCount = hazardData.factorCounts[params.targetFactor] || 0
-      const factorPct = hazardData.total > 0 ? (factorCount / hazardData.total) * 100 : 0
-      factorEffect = (factorPct * params.factorReduction) / 100
-      totalReduction += factorEffect
-    }
-
-    const trainingEffect = Math.min(15, params.trainingIncrease * 0.15)
+    const trainingEffect = Math.min(20, params.trainingIncrease * 0.2)
     totalReduction += trainingEffect
-    totalReduction = Math.min(60, totalReduction)
+    totalReduction = Math.min(50, totalReduction)
 
     const projectedWeekly = hazardData.weeklyAvg * (1 - totalReduction / 100)
     const quarterSaved = Math.round((hazardData.weeklyAvg - projectedWeekly) * 12)
@@ -144,7 +106,6 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
       quarterSaved,
       breakdown: {
         actions: Math.round(actionEffect * 10) / 10,
-        factor: Math.round(factorEffect * 10) / 10,
         training: Math.round(trainingEffect * 10) / 10
       }
     }
@@ -157,13 +118,11 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
   const handleReset = useCallback(() => {
     setParams({
       actionsToClose: 0,
-      targetFactor: hazardData?.topFactors?.[0]?.name || '',
-      factorReduction: 0,
       trainingIncrease: 0
     })
-  }, [hazardData])
+  }, [])
 
-  const hasChanges = params.actionsToClose > 0 || params.factorReduction > 0 || params.trainingIncrease > 0
+  const hasChanges = params.actionsToClose > 0 || params.trainingIncrease > 0
 
   if (!hazardData || hazardData.total === 0) {
     return (
@@ -179,7 +138,7 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
       <style>{sliderStyles}</style>
 
       {/* Compact Sliders Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {/* Close Actions */}
         <div className="bg-white rounded-xl border border-surface-200 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-2">
@@ -203,41 +162,6 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
             <span>0</span>
             <span>5</span>
             <span>10</span>
-          </div>
-        </div>
-
-        {/* Target Factor */}
-        <div className="bg-white rounded-xl border border-surface-200 p-3 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-purple-100">
-                <Target size={14} className="text-purple-600" />
-              </div>
-              <select
-                value={params.targetFactor}
-                onChange={(e) => handleChange('targetFactor', e.target.value)}
-                className="text-xs font-semibold bg-transparent border-none p-0 focus:ring-0 text-surface-700 truncate max-w-[90px] cursor-pointer"
-              >
-                {hazardData.topFactors.map(f => (
-                  <option key={f.name} value={f.name}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-            <span className="text-lg font-bold text-purple-600">{params.factorReduction}%</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={50}
-            step={5}
-            value={params.factorReduction}
-            onChange={(e) => handleChange('factorReduction', parseInt(e.target.value))}
-            className="whatif-slider purple"
-          />
-          <div className="flex justify-between text-[10px] text-surface-400 mt-1">
-            <span>0%</span>
-            <span>25%</span>
-            <span>50%</span>
           </div>
         </div>
 
@@ -286,12 +210,12 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
               <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(100, (projection.reductionPct / 60) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (projection.reductionPct / 50) * 100)}%` }}
                 />
               </div>
               <div className="flex justify-between text-[9px] text-surface-400 mt-0.5">
                 <span>0%</span>
-                <span>60% max</span>
+                <span>50% max</span>
               </div>
             </div>
 
@@ -336,15 +260,12 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
       </button>
 
       {showDetails && (
-        <div className="text-[10px] text-surface-500 bg-surface-50 rounded-lg p-2 grid grid-cols-3 gap-2">
+        <div className="text-[10px] text-surface-500 bg-surface-50 rounded-lg p-2 grid grid-cols-2 gap-2">
           <div>
-            <span className="font-medium text-amber-600">Actions:</span> 2%/action (max 30%)
+            <span className="font-medium text-amber-600">Actions:</span> 3%/action (max 30%)
           </div>
           <div>
-            <span className="font-medium text-purple-600">Factor:</span> (% contribution) × (your %)
-          </div>
-          <div>
-            <span className="font-medium text-emerald-600">Training:</span> 1.5%/10% (max 15%)
+            <span className="font-medium text-emerald-600">Training:</span> 2%/10% (max 20%)
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import InstallPrompt from './components/common/InstallPrompt'
 import { LoadingSpinner } from './components/ui'
+import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 
 // Direct imports for main tabs (instant switching)
 import Dashboard from './pages/Dashboard'
@@ -69,6 +70,7 @@ function App() {
           </Suspense>
         )}
       </Layout>
+      <GlobalLoadingOverlay />
     </ErrorBoundary>
   )
 }

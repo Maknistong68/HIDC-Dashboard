@@ -39,6 +39,14 @@ export { default as IncidentPredictionPanel } from './IncidentPredictionPanel'
 // Unified Predictive Panel (combines forecasting + scenario simulation)
 export { default as UnifiedPredictivePanel } from './UnifiedPredictivePanel'
 
+// Visual Prediction Components
+export { default as PredictionTrendChart } from './PredictionTrendChart'
+export { default as RiskGauge } from './RiskGauge'
+export { default as InterventionComparison } from './InterventionComparison'
+
+// Data-Driven Scenario Engine
+export * from './ScenarioSimulatorEngine'
+
 // Seasonal Pattern Detection
 export { default as SeasonalPatternChart } from './SeasonalPatternChart'
 export { default as SeasonalRiskPrediction } from './SeasonalRiskPrediction'

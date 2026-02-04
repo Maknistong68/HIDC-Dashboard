@@ -15,7 +15,7 @@ import { updateRecordsBatch, getAllRecords, getSetting, setSetting } from './ind
 
 // Current categorization algorithm version
 // Increment this when classification logic changes to trigger re-categorization
-export const CATEGORIZATION_VERSION = 2
+export const CATEGORIZATION_VERSION = 3
 
 // Batch size for non-blocking processing
 const BATCH_SIZE = 500

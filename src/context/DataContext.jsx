@@ -19,6 +19,7 @@ import {
 import { generateId } from '../utils/calculations'
 import { categorizeForImport, runBackgroundCategorization } from '../utils/categorizationManager'
 import { clearAllCaches, clearDataCaches } from '../utils/memoizedCalculations'
+import { useLoading } from './LoadingContext'
 
 const DataContext = createContext()
 
@@ -41,6 +42,9 @@ export const DataProvider = ({ children }) => {
   const [storageStats, setStorageStats] = useState(null)
   const [categorizationProgress, setCategorizationProgress] = useState(null)
 
+  // Global loading overlay
+  const { startLoading, updateProgress, finishLoading } = useLoading()
+
   // Load data on mount
   useEffect(() => {
     loadData()
@@ -48,56 +52,75 @@ export const DataProvider = ({ children }) => {
 
   // Reload incidents from storage
   const reloadIncidents = useCallback(async () => {
+    startLoading('Reloading incidents...')
     try {
+      updateProgress(20)
       // Clear data caches before reloading (keep normalization caches)
       clearDataCaches()
 
       const records = await getAllRecords()
+      updateProgress(60)
       setIncidents(Array.isArray(records) ? records : [])
 
       // Update storage stats
       const stats = await getStorageStatistics()
       setStorageStats(stats)
+      updateProgress(100)
     } catch (error) {
       console.error('[DataContext] Error reloading incidents:', error)
+    } finally {
+      finishLoading()
     }
-  }, [])
+  }, [startLoading, updateProgress, finishLoading])
 
   // Reload files list
   const reloadFiles = useCallback(async () => {
+    startLoading('Reloading files...')
     try {
+      updateProgress(30)
       const fileList = await getImportedFiles()
       setFiles(fileList)
+      updateProgress(70)
 
       // Update storage stats
       const stats = await getStorageStatistics()
       setStorageStats(stats)
+      updateProgress(100)
     } catch (error) {
       console.error('[DataContext] Error reloading files:', error)
+    } finally {
+      finishLoading()
     }
-  }, [])
+  }, [startLoading, updateProgress, finishLoading])
 
   // Load all data from storage
   const loadData = useCallback(async () => {
     setIsLoading(true)
+    startLoading('Loading data...')
     try {
+      updateProgress(10)
       // Load incidents from IndexedDB (with localStorage fallback)
       const storedIncidents = await loadIncidents()
 
       // Ensure it's an array
       const validIncidents = Array.isArray(storedIncidents) ? storedIncidents : []
+      updateProgress(40)
 
       setIncidents(validIncidents)
 
       // Load file list
       const fileList = await getImportedFiles()
       setFiles(fileList)
+      updateProgress(70)
 
       // Get storage statistics
       const stats = await getStorageStatistics()
       setStorageStats(stats)
+      updateProgress(90)
 
       console.log(`[DataContext] Loaded ${validIncidents.length} incidents from ${fileList.length} files`)
+
+      updateProgress(100)
 
       // Run background categorization if needed (non-blocking)
       runBackgroundCategorization(
@@ -107,8 +130,10 @@ export const DataProvider = ({ children }) => {
         (result) => {
           if (result.updated > 0) {
             console.log(`[DataContext] Background categorization updated ${result.updated} records`)
-            // Reload incidents to get updated categories
-            reloadIncidents()
+            // Reload incidents to get updated categories (silent - no overlay)
+            getAllRecords().then(records => {
+              setIncidents(Array.isArray(records) ? records : [])
+            }).catch(console.error)
           }
           setCategorizationProgress(null)
         }
@@ -120,8 +145,9 @@ export const DataProvider = ({ children }) => {
       setFiles([])
     } finally {
       setIsLoading(false)
+      finishLoading()
     }
-  }, [reloadIncidents])
+  }, [startLoading, updateProgress, finishLoading])
 
   // Project CRUD
   const addProject = useCallback((project) => {
@@ -164,6 +190,7 @@ export const DataProvider = ({ children }) => {
   }, [])
 
   // Add multiple incidents with file tracking (main import method)
+  // Set importOptions.skipReload = true during batch operations to prevent overlapping transactions
   const addIncidentsWithFile = useCallback(async (newIncidents, fileInfo, importOptions = {}) => {
     try {
       // Apply categorization with the import mode
@@ -195,11 +222,15 @@ export const DataProvider = ({ children }) => {
       }))
       setIncidents(prev => [...prev, ...incidentsWithFileId])
 
-      // Only reload files list (lightweight) to update the file management UI
-      await reloadFiles()
+      // Skip reload during batch operations to prevent overlapping IndexedDB transactions
+      // The caller (BatchImportModal) will call reloadFiles() once at the end
+      if (!importOptions.skipReload) {
+        // Only reload files list (lightweight) to update the file management UI
+        await reloadFiles()
 
-      // Update storage stats in background
-      getStorageStatistics().then(stats => setStorageStats(stats)).catch(console.error)
+        // Update storage stats in background
+        getStorageStatistics().then(stats => setStorageStats(stats)).catch(console.error)
+      }
 
       return {
         fileId: result.fileId,
@@ -352,18 +383,26 @@ export const DataProvider = ({ children }) => {
 
   // Clear all data
   const clearData = useCallback(async () => {
+    startLoading('Resetting application data...')
     try {
+      updateProgress(10)
       await storageClearAll()
+      updateProgress(40)
       setProjects([])
       setIncidents([])
+      updateProgress(60)
       setFiles([])
       setStorageStats(null)
+      updateProgress(80)
       clearAllCaches()
+      updateProgress(100)
       console.log('[DataContext] All data cleared')
     } catch (error) {
       console.error('[DataContext] Error clearing data:', error)
+    } finally {
+      finishLoading()
     }
-  }, [])
+  }, [startLoading, updateProgress, finishLoading])
 
   // Export data as JSON
   const exportData = useCallback(() => {

@@ -1,42 +1,83 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { AlertCircle, ChevronRight } from 'lucide-react'
-import { FACTOR_TYPE } from '../../utils/rootCauseEngine'
+import { Layers, ChevronRight } from 'lucide-react'
 
-// Type badge configs - matches HazardList trend indicator pattern
-const TYPE_CONFIGS = {
-  'common': { bg: 'bg-teal-500', text: 'text-white', label: 'C', fullLabel: 'Common' },
-  'specific': { bg: 'bg-violet-500', text: 'text-white', label: 'S', fullLabel: 'Specific' },
-  'default': { bg: 'bg-surface-400', text: 'text-white', label: '?', fullLabel: 'Unknown' }
-}
-
-// Helper to check if factor is common type
-const isCommonType = (type) => type === FACTOR_TYPE.COMMON || type === 'common'
-const isSpecificType = (type) => type === FACTOR_TYPE.SPECIFIC || type === 'specific'
-
-const getTypeConfig = (factor) => {
-  if (isCommonType(factor.type)) return TYPE_CONFIGS.common
-  if (isSpecificType(factor.type)) return TYPE_CONFIGS.specific
-  return TYPE_CONFIGS.default
+/**
+ * Get color based on count for the badge
+ */
+const getCountColor = (count, maxCount) => {
+  const ratio = maxCount > 0 ? count / maxCount : 0
+  if (ratio > 0.7) return { bg: 'bg-red-500', text: 'text-white' }
+  if (ratio > 0.4) return { bg: 'bg-amber-500', text: 'text-white' }
+  if (ratio > 0.2) return { bg: 'bg-blue-500', text: 'text-white' }
+  return { bg: 'bg-surface-400', text: 'text-white' }
 }
 
 /**
- * Get confidence level based on sample size
+ * DetectionRatioCard - Shows total observations vs detected ratio
  */
-const getConfidence = (count) => {
-  if (count >= 10) return { level: 'high', color: 'text-green-600' }
-  if (count >= 5) return { level: 'medium', color: 'text-amber-600' }
-  return { level: 'low', color: 'text-red-500', icon: '⚠' }
-}
+const DetectionRatioCard = React.memo(({ totalIncidents, detectedCount, factors }) => {
+  const detectionRate = totalIncidents > 0 ? ((detectedCount / totalIncidents) * 100).toFixed(1) : 0
+  const notDetectedCount = totalIncidents - detectedCount
+
+  return (
+    <div className="bg-white rounded-lg border border-surface-200 p-3 mb-3">
+      {/* Main stats */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-center flex-1">
+          <p className="text-2xl font-bold text-surface-800">{totalIncidents}</p>
+          <p className="text-2xs text-surface-500">Total Observations</p>
+        </div>
+        <div className="w-px h-10 bg-surface-200" />
+        <div className="text-center flex-1">
+          <p className="text-2xl font-bold text-primary-600">{detectedCount}</p>
+          <p className="text-2xs text-surface-500">With Factors</p>
+        </div>
+      </div>
+
+      {/* Detection rate bar */}
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-2xs text-surface-500">Detection Rate</span>
+          <span className={`text-xs font-bold ${parseFloat(detectionRate) > 50 ? 'text-green-600' : parseFloat(detectionRate) > 20 ? 'text-amber-600' : 'text-red-500'}`}>
+            {detectionRate}%
+          </span>
+        </div>
+        <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              parseFloat(detectionRate) > 50 ? 'bg-green-500' : parseFloat(detectionRate) > 20 ? 'bg-amber-500' : 'bg-red-500'
+            }`}
+            style={{ width: `${detectionRate}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Breakdown */}
+      <div className="flex items-center justify-between text-2xs pt-2 border-t border-surface-100">
+        <span className="text-surface-500">
+          <span className="font-medium text-primary-600">{detectedCount}</span> detected
+        </span>
+        <span className="text-surface-300">|</span>
+        <span className="text-surface-500">
+          <span className="font-medium text-surface-600">{notDetectedCount}</span> no factors
+        </span>
+        <span className="text-surface-300">|</span>
+        <span className="text-surface-500">
+          <span className="font-medium text-surface-700">{factors?.length || 0}</span> factors
+        </span>
+      </div>
+    </div>
+  )
+})
+
+DetectionRatioCard.displayName = 'DetectionRatioCard'
 
 /**
- * FactorItem - Individual factor button with smooth transitions
+ * FactorItem - Individual factor button matching HazardItem styling
  */
-const FactorItem = React.memo(({ factor, isSelected, onSelect, baseCount }) => {
-  const typeConfig = getTypeConfig(factor)
-  const percentage = baseCount > 0
-    ? ((factor.count / baseCount) * 100).toFixed(1)
-    : '0.0'
-  const confidence = getConfidence(factor.count)
+const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
+  const colorConfig = getCountColor(factor.count, maxCount)
+  const hazardCount = factor.hazardBreakdown?.length || 0
 
   return (
     <button
@@ -50,36 +91,27 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, baseCount }) => {
           : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
         }
       `}
-      title={`${typeConfig.fullLabel} Factor - ${factor.count} occurrences (${percentage}% of negative observations)`}
     >
-      {/* Type indicator badge */}
-      <span className={`flex-shrink-0 w-6 h-6 rounded ${typeConfig.bg} ${typeConfig.text} flex items-center justify-center text-xs font-bold transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`}>
-        {typeConfig.label}
+      {/* Count badge - matches trend indicator styling */}
+      <span className={`flex-shrink-0 w-6 h-6 rounded ${colorConfig.bg} ${colorConfig.text} flex items-center justify-center text-xs font-bold transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`}>
+        {factor.count > 99 ? '99+' : factor.count}
       </span>
 
-      {/* Name and count */}
+      {/* Name and hazard count */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
-            {factor.name}
-          </p>
-          {/* Low confidence warning */}
-          {confidence.level === 'low' && (
-            <span className={`text-xs ${confidence.color}`} title="Low sample size - may be unreliable">
-              {confidence.icon}
-            </span>
-          )}
-        </div>
+        <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+          {factor.name}
+        </p>
         <p className="text-xs text-surface-500">
-          {factor.count} occurrence{factor.count !== 1 ? 's' : ''}
+          {hazardCount} hazard{hazardCount !== 1 ? 's' : ''} affected
         </p>
       </div>
 
-      {/* Percentage and arrow */}
+      {/* Arrow */}
       <div className="flex flex-col items-end gap-0.5">
         <div className="flex items-center gap-1">
-          <span className={`text-xs font-bold transition-colors duration-200 ${isSelected ? 'text-primary-700' : 'text-surface-600'}`}>
-            {percentage}%
+          <span className={`text-xs font-bold transition-colors duration-200 ${isSelected ? 'text-primary-600' : 'text-surface-500'}`}>
+            {factor.count}
           </span>
           <ChevronRight
             size={16}
@@ -94,74 +126,68 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, baseCount }) => {
 FactorItem.displayName = 'FactorItem'
 
 /**
- * FactorList - Left panel showing contributing factors sorted by count
- * Matches HazardList UI pattern with optimized performance and smooth transitions
+ * FactorList - Left panel showing list of contributing factors
+ * Styled to match HazardList
  */
-const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount, totalNegative }) => {
+const FactorList = ({ factors, selected, onSelect, totalIncidents = 0, detectedCount = 0 }) => {
   const [sortBy, setSortBy] = useState('count')
-
-  // Use totalNegative as the base for percentage (factor coverage)
-  const baseCount = totalNegative || totalIncidents || 1
 
   // Memoized select handler
   const handleSelect = useCallback((factor) => {
     onSelect(factor)
   }, [onSelect])
 
-  // Sort factors based on selected criteria - memoized for performance
+  // Calculate max count for color scaling
+  const maxCount = useMemo(() => {
+    if (!factors?.length) return 0
+    return Math.max(...factors.map(f => f.count))
+  }, [factors])
+
+  // Sort factors based on criteria
   const sortedFactors = useMemo(() => {
-    if (!factors || factors.length === 0) return []
+    if (!factors) return []
     const sorted = [...factors]
 
-    switch (sortBy) {
-      case 'count':
-        sorted.sort((a, b) => b.count - a.count)
-        break
-      case 'name':
-        sorted.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case 'type':
-        // Common factors first, then Specific, then by count within type
-        sorted.sort((a, b) => {
-          const aIsCommon = isCommonType(a.type)
-          const bIsCommon = isCommonType(b.type)
-          if (aIsCommon && !bIsCommon) return -1
-          if (!aIsCommon && bIsCommon) return 1
-          return b.count - a.count
-        })
-        break
-      default:
-        break
+    if (sortBy === 'count') {
+      sorted.sort((a, b) => b.count - a.count)
+    } else if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy === 'hazards') {
+      sorted.sort((a, b) => (b.hazardBreakdown?.length || 0) - (a.hazardBreakdown?.length || 0))
     }
 
     return sorted
   }, [factors, sortBy])
 
-  // Count common vs specific factors for summary
-  const typeCounts = useMemo(() => {
-    if (!factors) return { common: 0, specific: 0 }
-    return factors.reduce((acc, f) => {
-      if (isCommonType(f.type)) acc.common++
-      else if (isSpecificType(f.type)) acc.specific++
-      return acc
-    }, { common: 0, specific: 0 })
-  }, [factors])
-
-  // Empty state
   if (!factors || factors.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-        <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-3">
-          <AlertCircle size={24} className="text-surface-400" />
+      <div className="flex flex-col h-full">
+        {/* Still show the detection card even if no factors */}
+        <DetectionRatioCard
+          totalIncidents={totalIncidents}
+          detectedCount={detectedCount}
+          factors={factors}
+        />
+        <div className="flex flex-col items-center justify-center flex-1 text-center p-4">
+          <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-3">
+            <Layers size={24} className="text-surface-400" />
+          </div>
+          <p className="text-sm text-surface-500">No factors detected</p>
+          <p className="text-xs text-surface-400 mt-1">Factors are detected from descriptions</p>
         </div>
-        <p className="text-sm text-surface-500">No contributing factors found</p>
-        <p className="text-xs text-surface-400 mt-1">Factors are detected from observation descriptions</p>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Detection ratio card */}
+      <DetectionRatioCard
+        totalIncidents={totalIncidents}
+        detectedCount={detectedCount}
+        factors={factors}
+      />
+
       {/* Header with sort */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <p className="text-xs text-surface-500">Select to explore</p>
@@ -171,8 +197,8 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
           className="text-xs text-surface-600 bg-white border border-surface-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-300 transition-colors duration-200"
         >
           <option value="count">By Count</option>
+          <option value="hazards">By Hazards</option>
           <option value="name">By Name</option>
-          <option value="type">By Type</option>
         </select>
       </div>
 
@@ -184,43 +210,9 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents, analyzedCount
             factor={factor}
             isSelected={selected?.name === factor.name}
             onSelect={handleSelect}
-            baseCount={baseCount}
+            maxCount={maxCount}
           />
         ))}
-      </div>
-
-      {/* Footer with coverage stats and legend */}
-      <div className="flex-shrink-0 pt-2 border-t border-surface-200 mt-2 space-y-2">
-        {/* Type legend */}
-        <div className="flex items-center justify-center gap-3 text-xs">
-          <div className="flex items-center gap-1 transition-colors duration-200" title="Common Factors apply to all hazard types">
-            <span className="w-4 h-4 rounded bg-teal-500 text-white flex items-center justify-center text-2xs font-bold">C</span>
-            <span className="text-surface-500">Common ({typeCounts.common})</span>
-          </div>
-          <div className="flex items-center gap-1 transition-colors duration-200" title="Specific Factors are unique to certain hazard types">
-            <span className="w-4 h-4 rounded bg-violet-500 text-white flex items-center justify-center text-2xs font-bold">S</span>
-            <span className="text-surface-500">Specific ({typeCounts.specific})</span>
-          </div>
-        </div>
-
-        {/* Coverage stats */}
-        {totalNegative > 0 && (
-          <div className="flex items-center justify-center gap-2 text-xs">
-            <span className="text-surface-400">Coverage:</span>
-            <span className={`font-semibold transition-colors duration-200 ${
-              analyzedCount / totalNegative >= 0.5 ? 'text-green-600' :
-              analyzedCount / totalNegative >= 0.25 ? 'text-amber-600' : 'text-red-500'
-            }`}>
-              {analyzedCount} / {totalNegative}
-            </span>
-            <span className={`font-bold px-1.5 py-0.5 rounded transition-colors duration-200 ${
-              analyzedCount / totalNegative >= 0.5 ? 'bg-green-100 text-green-700' :
-              analyzedCount / totalNegative >= 0.25 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
-            }`}>
-              {((analyzedCount / totalNegative) * 100).toFixed(1)}%
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )

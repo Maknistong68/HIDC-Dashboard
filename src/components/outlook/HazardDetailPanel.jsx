@@ -1,94 +1,202 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Target } from 'lucide-react'
+import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
+import { Target, BarChart3, TrendingUp } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell
+} from 'recharts'
+import { detectFactorsForHazard } from '../../utils/rootCauseEngine'
 import HazardTrendChart from './HazardTrendChart'
-import RootCausePanel from './RootCausePanel'
-import { getHazardDailyData } from '../../utils/insightsCalculations'
-import { aggregateRootCausesForHazard, getObservationTypeStats } from '../../utils/rootCauseEngine'
 
 /**
- * ObservationTypeIndicator - Simplified positive/negative display
+ * Get variance-based bar color
+ * High counts = red, medium = amber, low = blue, very low = green
  */
-const ObservationTypeIndicator = React.memo(({ stats }) => {
-  if (!stats || stats.total === 0) return null
+const getBarColor = (count, maxCount) => {
+  const ratio = maxCount > 0 ? count / maxCount : 0
+  if (ratio > 0.7) return '#ef4444' // red
+  if (ratio > 0.4) return '#f59e0b' // amber
+  if (ratio > 0.2) return '#3b82f6' // blue
+  return '#10b981' // green
+}
 
-  const positivePercent = parseFloat(stats.positive.percentage)
-  const negativePercent = parseFloat(stats.negative.percentage)
+/**
+ * HazardSummary - Shows hazard stats similar to DetectionSummary in FactorDetailPanel
+ */
+const HazardSummary = React.memo(({ hazard, totalIncidents }) => {
+  if (!hazard) return null
+
+  const percentage = totalIncidents > 0
+    ? ((hazard.totalCount / totalIncidents) * 100).toFixed(1)
+    : 0
+
+  const factorCount = hazard.factors?.length || 0
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-surface-500">
-        Positive: <span className="font-medium text-green-600">{stats.positive.count}</span>
-      </span>
-      <div className="flex-1 h-1.5 bg-surface-100 rounded-full overflow-hidden flex max-w-[120px]">
-        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${positivePercent}%` }} />
-        <div className="h-full bg-red-400 transition-all duration-500" style={{ width: `${negativePercent}%` }} />
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-surface-500">Percentage:</span>
+        <span className={`text-sm font-bold ${parseFloat(percentage) > 20 ? 'text-red-500' : parseFloat(percentage) > 10 ? 'text-amber-600' : 'text-green-600'}`}>
+          {percentage}%
+        </span>
       </div>
-      <span className="text-xs text-surface-500">
-        Negative: <span className="font-medium text-red-500">{stats.negative.count}</span>
-      </span>
+      <div className="w-px h-4 bg-surface-200" />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-surface-500">Observations:</span>
+        <span className="text-sm font-semibold text-primary-600">{hazard.totalCount}</span>
+      </div>
+      <div className="w-px h-4 bg-surface-200" />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-surface-500">Factors:</span>
+        <span className="text-sm font-semibold text-surface-700">{factorCount}</span>
+      </div>
     </div>
   )
 })
 
-ObservationTypeIndicator.displayName = 'ObservationTypeIndicator'
+HazardSummary.displayName = 'HazardSummary'
 
 /**
- * HazardDetailPanel - Right panel with tabs for Trend Chart, Site Issues, and Good Practices
- * Note: incidents prop is already filtered by time period from parent component
- * Optimized with deferred computations and smooth transitions
+ * FactorBarChart - Horizontal bar chart showing top contributing factors with variance colors
  */
-const HazardDetailPanel = ({ hazard, incidents, timePeriod }) => {
-  const [activeTab, setActiveTab] = useState('chart')
+const FactorBarChart = React.memo(({ factors, isTransitioning }) => {
+  const { chartData, maxCount } = useMemo(() => {
+    if (!factors?.length) return { chartData: [], maxCount: 0 }
+
+    const data = factors.slice(0, 8).map(f => ({
+      name: f.name.length > 15 ? f.name.substring(0, 15) + '...' : f.name,
+      fullName: f.name,
+      count: f.count
+    }))
+
+    const max = Math.max(...data.map(d => d.count), 0)
+
+    return {
+      chartData: data.map(d => ({
+        ...d,
+        fill: getBarColor(d.count, max)
+      })),
+      maxCount: max
+    }
+  }, [factors])
+
+  if (!chartData.length) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-sm text-surface-400">No factor data available</p>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`h-full flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+      style={{ willChange: 'opacity, transform' }}
+    >
+      <div className="flex-1 min-h-[180px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+            <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 10, fill: '#64748b' }}
+              axisLine={false}
+              tickLine={false}
+              width={100}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-surface-900 text-white px-3 py-2 rounded-lg shadow-xl text-xs">
+                      <p className="font-medium">{payload[0].payload.fullName}</p>
+                      <p className="text-surface-300">Count: <span className="text-white font-bold">{payload[0].value}</span></p>
+                    </div>
+                  )
+                }
+                return null
+              }}
+            />
+            <Bar
+              dataKey="count"
+              radius={[0, 4, 4, 0]}
+              isAnimationActive={true}
+              animationDuration={500}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${entry.fullName}-${index}`} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Color legend */}
+      <div className="flex items-center justify-center gap-4 mt-2 text-2xs text-surface-500">
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#ef4444]" />
+          <span>High</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" />
+          <span>Medium</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#3b82f6]" />
+          <span>Low</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#10b981]" />
+          <span>Very Low</span>
+        </div>
+      </div>
+    </div>
+  )
+})
+
+FactorBarChart.displayName = 'FactorBarChart'
+
+/**
+ * HazardDetailPanel - Right panel showing factor distribution for selected hazard
+ * Mirrors FactorDetailPanel implementation with bar charts and trend chart
+ */
+const HazardDetailPanel = ({ hazard, incidents, timePeriod, trendData }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [activeTab, setActiveTab] = useState('trend') // 'trend' or 'factors'
   const prevHazardRef = useRef(null)
+
+  // Calculate contributing factors for this hazard
+  const contributingFactors = useMemo(() => {
+    if (!hazard || !incidents) return []
+    return detectFactorsForHazard(incidents, hazard.name)
+  }, [hazard?.name, incidents])
 
   // Smooth transition effect when hazard changes
   useEffect(() => {
     if (prevHazardRef.current?.name !== hazard?.name) {
-      setIsTransitioning(true)
-      const timer = setTimeout(() => setIsTransitioning(false), 150)
+      startTransition(() => {
+        setIsTransitioning(true)
+      })
+      const timer = setTimeout(() => {
+        startTransition(() => {
+          setIsTransitioning(false)
+        })
+      }, 300)
       prevHazardRef.current = hazard
       return () => clearTimeout(timer)
     }
   }, [hazard])
-
-  // Calculate chart data (daily) - only when hazard name changes
-  const chartData = useMemo(() => {
-    if (!hazard || !incidents) return null
-    return getHazardDailyData(incidents, hazard.name, timePeriod)
-  }, [hazard?.name, incidents, timePeriod])
-
-  // Calculate observation type stats
-  const obsTypeStats = useMemo(() => {
-    if (!hazard || !incidents) return null
-    return getObservationTypeStats(incidents, hazard.name)
-  }, [hazard?.name, incidents])
-
-  // Calculate negative observations (Site Issues) - DEFERRED: only compute when tab is active
-  const negativeData = useMemo(() => {
-    if (!hazard || !incidents || activeTab !== 'negative') return null
-    return aggregateRootCausesForHazard(incidents, hazard.name, 'negative')
-  }, [hazard?.name, incidents, activeTab])
-
-  // Calculate positive observations (Good Practices) - DEFERRED: only compute when tab is active
-  const positiveData = useMemo(() => {
-    if (!hazard || !incidents || activeTab !== 'positive') return null
-    return aggregateRootCausesForHazard(incidents, hazard.name, 'positive')
-  }, [hazard?.name, incidents, activeTab])
-
-  const tabs = [
-    { id: 'chart', label: 'Trend' },
-    {
-      id: 'negative',
-      label: 'Factors',
-      count: obsTypeStats?.negative?.count || 0
-    },
-    {
-      id: 'positive',
-      label: 'Positive',
-      count: obsTypeStats?.positive?.count || 0
-    }
-  ]
 
   // Show placeholder when no hazard is selected
   if (!hazard) {
@@ -105,94 +213,104 @@ const HazardDetailPanel = ({ hazard, incidents, timePeriod }) => {
     )
   }
 
-  // Check if sample size is low for reliability warning
+  // Check sample size for reliability indicator
   const hasLowSampleSize = hazard.totalCount < 5
   const hasMediumSampleSize = hazard.totalCount >= 5 && hazard.totalCount < 20
 
+  // Add factors to hazard for summary
+  const hazardWithFactors = { ...hazard, factors: contributingFactors }
+
   return (
-    <div className={`h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden transition-opacity duration-150 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}>
-      {/* Header with observation type indicator and data quality warning */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 transition-all duration-200">
-        {obsTypeStats && obsTypeStats.total > 0 ? (
-          <ObservationTypeIndicator stats={obsTypeStats} />
-        ) : (
-          <div />
-        )}
-        {/* Data quality warning for low sample sizes */}
+    <div
+      className={`h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden transition-opacity duration-300 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
+      style={{ willChange: 'opacity, transform' }}
+    >
+      {/* Header with hazard summary */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-surface-100">
+        <HazardSummary
+          hazard={hazardWithFactors}
+          totalIncidents={incidents?.length || 0}
+        />
+        {/* Data quality warning */}
         {hasLowSampleSize && (
-          <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1 transition-colors duration-200" title="Low sample size - trends may be unreliable">
-            <span>⚠</span> Low data
+          <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1" title="Low sample size">
+            <span>Low data</span>
           </span>
         )}
         {hasMediumSampleSize && (
-          <span className="text-2xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded transition-colors duration-200" title="Moderate sample size - trends should be verified">
+          <span className="text-2xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded" title="Moderate sample size">
             Moderate data
           </span>
         )}
       </div>
 
-      {/* Cleaner tab buttons with smooth transitions */}
-      <div className="flex border-b border-surface-100">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id
-
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                flex items-center gap-1.5 px-3 py-2 text-sm transition-all duration-200
-                ${isActive
-                  ? 'text-primary-600 border-b-2 border-primary-500 font-medium'
-                  : 'text-surface-500 hover:text-surface-700'
-                }
-              `}
-            >
-              <span>{tab.label}</span>
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-xs transition-colors duration-200 ${isActive ? 'text-primary-500' : 'text-surface-400'}`}>
-                  · {tab.count}
-                </span>
-              )}
-            </button>
-          )
-        })}
+      {/* Hazard name header */}
+      <div className="px-4 py-2 bg-surface-50">
+        <h3 className="text-lg font-semibold text-surface-800">{hazard.name}</h3>
+        <p className="text-xs text-surface-500">
+          {hazard.totalCount} observation{hazard.totalCount !== 1 ? 's' : ''} with {contributingFactors.length} contributing factor{contributingFactors.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {/* Tab content with smooth fade transition */}
-      <div className="flex-1 p-3 overflow-auto">
-        <div className={`h-full transition-opacity duration-200 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-          {activeTab === 'chart' && (
-            <HazardTrendChart
-              data={chartData}
-              hazardName={hazard?.name}
-              timePeriod={timePeriod}
-            />
-          )}
-          {activeTab === 'negative' && (
-            <RootCausePanel
-              data={negativeData}
-              hazardName={hazard.name}
-              incidents={incidents}
-              observationType="negative"
-              title="Factors"
-              subtitle="Root causes identified"
-              emptyMessage="No deficiencies found"
-            />
-          )}
-          {activeTab === 'positive' && (
-            <RootCausePanel
-              data={positiveData}
-              hazardName={hazard.name}
-              incidents={incidents}
-              observationType="positive"
-              title="Good Practices"
-              subtitle="Positive observations"
-              emptyMessage="No positive observations recorded"
-              colorScheme="green"
-            />
-          )}
+      {/* Tab selector */}
+      <div className="flex items-center gap-1 px-4 py-2 border-b border-surface-100 bg-surface-50">
+        <button
+          onClick={() => setActiveTab('trend')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === 'trend'
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-600 hover:bg-surface-100'
+          }`}
+        >
+          <TrendingUp size={14} />
+          Trend
+        </button>
+        <button
+          onClick={() => setActiveTab('factors')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === 'factors'
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-600 hover:bg-surface-100'
+          }`}
+        >
+          <BarChart3 size={14} />
+          Factors
+        </button>
+      </div>
+
+      {/* Chart content based on active tab */}
+      <div className="flex-1 p-4 overflow-hidden">
+        {activeTab === 'trend' ? (
+          <HazardTrendChart
+            data={trendData}
+            hazardName={hazard.name}
+            timePeriod={timePeriod}
+          />
+        ) : (
+          <FactorBarChart
+            factors={contributingFactors}
+            isTransitioning={isTransitioning}
+          />
+        )}
+      </div>
+
+      {/* Hazard percentage bar at bottom */}
+      <div className="px-4 py-3 bg-surface-50 border-t border-surface-100">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-surface-600">Hazard Share of Total Observations</span>
+          <span className="text-xs font-bold text-surface-700">
+            {incidents?.length > 0 ? ((hazard.totalCount / incidents.length) * 100).toFixed(1) : 0}%
+          </span>
         </div>
+        <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full transition-all duration-500"
+            style={{ width: `${incidents?.length > 0 ? (hazard.totalCount / incidents.length) * 100 : 0}%` }}
+          />
+        </div>
+        <p className="text-2xs text-surface-400 mt-1">
+          {hazard.totalCount} of {incidents?.length || 0} total observations
+        </p>
       </div>
     </div>
   )

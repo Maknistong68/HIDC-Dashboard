@@ -74,12 +74,40 @@ const initDB = async () => {
 
 // Singleton DB instance
 let dbInstance = null
+let dbInitPromise = null
 
 const getDB = async () => {
-  if (!dbInstance) {
-    dbInstance = await initDB()
+  // If we have a valid connection, verify it's still usable
+  if (dbInstance) {
+    try {
+      // Test if connection is still valid by checking if we can start a transaction
+      // This will throw if the connection is closing or closed
+      const testTx = dbInstance.transaction(STORES.SETTINGS, 'readonly')
+      testTx.abort() // Immediately abort - we just wanted to test
+      return dbInstance
+    } catch (error) {
+      // Connection is stale or closing, reset it
+      console.warn('[IndexedDB] Connection stale, reconnecting...', error.message)
+      dbInstance = null
+      dbInitPromise = null
+    }
   }
-  return dbInstance
+
+  // Prevent multiple simultaneous init attempts
+  if (dbInitPromise) {
+    return dbInitPromise
+  }
+
+  dbInitPromise = initDB().then(db => {
+    dbInstance = db
+    dbInitPromise = null
+    return db
+  }).catch(error => {
+    dbInitPromise = null
+    throw error
+  })
+
+  return dbInitPromise
 }
 
 // ============================================

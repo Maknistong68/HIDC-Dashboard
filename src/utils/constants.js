@@ -455,7 +455,85 @@ export const HAZARD_EXCLUSIONS = {
     // ========================================================================
     'sitting beneath scaffolding', 'beneath scaffolding activity',
     'materials could potentially fall on him', 'fall on him',
-    'walking underneath', 'underneath the scaffold'
+    'walking underneath', 'underneath the scaffold',
+
+    // ========================================================================
+    // EXCAVATION CAVE-IN/COLLAPSE - Should be "Breaking Ground & Excavation"
+    // Cave-ins and soil collapse are excavation hazards, not WAH
+    // ========================================================================
+    'cave-in', 'cave in', 'cavein', 'cave-ins', 'cave ins',
+    'soil collapse', 'soil collapsing', 'collapse of soil',
+    'ground collapse', 'trench collapse', 'excavation collapse',
+    'vibration from the compactor', 'high vibration from',
+    'vibration can cause collapse', 'vibration could result in cave',
+    'compaction activities', 'compactor and vehicle movement',
+    'removal of excavated materials', 'excavated materials from unprotected',
+    'excavation was observed without any isolation',
+    'excavation was observed without',
+
+    // ========================================================================
+    // WEATHER/SIGNAGE - Should be "General Site Issues"
+    // Signs falling due to weather conditions
+    // ========================================================================
+    'sand storm', 'sand stom', 'sandstorm', 'dust storm',
+    'storm some sign', 'due to storm', 'due to wind',
+    'sign fall down', 'signs fall down', 'signage fall down',
+
+    // ========================================================================
+    // GROUND-LEVEL TRIP - Should be "Housekeeping" or "Slips/Trips/Falls"
+    // Tripping on materials on the ground level, not working at height
+    // ========================================================================
+    'tripped and almost', 'got tripped', 'about to fall down',
+    'put his foot on the scaffold pipe', 'foot on the scaffold pipe',
+    'scaffold pipe laying at the ground', 'pipe laying at the ground',
+    'scaffold pipe on the ground', 'stepped on', 'stumbled on',
+    'tripping hazard on the ground', 'trip hazard on ground',
+    'materials lying on the ground', 'pipes on the ground',
+
+    // ========================================================================
+    // ELECTRICAL - Should be "Energized System"
+    // Electrical contact with scaffolding is electrical hazard, not WAH
+    // ========================================================================
+    'electrical cable came into contact', 'cable came into contact with the scaffolding',
+    'live electrical cable came into contact', 'cable contact with scaffold',
+    'wire is in contact with the scaffold', 'wire in contact with scaffold',
+    'wire was in contact with the scaffold', 'electrical cable in contact',
+    'cable touching scaffold', 'wire touching scaffold',
+    'scaffold in contact with cable', 'scaffolding in contact with cable',
+    'scaffold standard in contact', 'contact with the scaffold standard',
+
+    // ========================================================================
+    // PPE ISSUES - Should be "PPE"
+    // PPE compliance issues unrelated to working at height
+    // ========================================================================
+    'boots with no steel toe', 'no steel toe', 'without steel toe',
+    'long boots with no steel', 'boots without steel toe',
+    'safety boots missing', 'improper footwear',
+    'inspector found on site with long boots',
+
+    // ========================================================================
+    // PATHWAY/ACCESS BLOCKING - Should be "Housekeeping"
+    // Access blocked by materials is housekeeping, not WAH
+    // ========================================================================
+    'pedestrian walkway was blocked', 'walkway was blocked due to',
+    'scaffold access was blocked', 'access was blocked due to',
+    'scaffolding materials obstructed', 'materials obstructed the entire',
+    'obstructed the entire pathway', 'blocked due to scaffold',
+    'blocked due to the timbers', 'scaffolding materials were scattered along',
+    'scaffold materials were scattered along', 'dispersed across the work zone',
+    'materials are dispersed across', 'scaffold materials dispersed',
+    'materials were observed stacked at the edge of the excavation',
+    'stacked at the edge of excavation', 'stored on the unprotected edge',
+    'stored on the edge of', 'stacked improperly at the edge',
+    'stacked improperly at edge', 'positioned on the scaffold platform',
+    'ledgers were positioned on', 'ledgers on top of the working platform',
+    'loose material was stored on', 'materials stored on the incomplete',
+    'excessive amount of wood was placed on', 'wood was placed on the scaffold',
+    'several wood was placed on', 'water igloo was observed placed',
+    'igloo placed on top of scaffold', 'wooden planks stored',
+    'scaffolding material was inadequately placed at site',
+    'scaffolding material was stacked improperly', 'material was stacked improperly',
+    'scaffolding materials were obstructed', 'materials were obstructed'
   ],
   'Breaking Ground & Excavation': [
     'breeding ground', 'common ground', 'groundswell', 'background',

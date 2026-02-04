@@ -1,25 +1,18 @@
 import React from 'react'
 import { Sparkles } from 'lucide-react'
 import HazardWhatIfSimulator from './HazardWhatIfSimulator'
-import FactorWhatIfSimulator from './FactorWhatIfSimulator'
 
 /**
  * WhatIfSection - Compact What-If simulation panel at bottom of detail panel
- * Shows context-specific simulation based on selected hazard or factor
+ * Shows context-specific simulation based on selected hazard
  */
 const WhatIfSection = ({
   hazard = null,
-  factor = null,
-  factorData = null,
   incidents,
   timePeriod
 }) => {
-  // Determine context: hazard or factor
-  const isHazardContext = !!hazard
-  const isFactorContext = !!factor
-
-  // Don't render if no context
-  if (!isHazardContext && !isFactorContext) {
+  // Don't render if no hazard context
+  if (!hazard) {
     return null
   }
 
@@ -35,31 +28,18 @@ const WhatIfSection = ({
             What-If Simulation
           </span>
           <span className="text-[10px] text-emerald-600 ml-2">
-            {isHazardContext
-              ? 'Adjust interventions to see projected impact'
-              : 'Set reduction target to see multi-hazard effect'
-            }
+            Adjust interventions to see projected impact
           </span>
         </div>
       </div>
 
       {/* Simulator Content */}
       <div className="p-3">
-        {isHazardContext && (
-          <HazardWhatIfSimulator
-            hazard={hazard}
-            incidents={incidents}
-            timePeriod={timePeriod}
-          />
-        )}
-        {isFactorContext && (
-          <FactorWhatIfSimulator
-            factor={factor}
-            factorData={factorData}
-            incidents={incidents}
-            timePeriod={timePeriod}
-          />
-        )}
+        <HazardWhatIfSimulator
+          hazard={hazard}
+          incidents={incidents}
+          timePeriod={timePeriod}
+        />
       </div>
     </div>
   )

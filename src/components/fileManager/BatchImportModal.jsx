@@ -20,7 +20,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * - Summary of results
  */
 const BatchImportModal = ({ onClose }) => {
-  const { addIncidentsWithFile, incidents } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -176,7 +176,7 @@ const BatchImportModal = ({ onClose }) => {
           result = await addIncidentsWithFile(
             duplicateResults.newRecords,
             { fileName: file.name, fileSize: file.size, fileHash },
-            { classificationMode: 'trust-excel' }
+            { classificationMode: 'trust-excel', skipReload: true }  // Skip reload during batch to prevent overlapping transactions
           )
 
           // After successful import, add Event IDs to batch tracker
@@ -235,7 +235,14 @@ const BatchImportModal = ({ onClose }) => {
     setIsProcessing(false)
     setIsComplete(true)
     setCurrentFileIndex(-1)
-  }, [selectedFiles, incidents, addIncidentsWithFile])
+
+    // Reload files list once at the end of batch import (avoids overlapping transactions)
+    try {
+      await reloadFiles()
+    } catch (error) {
+      console.error('[BatchImport] Error reloading files after batch:', error)
+    }
+  }, [selectedFiles, incidents, addIncidentsWithFile, reloadFiles])
 
   // Trigger file input
   const handleBrowse = () => {

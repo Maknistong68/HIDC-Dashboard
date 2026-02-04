@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { Sparkles, Info, ChevronDown, ChevronUp, TrendingDown, TrendingUp, Minus, RefreshCw } from 'lucide-react'
-import { detectContributingFactors, NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
+import { NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
 
 // Bidirectional slider styles with center at 0
 const sliderStyles = `
@@ -39,15 +39,6 @@ const sliderStyles = `
   }
   .predictive-slider.actions::-moz-range-thumb {
     background: #f59e0b;
-  }
-  .predictive-slider.factor {
-    background: linear-gradient(to right, #fecaca 0%, #e9d5ff 50%, #d1fae5 100%);
-  }
-  .predictive-slider.factor::-webkit-slider-thumb {
-    background: #9333ea;
-  }
-  .predictive-slider.factor::-moz-range-thumb {
-    background: #9333ea;
   }
   .predictive-slider.training {
     background: linear-gradient(to right, #fecaca 0%, #cffafe 50%, #d1fae5 100%);
@@ -101,190 +92,6 @@ const InterventionSlider = ({ id, label, value, min, max, step = 1, unit = '', o
 }
 
 /**
- * PredictionInsightSummary - Plain-English summary of prediction data
- * Makes complex analytics accessible to non-technical users
- */
-const PredictionInsightSummary = ({ incidentPrediction, baselineData, contextIncidents }) => {
-  // Don't render if no prediction data
-  if (!incidentPrediction?.weekly && !incidentPrediction?.typeProbability?.hasData) {
-    return null
-  }
-
-  // Extract key data points
-  const weekly = incidentPrediction.weekly
-  const monthly = incidentPrediction.monthly
-  const typeProbability = incidentPrediction.typeProbability
-  const typeRisk = incidentPrediction.typeRisk
-  const incidentCount = contextIncidents?.length || 0
-
-  // Most likely type
-  const mostLikelyType = typeProbability?.types?.[0]
-
-  // Highest risk type
-  const highestRisk = typeRisk?.highestRisk
-
-  // Determine trend direction text
-  const getTrendText = (changePercent) => {
-    if (changePercent > 10) return 'higher'
-    if (changePercent < -10) return 'lower'
-    return 'similar to'
-  }
-
-  // Get trend action recommendation
-  const getTrendRecommendation = (changePercent) => {
-    if (changePercent > 20) return 'Extra vigilance is strongly recommended.'
-    if (changePercent > 10) return 'Some additional attention may be warranted.'
-    if (changePercent < -10) return 'Current efforts appear to be effective.'
-    return ''
-  }
-
-  // Format type name for display
-  const formatTypeName = (type) => {
-    if (!type) return 'Unknown'
-    switch (type.toLowerCase()) {
-      case 'near-miss': return 'Near-Miss'
-      case 'fac': return 'FAC (First Aid Case)'
-      case 'mti': return 'MTI (Medical Treatment)'
-      case 'lti': return 'LTI (Lost Time Injury)'
-      default: return type
-    }
-  }
-
-  // Get confidence explanation
-  const getConfidenceExplanation = (confidence) => {
-    switch (confidence) {
-      case 'high':
-        return 'High confidence means your data is consistent and predictions are reliable.'
-      case 'medium':
-        return 'Medium confidence means there is some variation in your data.'
-      case 'low':
-        return '"Low confidence" appears because there is significant variation in your data - actual results may differ from predictions.'
-      default:
-        return ''
-    }
-  }
-
-  return (
-    <div className="px-4 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100">
-      <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
-        <Info size={14} className="text-blue-600" />
-        What This Means
-      </h3>
-
-      <div className="space-y-4 text-sm text-surface-700">
-        {/* Data basis */}
-        <p className="text-surface-600 italic">
-          Based on {incidentCount} incident{incidentCount !== 1 ? 's' : ''} recorded in the selected period:
-        </p>
-
-        {/* FORECAST Section */}
-        {(weekly || monthly) && (
-          <div>
-            <p className="font-semibold text-surface-800 mb-1.5">FORECAST</p>
-            <p>
-              {weekly && (
-                <>
-                  Your site is projected to have around <span className="font-bold text-surface-900">{weekly.predicted}</span> incident{weekly.predicted !== 1 ? 's' : ''} next week
-                  {monthly && (
-                    <> and <span className="font-bold text-surface-900">{monthly.predicted}</span> next month</>
-                  )}
-                  .
-                  {weekly.changePercent !== undefined && weekly.changePercent !== 0 && (
-                    <> This is about <span className={`font-semibold ${weekly.changePercent > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {Math.abs(weekly.changePercent)}%
-                    </span> {getTrendText(weekly.changePercent)} your recent averages. {getTrendRecommendation(weekly.changePercent)}</>
-                  )}
-                  {weekly.range && (
-                    <> The range could be anywhere from {weekly.range.min} to {weekly.range.max} depending on conditions.</>
-                  )}
-                </>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* INCIDENT TYPES Section */}
-        {(mostLikelyType || highestRisk) && (
-          <div>
-            <p className="font-semibold text-surface-800 mb-1.5">INCIDENT TYPES</p>
-            <p>
-              {mostLikelyType && (
-                <>
-                  <span className="font-bold text-surface-900">{formatTypeName(mostLikelyType.type)}</span> is the most common type ({Math.round(mostLikelyType.probability)}% of incidents)
-                  {highestRisk && highestRisk.type !== mostLikelyType.type && (
-                    <>, but <span className="font-bold text-surface-900">{formatTypeName(highestRisk.type)}</span> is your highest concern right now
-                  </>
-                  )}
-                  {highestRisk && highestRisk.trendChange > 0 && (
-                    <> - {highestRisk.type === mostLikelyType.type ? 'it has' : 'it has'} increased <span className="font-semibold text-amber-600">{highestRisk.trendChange}%</span> compared to the previous period</>
-                  )}
-                  .
-                </>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* TOP CONTRIBUTING FACTOR Section */}
-        {baselineData?.topFactors?.[0] && (
-          <div>
-            <p className="font-semibold text-surface-800 mb-1.5">TOP CONTRIBUTING FACTOR</p>
-            <p>
-              <span className="font-bold text-surface-900">{baselineData.topFactors[0].name}</span> accounts for{' '}
-              <span className="font-semibold text-amber-600">
-                {baselineData.totalNegative > 0
-                  ? Math.round((baselineData.topFactors[0].count / baselineData.totalNegative) * 100)
-                  : 0}%
-              </span> of incidents in this period. Addressing this factor could have the greatest impact on reducing incidents.
-            </p>
-          </div>
-        )}
-
-        {/* HOW WE CALCULATED THIS Section */}
-        <div>
-          <p className="font-semibold text-surface-800 mb-1.5">HOW WE CALCULATED THIS</p>
-          <p>
-            These predictions are based on patterns in your last 90 days of recorded incidents.
-            We use statistical methods (linear regression) to project future counts, and weight
-            recent months more heavily when predicting incident types.
-            {weekly?.confidence && (
-              <> {getConfidenceExplanation(weekly.confidence)}</>
-            )}
-          </p>
-        </div>
-
-        {/* WHAT TO CONSIDER Section */}
-        {(highestRisk?.trend === 'increasing' || baselineData?.topFactors?.[0]) && (
-          <div>
-            <p className="font-semibold text-surface-800 mb-1.5">WHAT TO CONSIDER</p>
-            <ul className="list-disc list-inside space-y-1 text-surface-600">
-              {highestRisk?.trend === 'increasing' && (
-                <li>
-                  Focus on reducing <span className="font-semibold text-surface-700">{formatTypeName(highestRisk.type)}</span> incidents - they are trending up
-                </li>
-              )}
-              {baselineData?.topFactors?.[0] && (
-                <li>
-                  The top contributing factor ({baselineData.topFactors[0].name}) accounts for{' '}
-                  {baselineData.totalNegative > 0
-                    ? Math.round((baselineData.topFactors[0].count / baselineData.totalNegative) * 100)
-                    : 0}% of incidents
-                </li>
-              )}
-              {weekly?.changePercent > 15 && (
-                <li>
-                  Weekly incidents are trending upward - consider reviewing recent changes in operations or conditions
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/**
  * RiskBar - Visual risk level indicator
  */
 const RiskBar = ({ level, label }) => {
@@ -331,60 +138,38 @@ const RiskBar = ({ level, label }) => {
 }
 
 /**
- * PredictiveAnalysisSection - Unified What-If + Prediction panel
+ * PredictiveAnalysisSection - What-If + Prediction panel
  * Two-column layout: Scenario (left) | Projected Outcome (right)
  */
-const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHazard, selectedFactor }) => {
+const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHazard }) => {
   const [showMethodology, setShowMethodology] = useState(false)
 
   // Intervention state - bidirectional sliders centered at 0
   const [interventions, setInterventions] = useState({
     actions: 0,      // -10 to +10: negative = more open actions, positive = close actions
-    factor: 0,       // -50 to +50: negative = factor worsens, positive = factor reduced
     training: 0      // -50 to +50: negative = less training, positive = more training
   })
 
   // Context label showing what's being analyzed
   const contextLabel = useMemo(() => {
     if (selectedHazard) return `For: ${selectedHazard.name}`
-    if (selectedFactor) return `For: ${selectedFactor.name}`
     return 'Overall Incidents'
-  }, [selectedHazard, selectedFactor])
+  }, [selectedHazard])
 
-  // Filter incidents based on selected hazard/factor
+  // Filter incidents based on selected hazard
   const contextIncidents = useMemo(() => {
     if (!incidents?.length) return []
     if (selectedHazard) {
       return incidents.filter(i => i.location === selectedHazard.name)
     }
-    if (selectedFactor) {
-      return incidents.filter(i => {
-        if (!i.description) return false
-        const factors = detectContributingFactors(i.description)
-        return factors.some(f => f.name === selectedFactor.name)
-      })
-    }
     return incidents
-  }, [incidents, selectedHazard, selectedFactor])
+  }, [incidents, selectedHazard])
 
   // Calculate baseline data from filtered incidents
   const baselineData = useMemo(() => {
     if (!contextIncidents?.length) return null
 
     const negativeIncidents = contextIncidents.filter(i => NEGATIVE_TYPES.includes(i.type))
-
-    // Detect all contributing factors
-    const factorCounts = {}
-    negativeIncidents.forEach(i => {
-      const factors = detectContributingFactors(i.description || '')
-      factors.forEach(({ factor }) => {
-        factorCounts[factor] = (factorCounts[factor] || 0) + 1
-      })
-    })
-
-    const topFactors = Object.entries(factorCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
 
     // Calculate weekly average (assuming 12 weeks of data)
     const weeklyAvg = Math.max(1, Math.round(negativeIncidents.length / 12))
@@ -395,18 +180,9 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
     return {
       totalNegative: negativeIncidents.length,
       weeklyAvg,
-      topFactors,
-      factorCounts,
       mostLikelyType
     }
   }, [contextIncidents, incidentPrediction])
-
-  // Get top factor name for display
-  const topFactorName = useMemo(() => {
-    if (selectedFactor) return selectedFactor.name
-    if (baselineData?.topFactors?.[0]) return baselineData.topFactors[0].name
-    return 'Top Risk Factor'
-  }, [selectedFactor, baselineData])
 
   // Calculate projected outcome based on interventions
   const projection = useMemo(() => {
@@ -418,27 +194,16 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
     // Calculate total impact from interventions
     let totalChange = 0
 
-    // Actions: each action closed = -2% incidents, each open action = +2%
-    const actionEffect = interventions.actions * -2
+    // Actions: each action closed = -3% incidents, each open action = +3%
+    const actionEffect = interventions.actions * -3
     totalChange += actionEffect
 
-    // Factor: reducing top factor reduces incidents proportionally
-    // Getting worse increases incidents
-    if (baselineData.topFactors.length > 0) {
-      const topFactor = baselineData.topFactors[0]
-      const factorPct = baselineData.totalNegative > 0
-        ? (topFactor.count / baselineData.totalNegative) * 100
-        : 10
-      const factorEffect = (factorPct * interventions.factor) / 100 * -1
-      totalChange += factorEffect
-    }
-
     // Training: more training = fewer incidents, less training = more
-    const trainingEffect = interventions.training * -0.15
+    const trainingEffect = interventions.training * -0.2
     totalChange += trainingEffect
 
-    // Cap total change at -60% to +60%
-    totalChange = Math.max(-60, Math.min(60, totalChange))
+    // Cap total change at -50% to +50%
+    totalChange = Math.max(-50, Math.min(50, totalChange))
 
     // Calculate projected values
     const projectedWeekly = Math.round(baseline * (1 + totalChange / 100) * 10) / 10
@@ -472,10 +237,10 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
   }, [])
 
   const handleReset = useCallback(() => {
-    setInterventions({ actions: 0, factor: 0, training: 0 })
+    setInterventions({ actions: 0, training: 0 })
   }, [])
 
-  const hasChanges = interventions.actions !== 0 || interventions.factor !== 0 || interventions.training !== 0
+  const hasChanges = interventions.actions !== 0 || interventions.training !== 0
   const netChange = projection?.changePercent || 0
 
   // Don't render if no data
@@ -524,13 +289,10 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
           {/* Context banner */}
           <div className="p-3 bg-primary-50 rounded-lg border border-primary-100">
             <p className="text-xs font-medium text-primary-700">
-              Currently analyzing: {selectedHazard?.name || selectedFactor?.name || 'All Hazards'}
+              Currently analyzing: {selectedHazard?.name || 'All Hazards'}
             </p>
             <div className="flex items-center gap-4 mt-1 text-xs text-primary-600">
               <span>Current rate: {baselineData?.weeklyAvg || 0}/week</span>
-              {baselineData?.topFactors?.[0] && (
-                <span>Top factor: {baselineData.topFactors[0].name} ({Math.round((baselineData.topFactors[0].count / baselineData.totalNegative) * 100)}%)</span>
-              )}
             </div>
           </div>
 
@@ -543,18 +305,6 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
               max={10}
               onChange={handleInterventionChange}
               colorClass="actions"
-            />
-
-            <InterventionSlider
-              id="factor"
-              label={topFactorName}
-              value={interventions.factor}
-              min={-50}
-              max={50}
-              step={5}
-              unit="%"
-              onChange={handleInterventionChange}
-              colorClass="factor"
             />
 
             <InterventionSlider
@@ -603,7 +353,7 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
               {/* Big number - weekly prediction */}
               <div className="text-center py-4">
                 <p className="text-sm font-medium text-surface-600 mb-2">
-                  {selectedHazard?.name || selectedFactor?.name || 'All Incidents'}:
+                  {selectedHazard?.name || 'All Incidents'}:
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   <span className={`text-5xl font-bold ${
@@ -705,13 +455,6 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
         </div>
       </div>
 
-      {/* Plain-English Summary Section */}
-      <PredictionInsightSummary
-        incidentPrediction={incidentPrediction}
-        baselineData={baselineData}
-        contextIncidents={contextIncidents}
-      />
-
       {/* Methodology disclosure */}
       <div className="border-t border-surface-200">
         <button
@@ -729,9 +472,8 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
               <div className="space-y-1.5">
                 <p className="font-semibold text-surface-700">Scenario Sliders</p>
                 <ul className="space-y-1 text-surface-500">
-                  <li><span className="font-medium text-amber-600">Open Actions:</span> Each action closed reduces incidents by ~2%</li>
-                  <li><span className="font-medium text-purple-600">Top Factor:</span> Reduction scaled by factor's contribution percentage</li>
-                  <li><span className="font-medium text-emerald-600">Training:</span> +10% training = ~1.5% incident reduction</li>
+                  <li><span className="font-medium text-amber-600">Open Actions:</span> Each action closed reduces incidents by ~3%</li>
+                  <li><span className="font-medium text-emerald-600">Training:</span> +10% training = ~2% incident reduction</li>
                 </ul>
               </div>
               <div className="space-y-1.5">
@@ -743,7 +485,7 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
               </div>
             </div>
             <p className="text-surface-400 italic pt-2">
-              Maximum combined impact capped at 60%. Projections are estimates based on historical patterns.
+              Maximum combined impact capped at 50%. Projections are estimates based on historical patterns.
             </p>
           </div>
         )}
