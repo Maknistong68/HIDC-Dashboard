@@ -14,7 +14,9 @@ import {
   deleteRecord,
   replaceFileRecords,
   updateFile,
-  getFileById
+  getFileById,
+  getContractorClassifications,
+  setContractorClassification
 } from '../utils/indexedDBStorage'
 import { generateId } from '../utils/calculations'
 import { categorizeForImport, runBackgroundCategorization } from '../utils/categorizationManager'
@@ -41,6 +43,7 @@ export const DataProvider = ({ children }) => {
   const [showOpenClosed, setShowOpenClosed] = useState(false)
   const [storageStats, setStorageStats] = useState(null)
   const [categorizationProgress, setCategorizationProgress] = useState(null)
+  const [contractorClassifications, setContractorClassifications] = useState({})
 
   // Global loading overlay
   const { startLoading, updateProgress, finishLoading } = useLoading()
@@ -116,6 +119,11 @@ export const DataProvider = ({ children }) => {
       // Get storage statistics
       const stats = await getStorageStatistics()
       setStorageStats(stats)
+      updateProgress(85)
+
+      // Load contractor classifications
+      const classifications = await getContractorClassifications()
+      setContractorClassifications(classifications)
       updateProgress(90)
 
       console.log(`[DataContext] Loaded ${validIncidents.length} incidents from ${fileList.length} files`)
@@ -422,6 +430,49 @@ export const DataProvider = ({ children }) => {
   }, [])
 
   // ============================================
+  // CONTRACTOR CLASSIFICATION
+  // ============================================
+
+  // Update contractor classification
+  const updateContractorClassification = useCallback(async (name, subRegion) => {
+    try {
+      await setContractorClassification(name, subRegion)
+      // Update local state
+      setContractorClassifications(prev => {
+        const updated = { ...prev }
+        if (subRegion) {
+          updated[name] = subRegion
+        } else {
+          delete updated[name]
+        }
+        return updated
+      })
+    } catch (error) {
+      console.error('[DataContext] Error updating contractor classification:', error)
+      throw error
+    }
+  }, [])
+
+  // Get enriched contractors with sub-regions and record counts
+  const getEnrichedContractors = useCallback(() => {
+    const contractorMap = new Map()
+
+    for (const incident of incidents) {
+      const contractor = incident.contractor || 'Unknown'
+      if (!contractorMap.has(contractor)) {
+        contractorMap.set(contractor, {
+          name: contractor,
+          recordCount: 0,
+          subRegion: contractorClassifications[contractor] || ''
+        })
+      }
+      contractorMap.get(contractor).recordCount++
+    }
+
+    return Array.from(contractorMap.values())
+  }, [incidents, contractorClassifications])
+
+  // ============================================
   // IMPORT TRACKING
   // ============================================
 
@@ -456,6 +507,7 @@ export const DataProvider = ({ children }) => {
     setShowOpenClosed,
     storageStats,
     categorizationProgress,
+    contractorClassifications,
 
     // Project operations
     addProject,
@@ -485,6 +537,10 @@ export const DataProvider = ({ children }) => {
     reloadIncidents,
     reloadFiles,
 
+    // Contractor classification
+    updateContractorClassification,
+    getEnrichedContractors,
+
     // Import tracking
     recordImportWarnings,
     clearImportWarnings,
@@ -499,6 +555,7 @@ export const DataProvider = ({ children }) => {
     showOpenClosed,
     storageStats,
     categorizationProgress,
+    contractorClassifications,
     addProject,
     updateProject,
     deleteProject,
@@ -519,6 +576,8 @@ export const DataProvider = ({ children }) => {
     loadData,
     reloadIncidents,
     reloadFiles,
+    updateContractorClassification,
+    getEnrichedContractors,
     recordImportWarnings,
     clearImportWarnings,
     recordImportStats,

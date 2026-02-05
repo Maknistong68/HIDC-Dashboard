@@ -495,6 +495,44 @@ export const clearSetting = async (key) => {
 }
 
 // ============================================
+// CONTRACTOR CLASSIFICATIONS
+// ============================================
+
+/**
+ * Get all contractor classifications
+ * @returns {Promise<Object>} - Map of contractor name to sub-region
+ */
+export const getContractorClassifications = async () => {
+  const classifications = await getSetting('contractorClassifications')
+  return classifications || {}
+}
+
+/**
+ * Set classification for a contractor
+ * @param {string} name - Contractor name
+ * @param {string} subRegion - Sub-region to assign (empty string to unassign)
+ */
+export const setContractorClassification = async (name, subRegion) => {
+  const classifications = await getContractorClassifications()
+  if (subRegion) {
+    classifications[name] = subRegion
+  } else {
+    delete classifications[name]
+  }
+  await setSetting('contractorClassifications', classifications)
+}
+
+/**
+ * Remove a contractor classification
+ * @param {string} name - Contractor name
+ */
+export const removeContractorClassification = async (name) => {
+  const classifications = await getContractorClassifications()
+  delete classifications[name]
+  await setSetting('contractorClassifications', classifications)
+}
+
+// ============================================
 // REPORTER EXCLUSION
 // ============================================
 

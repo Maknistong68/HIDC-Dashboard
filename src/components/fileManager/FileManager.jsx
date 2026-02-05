@@ -14,7 +14,8 @@ import {
   Database,
   HardDrive,
   TrendingUp,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { Card } from '../ui'
@@ -22,6 +23,7 @@ import FileDeleteConfirm from './FileDeleteConfirm'
 import FileReplaceModal from './FileReplaceModal'
 import BatchImportModal from './BatchImportModal'
 import DataTimeline from './DataTimeline'
+import ContractorClassificationPanel from './ContractorClassificationPanel'
 
 /**
  * FileManager - Enterprise file management for imported data
@@ -164,7 +166,8 @@ const FileManager = () => {
   // Tab configuration
   const tabs = [
     { id: 'files', label: 'Files', icon: List },
-    { id: 'timeline', label: 'Timeline', icon: Calendar }
+    { id: 'timeline', label: 'Timeline', icon: Calendar },
+    { id: 'contractors', label: 'Contractors', icon: Users }
   ]
 
   if (isLoading) {
@@ -458,6 +461,10 @@ const FileManager = () => {
 
       {activeTab === 'timeline' && (
         <DataTimeline files={enrichedFiles} incidents={incidents} />
+      )}
+
+      {activeTab === 'contractors' && (
+        <ContractorClassificationPanel />
       )}
 
       {/* Delete Confirmation Modal */}
