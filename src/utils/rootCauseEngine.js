@@ -583,6 +583,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'weekly toolbox', 'weekly safety standout', 'safety standout',
       'safety standout meeting', 'safety standout toll box', 'standout meeting',
       'toolbox has been conducted', 'standout was conducted',
+      // Mass TBT variations
+      'mass tbt', 'mass tbt conducted', 'mass tbt was', 'tbt was successfully',
+      'tbt has been conducted', 'tbt successfully conducted',
       // Hazard awareness
       'aware about the hazards', 'aware of hazards', 'hazards and precautions',
       'precautions before', 'hazards and precautionary', 'identify hazards',
@@ -1378,6 +1381,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'homemade tools', 'homemade tool', 'improvised tool', 'improvised tools',
       'makeshift tool', 'makeshift tools', 'homemade tools found',
       'homemade tools being used', 'using homemade', 'using improvised',
+      'homemade hammer', 'homemade wrench', 'homemade equipment',
+      'tool is not approved', 'not approved for use', 'non-designated tool',
+      'not specifically designed', 'not designed for', 'used as a mixing tool',
 
       // === ELECTRICAL PANEL ISSUES ===
       'electrical panel', 'electrical panel unlocked', 'electrical panel not locked',
