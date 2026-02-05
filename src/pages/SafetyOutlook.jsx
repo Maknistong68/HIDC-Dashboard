@@ -3,12 +3,21 @@ import { Target, AlertTriangle, Layers } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskComparisonPanel } from '../components/outlook'
 import { UnifiedPredictivePanel } from '../components/insights'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getIncidentPredictionSummary, getHazardDailyData } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
+
+// Sub-region options for the filter dropdown
+const SUB_REGION_OPTIONS = [
+  { value: 'SUB REGION 1', label: 'Sub Region 1' },
+  { value: 'SUB REGION 2', label: 'Sub Region 2' },
+  { value: 'SUB REGION 3', label: 'Sub Region 3' },
+  { value: 'SUB REGION 4', label: 'Sub Region 4' },
+  { value: 'SUB REGION 5', label: 'Sub Region 5' },
+]
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -102,11 +111,11 @@ FactorSummary.displayName = 'FactorSummary'
  * Optimized with startTransition for smooth selections
  */
 const SafetyOutlook = () => {
-  const { incidents } = useData()
+  const { incidents, siteClassifications } = useData()
   const { getPeriodRange } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion } = useFilter()
 
   // Local state
   const [activeTab, setActiveTab] = useState('hazards') // 'hazards' or 'factors'
@@ -129,7 +138,7 @@ const SafetyOutlook = () => {
     return sites.sort().map(site => ({ value: site, label: site }))
   }, [incidents, contractor])
 
-  // Filter configuration - Contractor (parent) and Site (child)
+  // Filter configuration - Contractor (parent), Site (child), and Sub-Region
   const filterConfig = useMemo(() => [
     {
       key: 'contractor',
@@ -144,16 +153,25 @@ const SafetyOutlook = () => {
       label: 'Site',
       placeholder: 'All Sites',
       options: siteOptions
+    },
+    {
+      key: 'subRegion',
+      type: 'select',
+      label: 'Sub-Region',
+      placeholder: 'All Sub-Regions',
+      options: SUB_REGION_OPTIONS
     }
   ], [uniqueContractors, siteOptions])
 
-  // Filtered incidents based on contractor, site, and period
+  // Filtered incidents based on contractor, site, subRegion, and period
   const filteredIncidents = useMemo(() => {
     // If period is null, show all data (no date filtering)
     if (period === null) {
       return incidents.filter(i => {
         if (contractor && i.contractor !== contractor) return false
         if (site && i.site !== site) return false
+        // Filter by sub-region using site classifications
+        if (subRegion && siteClassifications[i.site] !== subRegion) return false
         return true
       })
     }
@@ -164,11 +182,13 @@ const SafetyOutlook = () => {
     return incidents.filter(i => {
       if (contractor && i.contractor !== contractor) return false
       if (site && i.site !== site) return false
+      // Filter by sub-region using site classifications
+      if (subRegion && siteClassifications[i.site] !== subRegion) return false
       if (i.date < dateFrom) return false
       if (i.date > dateTo) return false
       return true
     })
-  }, [incidents, contractor, site, period, getPeriodRange])
+  }, [incidents, contractor, site, subRegion, siteClassifications, period, getPeriodRange])
 
   // Calculate hazard trends based on filtered incidents and period
   const sortedHazards = useMemo(() => {
@@ -526,6 +546,14 @@ const SafetyOutlook = () => {
           </>
         )}
       </div>
+
+      {/* Risk Comparison Section */}
+      {filteredIncidents.length > 0 && (
+        <RiskComparisonPanel
+          incidents={filteredIncidents}
+          siteClassifications={siteClassifications}
+        />
+      )}
 
       {/* Unified Predictive Analysis Panel (negative observations only) */}
       {negativeIncidents.length > 0 && incidentPrediction.hasData && (

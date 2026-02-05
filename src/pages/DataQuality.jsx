@@ -77,6 +77,15 @@ import { detectMisspellings } from '../utils/spellChecker'
 import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
 import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
+
+// Sub-region options for the filter dropdown
+const SUB_REGION_OPTIONS = [
+  { value: 'SUB REGION 1', label: 'Sub Region 1' },
+  { value: 'SUB REGION 2', label: 'Sub Region 2' },
+  { value: 'SUB REGION 3', label: 'Sub Region 3' },
+  { value: 'SUB REGION 4', label: 'Sub Region 4' },
+  { value: 'SUB REGION 5', label: 'Sub Region 5' },
+]
 import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import BatchImportModal from '../components/fileManager/BatchImportModal'
@@ -172,7 +181,7 @@ const KPIMiniCard = ({ title, value, unit, status, icon: Icon, subtitle, onClick
 }
 
 const DataQuality = () => {
-  const { incidents, isLoading, importWarnings, updateIncident } = useData()
+  const { incidents, isLoading, importWarnings, updateIncident, siteClassifications } = useData()
   const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
   const [expandedSection, setExpandedSection] = useState(null)
   const [reporterSort, setReporterSort] = useState('total')
@@ -210,7 +219,7 @@ const DataQuality = () => {
   const { getPeriodRange } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, excludedReporters, setExcludedReporters } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
 
   // Handle period change
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -238,7 +247,7 @@ const DataQuality = () => {
     return sites.sort().map(site => ({ value: site, label: site }))
   }, [incidents, contractor])
 
-  // Filter configuration - Contractor (parent) and Site (child)
+  // Filter configuration - Contractor (parent), Site (child), and Sub-Region
   const filterConfig = [
     {
       key: 'contractor',
@@ -253,10 +262,17 @@ const DataQuality = () => {
       label: 'Site',
       placeholder: 'All Sites',
       options: siteOptions
+    },
+    {
+      key: 'subRegion',
+      type: 'select',
+      label: 'Sub-Region',
+      placeholder: 'All Sub-Regions',
+      options: SUB_REGION_OPTIONS
     }
   ]
 
-  // Filtered incidents based on contractor, site, and period
+  // Filtered incidents based on contractor, site, subRegion, and period
   // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
   const filteredIncidents = useMemo(() => {
     // If period is null, show all data (no date filtering)
@@ -264,6 +280,8 @@ const DataQuality = () => {
       return incidents.filter(i => {
         if (contractor && i.contractor !== contractor) return false
         if (site && i.site !== site) return false
+        // Filter by sub-region using site classifications
+        if (subRegion && siteClassifications[i.site] !== subRegion) return false
         return true
       })
     }
@@ -274,11 +292,13 @@ const DataQuality = () => {
     return incidents.filter(i => {
       if (contractor && i.contractor !== contractor) return false
       if (site && i.site !== site) return false
+      // Filter by sub-region using site classifications
+      if (subRegion && siteClassifications[i.site] !== subRegion) return false
       if (i.date < dateFrom) return false
       if (i.date > dateTo) return false
       return true
     })
-  }, [incidents, contractor, site, period])
+  }, [incidents, contractor, site, subRegion, siteClassifications, period])
 
   // ============================================
   // SPLIT CALCULATIONS INTO FOCUSED MEMOS

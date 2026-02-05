@@ -495,41 +495,47 @@ export const clearSetting = async (key) => {
 }
 
 // ============================================
-// CONTRACTOR CLASSIFICATIONS
+// SITE CLASSIFICATIONS
 // ============================================
 
 /**
- * Get all contractor classifications
- * @returns {Promise<Object>} - Map of contractor name to sub-region
+ * Get all site classifications
+ * @returns {Promise<Object>} - Map of site name to sub-region
  */
-export const getContractorClassifications = async () => {
-  const classifications = await getSetting('contractorClassifications')
+export const getSiteClassifications = async () => {
+  const classifications = await getSetting('siteClassifications')
   return classifications || {}
 }
 
 /**
- * Set classification for a contractor
- * @param {string} name - Contractor name
+ * Set classification for a site
+ * @param {string} name - Site name
  * @param {string} subRegion - Sub-region to assign (empty string to unassign)
  */
-export const setContractorClassification = async (name, subRegion) => {
-  const classifications = await getContractorClassifications()
+export const setSiteClassification = async (name, subRegion) => {
+  const classifications = await getSiteClassifications()
   if (subRegion) {
     classifications[name] = subRegion
   } else {
     delete classifications[name]
   }
-  await setSetting('contractorClassifications', classifications)
+  await setSetting('siteClassifications', classifications)
 }
 
 /**
- * Remove a contractor classification
- * @param {string} name - Contractor name
+ * Bulk assign multiple sites at once
+ * @param {Array<{name: string, subRegion: string}>} assignments - Array of site assignments
  */
-export const removeContractorClassification = async (name) => {
-  const classifications = await getContractorClassifications()
-  delete classifications[name]
-  await setSetting('contractorClassifications', classifications)
+export const setSiteClassificationsBatch = async (assignments) => {
+  const classifications = await getSiteClassifications()
+  for (const { name, subRegion } of assignments) {
+    if (subRegion) {
+      classifications[name] = subRegion
+    } else {
+      delete classifications[name]
+    }
+  }
+  await setSetting('siteClassifications', classifications)
 }
 
 // ============================================

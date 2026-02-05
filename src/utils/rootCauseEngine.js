@@ -5603,11 +5603,12 @@ const calculateFactorScore = (text, config) => {
     }
   }
 
-  // Check exclusion patterns (-15 each)
+  // Check exclusion patterns (-5 each, requires 2+ to significantly impact score)
+  // Reduced from -15 to -5 to prevent single false-positive exclusion from hiding valid factors
   if (config.exclusionPatterns) {
     for (const pattern of config.exclusionPatterns) {
       if (text.includes(pattern)) {
-        score -= 15
+        score -= 5
         exclusionMatches.push(pattern)
       }
     }
@@ -5985,6 +5986,10 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
   const byFactor = Object.values(factorMap)
     .map(f => ({
       ...f,
+      // Calculate percentage of total analyzed incidents
+      percentage: filteredIncidents.length > 0
+        ? (f.count / filteredIncidents.length) * 100
+        : 0,
       hazardBreakdown: Object.entries(f.hazards)
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count)
@@ -6003,6 +6008,9 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
     byFactor.push({
       name: 'Unclassified',
       count: unclassifiedIncidents.length,
+      percentage: filteredIncidents.length > 0
+        ? (unclassifiedIncidents.length / filteredIncidents.length) * 100
+        : 0,
       hazards: unclassifiedHazards,
       incidents: unclassifiedIncidents,
       hazardBreakdown: Object.entries(unclassifiedHazards)

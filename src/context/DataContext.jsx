@@ -15,8 +15,9 @@ import {
   replaceFileRecords,
   updateFile,
   getFileById,
-  getContractorClassifications,
-  setContractorClassification
+  getSiteClassifications,
+  setSiteClassification,
+  setSiteClassificationsBatch
 } from '../utils/indexedDBStorage'
 import { generateId } from '../utils/calculations'
 import { categorizeForImport, runBackgroundCategorization } from '../utils/categorizationManager'
@@ -43,7 +44,7 @@ export const DataProvider = ({ children }) => {
   const [showOpenClosed, setShowOpenClosed] = useState(false)
   const [storageStats, setStorageStats] = useState(null)
   const [categorizationProgress, setCategorizationProgress] = useState(null)
-  const [contractorClassifications, setContractorClassifications] = useState({})
+  const [siteClassifications, setSiteClassifications] = useState({})
 
   // Global loading overlay
   const { startLoading, updateProgress, finishLoading } = useLoading()
@@ -77,22 +78,29 @@ export const DataProvider = ({ children }) => {
   }, [startLoading, updateProgress, finishLoading])
 
   // Reload files list
-  const reloadFiles = useCallback(async () => {
-    startLoading('Reloading files...')
+  // Use { silent: true } to skip showing the global loading overlay (e.g., during batch import)
+  const reloadFiles = useCallback(async (options = {}) => {
+    const { silent = false } = options
+
+    if (!silent) {
+      startLoading('Reloading files...')
+    }
     try {
-      updateProgress(30)
+      if (!silent) updateProgress(30)
       const fileList = await getImportedFiles()
       setFiles(fileList)
-      updateProgress(70)
+      if (!silent) updateProgress(70)
 
       // Update storage stats
       const stats = await getStorageStatistics()
       setStorageStats(stats)
-      updateProgress(100)
+      if (!silent) updateProgress(100)
     } catch (error) {
       console.error('[DataContext] Error reloading files:', error)
     } finally {
-      finishLoading()
+      if (!silent) {
+        finishLoading()
+      }
     }
   }, [startLoading, updateProgress, finishLoading])
 
@@ -121,9 +129,9 @@ export const DataProvider = ({ children }) => {
       setStorageStats(stats)
       updateProgress(85)
 
-      // Load contractor classifications
-      const classifications = await getContractorClassifications()
-      setContractorClassifications(classifications)
+      // Load site classifications
+      const classifications = await getSiteClassifications()
+      setSiteClassifications(classifications)
       updateProgress(90)
 
       console.log(`[DataContext] Loaded ${validIncidents.length} incidents from ${fileList.length} files`)
@@ -430,15 +438,15 @@ export const DataProvider = ({ children }) => {
   }, [])
 
   // ============================================
-  // CONTRACTOR CLASSIFICATION
+  // SITE CLASSIFICATION
   // ============================================
 
-  // Update contractor classification
-  const updateContractorClassification = useCallback(async (name, subRegion) => {
+  // Update site classification
+  const updateSiteClassification = useCallback(async (name, subRegion) => {
     try {
-      await setContractorClassification(name, subRegion)
+      await setSiteClassification(name, subRegion)
       // Update local state
-      setContractorClassifications(prev => {
+      setSiteClassifications(prev => {
         const updated = { ...prev }
         if (subRegion) {
           updated[name] = subRegion
@@ -448,29 +456,51 @@ export const DataProvider = ({ children }) => {
         return updated
       })
     } catch (error) {
-      console.error('[DataContext] Error updating contractor classification:', error)
+      console.error('[DataContext] Error updating site classification:', error)
       throw error
     }
   }, [])
 
-  // Get enriched contractors with sub-regions and record counts
-  const getEnrichedContractors = useCallback(() => {
-    const contractorMap = new Map()
+  // Bulk update site classifications
+  const updateSiteClassificationsBatch = useCallback(async (assignments) => {
+    try {
+      await setSiteClassificationsBatch(assignments)
+      // Update local state
+      setSiteClassifications(prev => {
+        const updated = { ...prev }
+        for (const { name, subRegion } of assignments) {
+          if (subRegion) {
+            updated[name] = subRegion
+          } else {
+            delete updated[name]
+          }
+        }
+        return updated
+      })
+    } catch (error) {
+      console.error('[DataContext] Error updating site classifications batch:', error)
+      throw error
+    }
+  }, [])
+
+  // Get enriched sites with sub-regions and record counts
+  const getEnrichedSites = useCallback(() => {
+    const siteMap = new Map()
 
     for (const incident of incidents) {
-      const contractor = incident.contractor || 'Unknown'
-      if (!contractorMap.has(contractor)) {
-        contractorMap.set(contractor, {
-          name: contractor,
+      const site = incident.site || 'Unknown'
+      if (!siteMap.has(site)) {
+        siteMap.set(site, {
+          name: site,
           recordCount: 0,
-          subRegion: contractorClassifications[contractor] || ''
+          subRegion: siteClassifications[site] || ''
         })
       }
-      contractorMap.get(contractor).recordCount++
+      siteMap.get(site).recordCount++
     }
 
-    return Array.from(contractorMap.values())
-  }, [incidents, contractorClassifications])
+    return Array.from(siteMap.values())
+  }, [incidents, siteClassifications])
 
   // ============================================
   // IMPORT TRACKING
@@ -507,7 +537,7 @@ export const DataProvider = ({ children }) => {
     setShowOpenClosed,
     storageStats,
     categorizationProgress,
-    contractorClassifications,
+    siteClassifications,
 
     // Project operations
     addProject,
@@ -537,9 +567,10 @@ export const DataProvider = ({ children }) => {
     reloadIncidents,
     reloadFiles,
 
-    // Contractor classification
-    updateContractorClassification,
-    getEnrichedContractors,
+    // Site classification
+    updateSiteClassification,
+    updateSiteClassificationsBatch,
+    getEnrichedSites,
 
     // Import tracking
     recordImportWarnings,
@@ -555,7 +586,7 @@ export const DataProvider = ({ children }) => {
     showOpenClosed,
     storageStats,
     categorizationProgress,
-    contractorClassifications,
+    siteClassifications,
     addProject,
     updateProject,
     deleteProject,
@@ -576,8 +607,9 @@ export const DataProvider = ({ children }) => {
     loadData,
     reloadIncidents,
     reloadFiles,
-    updateContractorClassification,
-    getEnrichedContractors,
+    updateSiteClassification,
+    updateSiteClassificationsBatch,
+    getEnrichedSites,
     recordImportWarnings,
     clearImportWarnings,
     recordImportStats,

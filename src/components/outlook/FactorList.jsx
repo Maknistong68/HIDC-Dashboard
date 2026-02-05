@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { Layers, ChevronRight } from 'lucide-react'
+import { Layers, ChevronRight, AlertTriangle } from 'lucide-react'
 
 /**
  * Get color based on count for the badge
@@ -14,10 +14,15 @@ const getCountColor = (count, maxCount) => {
 
 /**
  * DetectionRatioCard - Shows total observations vs detected ratio
+ * Includes warning when unclassified rate exceeds threshold
  */
 const DetectionRatioCard = React.memo(({ totalIncidents, detectedCount, factors }) => {
   const detectionRate = totalIncidents > 0 ? ((detectedCount / totalIncidents) * 100).toFixed(1) : 0
   const notDetectedCount = totalIncidents - detectedCount
+  const unclassifiedRate = totalIncidents > 0 ? ((notDetectedCount / totalIncidents) * 100) : 0
+
+  // Show warning when unclassified rate exceeds 20%
+  const showUnclassifiedWarning = unclassifiedRate > 20 && totalIncidents > 10
 
   return (
     <div className="bg-white rounded-lg border border-surface-200 p-3 mb-3">
@@ -66,6 +71,23 @@ const DetectionRatioCard = React.memo(({ totalIncidents, detectedCount, factors 
           <span className="font-medium text-surface-700">{factors?.length || 0}</span> factors
         </span>
       </div>
+
+      {/* Unclassified warning - shown when >20% of observations have no factors */}
+      {showUnclassifiedWarning && (
+        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-2xs">
+              <p className="font-medium text-amber-800">
+                High Unclassified Rate: {unclassifiedRate.toFixed(1)}%
+              </p>
+              <p className="text-amber-700 mt-0.5">
+                {notDetectedCount} observations couldn't be classified. Factor detection patterns may need expansion.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 })

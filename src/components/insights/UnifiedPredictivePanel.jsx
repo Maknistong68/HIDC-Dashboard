@@ -298,6 +298,65 @@ const UnifiedPredictivePanel = ({
     return Math.round((hazardTrendData.avgPerDay || 0) * 7)
   }, [hazardTrendData, hazardFilteredIncidents])
 
+  // Calculate hazard-specific trend direction using linear regression
+  const hazardTrend = useMemo(() => {
+    if (selectedHazard === 'all' || !hazardFilteredIncidents?.length) {
+      return { slope: 0, direction: 'stable', trendFactor: 1 }
+    }
+
+    // Group incidents by week for trend analysis
+    const weeklyData = {}
+    hazardFilteredIncidents.forEach(i => {
+      if (!i.date) return
+      const date = new Date(i.date)
+      // Get ISO week number
+      const startOfYear = new Date(date.getFullYear(), 0, 1)
+      const weekNum = Math.ceil(((date - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7)
+      const weekKey = `${date.getFullYear()}-W${weekNum}`
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1
+    })
+
+    const weeks = Object.keys(weeklyData).sort()
+    if (weeks.length < 3) {
+      return { slope: 0, direction: 'stable', trendFactor: 1 }
+    }
+
+    // Simple linear regression on last 8 weeks (or available data)
+    const recentWeeks = weeks.slice(-8)
+    const n = recentWeeks.length
+    const values = recentWeeks.map(w => weeklyData[w])
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0
+    for (let i = 0; i < n; i++) {
+      sumX += i
+      sumY += values[i]
+      sumXY += i * values[i]
+      sumX2 += i * i
+    }
+
+    const denominator = n * sumX2 - sumX * sumX
+    const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
+    const avgCount = sumY / n
+
+    // Normalize slope relative to average
+    const normalizedSlope = avgCount > 0 ? slope / avgCount : 0
+
+    // Determine trend direction and factor
+    let direction = 'stable'
+    let trendFactor = 1
+    if (normalizedSlope > 0.05) {
+      direction = 'increasing'
+      // Increase prediction by up to 20% for strong upward trends
+      trendFactor = 1 + Math.min(0.2, normalizedSlope)
+    } else if (normalizedSlope < -0.05) {
+      direction = 'decreasing'
+      // Decrease prediction by up to 20% for strong downward trends
+      trendFactor = 1 + Math.max(-0.2, normalizedSlope)
+    }
+
+    return { slope: normalizedSlope, direction, trendFactor, avgCount }
+  }, [selectedHazard, hazardFilteredIncidents])
+
   // Calculate projected outcome using data-driven engine
   const projection = useMemo(() => {
     if (weekly?.predicted === undefined || weekly?.predicted === null) return null
@@ -308,7 +367,17 @@ const UnifiedPredictivePanel = ({
 
     if (selectedHazard !== 'all' && filteredIncidents?.length > 0) {
       hazardRatio = hazardFilteredIncidents.length / filteredIncidents.length
-      basePrediction = Math.max(1, Math.round(weekly.predicted * hazardRatio))
+
+      // Use hazard-specific trend to adjust prediction (not just simple proportion)
+      // Base prediction uses the historical ratio
+      let hazardBase = weekly.predicted * hazardRatio
+
+      // Apply hazard-specific trend factor
+      // If hazard is trending up, prediction should be higher
+      // If hazard is trending down, prediction should be lower
+      hazardBase *= hazardTrend.trendFactor
+
+      basePrediction = Math.max(1, Math.round(hazardBase))
     }
 
     // Use data-driven calculation
@@ -325,9 +394,11 @@ const UnifiedPredictivePanel = ({
       ...result,
       hazardRatio: Math.round(hazardRatio * 100),
       totalIncidents: incidentStats.totalIncidents,
-      isFiltered: selectedHazard !== 'all'
+      isFiltered: selectedHazard !== 'all',
+      hazardTrendDirection: hazardTrend.direction,
+      hazardTrendFactor: hazardTrend.trendFactor
     }
-  }, [weekly, sliders, actionsToClose, factorData, incidentStats, selectedHazard, hazardFilteredIncidents, filteredIncidents])
+  }, [weekly, sliders, actionsToClose, factorData, incidentStats, selectedHazard, hazardFilteredIncidents, filteredIncidents, hazardTrend])
 
   const handleSliderChange = useCallback((id, value) => {
     setSliders(prev => ({ ...prev, [id]: value }))
@@ -1129,7 +1200,32 @@ const ScenarioSlider = ({
  * ProjectedImpactBox - Shows the projected impact (numbers mode)
  */
 const ProjectedImpactBox = ({ projection, hasChanges, onClick, selectedHazard }) => {
-  const { baseline, projected, changePercent, riskLevel, isImproved, hazardRatio, isFiltered } = projection
+  const { baseline, projected, changePercent, riskLevel, isImproved, hazardRatio, isFiltered, hazardTrendDirection, hazardTrendFactor } = projection
+
+  // Get trend indicator for hazard-specific predictions
+  const getTrendIndicator = () => {
+    if (!isFiltered || !hazardTrendDirection || hazardTrendDirection === 'stable') return null
+
+    if (hazardTrendDirection === 'increasing') {
+      return (
+        <span className="ml-1 text-2xs text-red-600 flex items-center gap-0.5" title={`Hazard trending up (+${((hazardTrendFactor - 1) * 100).toFixed(0)}% adjustment)`}>
+          <TrendingUp size={10} />
+          trending
+        </span>
+      )
+    }
+
+    if (hazardTrendDirection === 'decreasing') {
+      return (
+        <span className="ml-1 text-2xs text-green-600 flex items-center gap-0.5" title={`Hazard trending down (${((hazardTrendFactor - 1) * 100).toFixed(0)}% adjustment)`}>
+          <TrendingDown size={10} />
+          trending
+        </span>
+      )
+    }
+
+    return null
+  }
 
   const getRiskColor = (level) => {
     switch (level) {
@@ -1179,9 +1275,12 @@ const ProjectedImpactBox = ({ projection, hasChanges, onClick, selectedHazard })
           )}
         </span>
         {isFiltered && (
-          <span className="text-2xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
-            {hazardRatio}% of total
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-2xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+              {hazardRatio}% of total
+            </span>
+            {getTrendIndicator()}
+          </div>
         )}
       </div>
 

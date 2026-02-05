@@ -15,6 +15,7 @@ export const FilterProvider = ({ children }) => {
   const [period, setPeriod] = useState(null)        // null = All
   const [contractor, setContractorState] = useState('')
   const [site, setSiteState] = useState('')
+  const [subRegion, setSubRegionState] = useState('')
   const [excludedReporters, setExcludedReportersState] = useState([])
 
   // Load excluded reporters from IndexedDB on mount
@@ -24,15 +25,21 @@ export const FilterProvider = ({ children }) => {
     })
   }, [])
 
-  // Contractor change resets site (parent-child relationship)
+  // Contractor change resets site and subRegion (parent-child relationship)
   const setContractor = useCallback((value) => {
     setContractorState(value)
     setSiteState('')
+    setSubRegionState('')
   }, [])
 
   // Direct site setter
   const setSite = useCallback((value) => {
     setSiteState(value)
+  }, [])
+
+  // Direct subRegion setter
+  const setSubRegion = useCallback((value) => {
+    setSubRegionState(value)
   }, [])
 
   // Excluded reporters setter (persists to IndexedDB)
@@ -47,6 +54,8 @@ export const FilterProvider = ({ children }) => {
       setContractor(value)
     } else if (key === 'site') {
       setSiteState(value)
+    } else if (key === 'subRegion') {
+      setSubRegionState(value)
     } else if (key === 'excludedReporters') {
       setExcludedReporters(value)
     }
@@ -57,24 +66,27 @@ export const FilterProvider = ({ children }) => {
     setPeriod(null)
     setContractorState('')
     setSiteState('')
+    setSubRegionState('')
   }, [])
 
   // Combined filters object for FilterBar compatibility
-  const filters = useMemo(() => ({ contractor, site, excludedReporters }), [contractor, site, excludedReporters])
+  const filters = useMemo(() => ({ contractor, site, subRegion, excludedReporters }), [contractor, site, subRegion, excludedReporters])
 
   const value = useMemo(() => ({
     period,
     setPeriod,
     contractor,
     site,
+    subRegion,
     excludedReporters,
     setContractor,
     setSite,
+    setSubRegion,
     setExcludedReporters,
     setFilter,
     clearFilters,
     filters
-  }), [period, contractor, site, excludedReporters, setContractor, setSite, setExcludedReporters, setFilter, clearFilters, filters])
+  }), [period, contractor, site, subRegion, excludedReporters, setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters, filters])
 
   return (
     <FilterContext.Provider value={value}>

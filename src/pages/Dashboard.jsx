@@ -52,12 +52,21 @@ const normalizeHazard = memoize((hazard) => {
     .join(' ')
 }, 500) // Cache up to 500 unique hazard names
 
+// Sub-region options for the filter dropdown
+const SUB_REGION_OPTIONS = [
+  { value: 'SUB REGION 1', label: 'Sub Region 1' },
+  { value: 'SUB REGION 2', label: 'Sub Region 2' },
+  { value: 'SUB REGION 3', label: 'Sub Region 3' },
+  { value: 'SUB REGION 4', label: 'Sub Region 4' },
+  { value: 'SUB REGION 5', label: 'Sub Region 5' },
+]
+
 const Dashboard = () => {
-  const { projects, incidents, isLoading, showOpenClosed } = useData()
+  const { projects, incidents, isLoading, showOpenClosed, siteClassifications } = useData()
   const { cutoffDates, getPeriodRange } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters, contractor, site } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters, contractor, site, subRegion } = useFilter()
 
   // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({
@@ -193,7 +202,7 @@ const Dashboard = () => {
     return sites.sort().map(site => ({ value: site, label: site }))
   }, [incidents, contractor])
 
-  // Filter configuration - Contractor (parent) and Site (child)
+  // Filter configuration - Contractor (parent), Site (child), and Sub-Region
   const filterConfig = [
     {
       key: 'contractor',
@@ -208,10 +217,17 @@ const Dashboard = () => {
       label: 'Site',
       placeholder: 'All Sites',
       options: siteOptions
+    },
+    {
+      key: 'subRegion',
+      type: 'select',
+      label: 'Sub-Region',
+      placeholder: 'All Sub-Regions',
+      options: SUB_REGION_OPTIONS
     }
   ]
 
-  // Filtered incidents based on contractor, site, and period (for KPIs, charts, Top Hazards, Top Observers)
+  // Filtered incidents based on contractor, site, subRegion, and period (for KPIs, charts, Top Hazards, Top Observers)
   // Note: Hazard categorization is done at import time, so no recategorization needed here
   // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
   const filteredIncidents = useMemo(() => {
@@ -220,6 +236,8 @@ const Dashboard = () => {
       return incidents.filter(i => {
         if (contractor && i.contractor !== contractor) return false
         if (site && i.site !== site) return false
+        // Filter by sub-region using site classifications
+        if (subRegion && siteClassifications[i.site] !== subRegion) return false
         return true
       })
     }
@@ -230,18 +248,20 @@ const Dashboard = () => {
     return incidents.filter(i => {
       if (contractor && i.contractor !== contractor) return false
       if (site && i.site !== site) return false
+      // Filter by sub-region using site classifications
+      if (subRegion && siteClassifications[i.site] !== subRegion) return false
       if (i.date < dateFrom) return false
       if (i.date > dateTo) return false
       return true
     })
-  }, [incidents, contractor, site, period])
+  }, [incidents, contractor, site, subRegion, siteClassifications, period])
 
   // Export hook - dashboardContentRef for PDF full-page capture, chartRefs for PowerPoint
   // Note: filteredIncidents is passed for summary statistics in exports
   const { isExporting, exportProgress, handleExportPDF, handleExportPPTX } = useExport(dashboardContentRef, chartRefs, filters, filteredIncidents)
 
   // Heatmap uses ALL incidents (not filtered by "This Month")
-  // Only contractor/site filter applies to heatmap
+  // Contractor/site/subRegion filters apply to heatmap
   // Exclude positive observations from heatmap
   // Note: Hazard categorization is done at import time, so no recategorization needed here
   const heatmapIncidents = useMemo(() => {
@@ -249,9 +269,11 @@ const Dashboard = () => {
       if (i.type === 'positive') return false
       if (contractor && i.contractor !== contractor) return false
       if (site && i.site !== site) return false
+      // Filter by sub-region using site classifications
+      if (subRegion && siteClassifications[i.site] !== subRegion) return false
       return true
     })
-  }, [incidents, contractor, site])
+  }, [incidents, contractor, site, subRegion, siteClassifications])
 
   // Get filtered data based on drill-down selection
   const getFilteredBySelection = useMemo(() => {

@@ -27,6 +27,10 @@ const BatchImportModal = ({ onClose }) => {
   const [currentFileIndex, setCurrentFileIndex] = useState(-1)
   const [results, setResults] = useState([])
   const [isComplete, setIsComplete] = useState(false)
+  const [processingDetails, setProcessingDetails] = useState({
+    step: '',
+    progress: 0,
+  })
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -96,8 +100,12 @@ const BatchImportModal = ({ onClose }) => {
       const { file } = selectedFiles[i]
 
       try {
-        // Step 1: Calculate file hash and check for duplicates
+        // Step 1: Calculate file hash
+        setProcessingDetails({ step: 'Calculating file hash...', progress: 5 })
         const fileHash = await calculateFileHash(file)
+
+        // Step 2: Check for duplicate files
+        setProcessingDetails({ step: 'Checking if file already imported...', progress: 10 })
         const existingFile = await checkFileHashExists(fileHash)
 
         if (existingFile) {
@@ -126,19 +134,23 @@ const BatchImportModal = ({ onClose }) => {
           continue // Skip to next file
         }
 
-        // Step 2: Parse file
+        // Step 3: Parse Excel file
+        setProcessingDetails({ step: 'Reading Excel file...', progress: 20 })
         const data = await parseExcelFile(file)
 
-        // Validate format
+        // Step 4: Validate format
+        setProcessingDetails({ step: 'Validating NEOM format...', progress: 30 })
         const validation = validateNEOMFormat(data.headers)
         if (!validation.valid) {
           throw new Error(`Invalid format: missing ${validation.missing.join(', ')}`)
         }
 
-        // Map columns
+        // Step 5: Map columns
+        setProcessingDetails({ step: 'Mapping columns...', progress: 35 })
         const mappings = mapNEOMColumns(data.headers)
 
-        // Transform rows
+        // Step 6: Transform rows (bulk work)
+        setProcessingDetails({ step: 'Cleaning and categorizing data...', progress: 50 })
         const { incidents: transformedIncidents, warnings } = transformRows(
           data.rows,
           data.headers,
@@ -148,7 +160,8 @@ const BatchImportModal = ({ onClose }) => {
           { classificationMode: 'trust-excel' }
         )
 
-        // Step 1: Filter out items whose Event ID was already imported in this batch session
+        // Step 7: Check for duplicates within batch
+        setProcessingDetails({ step: 'Checking for duplicate records...', progress: 90 })
         const withinBatchSkipped = []
         const filteredIncidents = transformedIncidents.filter(item => {
           if (item.externalId && batchImportedIds.has(item.externalId)) {
@@ -162,7 +175,7 @@ const BatchImportModal = ({ onClose }) => {
           return true
         })
 
-        // Step 2: Check against existing data (only items not already in this batch)
+        // Check against existing data (only items not already in this batch)
         const duplicateResults = checkDuplicates(
           filteredIncidents,
           incidents,
@@ -170,7 +183,8 @@ const BatchImportModal = ({ onClose }) => {
           'skip'
         )
 
-        // Only save new records (non-duplicates)
+        // Step 8: Save to database
+        setProcessingDetails({ step: 'Saving to database...', progress: 95 })
         let result = { recordCount: 0 }
         if (duplicateResults.newRecords.length > 0) {
           result = await addIncidentsWithFile(
@@ -237,8 +251,9 @@ const BatchImportModal = ({ onClose }) => {
     setCurrentFileIndex(-1)
 
     // Reload files list once at the end of batch import (avoids overlapping transactions)
+    // Use silent: true to prevent showing global overlay over the modal
     try {
-      await reloadFiles()
+      await reloadFiles({ silent: true })
     } catch (error) {
       console.error('[BatchImport] Error reloading files after batch:', error)
     }

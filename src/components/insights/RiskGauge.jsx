@@ -1,6 +1,68 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react'
 import RiskExplanationModal from './RiskExplanationModal'
+
+/**
+ * Risk level thresholds with hysteresis
+ * To prevent volatile flipping between levels, we require:
+ * - To go UP a level: must exceed threshold by hysteresis amount
+ * - To go DOWN a level: must fall below threshold by hysteresis amount
+ */
+const RISK_THRESHOLDS = {
+  // changePercent boundaries for each level
+  // Level 0 (Low): <= -30%
+  // Level 1 (OK): -30% to -10%
+  // Level 2 (Medium): -10% to +15%
+  // Level 3 (High): +15% to +40%
+  // Level 4 (Critical): > +40%
+  boundaries: [-30, -10, 15, 40],
+  hysteresis: 5 // +/- 5% buffer to prevent flipping
+}
+
+/**
+ * Calculate risk level with hysteresis to prevent volatile flipping
+ * @param {number} changePercent - Current change percentage
+ * @param {number|null} previousLevel - Previous risk level (0-4)
+ * @returns {number} Risk level (0-4)
+ */
+const calculateRiskLevelWithHysteresis = (changePercent, previousLevel) => {
+  const { boundaries, hysteresis } = RISK_THRESHOLDS
+
+  // If no previous level, calculate normally without hysteresis
+  if (previousLevel === null || previousLevel === undefined) {
+    if (changePercent <= boundaries[0]) return 0  // Low
+    if (changePercent <= boundaries[1]) return 1  // OK
+    if (changePercent <= boundaries[2]) return 2  // Medium
+    if (changePercent <= boundaries[3]) return 3  // High
+    return 4  // Critical
+  }
+
+  // Calculate what level would be without hysteresis
+  let naturalLevel
+  if (changePercent <= boundaries[0]) naturalLevel = 0
+  else if (changePercent <= boundaries[1]) naturalLevel = 1
+  else if (changePercent <= boundaries[2]) naturalLevel = 2
+  else if (changePercent <= boundaries[3]) naturalLevel = 3
+  else naturalLevel = 4
+
+  // If trying to go UP, require exceeding threshold by hysteresis amount
+  if (naturalLevel > previousLevel) {
+    const thresholdToExceed = boundaries[previousLevel] + hysteresis
+    if (changePercent <= thresholdToExceed) {
+      return previousLevel  // Stay at current level
+    }
+  }
+
+  // If trying to go DOWN, require falling below threshold by hysteresis amount
+  if (naturalLevel < previousLevel) {
+    const thresholdToFallBelow = boundaries[naturalLevel] - hysteresis
+    if (changePercent >= thresholdToFallBelow) {
+      return previousLevel  // Stay at current level
+    }
+  }
+
+  return naturalLevel
+}
 
 /**
  * RiskGauge - Visual 5-level risk gauge showing where prediction falls on risk spectrum
@@ -25,7 +87,11 @@ const RiskGauge = ({
   weeklyHistory
 }) => {
   const [showWhyModal, setShowWhyModal] = useState(false)
-  // Calculate risk level based on predicted vs average
+
+  // Track previous risk level for hysteresis
+  const previousLevelRef = useRef(null)
+
+  // Calculate risk level based on predicted vs average with hysteresis
   const riskAnalysis = useMemo(() => {
     if (predicted === undefined || predicted === null || average === undefined || average === null) {
       return {
@@ -41,29 +107,19 @@ const RiskGauge = ({
     const changePercent = average > 0 ? Math.round(((predicted - average) / average) * 100) : 0
     const isAbove = predicted > average
 
-    // Determine risk level (0-4)
-    let level, label, color
-    if (changePercent <= -30) {
-      level = 0
-      label = 'Low'
-      color = 'green'
-    } else if (changePercent <= -10) {
-      level = 1
-      label = 'OK'
-      color = 'emerald'
-    } else if (changePercent <= 15) {
-      level = 2
-      label = 'Medium'
-      color = 'amber'
-    } else if (changePercent <= 40) {
-      level = 3
-      label = 'High'
-      color = 'orange'
-    } else {
-      level = 4
-      label = 'Critical'
-      color = 'red'
-    }
+    // Calculate level with hysteresis to prevent volatile flipping
+    const level = calculateRiskLevelWithHysteresis(changePercent, previousLevelRef.current)
+
+    // Map level to label and color
+    const levelConfig = [
+      { label: 'Low', color: 'green' },
+      { label: 'OK', color: 'emerald' },
+      { label: 'Medium', color: 'amber' },
+      { label: 'High', color: 'orange' },
+      { label: 'Critical', color: 'red' }
+    ]
+
+    const { label, color } = levelConfig[level]
 
     // Calculate pointer position (0-100%)
     // Maps level 0-4 to position 10%, 30%, 50%, 70%, 90%
@@ -71,6 +127,11 @@ const RiskGauge = ({
 
     return { level, label, color, percent, changePercent, isAbove }
   }, [predicted, average])
+
+  // Update previous level ref after render (for next hysteresis calculation)
+  useEffect(() => {
+    previousLevelRef.current = riskAnalysis.level
+  }, [riskAnalysis.level])
 
   // Analyze weekly trend pattern
   const trendAnalysis = useMemo(() => {

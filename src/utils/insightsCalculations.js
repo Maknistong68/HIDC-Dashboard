@@ -2454,9 +2454,35 @@ export const getTrendLevel = (changePercent, isNew = false, currentCount = 0) =>
 }
 
 /**
+ * Calculate time-decay weight for an incident
+ * Recent data (last 3 months) gets weight 1.0
+ * Older data decays exponentially with half-life of 90 days
+ *
+ * @param {Date} incidentDate - Date of the incident
+ * @param {Date} endDate - Reference end date (most recent)
+ * @returns {number} Weight between 0 and 1
+ */
+const calculateTimeWeight = (incidentDate, endDate) => {
+  const daysAgo = differenceInDays(endDate, incidentDate)
+
+  // Recent data (within 90 days) gets full weight
+  if (daysAgo <= 90) return 1.0
+
+  // Exponential decay with half-life of 90 days
+  // After 90 days: weight = 0.5^((daysAgo - 90) / 90)
+  const decayFactor = Math.pow(0.5, (daysAgo - 90) / 90)
+
+  // Minimum weight of 0.1 to prevent old data from being completely ignored
+  return Math.max(0.1, decayFactor)
+}
+
+/**
  * Enhanced hazard trending with configurable period
  * Split by period: compare current vs previous
  * Return hazards sorted by trend level
+ *
+ * For "All Time" periods, applies time-decay weighting to prevent
+ * stale historical trends from dominating current analysis.
  */
 export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
@@ -2466,9 +2492,10 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
   const dataStartDate = parseISO(dates[0])
 
   let midDate, startDate
+  const isAllTime = periodMonths === null || periodMonths === undefined
 
   // Handle null/undefined period (All time) - use full data range, split in half
-  if (periodMonths === null || periodMonths === undefined) {
+  if (isAllTime) {
     // For "All time", use full data range and split at midpoint
     startDate = dataStartDate
     const totalDays = differenceInDays(endDate, dataStartDate)
@@ -2516,16 +2543,31 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
   })
 
   // Count by hazard for each period
+  // For "All Time", apply time-decay weighting to prevent stale trends from dominating
   const previousCounts = {}
   previousPeriod.forEach(i => {
     const h = i.location || 'Unspecified'
-    previousCounts[h] = (previousCounts[h] || 0) + 1
+    if (isAllTime) {
+      // Apply time-decay weight for "All Time" view
+      const incidentDate = parseISO(i.date.substring(0, 10))
+      const weight = calculateTimeWeight(incidentDate, endDate)
+      previousCounts[h] = (previousCounts[h] || 0) + weight
+    } else {
+      previousCounts[h] = (previousCounts[h] || 0) + 1
+    }
   })
 
   const currentCounts = {}
   currentPeriod.forEach(i => {
     const h = i.location || 'Unspecified'
-    currentCounts[h] = (currentCounts[h] || 0) + 1
+    if (isAllTime) {
+      // Apply time-decay weight for "All Time" view
+      const incidentDate = parseISO(i.date.substring(0, 10))
+      const weight = calculateTimeWeight(incidentDate, endDate)
+      currentCounts[h] = (currentCounts[h] || 0) + weight
+    } else {
+      currentCounts[h] = (currentCounts[h] || 0) + 1
+    }
   })
 
   // ALWAYS include ALL hazard categories from the master list
@@ -2534,26 +2576,32 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
   const allHazards = new Set([...ALL_HAZARDS, ...dataHazards])
 
   const trending = [...allHazards].map(hazard => {
-    const prev = previousCounts[hazard] || 0
-    const curr = currentCounts[hazard] || 0
+    const prevWeighted = previousCounts[hazard] || 0
+    const currWeighted = currentCounts[hazard] || 0
+    const totalWeighted = prevWeighted + currWeighted
+
+    // For display, round weighted counts to integers
+    const prev = isAllTime ? Math.round(prevWeighted) : prevWeighted
+    const curr = isAllTime ? Math.round(currWeighted) : currWeighted
     const total = prev + curr
 
     // Determine if this is a "new" hazard (no baseline data to compare)
-    const isNew = prev === 0 && curr > 0
+    const isNew = prevWeighted === 0 && currWeighted > 0
 
-    // Calculate change percent - new hazards get 100% (emerging risk)
+    // Calculate change percent using weighted values for accuracy
+    // This ensures trend reflects time-weighted reality
     let changePercent = 0
-    if (prev > 0) {
-      changePercent = ((curr - prev) / prev) * 100
+    if (prevWeighted > 0) {
+      changePercent = ((currWeighted - prevWeighted) / prevWeighted) * 100
     } else if (isNew) {
       // New hazards are treated as +100% for proper ranking in "By % Change" sort
       changePercent = 100
     }
 
     // For hazards with no data at all, use a special "no-data" level
-    const hasNoData = total === 0
+    const hasNoData = totalWeighted === 0
 
-    // Calculate confidence based on sample size
+    // Calculate confidence based on sample size (use actual total for better accuracy)
     const confidence = getConfidenceFromCount(total)
 
     // Check statistical significance for established hazards
@@ -2574,7 +2622,10 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       trendLevel,
       isMajor: MAJOR_HAZARDS.includes(hazard),
       confidence,
-      isSignificant
+      isSignificant,
+      // Include weighted values for debugging/advanced analysis
+      _weightedPrev: isAllTime ? prevWeighted : undefined,
+      _weightedCurr: isAllTime ? currWeighted : undefined
     }
   })
 
@@ -3625,4 +3676,63 @@ export const predictSeasonalRisk = (incidents, daysAhead = 7) => {
       averageRisk: Math.round(predictions.reduce((sum, p) => sum + p.combinedRisk, 0) / predictions.length)
     }
   }
+}
+
+/**
+ * Calculate risk scores grouped by dimension (contractor, site, or subregion)
+ * @param {Array} incidents - Array of incident objects
+ * @param {string} dimension - 'contractor', 'site', or 'subregion'
+ * @param {Object} siteClassifications - Map of site names to sub-region values (required for subregion dimension)
+ * @returns {Array} Sorted array of { name, score, level, incidentCount }
+ */
+export const calculateRiskByDimension = (incidents, dimension, siteClassifications = {}) => {
+  if (!incidents || incidents.length === 0) return []
+
+  // Group incidents by the specified dimension
+  const groups = new Map()
+
+  incidents.forEach(incident => {
+    let key = null
+
+    switch (dimension) {
+      case 'contractor':
+        key = incident.contractor
+        break
+      case 'site':
+        key = incident.site
+        break
+      case 'subregion':
+        // Use site classifications to determine subregion
+        key = siteClassifications[incident.site] || 'Unclassified'
+        break
+      default:
+        key = incident.contractor
+    }
+
+    if (!key) return
+
+    if (!groups.has(key)) {
+      groups.set(key, [])
+    }
+    groups.get(key).push(incident)
+  })
+
+  // Calculate risk score for each group
+  const results = []
+
+  groups.forEach((groupIncidents, name) => {
+    const riskData = calculateRiskScore(groupIncidents)
+
+    results.push({
+      name,
+      score: riskData.score,
+      level: riskData.level,
+      incidentCount: groupIncidents.length
+    })
+  })
+
+  // Sort by score descending (highest risk at top - but score is inverted, so lowest score = highest risk)
+  results.sort((a, b) => a.score - b.score)
+
+  return results
 }
