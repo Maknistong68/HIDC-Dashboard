@@ -7,7 +7,7 @@ import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMon
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
 import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
-import { aggregateRootCausesForHazard, getObservationTypeStats } from './rootCauseEngine'
+import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType } from './rootCauseEngine'
 
 // Re-export the new keyword-based root cause detection as extractDeviationsForHazard
 // for backward compatibility with existing components
@@ -679,6 +679,8 @@ export const getPerformanceOutliers = (incidents, threshold = 50) => {
 
 /**
  * Calculate overall risk score (composite)
+ * Based on observation-based metrics focused on Major Hazards (14 Significant Hazards)
+ * All factors use RATES (not counts) to be size-bias free across companies
  */
 export const calculateRiskScore = (incidents) => {
   if (incidents.length === 0) return { score: 0, level: 'unknown', factors: [] }
@@ -686,52 +688,115 @@ export const calculateRiskScore = (incidents) => {
   const factors = []
   let totalWeight = 0
   let weightedSum = 0
+  const now = new Date()
 
-  // Factor 1: Near-miss rate (weight: 25)
+  // Helper: calculate days since observation date
+  const getDaysSince = (dateStr) => {
+    if (!dateStr) return Infinity
+    try {
+      const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr
+      return differenceInDays(now, date)
+    } catch {
+      return Infinity
+    }
+  }
+
+  // Helper: check if observation is high-risk (based on 14 significant hazards)
+  const isHighRisk = (incident) =>
+    MAJOR_HAZARDS.includes(incident.hazardCategory) || MAJOR_HAZARDS.includes(incident.location)
+
+  // Split observations into periods (30 days each) for trend analysis
+  const currentPeriodObs = incidents.filter(i => getDaysSince(i.date) <= 30)
+  const previousPeriodObs = incidents.filter(i => getDaysSince(i.date) > 30 && getDaysSince(i.date) <= 60)
+
+  // High-risk observations for each period
+  const currentHighRisk = currentPeriodObs.filter(isHighRisk)
+  const previousHighRisk = previousPeriodObs.filter(isHighRisk)
+
+  // All high-risk observations (for factors 3 & 4)
+  const allHighRiskObs = incidents.filter(isHighRisk)
+  const totalHighRisk = allHighRiskObs.length
+
+  // Factor 1: Near-Miss Reporting (weight: 25)
   const nearMiss = getNearMissAnalysis(incidents)
   const nmScore = Math.min(100, (nearMiss.rateValue / 5) * 100)
   factors.push({ name: 'Near-Miss Reporting', score: nmScore, weight: 25, status: nearMiss.status })
   weightedSum += nmScore * 25
   totalWeight += 25
 
-  // Factor 2: Open actions age (weight: 25)
-  const overdueAlerts = getOverdueActionAlerts(incidents)
-  const overdueCount = overdueAlerts.reduce((sum, a) => sum + (a.metric || 0), 0)
-  const openActionsScore = Math.max(0, 100 - (overdueCount * 5))
+  // Factor 2: High-Risk Trend (weight: 25) - SIZE-BIAS FREE using rates
+  // Compares current period rate vs previous period rate
+  // Improvement (decreasing rate) = good score
+  const currentRate = currentPeriodObs.length >= 5
+    ? (currentHighRisk.length / currentPeriodObs.length) * 100
+    : null
+  const previousRate = previousPeriodObs.length >= 5
+    ? (previousHighRisk.length / previousPeriodObs.length) * 100
+    : null
+
+  let trendScore = 50 // Default: neutral
+  let trendStatus = 'good'
+  let trendDetail = ''
+
+  if (currentRate !== null && previousRate !== null) {
+    // Both periods have sufficient data - calculate trend
+    const rateChange = previousRate - currentRate // Positive = improvement
+    // +10% improvement = 100, 0% = 50, -10% worsening = 0
+    trendScore = Math.max(0, Math.min(100, 50 + (rateChange * 5)))
+    trendStatus = rateChange > 2 ? 'good' : rateChange < -2 ? 'critical' : 'warning'
+    trendDetail = rateChange >= 0
+      ? `${Math.abs(rateChange).toFixed(1)}% improvement`
+      : `${Math.abs(rateChange).toFixed(1)}% increase`
+  } else if (currentRate !== null) {
+    // Only current period has data - use absolute rate vs benchmark (30% is neutral)
+    trendScore = Math.max(0, Math.min(100, 100 - (currentRate * 1.67))) // 0% = 100, 60% = 0
+    trendStatus = currentRate > 40 ? 'critical' : currentRate > 25 ? 'warning' : 'good'
+    trendDetail = `${currentRate.toFixed(1)}% current rate`
+  } else {
+    // Insufficient data
+    trendScore = 50
+    trendStatus = 'warning'
+    trendDetail = 'Insufficient data'
+  }
+
   factors.push({
-    name: 'Action Closure',
-    score: openActionsScore,
+    name: 'High-Risk Trend',
+    score: Math.round(trendScore),
     weight: 25,
-    status: overdueCount > 10 ? 'critical' : overdueCount > 5 ? 'warning' : 'good'
+    status: trendStatus,
+    detail: trendDetail
   })
-  weightedSum += openActionsScore * 25
+  weightedSum += trendScore * 25
   totalWeight += 25
 
-  // Factor 3: Coverage balance (weight: 20)
-  const hourData = getObservationsByHour(incidents)
-  const coverageScore = hourData.summary.hasTimeData
-    ? Math.min(100, (parseFloat(hourData.summary.nightShiftPct) / 25) * 100)
-    : 50
+  // Factor 3: High-Risk Closure Rate (weight: 25)
+  // Higher closure rate is better
+  const closedHighRisk = allHighRiskObs.filter(i => i.actionStatus === 'closed').length
+  const closureRate = totalHighRisk > 0 ? (closedHighRisk / totalHighRisk) * 100 : 100
   factors.push({
-    name: 'Shift Coverage',
-    score: coverageScore,
-    weight: 20,
-    status: coverageScore < 50 ? 'warning' : 'good'
+    name: 'High-Risk Closure',
+    score: Math.round(closureRate),
+    weight: 25,
+    status: closureRate < 50 ? 'critical' : closureRate < 70 ? 'warning' : 'good',
+    detail: `${closedHighRisk} of ${totalHighRisk} closed`
   })
-  weightedSum += coverageScore * 20
-  totalWeight += 20
+  weightedSum += closureRate * 25
+  totalWeight += 25
 
-  // Factor 4: Contractor performance (weight: 30)
-  const outliers = getPerformanceOutliers(incidents)
-  const contractorScore = Math.max(0, 100 - (outliers.criticalCount * 20) - (outliers.warningCount * 10))
+  // Factor 4: Positive High-Risk Rate (weight: 25)
+  // Higher positive rate indicates proactive safety culture
+  const positiveHighRisk = allHighRiskObs.filter(i => isPositiveType(i.type)).length
+  const positiveRate = totalHighRisk > 0 ? (positiveHighRisk / totalHighRisk) * 100 : 0
+  const positiveScore = Math.min(100, positiveRate * 2) // Boost: 50% positive = 100 score
   factors.push({
-    name: 'Contractor Quality',
-    score: contractorScore,
-    weight: 30,
-    status: outliers.criticalCount > 0 ? 'critical' : outliers.warningCount > 0 ? 'warning' : 'good'
+    name: 'Positive High-Risk',
+    score: Math.round(positiveScore),
+    weight: 25,
+    status: positiveRate < 10 ? 'critical' : positiveRate < 25 ? 'warning' : 'good',
+    detail: `${positiveHighRisk} positive observations`
   })
-  weightedSum += contractorScore * 30
-  totalWeight += 30
+  weightedSum += positiveScore * 25
+  totalWeight += 25
 
   const score = Math.round(weightedSum / totalWeight)
 
