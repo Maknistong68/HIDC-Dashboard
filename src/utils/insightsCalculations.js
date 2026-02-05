@@ -3792,6 +3792,7 @@ export const calculateRiskByDimension = (incidents, dimension, siteClassificatio
       name,
       score: riskData.score,
       level: riskData.level,
+      factors: riskData.factors,
       incidentCount: groupIncidents.length
     })
   })

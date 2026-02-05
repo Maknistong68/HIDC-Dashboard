@@ -23,19 +23,61 @@ const getRiskColor = (score) => {
 }
 
 /**
- * Custom tooltip for the bar chart
+ * Get status icon for factor
+ */
+const getStatusIcon = (status) => {
+  if (status === 'good') return '✓'
+  if (status === 'critical') return '✗'
+  return '!'
+}
+
+/**
+ * Get status color for factor
+ */
+const getStatusColor = (status) => {
+  if (status === 'good') return '#22c55e'
+  if (status === 'critical') return '#ef4444'
+  return '#f59e0b'
+}
+
+/**
+ * Custom tooltip for the bar chart with factor breakdown
  */
 const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload || !payload.length) return null
 
   const data = payload[0].payload
+  const factors = data.factors || []
+
   return (
-    <div className="bg-white border border-surface-200 rounded-lg shadow-lg p-2 text-xs">
-      <p className="font-semibold text-surface-800">{data.name}</p>
-      <p className="text-surface-600">
-        Risk Score: <span className="font-bold" style={{ color: getRiskColor(data.score) }}>{data.score}%</span>
-      </p>
-      <p className="text-surface-500">{data.incidentCount} observations</p>
+    <div className="bg-white border border-surface-200 rounded-lg shadow-xl p-3 text-xs min-w-[220px]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2 pb-2 border-b border-surface-100">
+        <p className="font-semibold text-surface-800">{data.name}</p>
+        <span className="font-bold text-sm" style={{ color: getRiskColor(data.score) }}>{data.score}%</span>
+      </div>
+
+      {/* Factors breakdown */}
+      {factors.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {factors.map((factor, idx) => (
+            <div key={idx} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: getStatusColor(factor.status) }}>{getStatusIcon(factor.status)}</span>
+                <span className="text-surface-600">{factor.name}</span>
+              </div>
+              <span className="font-medium" style={{ color: getStatusColor(factor.status) }}>
+                {Math.round(factor.score)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="pt-2 border-t border-surface-100 text-surface-500">
+        {data.incidentCount} observations
+      </div>
     </div>
   )
 }
@@ -126,8 +168,11 @@ const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
     return { total, avgScore, criticalCount }
   }, [currentData])
 
-  // Chart height based on data count (32px per bar for better spacing)
-  const chartHeight = Math.max(200, Math.min(500, currentData.length * 32 + 20))
+  // Dynamic chart height based on data count
+  // 36px per bar for comfortable spacing, min 150px, no max limit
+  const chartHeight = currentData.length > 0
+    ? Math.max(150, currentData.length * 36 + 20)
+    : 150
 
   if (!incidents.length) return null
 
