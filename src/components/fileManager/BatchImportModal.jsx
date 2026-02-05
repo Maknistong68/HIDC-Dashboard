@@ -34,11 +34,21 @@ const BatchImportModal = ({ onClose }) => {
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
+  const isProcessingRef = useRef(false)  // Ref to track processing state (survives re-renders)
 
   // Check if folder selection is supported (Chrome/Edge only)
   const isFolderSelectSupported = useMemo(() => {
     return 'webkitdirectory' in document.createElement('input')
   }, [])
+
+  // Safe close handler - prevents closing during processing
+  const handleClose = useCallback(() => {
+    if (isProcessingRef.current || isProcessing) {
+      console.warn('[BatchImport] Cannot close while processing')
+      return
+    }
+    onClose()
+  }, [onClose, isProcessing])
 
   // Handle file selection
   const handleFileSelect = useCallback((event) => {
@@ -82,7 +92,9 @@ const BatchImportModal = ({ onClose }) => {
   // Process all files
   const processFiles = useCallback(async () => {
     if (selectedFiles.length === 0) return
+    if (isProcessingRef.current) return  // Prevent double-processing
 
+    isProcessingRef.current = true
     setIsProcessing(true)
     const newResults = []
 
@@ -245,7 +257,11 @@ const BatchImportModal = ({ onClose }) => {
       }
     }
 
+    // Verify completion before showing results
+    console.log(`[BatchImport] Batch complete: ${newResults.filter(r => r.success).length} files imported, ${newResults.reduce((sum, r) => sum + (r.recordCount || 0), 0)} total records`)
+
     setResults(newResults)
+    isProcessingRef.current = false
     setIsProcessing(false)
     setIsComplete(true)
     setCurrentFileIndex(-1)
@@ -254,6 +270,7 @@ const BatchImportModal = ({ onClose }) => {
     // Use silent: true to prevent showing global overlay over the modal
     try {
       await reloadFiles({ silent: true })
+      console.log('[BatchImport] Files reloaded successfully')
     } catch (error) {
       console.error('[BatchImport] Error reloading files after batch:', error)
     }
@@ -310,7 +327,7 @@ const BatchImportModal = ({ onClose }) => {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={isProcessing ? undefined : onClose}
+        onClick={handleClose}
       />
 
       {/* Modal */}
@@ -335,7 +352,7 @@ const BatchImportModal = ({ onClose }) => {
           </div>
           {!isProcessing && (
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 hover:bg-surface-100 rounded-lg transition-colors"
               aria-label="Close"
             >
@@ -595,7 +612,7 @@ const BatchImportModal = ({ onClose }) => {
           {!isComplete ? (
             <>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 disabled={isProcessing}
                 className="px-4 py-2 text-surface-700 font-medium hover:bg-surface-100 rounded-lg transition-colors disabled:opacity-50"
               >
@@ -621,7 +638,7 @@ const BatchImportModal = ({ onClose }) => {
             </>
           ) : (
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors"
             >
               Done

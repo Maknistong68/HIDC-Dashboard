@@ -25,8 +25,7 @@ import {
   HelpCircle,
   AlertOctagon,
   MessageSquareWarning,
-  Flag,
-  Calendar
+  Flag
 } from 'lucide-react'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -57,7 +56,6 @@ import {
   getNearMissMetrics,
   getReporterMetrics,
   getContractorMetrics,
-  getCoverageMetrics,
   getQualityTrend,
   getDuplicateDescriptions,
   getOtherHazardAnalysis,
@@ -147,7 +145,7 @@ const QualityScoreGauge = ({ score }) => {
       <div>
         <div className="flex items-center text-sm font-medium text-surface-500">
           Data Quality Score
-          <InfoTooltip text="HOW THIS SCORE IS CALCULATED: Your data is evaluated across 5 categories, each contributing to the total: (1) CATEGORIZATION (25%): Are observations properly classified into hazard types? More complete categorization = higher score. (2) DESCRIPTION QUALITY (25%): Are descriptions detailed enough to understand what happened? Longer, more specific descriptions score higher. (3) NEAR-MISS RATE (20%): Are near-misses being reported? A healthy ratio of near-misses to incidents indicates good hazard awareness. (4) COVERAGE (20%): Is reporting happening across all shifts and days? Even distribution across day/night and weekdays/weekends scores higher. (5) REPORTER ENGAGEMENT (10%): Are many different people reporting, or just a few? More diverse reporters indicate wider engagement. GREEN (80+): Excellent data. YELLOW (60-79): Good but has gaps. RED (below 60): Needs significant improvement." />
+          <InfoTooltip text="HOW THIS SCORE IS CALCULATED: Your data is evaluated across 5 categories, each contributing to the total: (1) CATEGORIZATION (25%): Are observations properly classified into hazard types? More complete categorization = higher score. (2) DESCRIPTION QUALITY (25%): Are descriptions detailed enough to understand what happened? Longer, more specific descriptions score higher. (3) NEAR-MISS RATE (20%): Are near-misses being reported? A healthy ratio of near-misses to incidents indicates good hazard awareness. (4) REPORTER ENGAGEMENT (15%): Are many different people reporting, or just a few? More diverse reporters indicate wider engagement. (5) DATA INTEGRITY (15%): Are descriptions unique or copy-pasted? Lower duplicate rate = higher score. GREEN (80+): Excellent data. YELLOW (60-79): Good but has gaps. RED (below 60): Needs significant improvement." />
         </div>
         <div className="text-xs text-surface-400">out of 100</div>
       </div>
@@ -311,7 +309,6 @@ const DataQuality = () => {
     return {
       quality: calculateQualityScore(filteredIncidents),
       nearMiss: getNearMissMetrics(filteredIncidents),
-      coverage: getCoverageMetrics(filteredIncidents),
     }
   }, [filteredIncidents])
 
@@ -365,7 +362,6 @@ const DataQuality = () => {
       // Core quality
       quality: coreQualityMetrics.quality,
       nearMiss: coreQualityMetrics.nearMiss,
-      coverage: coreQualityMetrics.coverage,
       // Categorization
       categorization: categorizationMetrics?.categorization,
       autoClassification: categorizationMetrics?.autoClassification,
@@ -406,7 +402,6 @@ const DataQuality = () => {
     return [...qualityData.contractors].sort((a, b) => {
       if (contractorSort === 'totalObs') return b.totalObs - a.totalObs
       if (contractorSort === 'qualityScore') return b.qualityScore - a.qualityScore
-      if (contractorSort === 'coverage') return b.activeDays - a.activeDays
       return 0
     }).slice(0, 10)
   }, [qualityData, contractorSort])
@@ -870,7 +865,7 @@ const DataQuality = () => {
     )
   }
 
-  const { quality, categorization, description, nearMiss, reporters, contractors, coverage, trend, alerts, duplicates, spellingIssues, otherHazards, autoClassification, categorizationComparison, unclassifiableRecords, flaggedRecords } = qualityData
+  const { quality, categorization, description, nearMiss, reporters, contractors, trend, alerts, duplicates, spellingIssues, otherHazards, autoClassification, categorizationComparison, unclassifiableRecords, flaggedRecords } = qualityData
 
   // Pie chart colors
   const COLORS = ['#22c55e', '#94a3b8', '#f97316']
@@ -1179,15 +1174,6 @@ const DataQuality = () => {
               info="HOW THIS IS CALCULATED: We first exclude positive observations (since they're not hazards), then count how many of the remaining observations are classified as 'Near Miss'. The percentage shows near misses out of all negative observations. WHY NEAR MISSES MATTER: Near misses are incidents that ALMOST happened. If people are reporting these, it means they're catching hazards BEFORE they cause harm. Industry best practice suggests 5-10% near-miss rate indicates good awareness. A very low rate might mean people only report after something bad happens, missing prevention opportunities."
             />
             <KPIMiniCard
-              title="Coverage"
-              value={coverage.rate}
-              unit="%"
-              status={coverage.status}
-              icon={Calendar}
-              subtitle={`${coverage.activeDays} active days`}
-              info="HOW THIS IS CALCULATED: We look at the selected time period and count how many days had at least one observation submitted. This percentage shows coverage - are people reporting consistently every day, or are there big gaps? The subtitle shows the actual number of 'active' days. GREEN (80%+): Excellent - observations being submitted almost every day. YELLOW (50-79%): Some gaps - certain days have no reporting. RED (below 50%): Major gaps - more than half the days have no observations. This could indicate reporting is only happening on certain shifts or after incidents, rather than proactively."
-            />
-            <KPIMiniCard
               title="Reporters"
               value={quality.breakdown.reporters.active}
               unit={`/${quality.breakdown.reporters.total}`}
@@ -1232,7 +1218,7 @@ const DataQuality = () => {
           <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-3 flex items-center gap-2">
             <TrendingUp size={14} />
             Quality Score Trend (Last 12 Months)
-            <InfoTooltip text="HOW THIS CHART IS CREATED: Each month, we calculate a quality score for all observations submitted during that month using the same 5-category formula (categorization, description quality, near-miss rate, coverage, and reporter diversity). This line shows how your data quality changes over time. UPWARD TREND: Quality is improving - training and processes are working. DOWNWARD TREND: Quality is declining - may need refresher training or process review. The dashed blue line at 75% shows the recommended target. Click any dot to see the actual observations from that month." />
+            <InfoTooltip text="HOW THIS CHART IS CREATED: Each month, we calculate a quality score for all observations submitted during that month using the same 5-category formula (categorization, description quality, near-miss rate, reporter diversity, and data integrity). This line shows how your data quality changes over time. UPWARD TREND: Quality is improving - training and processes are working. DOWNWARD TREND: Quality is declining - may need refresher training or process review. The dashed blue line at 75% shows the recommended target. Click any dot to see the actual observations from that month." />
           </h3>
           <div className={isMobile ? 'h-32' : 'h-40'}>
             <ResponsiveContainer width="100%" height="100%">
@@ -2371,7 +2357,6 @@ const DataQuality = () => {
             >
               <option value="totalObs">Sort by Total</option>
               <option value="qualityScore">Sort by Score</option>
-              <option value="coverage">Sort by Coverage</option>
             </select>
           </div>
           {isMobile ? (

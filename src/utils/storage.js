@@ -42,7 +42,9 @@ let useIndexedDB = null
  */
 const shouldUseIndexedDB = async () => {
   if (useIndexedDB === null) {
+    console.log('[Storage] Checking IndexedDB support for the first time...')
     useIndexedDB = await isIndexedDBSupported()
+    console.log(`[Storage] IndexedDB support result: ${useIndexedDB}`)
   }
   return useIndexedDB
 }
@@ -135,8 +137,11 @@ export const clearAllData = async () => {
  * This runs once on first load after IndexedDB is enabled
  */
 export const migrateToIndexedDB = async () => {
+  console.log('[Migration] Checking migration status...')
+  console.log('[Migration] hse_migrated_to_idb flag:', localStorage.getItem(STORAGE_KEYS.MIGRATED_TO_IDB))
+
   if (isMigrated()) {
-    console.log('[Migration] Already migrated to IndexedDB')
+    console.log('[Migration] Already migrated to IndexedDB - skipping')
     return { success: true, skipped: true }
   }
 
@@ -150,9 +155,11 @@ export const migrateToIndexedDB = async () => {
 
     // Get existing incidents from localStorage
     const incidents = getData('INCIDENTS') || []
+    console.log(`[Migration] Found ${incidents.length} records in localStorage`)
 
     if (incidents.length > 0) {
       // Create a file record for the migrated data
+      console.log('[Migration] Creating file record for migrated data...')
       const fileId = await createFile({
         fileName: 'Migrated from localStorage',
         fileSize: 0,
@@ -160,16 +167,21 @@ export const migrateToIndexedDB = async () => {
         status: 'active',
         migratedFrom: 'localStorage'
       })
+      console.log(`[Migration] File record created with ID: ${fileId}`)
 
       // Add all records to IndexedDB with the file reference
+      console.log('[Migration] Adding records to IndexedDB...')
       await addRecords(incidents, fileId)
 
       console.log(`[Migration] Migrated ${incidents.length} records to IndexedDB`)
+    } else {
+      console.log('[Migration] No records in localStorage to migrate')
     }
 
     // Migrate settings
     const settings = getData('SETTINGS')
     if (settings) {
+      console.log('[Migration] Migrating settings...')
       for (const [key, value] of Object.entries(settings)) {
         await setSetting(key, value)
       }
@@ -177,6 +189,7 @@ export const migrateToIndexedDB = async () => {
     }
 
     // Mark as migrated
+    console.log('[Migration] Setting migration flag...')
     markMigrated()
 
     // Clear localStorage incidents (keep settings as backup)
@@ -185,7 +198,8 @@ export const migrateToIndexedDB = async () => {
     console.log('[Migration] Migration complete!')
     return { success: true, recordsMigrated: incidents.length }
   } catch (error) {
-    console.error('[Migration] Error during migration:', error)
+    console.error('[Migration] CRITICAL ERROR during migration:', error)
+    console.error('[Migration] Error stack:', error.stack)
     return { success: false, error: error.message }
   }
 }
@@ -198,22 +212,36 @@ export const migrateToIndexedDB = async () => {
  * Load all incidents (from IndexedDB or localStorage)
  */
 export const loadIncidents = async () => {
+  console.log('[Storage] loadIncidents() called')
   try {
     // Try IndexedDB first
-    if (await shouldUseIndexedDB()) {
+    const useIDB = await shouldUseIndexedDB()
+    console.log(`[Storage] Using IndexedDB: ${useIDB}`)
+
+    if (useIDB) {
       // Run migration if needed
+      console.log('[Storage] Running migration check...')
       await migrateToIndexedDB()
 
+      console.log('[Storage] Fetching records from IndexedDB...')
       const records = await getAllRecords()
+      console.log(`[Storage] Successfully loaded ${records.length} records from IndexedDB`)
       return records
     }
 
     // Fallback to localStorage
-    return getData('INCIDENTS') || []
+    console.log('[Storage] Falling back to localStorage')
+    const localData = getData('INCIDENTS') || []
+    console.log(`[Storage] Loaded ${localData.length} records from localStorage`)
+    return localData
   } catch (error) {
-    console.error('Error loading incidents:', error)
+    console.error('[Storage] CRITICAL ERROR loading incidents:', error)
+    console.error('[Storage] Error stack:', error.stack)
     // Final fallback
-    return getData('INCIDENTS') || []
+    console.log('[Storage] Attempting final fallback to localStorage')
+    const fallbackData = getData('INCIDENTS') || []
+    console.log(`[Storage] Fallback loaded ${fallbackData.length} records`)
+    return fallbackData
   }
 }
 
@@ -269,9 +297,14 @@ export const saveIncidents = async (incidents) => {
  * @returns {Promise<{ fileId: number, recordCount: number }>}
  */
 export const saveIncidentsWithFile = async (incidents, fileInfo) => {
+  console.log(`[Storage] saveIncidentsWithFile() called - ${incidents.length} records, file: ${fileInfo.fileName}`)
   try {
-    if (await shouldUseIndexedDB()) {
+    const useIDB = await shouldUseIndexedDB()
+    console.log(`[Storage] Using IndexedDB for save: ${useIDB}`)
+
+    if (useIDB) {
       // Create file record
+      console.log('[Storage] Creating file record in IndexedDB...')
       const fileId = await createFile({
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize || 0,
@@ -279,19 +312,25 @@ export const saveIncidentsWithFile = async (incidents, fileInfo) => {
         recordCount: incidents.length,
         status: 'active'
       })
+      console.log(`[Storage] File record created with ID: ${fileId}`)
 
       // Add records with file reference
+      console.log(`[Storage] Adding ${incidents.length} records to IndexedDB...`)
       await addRecords(incidents, fileId)
+      console.log(`[Storage] Successfully saved ${incidents.length} records with fileId: ${fileId}`)
 
       return { fileId, recordCount: incidents.length }
     }
 
     // Fallback: append to localStorage
+    console.log('[Storage] Using localStorage fallback for save')
     const existing = getData('INCIDENTS') || []
     saveData('INCIDENTS', [...existing, ...incidents])
+    console.log(`[Storage] Saved to localStorage. Total: ${existing.length + incidents.length} records`)
     return { fileId: null, recordCount: incidents.length }
   } catch (error) {
-    console.error('Error saving incidents with file:', error)
+    console.error('[Storage] CRITICAL ERROR saving incidents with file:', error)
+    console.error('[Storage] Error stack:', error.stack)
     throw error
   }
 }

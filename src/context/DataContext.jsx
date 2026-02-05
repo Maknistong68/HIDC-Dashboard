@@ -106,35 +106,50 @@ export const DataProvider = ({ children }) => {
 
   // Load all data from storage
   const loadData = useCallback(async () => {
+    console.log('[DataContext] ========== LOAD DATA START ==========')
+    console.log('[DataContext] Timestamp:', new Date().toISOString())
     setIsLoading(true)
     startLoading('Loading data...')
     try {
       updateProgress(10)
       // Load incidents from IndexedDB (with localStorage fallback)
+      console.log('[DataContext] Step 1: Loading incidents...')
       const storedIncidents = await loadIncidents()
+      console.log(`[DataContext] Step 1 complete: Received ${storedIncidents?.length ?? 'null'} incidents`)
 
       // Ensure it's an array
       const validIncidents = Array.isArray(storedIncidents) ? storedIncidents : []
+      if (!Array.isArray(storedIncidents)) {
+        console.warn('[DataContext] WARNING: storedIncidents was not an array:', typeof storedIncidents)
+      }
       updateProgress(40)
 
+      console.log(`[DataContext] Setting incidents state with ${validIncidents.length} records`)
       setIncidents(validIncidents)
 
       // Load file list
+      console.log('[DataContext] Step 2: Loading file list...')
       const fileList = await getImportedFiles()
+      console.log(`[DataContext] Step 2 complete: Loaded ${fileList.length} files`)
       setFiles(fileList)
       updateProgress(70)
 
       // Get storage statistics
+      console.log('[DataContext] Step 3: Getting storage statistics...')
       const stats = await getStorageStatistics()
+      console.log('[DataContext] Step 3 complete: Storage stats:', stats)
       setStorageStats(stats)
       updateProgress(85)
 
       // Load site classifications
+      console.log('[DataContext] Step 4: Loading site classifications...')
       const classifications = await getSiteClassifications()
+      console.log(`[DataContext] Step 4 complete: ${Object.keys(classifications).length} site classifications`)
       setSiteClassifications(classifications)
       updateProgress(90)
 
-      console.log(`[DataContext] Loaded ${validIncidents.length} incidents from ${fileList.length} files`)
+      console.log(`[DataContext] ========== LOAD DATA SUCCESS ==========`)
+      console.log(`[DataContext] Summary: ${validIncidents.length} incidents from ${fileList.length} files`)
 
       updateProgress(100)
 
@@ -156,12 +171,15 @@ export const DataProvider = ({ children }) => {
       ).catch(console.error)
 
     } catch (error) {
-      console.error('[DataContext] Error loading data:', error)
+      console.error('[DataContext] ========== LOAD DATA FAILED ==========')
+      console.error('[DataContext] Error:', error)
+      console.error('[DataContext] Error stack:', error.stack)
       setIncidents([])
       setFiles([])
     } finally {
       setIsLoading(false)
       finishLoading()
+      console.log('[DataContext] ========== LOAD DATA END ==========')
     }
   }, [startLoading, updateProgress, finishLoading])
 
@@ -208,9 +226,11 @@ export const DataProvider = ({ children }) => {
   // Add multiple incidents with file tracking (main import method)
   // Set importOptions.skipReload = true during batch operations to prevent overlapping transactions
   const addIncidentsWithFile = useCallback(async (newIncidents, fileInfo, importOptions = {}) => {
+    console.log(`[DataContext] addIncidentsWithFile() called - ${newIncidents.length} records, file: ${fileInfo.fileName}`)
     try {
       // Apply categorization with the import mode
       const mode = importOptions.classificationMode || 'trust-excel'
+      console.log(`[DataContext] Categorizing with mode: ${mode}`)
       const categorizedIncidents = categorizeForImport(newIncidents, mode)
 
       // Assign IDs if needed
@@ -218,13 +238,16 @@ export const DataProvider = ({ children }) => {
         ...incident,
         id: incident.id || generateId()
       }))
+      console.log(`[DataContext] Prepared ${incidentsWithIds.length} records with IDs`)
 
       // Save to IndexedDB with file tracking
+      console.log('[DataContext] Calling saveIncidentsWithFile...')
       const result = await saveIncidentsWithFile(incidentsWithIds, {
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize || 0,
         fileHash: fileInfo.fileHash || null
       })
+      console.log(`[DataContext] Save complete - fileId: ${result.fileId}, recordCount: ${result.recordCount}`)
 
       // Clear data caches since data changed (keep normalization caches)
       clearDataCaches()
@@ -236,25 +259,33 @@ export const DataProvider = ({ children }) => {
         ...incident,
         fileId: result.fileId
       }))
-      setIncidents(prev => [...prev, ...incidentsWithFileId])
+      console.log(`[DataContext] Updating React state with ${incidentsWithFileId.length} new records`)
+      setIncidents(prev => {
+        const newTotal = prev.length + incidentsWithFileId.length
+        console.log(`[DataContext] State update: ${prev.length} existing + ${incidentsWithFileId.length} new = ${newTotal} total`)
+        return [...prev, ...incidentsWithFileId]
+      })
 
       // Skip reload during batch operations to prevent overlapping IndexedDB transactions
       // The caller (BatchImportModal) will call reloadFiles() once at the end
       if (!importOptions.skipReload) {
         // Only reload files list (lightweight) to update the file management UI
+        console.log('[DataContext] Reloading files list...')
         await reloadFiles()
 
         // Update storage stats in background
         getStorageStatistics().then(stats => setStorageStats(stats)).catch(console.error)
       }
 
+      console.log(`[DataContext] addIncidentsWithFile() complete - fileId: ${result.fileId}`)
       return {
         fileId: result.fileId,
         recordCount: result.recordCount,
         incidents: incidentsWithIds
       }
     } catch (error) {
-      console.error('[DataContext] Error adding incidents with file:', error)
+      console.error('[DataContext] CRITICAL ERROR in addIncidentsWithFile:', error)
+      console.error('[DataContext] Error stack:', error.stack)
       throw error
     }
   }, [])

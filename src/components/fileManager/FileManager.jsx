@@ -170,11 +170,29 @@ const FileManager = () => {
     { id: 'sites', label: 'Sites', icon: MapPin }
   ]
 
-  if (isLoading) {
+  // Render modal independently so it stays mounted during data operations
+  const batchImportModal = showBatchImport && (
+    <BatchImportModal onClose={() => setShowBatchImport(false)} />
+  )
+
+  // Show loading state but keep modal mounted if it's open
+  if (isLoading && !showBatchImport) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
       </div>
+    )
+  }
+
+  // If loading but modal is open, show both the loading spinner and the modal
+  if (isLoading && showBatchImport) {
+    return (
+      <>
+        {batchImportModal}
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+        </div>
+      </>
     )
   }
 
@@ -485,12 +503,8 @@ const FileManager = () => {
         />
       )}
 
-      {/* Batch Import Modal */}
-      {showBatchImport && (
-        <BatchImportModal
-          onClose={() => setShowBatchImport(false)}
-        />
-      )}
+      {/* Batch Import Modal - rendered outside loading guard */}
+      {batchImportModal}
     </div>
   )
 }

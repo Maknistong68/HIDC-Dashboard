@@ -236,8 +236,8 @@ const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
           No data available for this dimension
         </div>
       ) : (
-        <div style={{ height: chartHeight }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div style={{ height: `${chartHeight}px`, minHeight: `${chartHeight}px` }}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart
               data={currentData}
               layout="vertical"

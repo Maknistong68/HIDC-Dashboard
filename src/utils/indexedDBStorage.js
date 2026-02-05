@@ -95,15 +95,19 @@ const getDB = async () => {
 
   // Prevent multiple simultaneous init attempts
   if (dbInitPromise) {
+    console.log('[IndexedDB] Waiting for existing init promise...')
     return dbInitPromise
   }
 
+  console.log('[IndexedDB] Initializing database connection...')
   dbInitPromise = initDB().then(db => {
     dbInstance = db
     dbInitPromise = null
+    console.log('[IndexedDB] Database connection established successfully')
     return db
   }).catch(error => {
     dbInitPromise = null
+    console.error('[IndexedDB] CRITICAL: Failed to initialize database:', error)
     throw error
   })
 
@@ -120,14 +124,21 @@ const getDB = async () => {
  * @returns {Promise<number>} - The generated file ID
  */
 export const createFile = async (fileData) => {
-  const db = await getDB()
-  const file = {
-    ...fileData,
-    importedAt: new Date().toISOString(),
-    status: fileData.status || 'active'
+  console.log('[IndexedDB] Creating file record:', fileData.fileName)
+  try {
+    const db = await getDB()
+    const file = {
+      ...fileData,
+      importedAt: new Date().toISOString(),
+      status: fileData.status || 'active'
+    }
+    const id = await db.add(STORES.FILES, file)
+    console.log('[IndexedDB] File record created with ID:', id)
+    return id
+  } catch (error) {
+    console.error('[IndexedDB] FAILED to create file record:', error)
+    throw error
   }
-  const id = await db.add(STORES.FILES, file)
-  return id
 }
 
 /**
@@ -135,8 +146,16 @@ export const createFile = async (fileData) => {
  * @returns {Promise<Array>}
  */
 export const getAllFiles = async () => {
-  const db = await getDB()
-  return db.getAll(STORES.FILES)
+  console.log('[IndexedDB] Loading all files...')
+  try {
+    const db = await getDB()
+    const files = await db.getAll(STORES.FILES)
+    console.log(`[IndexedDB] Loaded ${files.length} file records`)
+    return files
+  } catch (error) {
+    console.error('[IndexedDB] FAILED to load files:', error)
+    throw error
+  }
 }
 
 /**
@@ -227,22 +246,34 @@ export const getFileRecordCounts = async () => {
  * @returns {Promise<Array<string>>} - Array of generated IDs
  */
 export const addRecords = async (records, fileId) => {
-  const db = await getDB()
-  const tx = db.transaction(STORES.RECORDS, 'readwrite')
-  const ids = []
+  console.log(`[IndexedDB] Adding ${records.length} records for fileId: ${fileId}`)
+  try {
+    const db = await getDB()
+    const tx = db.transaction(STORES.RECORDS, 'readwrite')
+    const ids = []
 
-  for (const record of records) {
-    const recordWithFile = {
-      ...record,
-      fileId,
-      id: record.id || generateRecordId()
+    for (const record of records) {
+      const recordWithFile = {
+        ...record,
+        fileId,
+        id: record.id || generateRecordId()
+      }
+      await tx.store.put(recordWithFile)
+      ids.push(recordWithFile.id)
     }
-    await tx.store.put(recordWithFile)
-    ids.push(recordWithFile.id)
-  }
 
-  await tx.done
-  return ids
+    await tx.done
+    console.log(`[IndexedDB] Successfully added ${ids.length} records`)
+
+    // Verify records were actually saved
+    const verifyCount = await db.count(STORES.RECORDS)
+    console.log(`[IndexedDB] Verification: Total records in store now: ${verifyCount}`)
+
+    return ids
+  } catch (error) {
+    console.error('[IndexedDB] FAILED to add records:', error)
+    throw error
+  }
 }
 
 /**
@@ -250,8 +281,16 @@ export const addRecords = async (records, fileId) => {
  * @returns {Promise<Array>}
  */
 export const getAllRecords = async () => {
-  const db = await getDB()
-  return db.getAll(STORES.RECORDS)
+  console.log('[IndexedDB] Loading all records...')
+  try {
+    const db = await getDB()
+    const records = await db.getAll(STORES.RECORDS)
+    console.log(`[IndexedDB] Loaded ${records.length} records from database`)
+    return records
+  } catch (error) {
+    console.error('[IndexedDB] FAILED to load records:', error)
+    throw error
+  }
 }
 
 /**
@@ -568,11 +607,17 @@ export const setExcludedReporters = async (reporters) => {
  * @returns {Promise<boolean>}
  */
 export const isIndexedDBSupported = async () => {
+  console.log('[IndexedDB] Checking if IndexedDB is supported...')
   try {
-    if (!window.indexedDB) return false
+    if (!window.indexedDB) {
+      console.warn('[IndexedDB] window.indexedDB is not available')
+      return false
+    }
     await getDB()
+    console.log('[IndexedDB] IndexedDB is supported and working')
     return true
-  } catch {
+  } catch (error) {
+    console.error('[IndexedDB] IndexedDB check failed:', error)
     return false
   }
 }

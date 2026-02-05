@@ -413,12 +413,13 @@ export const calculateQualityScore = (incidents) => {
   const customWeights = qualitySettings.weights || {}
 
   // Use custom weights from settings if available, otherwise use defaults
+  // Note: Coverage metric removed - it unfairly penalizes contractors who don't work all days
+  // (different schedules, no night shifts, regional weekend patterns)
   const weights = {
-    categorization: customWeights.categorization || 20,
-    description: customWeights.description || 20,
-    nearMiss: 15,
-    coverage: customWeights.completeness || 20, // completeness maps to coverage
-    reporters: 10,
+    categorization: customWeights.categorization || 25,
+    description: customWeights.description || 25,
+    nearMiss: 20,
+    reporters: 15,
     dataIntegrity: 15
   }
 
@@ -432,7 +433,6 @@ export const calculateQualityScore = (incidents) => {
   const categorization = getCategorizationMetrics(incidents)
   const description = getDescriptionMetrics(incidents)
   const nearMiss = getNearMissMetrics(incidents)
-  const coverage = getCoverageMetrics(incidents)
   const reporters = getReporterMetrics(incidents)
   const duplicates = getDuplicateDescriptions(incidents)
 
@@ -445,7 +445,6 @@ export const calculateQualityScore = (incidents) => {
   const categorizationScore = parseFloat(categorization.properRate)
   const descriptionScore = parseFloat(description.qualityRate)
   const nearMissScore = Math.min(parseFloat(nearMiss.rate) / 5 * 100, 100) // Scale: 5% = 100
-  const coverageScore = parseFloat(coverage.rate)
 
   // Data Integrity score: Lower duplicate rate = higher score
   // Formula: 0% = 100%, 5% = 75%, 10% = 50%, 20%+ = 0%
@@ -453,12 +452,11 @@ export const calculateQualityScore = (incidents) => {
   const dataIntegrityScore = Math.max(0, 100 - (duplicateRate * 5))
   const dataIntegrityStatus = duplicateRate <= 2 ? 'good' : duplicateRate <= 5 ? 'warning' : 'poor'
 
-  // Calculate score using normalized weights
+  // Calculate score using normalized weights (coverage removed)
   const score = Math.round(
     categorizationScore * (normalizedWeights.categorization / 100) +
     descriptionScore * (normalizedWeights.description / 100) +
     nearMissScore * (normalizedWeights.nearMiss / 100) +
-    coverageScore * (normalizedWeights.coverage / 100) +
     reporterEngagement * (normalizedWeights.reporters / 100) +
     dataIntegrityScore * (normalizedWeights.dataIntegrity / 100)
   )
@@ -469,7 +467,6 @@ export const calculateQualityScore = (incidents) => {
       categorization: { value: categorizationScore, weight: Math.round(normalizedWeights.categorization), status: categorization.status },
       description: { value: descriptionScore, weight: Math.round(normalizedWeights.description), status: description.status },
       nearMiss: { value: nearMissScore, weight: Math.round(normalizedWeights.nearMiss), status: nearMiss.status, actualRate: nearMiss.rate },
-      coverage: { value: coverageScore, weight: Math.round(normalizedWeights.coverage), status: coverage.status },
       reporters: { value: reporterEngagement, weight: Math.round(normalizedWeights.reporters), active: activeReporters, total: totalReporters },
       dataIntegrity: { value: dataIntegrityScore, weight: Math.round(normalizedWeights.dataIntegrity), status: dataIntegrityStatus, duplicateRate: duplicates.duplicateRate, duplicateCount: duplicates.totalDuplicates }
     },
