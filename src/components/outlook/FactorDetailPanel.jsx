@@ -27,7 +27,7 @@ const getBarColor = (count, maxCount) => {
 }
 
 /**
- * DetectionSummary - Shows detection rate and stats
+ * DetectionSummary - Shows detection rate and stats in a grid layout for better readability
  */
 const DetectionSummary = React.memo(({ factor, totalIncidents, analyzedIncidents, detectedIncidents }) => {
   if (!factor) return null
@@ -39,22 +39,20 @@ const DetectionSummary = React.memo(({ factor, totalIncidents, analyzedIncidents
   const hazardCount = factor.hazardBreakdown?.length || 0
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-surface-500">Detection Rate:</span>
-        <span className={`text-sm font-bold ${parseFloat(detectionRate) > 50 ? 'text-green-600' : parseFloat(detectionRate) > 20 ? 'text-amber-600' : 'text-red-500'}`}>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+      <div className="bg-surface-50 rounded px-2 py-1.5">
+        <span className="text-surface-500">Occurrences</span>
+        <span className="font-semibold text-primary-600 ml-1">{factor.count}</span>
+      </div>
+      <div className="bg-surface-50 rounded px-2 py-1.5">
+        <span className="text-surface-500">Detection</span>
+        <span className={`font-semibold ml-1 ${parseFloat(detectionRate) > 50 ? 'text-green-600' : parseFloat(detectionRate) > 20 ? 'text-amber-600' : 'text-red-500'}`}>
           {detectionRate}%
         </span>
       </div>
-      <div className="w-px h-4 bg-surface-200" />
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-surface-500">Occurrences:</span>
-        <span className="text-sm font-semibold text-primary-600">{factor.count}</span>
-      </div>
-      <div className="w-px h-4 bg-surface-200" />
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-surface-500">Hazards:</span>
-        <span className="text-sm font-semibold text-surface-700">{hazardCount}</span>
+      <div className="bg-surface-50 rounded px-2 py-1.5">
+        <span className="text-surface-500">Hazards</span>
+        <span className="font-semibold text-surface-700 ml-1">{hazardCount}</span>
       </div>
     </div>
   )
@@ -272,7 +270,7 @@ const FactorDetailPanelInner = ({ factor, totalIncidents = 0, analyzedIncidents 
       style={{ willChange: 'opacity, transform' }}
     >
       {/* Header with detection summary */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-surface-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-100">
         <DetectionSummary
           factor={factor}
           totalIncidents={totalIncidents}
@@ -293,7 +291,7 @@ const FactorDetailPanelInner = ({ factor, totalIncidents = 0, analyzedIncidents 
       </div>
 
       {/* Factor name header */}
-      <div className="px-4 py-2 bg-surface-50">
+      <div className="px-4 py-3 bg-surface-50">
         <h3 className="text-lg font-semibold text-surface-800">{factor.name}</h3>
         <p className="text-xs text-surface-500">
           Found in {factor.count} observation{factor.count !== 1 ? 's' : ''} across {factor.hazardBreakdown?.length || 0} hazard categories
@@ -301,7 +299,7 @@ const FactorDetailPanelInner = ({ factor, totalIncidents = 0, analyzedIncidents 
       </div>
 
       {/* Tab selector */}
-      <div className="flex items-center gap-1 px-4 py-2 border-b border-surface-100 bg-surface-50">
+      <div className="flex items-center gap-1 px-4 py-3 border-b border-surface-100 bg-surface-50">
         <button
           onClick={() => setActiveTab('trend')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${

@@ -9,15 +9,7 @@ import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getIncidentPredictionSummary, getHazardDailyData } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
-
-// Sub-region options for the filter dropdown
-const SUB_REGION_OPTIONS = [
-  { value: 'SUB REGION 1', label: 'Sub Region 1' },
-  { value: 'SUB REGION 2', label: 'Sub Region 2' },
-  { value: 'SUB REGION 3', label: 'Sub Region 3' },
-  { value: 'SUB REGION 4', label: 'Sub Region 4' },
-  { value: 'SUB REGION 5', label: 'Sub Region 5' },
-]
+import { SUB_REGION_OPTIONS } from '../utils/constants'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -425,7 +417,7 @@ const SafetyOutlook = () => {
   }
 
   return (
-    <div className="space-y-3 flex flex-col h-full">
+    <div className="space-y-5 flex flex-col h-full">
       {/* Filters Row - consistent with Dashboard */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -440,8 +432,8 @@ const SafetyOutlook = () => {
       </div>
 
       {/* Tab Toggle and Stats */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2">
           {/* Hazards Tab */}
           <button
             onClick={() => handleTabChange('hazards')}
@@ -480,8 +472,10 @@ const SafetyOutlook = () => {
         </div>
 
         {/* Show summary based on active tab */}
-        {activeTab === 'hazards' && <TrendSummary hazards={sortedHazards} />}
-        {activeTab === 'factors' && <FactorSummary factorData={factorData} totalIncidents={filteredIncidents.length} />}
+        <div className="text-xs">
+          {activeTab === 'hazards' && <TrendSummary hazards={sortedHazards} />}
+          {activeTab === 'factors' && <FactorSummary factorData={factorData} totalIncidents={filteredIncidents.length} />}
+        </div>
       </div>
 
       {/* Main content */}
@@ -489,7 +483,7 @@ const SafetyOutlook = () => {
         {activeTab === 'hazards' ? (
           <>
             {/* Left: Hazard List */}
-            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col transition-all duration-200">
+            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
               <div className="flex items-center justify-between mb-1 flex-shrink-0">
                 <h2 className="text-sm font-semibold text-surface-800">Hazards</h2>
                 <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{sortedHazards.length}</span>
@@ -516,7 +510,7 @@ const SafetyOutlook = () => {
         ) : (
           <>
             {/* Left: Factor List */}
-            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 flex flex-col transition-all duration-200">
+            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
               <div className="flex items-center justify-between mb-1 flex-shrink-0">
                 <h2 className="text-sm font-semibold text-surface-800">Factors</h2>
                 <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{factorData.byFactor.length}</span>

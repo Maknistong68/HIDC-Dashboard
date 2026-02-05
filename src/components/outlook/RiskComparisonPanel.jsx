@@ -178,10 +178,13 @@ const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
 
   return (
     <div className="bg-white rounded-lg border border-surface-200 p-4">
-      {/* Header */}
+      {/* Section Header */}
+      <h3 className="text-sm font-medium text-surface-700 mb-3">Risk Comparison</h3>
+
+      {/* Header with tooltip */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1">
-          <h3 className="text-sm font-semibold text-surface-800">Risk Comparison</h3>
+          <span className="text-xs text-surface-500">Compare risk across dimensions</span>
           <InfoTooltip text="Compare risk scores across Companies, Sites, and Subregions. Risk scores use rates (not counts) for fair comparison regardless of company size. Factors: Near-Miss Reporting (25%), High-Risk Trend (25% - compares current vs previous 30-day period), High-Risk Closure (25%), Positive High-Risk (25%). High-risk = 14 significant hazards. Green (70+) good, amber (50-70) warning, red (<50) critical." />
         </div>
       </div>

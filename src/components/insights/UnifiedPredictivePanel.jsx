@@ -507,9 +507,10 @@ const UnifiedPredictivePanel = ({
       {isExpanded && (
         <div className="border-t border-surface-200">
           {viewMode === 'visual' ? (
-            <>
-              {/* Visual Mode: Trend Chart + Risk Gauge */}
-              <div className="p-4 border-b border-surface-200">
+            <div className="space-y-4 p-4">
+              {/* Forecast Section */}
+              <div className="bg-surface-50 rounded-lg p-4">
+                <h4 className="text-xs font-medium text-surface-500 uppercase tracking-wide mb-3">FORECAST</h4>
                 <PredictionTrendChart
                   historicalData={hazardTrendData?.days || []}
                   prediction={weekly?.predicted}
@@ -520,27 +521,31 @@ const UnifiedPredictivePanel = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-surface-200 border-b border-surface-200">
-                <div className="p-4">
-                  <RiskGauge
+              {/* Risk Analysis Section */}
+              <div className="bg-surface-50 rounded-lg p-4">
+                <h4 className="text-xs font-medium text-surface-500 uppercase tracking-wide mb-3">RISK ANALYSIS</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-3 border border-surface-100">
+                    <RiskGauge
                     predicted={weekly?.predicted}
                     average={weeklyAverage}
                     confidence={weekly?.confidence}
                     trend={weekly?.trend}
                     size="medium"
-                    factorData={factorData}
-                    weeklyHistory={hazardTrendData}
-                  />
-                </div>
-                <div className="p-4">
-                  <QuickStats
-                    weekly={weekly}
-                    monthly={monthly}
-                    onClick={(type) => openBreakdown(type)}
-                  />
+                      factorData={factorData}
+                      weeklyHistory={hazardTrendData}
+                    />
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-surface-100">
+                    <QuickStats
+                      weekly={weekly}
+                      monthly={monthly}
+                      onClick={(type) => openBreakdown(type)}
+                    />
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-surface-200">
               <PredictionCard
@@ -565,18 +570,20 @@ const UnifiedPredictivePanel = ({
           )}
 
           {/* Type Probability & Risk Assessment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-surface-200 border-t border-surface-200">
-            {typeProbability?.hasData && (
-              <TypeProbabilitySection data={typeProbability} onClick={() => openBreakdown('typeProbability')} />
-            )}
-            {typeRisk?.hasData && (
-              <RiskAssessmentSection data={typeRisk} onClick={() => openBreakdown('riskAssessment')} />
-            )}
-          </div>
+          {(typeProbability?.hasData || typeRisk?.hasData) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-surface-200 border-t border-surface-200">
+              {typeProbability?.hasData && (
+                <TypeProbabilitySection data={typeProbability} onClick={() => openBreakdown('typeProbability')} />
+              )}
+              {typeRisk?.hasData && (
+                <RiskAssessmentSection data={typeRisk} onClick={() => openBreakdown('riskAssessment')} />
+              )}
+            </div>
+          )}
 
-          {/* Data-Driven Scenario Simulator Section */}
+          {/* Scenario Simulator Section */}
           <div className="border-t border-surface-200">
-            <div className="flex items-center justify-between px-4 py-3 bg-surface-50">
+            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-surface-50 to-surface-100">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-semibold text-surface-700 uppercase tracking-wide">
                   Scenario Simulator
@@ -596,9 +603,10 @@ const UnifiedPredictivePanel = ({
               )}
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Hazard Selector */}
-              <div className="space-y-1.5">
+            <div className="p-4">
+              <div className="bg-surface-50 rounded-lg p-4 space-y-4">
+                {/* Hazard Selector */}
+                <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <Target size={16} className="text-primary-600" />
                   <span className="text-sm font-medium text-surface-700">Focus on Hazard</span>
@@ -618,7 +626,7 @@ const UnifiedPredictivePanel = ({
               </div>
 
               {/* HSE Hierarchy Info */}
-              <div className="bg-surface-50 rounded-lg p-3 border border-surface-100">
+              <div className="bg-white rounded-lg p-3 border border-surface-200">
                 <div className="flex items-start gap-2">
                   <Info size={14} className="text-surface-400 mt-0.5 flex-shrink-0" />
                   <div className="text-xs text-surface-600">
@@ -735,6 +743,7 @@ const UnifiedPredictivePanel = ({
                   selectedHazard={selectedHazard}
                 />
               )}
+              </div>
             </div>
           </div>
 
