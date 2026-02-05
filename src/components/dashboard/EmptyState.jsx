@@ -1,6 +1,6 @@
-import React, { memo } from 'react'
-import { FileSpreadsheet, Lightbulb } from 'lucide-react'
-import ImportWizard from '../import/ImportWizard'
+import React, { memo, useState } from 'react'
+import { FileSpreadsheet, Lightbulb, Upload } from 'lucide-react'
+import BatchImportModal from '../fileManager/BatchImportModal'
 import { Card } from '../ui'
 
 /**
@@ -8,6 +8,15 @@ import { Card } from '../ui'
  * Wrapped in React.memo to prevent unnecessary re-renders
  */
 const EmptyState = memo(({ onImportComplete }) => {
+  const [showImportModal, setShowImportModal] = useState(false)
+
+  const handleClose = () => {
+    setShowImportModal(false)
+    if (onImportComplete) {
+      onImportComplete()
+    }
+  }
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Helpful Tip */}
@@ -36,13 +45,29 @@ const EmptyState = memo(({ onImportComplete }) => {
           </div>
         </div>
 
-        <ImportWizard
-          mode="inline"
-          showHeader={false}
-          onComplete={onImportComplete}
-          onCancel={null}
-        />
+        <div className="text-center py-8">
+          <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
+            <Upload size={28} className="text-primary-500" />
+          </div>
+          <p className="text-surface-600 mb-6">
+            Import Excel files containing your HSE observation data
+          </p>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            <Upload size={20} />
+            Import Files
+          </button>
+          <p className="text-xs text-surface-400 mt-4">
+            Supports .xlsx and .xls files. Drag-drop multiple files or select a folder.
+          </p>
+        </div>
       </Card>
+
+      {showImportModal && (
+        <BatchImportModal onClose={handleClose} />
+      )}
     </div>
   )
 })

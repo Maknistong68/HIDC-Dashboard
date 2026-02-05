@@ -79,7 +79,7 @@ import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
 import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
-import QuickImportModal from '../components/import/QuickImportModal'
+import BatchImportModal from '../components/fileManager/BatchImportModal'
 
 // Status color mapping
 const getStatusColor = (status) => {

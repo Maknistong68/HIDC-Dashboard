@@ -1,25 +1,22 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ImportWizard from '../components/import/ImportWizard'
+import BatchImportModal from '../components/fileManager/BatchImportModal'
 
 const Import = () => {
   const navigate = useNavigate()
+  const [showModal, setShowModal] = useState(true)
 
-  const handleComplete = () => {
+  const handleClose = () => {
+    setShowModal(false)
     navigate('/')
   }
 
-  const handleCancel = () => {
-    navigate('/')
-  }
+  // Show modal on mount
+  useEffect(() => {
+    setShowModal(true)
+  }, [])
 
-  return (
-    <ImportWizard
-      mode="inline"
-      onComplete={handleComplete}
-      onCancel={handleCancel}
-    />
-  )
+  return showModal ? <BatchImportModal onClose={handleClose} /> : null
 }
 
 export default Import
