@@ -8,7 +8,7 @@ import { UnifiedPredictivePanel } from '../components/insights'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getIncidentPredictionSummary, getHazardDailyData } from '../utils/insightsCalculations'
-import { aggregateContributingFactors } from '../utils/rootCauseEngine'
+import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -175,14 +175,19 @@ const SafetyOutlook = () => {
     return getHazardTrendingByPeriod(filteredIncidents, period)
   }, [filteredIncidents, period])
 
-  // Calculate incident prediction data
-  const incidentPrediction = useMemo(() => {
-    return getIncidentPredictionSummary(filteredIncidents)
+  // Filter to negative observations only for predictions (exclude positive types)
+  const negativeIncidents = useMemo(() => {
+    return filteredIncidents.filter(i => !isPositiveType(i.type))
   }, [filteredIncidents])
 
-  // Calculate contributing factors
+  // Calculate incident prediction data (negative observations only)
+  const incidentPrediction = useMemo(() => {
+    return getIncidentPredictionSummary(negativeIncidents)
+  }, [negativeIncidents])
+
+  // Calculate contributing factors (negative observations only)
   const factorData = useMemo(() => {
-    return aggregateContributingFactors(filteredIncidents)
+    return aggregateContributingFactors(filteredIncidents, 'negative')
   }, [filteredIncidents])
 
   // Calculate hazard trend data for selected hazard
@@ -239,10 +244,12 @@ const SafetyOutlook = () => {
     }
   }, [selectedFactor?.name, factorData?.byFactor])
 
-  // Calculate detected incidents count (unique incidents that have at least one factor)
+  // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
   const detectedIncidentsCount = useMemo(() => {
     const incidentSet = new Set()
     factorData.byFactor.forEach(f => {
+      // Exclude Unclassified from detected count - those are observations WITHOUT factors
+      if (f.isUnclassified || f.name === 'Unclassified') return
       f.incidents?.forEach(inc => {
         if (inc.id) incidentSet.add(inc.id)
       })
@@ -499,7 +506,7 @@ const SafetyOutlook = () => {
                   factors={factorData.byFactor}
                   selected={selectedFactor}
                   onSelect={handleFactorSelect}
-                  totalIncidents={filteredIncidents.length}
+                  totalIncidents={factorData.analyzed}
                   detectedCount={detectedIncidentsCount}
                 />
               </div>
@@ -509,7 +516,7 @@ const SafetyOutlook = () => {
             <div className="flex-1 min-w-0 transition-all duration-200">
               <FactorDetailPanel
                 factor={selectedFactor}
-                totalIncidents={filteredIncidents.length}
+                totalIncidents={factorData.analyzed}
                 analyzedIncidents={factorData.analyzed}
                 allFactors={factorData.byFactor}
                 trendData={factorTrendData}
@@ -520,11 +527,11 @@ const SafetyOutlook = () => {
         )}
       </div>
 
-      {/* Unified Predictive Analysis Panel */}
-      {filteredIncidents.length > 0 && incidentPrediction.hasData && (
+      {/* Unified Predictive Analysis Panel (negative observations only) */}
+      {negativeIncidents.length > 0 && incidentPrediction.hasData && (
         <UnifiedPredictivePanel
           incidentPrediction={incidentPrediction}
-          filteredIncidents={filteredIncidents}
+          filteredIncidents={negativeIncidents}
           selectedHazardName={activeTab === 'hazards' ? selectedHazard?.name : null}
           hazardTrendData={activeTab === 'hazards' ? hazardTrendData : null}
           factorData={factorData}

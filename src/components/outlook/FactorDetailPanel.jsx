@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { Layers, BarChart3, TrendingUp } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -11,6 +12,7 @@ import {
   Cell
 } from 'recharts'
 import FactorTrendChart from './FactorTrendChart'
+import DrillDownModal from '../common/DrillDownModal'
 
 /**
  * Get variance-based bar color
@@ -64,12 +66,13 @@ DetectionSummary.displayName = 'DetectionSummary'
  * HazardBarChart - Horizontal bar chart showing hazard distribution with variance colors
  * Colors indicate relative frequency: red (high), amber (medium), blue (low), green (very low)
  */
-const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
+const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning, onBarClick }) => {
   // Pre-calculate chart data and colors for performance
   const { chartData, maxCount } = useMemo(() => {
     if (!hazardBreakdown?.length) return { chartData: [], maxCount: 0 }
 
-    const data = hazardBreakdown.slice(0, 8).map(h => ({
+    // Show all hazards (no limit) for scrollable view
+    const data = hazardBreakdown.map(h => ({
       name: h.name.length > 15 ? h.name.substring(0, 15) + '...' : h.name,
       fullName: h.name,
       count: h.count
@@ -87,6 +90,9 @@ const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
     }
   }, [hazardBreakdown])
 
+  // Calculate dynamic height based on number of items (30px per bar minimum)
+  const chartHeight = Math.max(180, chartData.length * 30)
+
   if (!chartData.length) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -95,12 +101,23 @@ const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
     )
   }
 
+  const handleBarClick = (data) => {
+    if (onBarClick && data?.fullName) {
+      onBarClick(data.fullName)
+    }
+  }
+
   return (
     <div
       className={`h-full flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
       style={{ willChange: 'opacity, transform' }}
     >
-      <div className="flex-1 min-h-[180px]">
+      {/* Click hint */}
+      {onBarClick && (
+        <p className="text-2xs text-surface-400 text-center mb-1">Click a bar to view observations</p>
+      )}
+      <div className="flex-1 min-h-[180px] overflow-y-auto overflow-x-hidden">
+        <div style={{ height: chartHeight, minHeight: '100%' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -124,6 +141,9 @@ const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
                     <div className="bg-surface-900 text-white px-3 py-2 rounded-lg shadow-xl text-xs">
                       <p className="font-medium">{payload[0].payload.fullName}</p>
                       <p className="text-surface-300">Count: <span className="text-white font-bold">{payload[0].value}</span></p>
+                      {onBarClick && (
+                        <p className="text-surface-400 text-2xs mt-1">Click to view observations</p>
+                      )}
                     </div>
                   )
                 }
@@ -135,17 +155,24 @@ const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
               radius={[0, 4, 4, 0]}
               isAnimationActive={true}
               animationDuration={500}
+              onClick={handleBarClick}
+              style={{ cursor: onBarClick ? 'pointer' : 'default' }}
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${entry.fullName}-${index}`} fill={entry.fill} />
+                <Cell
+                  key={`cell-${entry.fullName}-${index}`}
+                  fill={entry.fill}
+                  style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+                />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Color legend */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-2xs text-surface-500">
+      <div className="flex items-center justify-center gap-4 mt-2 text-2xs text-surface-500 flex-wrap">
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded-sm bg-[#ef4444]" />
           <span>High</span>
@@ -170,10 +197,10 @@ const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning }) => {
 HazardBarChart.displayName = 'HazardBarChart'
 
 /**
- * FactorDetailPanel - Right panel showing hazard breakdown for selected factor
+ * FactorDetailPanelInner - Right panel showing hazard breakdown for selected factor
  * With bar chart showing variance colors and detection percentage
  */
-const FactorDetailPanel = ({ factor, totalIncidents = 0, analyzedIncidents = 0, allFactors = [], trendData, timePeriod }) => {
+const FactorDetailPanelInner = ({ factor, totalIncidents = 0, analyzedIncidents = 0, allFactors = [], trendData, timePeriod, onOpenDrillDown }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeTab, setActiveTab] = useState('trend') // 'trend' or 'hazards'
   const prevFactorRef = useRef(null)
@@ -189,6 +216,20 @@ const FactorDetailPanel = ({ factor, totalIncidents = 0, analyzedIncidents = 0, 
     })
     return incidentSet.size
   }, [allFactors])
+
+  // Handle hazard bar click - filter observations and open drill-down
+  const handleHazardClick = (hazardName) => {
+    if (!hazardName || !factor?.incidents?.length || !onOpenDrillDown) return
+
+    // Filter factor's incidents that belong to this hazard category
+    const hazardObservations = factor.incidents.filter(inc => inc.location === hazardName)
+
+    onOpenDrillDown(
+      hazardObservations,
+      `${factor.name} in ${hazardName}`,
+      hazardName
+    )
+  }
 
   // Smooth transition effect when factor changes
   useEffect(() => {
@@ -297,6 +338,7 @@ const FactorDetailPanel = ({ factor, totalIncidents = 0, analyzedIncidents = 0, 
           <HazardBarChart
             hazardBreakdown={factor.hazardBreakdown}
             isTransitioning={isTransitioning}
+            onBarClick={handleHazardClick}
           />
         )}
       </div>
@@ -320,6 +362,52 @@ const FactorDetailPanel = ({ factor, totalIncidents = 0, analyzedIncidents = 0, 
         </p>
       </div>
     </div>
+  )
+}
+
+/**
+ * Wrapper component that renders the modal using portal
+ */
+const FactorDetailPanel = (props) => {
+  const [drillDownOpen, setDrillDownOpen] = useState(false)
+  const [drillDownData, setDrillDownData] = useState([])
+  const [drillDownTitle, setDrillDownTitle] = useState('')
+  const [drillDownHazard, setDrillDownHazard] = useState('')
+
+  const handleOpenDrillDown = (data, title, hazardName) => {
+    setDrillDownData(data)
+    setDrillDownTitle(title)
+    setDrillDownHazard(hazardName)
+    setDrillDownOpen(true)
+  }
+
+  const handleCloseDrillDown = () => {
+    setDrillDownOpen(false)
+    setDrillDownData([])
+    setDrillDownTitle('')
+    setDrillDownHazard('')
+  }
+
+  return (
+    <>
+      <FactorDetailPanelInner
+        {...props}
+        onOpenDrillDown={handleOpenDrillDown}
+      />
+      {/* Portal the modal to document.body to escape overflow/transform contexts */}
+      {createPortal(
+        <DrillDownModal
+          isOpen={drillDownOpen}
+          onClose={handleCloseDrillDown}
+          title={drillDownTitle}
+          data={drillDownData}
+          type="records"
+          breadcrumb={['Safety Outlook', 'Factors', props.factor?.name || '', drillDownHazard]}
+          source="Safety Outlook"
+        />,
+        document.body
+      )}
+    </>
   )
 }
 

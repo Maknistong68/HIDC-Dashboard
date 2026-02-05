@@ -939,20 +939,21 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
     contextResult.votes?.controlLink?.category !== FALLBACK_CATEGORY &&
     contextResult.votes?.controlLink?.isControlIssue
 
-  // NOTE: All STEP 2 returns check isAllowedForOtherSource - if source was "Other", skip Significant Hazards
-  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold && isAllowedForOtherSource(contextResult.category)) {
+  // NOTE: All STEP 2 returns check isAllowedForOtherSource AND isExcludedTerm
+  // This ensures exclusion rules (e.g., 'wastewater' not being "Working on or Near Water") are respected
+  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
     if (isDebugTarget) console.log('[DEBUG] STEP 2a analyzeObservation shouldOverride:', contextResult.category, contextResult.confidence)
     return contextResult.category
   }
 
   // If controlLink strategy found a specific hazard, use it (control issues linked to hazards)
-  if (controlLinkFound && contextResult.votes.controlLink.confidence >= 70 && isAllowedForOtherSource(contextResult.votes.controlLink.category)) {
+  if (controlLinkFound && contextResult.votes.controlLink.confidence >= 70 && isAllowedForOtherSource(contextResult.votes.controlLink.category) && !isExcludedTerm(text, contextResult.votes.controlLink.category)) {
     if (isDebugTarget) console.log('[DEBUG] STEP 2b controlLink found:', contextResult.votes.controlLink.category)
     return contextResult.votes.controlLink.category
   }
 
   // If voting found a valid category with any consensus, prefer it over keyword matching
-  if (hasValidVotingResult && contextResult.confidence >= 50 && isAllowedForOtherSource(contextResult.category)) {
+  if (hasValidVotingResult && contextResult.confidence >= 50 && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
     if (isDebugTarget) console.log('[DEBUG] STEP 2c voting consensus:', contextResult.category, contextResult.consensusLevel)
     return contextResult.category
   }

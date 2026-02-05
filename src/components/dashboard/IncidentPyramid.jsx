@@ -244,6 +244,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
         onBack={handleBack}
         canGoBack={selectedMonth !== null}
         breadcrumb={breadcrumb}
+        source="Incident Pyramid"
       />
     </Card>
   )

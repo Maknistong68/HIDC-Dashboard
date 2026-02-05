@@ -1140,6 +1140,7 @@ const Dashboard = () => {
           drillDown.filter,
           ...(drillDown.level === 3 && drillDown.period ? [format(parseISO(drillDown.period + '-01'), 'MMM yyyy')] : [])
         ].filter(Boolean)}
+        source={drillDown.chart === 'hazards' ? 'Hazards Identification' : 'Observer Analytics'}
       />
 
       {/* Heatmap Drill-Down Modal */}
@@ -1154,6 +1155,7 @@ const Dashboard = () => {
         data={heatmapDrillDownData}
         type="records"
         breadcrumb={['Heatmap', heatmapDrillDown.hazard, heatmapDrillDown.month ? format(parseISO(heatmapDrillDown.month + '-01'), 'MMM yyyy') : ''].filter(Boolean)}
+        source="Hazards Identification"
       />
     </div>
   )

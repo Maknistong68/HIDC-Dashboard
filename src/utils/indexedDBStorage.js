@@ -495,6 +495,27 @@ export const clearSetting = async (key) => {
 }
 
 // ============================================
+// REPORTER EXCLUSION
+// ============================================
+
+/**
+ * Get excluded reporters list
+ * @returns {Promise<Array<string>>} - Array of excluded reporter names
+ */
+export const getExcludedReporters = async () => {
+  const reporters = await getSetting('excludedReporters')
+  return reporters || []
+}
+
+/**
+ * Set excluded reporters list
+ * @param {Array<string>} reporters - Array of reporter names to exclude
+ */
+export const setExcludedReporters = async (reporters) => {
+  await setSetting('excludedReporters', reporters)
+}
+
+// ============================================
 // MIGRATION & UTILITIES
 // ============================================
 

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
+import { getExcludedReporters, setExcludedReporters as persistExcludedReporters } from '../utils/indexedDBStorage'
 
 const FilterContext = createContext(null)
 
@@ -14,6 +15,14 @@ export const FilterProvider = ({ children }) => {
   const [period, setPeriod] = useState(null)        // null = All
   const [contractor, setContractorState] = useState('')
   const [site, setSiteState] = useState('')
+  const [excludedReporters, setExcludedReportersState] = useState([])
+
+  // Load excluded reporters from IndexedDB on mount
+  useEffect(() => {
+    getExcludedReporters().then(reporters => {
+      setExcludedReportersState(reporters)
+    })
+  }, [])
 
   // Contractor change resets site (parent-child relationship)
   const setContractor = useCallback((value) => {
@@ -26,16 +35,24 @@ export const FilterProvider = ({ children }) => {
     setSiteState(value)
   }, [])
 
+  // Excluded reporters setter (persists to IndexedDB)
+  const setExcludedReporters = useCallback(async (reporters) => {
+    setExcludedReportersState(reporters)
+    await persistExcludedReporters(reporters)
+  }, [])
+
   // Generic setter for FilterBar compatibility
   const setFilter = useCallback((key, value) => {
     if (key === 'contractor') {
       setContractor(value)
     } else if (key === 'site') {
       setSiteState(value)
+    } else if (key === 'excludedReporters') {
+      setExcludedReporters(value)
     }
-  }, [setContractor])
+  }, [setContractor, setExcludedReporters])
 
-  // Clear all filters
+  // Clear all filters (excludedReporters persists - it's a setting, not a temporary filter)
   const clearFilters = useCallback(() => {
     setPeriod(null)
     setContractorState('')
@@ -43,19 +60,21 @@ export const FilterProvider = ({ children }) => {
   }, [])
 
   // Combined filters object for FilterBar compatibility
-  const filters = useMemo(() => ({ contractor, site }), [contractor, site])
+  const filters = useMemo(() => ({ contractor, site, excludedReporters }), [contractor, site, excludedReporters])
 
   const value = useMemo(() => ({
     period,
     setPeriod,
     contractor,
     site,
+    excludedReporters,
     setContractor,
     setSite,
+    setExcludedReporters,
     setFilter,
     clearFilters,
     filters
-  }), [period, contractor, site, setContractor, setSite, setFilter, clearFilters, filters])
+  }), [period, contractor, site, excludedReporters, setContractor, setSite, setExcludedReporters, setFilter, clearFilters, filters])
 
   return (
     <FilterContext.Provider value={value}>

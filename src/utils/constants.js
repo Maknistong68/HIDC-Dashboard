@@ -556,6 +556,13 @@ export const HAZARD_EXCLUSIONS = {
     'water resistant', 'waterproof', 'water supply', 'water tank',
     'water pipe', 'water main', 'potable water', 'water storage',
     'water treatment', 'waste water', 'wastewater', 'water test',
+    // Water filter/maintenance (welfare, not water hazard)
+    'water filter', 'filter not replaced', 'filter had not been replaced',
+    'water filtration', 'replace the filter', 'replacing filter',
+    // Sewage/overflow (environmental, not water hazard)
+    'sewage', 'sewage water', 'sewage wastewater', 'toilet overflow',
+    'overflowed toilet', 'toilet overflowed', 'spilled from the toilet',
+    'stand-alone toilet', 'toilet unit', 'sewage spill',
     // Additional welfare exclusions
     'water dispenser', 'water station', 'water jug', 'water container',
     'filtered water', 'clean water', 'safe water', 'hot water', 'cold water',
@@ -563,6 +570,9 @@ export const HAZARD_EXCLUSIONS = {
     'water shortage', 'water issue', 'water problem', 'water complaint',
     'water not available', 'water not provided', 'no drinking water',
     'water for drinking', 'supply of water', 'lack of water',
+    // Water availability issues (welfare)
+    'no water', 'no water available', 'water was not available', 'water was available',
+    'availability of water', 'without water', 'water in toilet', 'water in washroom',
     // Water analysis/testing (welfare, not water hazard)
     'water analysis', 'water analysis test', 'water quality', 'water sample',
     'water delivery', 'water delivery date', 'delivery of water',
@@ -571,6 +581,8 @@ export const HAZARD_EXCLUSIONS = {
     'water igloo', 'igloo', 'water bucket', 'stored inside water',
     // Complaint/admin (not water hazard)
     'complaint box', 'complaint', 'sealed', 'properly sealed',
+    // Swimming pool (cleaning/maintenance, not drowning hazard)
+    'swimming pool', 'pool area', 'pool cleaning', 'inside swimming pool',
     // PPE-related exclusions (clearly not water hazard)
     'safety shoes', 'safety boots', 'not wearing', 'ppe', 'personal protective equipment',
     'hard hat', 'helmet', 'safety vest', 'hi-vis', 'high visibility', 'gloves',

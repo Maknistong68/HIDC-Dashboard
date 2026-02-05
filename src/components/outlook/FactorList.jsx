@@ -76,7 +76,11 @@ DetectionRatioCard.displayName = 'DetectionRatioCard'
  * FactorItem - Individual factor button matching HazardItem styling
  */
 const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
-  const colorConfig = getCountColor(factor.count, maxCount)
+  const isUnclassified = factor.isUnclassified || factor.name === 'Unclassified'
+  // Use gray color for Unclassified factor
+  const colorConfig = isUnclassified
+    ? { bg: 'bg-gray-500', text: 'text-white' }
+    : getCountColor(factor.count, maxCount)
   const hazardCount = factor.hazardBreakdown?.length || 0
 
   return (
@@ -87,8 +91,12 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
         text-left group
         transition-all duration-200 ease-out
         ${isSelected
-          ? 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm scale-[1.01]'
-          : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
+          ? isUnclassified
+            ? 'bg-gray-100 ring-2 ring-gray-500 ring-inset shadow-sm scale-[1.01]'
+            : 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm scale-[1.01]'
+          : isUnclassified
+            ? 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm border border-gray-300 hover:border-gray-400'
+            : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
         }
       `}
     >
@@ -99,8 +107,13 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
 
       {/* Name and hazard count */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+        <p className={`text-sm truncate transition-colors duration-200 ${
+          isSelected
+            ? isUnclassified ? 'text-gray-800 font-semibold' : 'text-primary-800 font-semibold'
+            : isUnclassified ? 'text-gray-700 font-medium' : 'text-surface-800 font-medium'
+        }`}>
           {factor.name}
+          {isUnclassified && <span className="ml-1 text-2xs text-gray-500">(no factors)</span>}
         </p>
         <p className="text-xs text-surface-500">
           {hazardCount} hazard{hazardCount !== 1 ? 's' : ''} affected
@@ -110,12 +123,20 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
       {/* Arrow */}
       <div className="flex flex-col items-end gap-0.5">
         <div className="flex items-center gap-1">
-          <span className={`text-xs font-bold transition-colors duration-200 ${isSelected ? 'text-primary-600' : 'text-surface-500'}`}>
+          <span className={`text-xs font-bold transition-colors duration-200 ${
+            isSelected
+              ? isUnclassified ? 'text-gray-600' : 'text-primary-600'
+              : 'text-surface-500'
+          }`}>
             {factor.count}
           </span>
           <ChevronRight
             size={16}
-            className={`transition-all duration-200 ${isSelected ? 'text-primary-600 translate-x-0.5' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
+            className={`transition-all duration-200 ${
+              isSelected
+                ? isUnclassified ? 'text-gray-600 translate-x-0.5' : 'text-primary-600 translate-x-0.5'
+                : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'
+            }`}
           />
         </div>
       </div>

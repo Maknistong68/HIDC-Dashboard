@@ -1289,6 +1289,251 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
 }
 
 /**
+ * Deep dive analytics for a specific contractor
+ * Similar to getReporterDeepDive but for contractors
+ */
+export const getContractorDeepDive = (incidents, contractorName, allIncidents) => {
+  // Filter incidents for this contractor
+  const contractorIncidents = incidents.filter(i => i.contractor === contractorName)
+
+  if (contractorIncidents.length === 0) {
+    return null
+  }
+
+  // Basic stats
+  const total = contractorIncidents.length
+
+  // Active reporters for this contractor
+  const reportersSet = new Set()
+  contractorIncidents.forEach(i => {
+    if (i.reportedBy) {
+      reportersSet.add(i.reportedBy)
+    }
+  })
+  const activeReporters = reportersSet.size
+
+  // Reporter breakdown (top reporters for this contractor)
+  const reporterCounts = {}
+  contractorIncidents.forEach(i => {
+    const reporter = i.reportedBy || 'Unknown'
+    reporterCounts[reporter] = (reporterCounts[reporter] || 0) + 1
+  })
+  const topReporters = Object.entries(reporterCounts)
+    .map(([name, count]) => ({ name, count, percentage: ((count / total) * 100).toFixed(1) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  // Observation type breakdown
+  const typeBreakdown = {
+    nearMiss: contractorIncidents.filter(i => i.type === 'near-miss').length,
+    unsafeCondition: contractorIncidents.filter(i => i.type === 'unsafe-condition').length,
+    unsafeAct: contractorIncidents.filter(i => i.type === 'unsafe-act').length,
+    positive: contractorIncidents.filter(i => i.type === 'positive').length,
+    incident: contractorIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type)).length
+  }
+
+  // Calculate percentages
+  const typeBreakdownPct = {
+    nearMiss: total > 0 ? ((typeBreakdown.nearMiss / total) * 100).toFixed(1) : '0.0',
+    unsafeCondition: total > 0 ? ((typeBreakdown.unsafeCondition / total) * 100).toFixed(1) : '0.0',
+    unsafeAct: total > 0 ? ((typeBreakdown.unsafeAct / total) * 100).toFixed(1) : '0.0',
+    positive: total > 0 ? ((typeBreakdown.positive / total) * 100).toFixed(1) : '0.0',
+    incident: total > 0 ? ((typeBreakdown.incident / total) * 100).toFixed(1) : '0.0'
+  }
+
+  // Top hazards reported
+  const hazardCounts = {}
+  contractorIncidents.forEach(i => {
+    const hazard = i.location || 'Unspecified'
+    hazardCounts[hazard] = (hazardCounts[hazard] || 0) + 1
+  })
+  const topHazards = Object.entries(hazardCounts)
+    .map(([name, count]) => ({ name, count, percentage: ((count / total) * 100).toFixed(1) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  // Time of reporting pattern
+  const hourCounts = Array(24).fill(0)
+  let hasTimeData = false
+  contractorIncidents.forEach(i => {
+    const hour = extractHour(i.eventTime, i.date)
+    if (hour !== null) {
+      hourCounts[hour]++
+      hasTimeData = true
+    }
+  })
+  const dayShiftCount = hourCounts.slice(6, 18).reduce((a, b) => a + b, 0)
+  const nightShiftCount = hourCounts.reduce((a, b) => a + b, 0) - dayShiftCount
+  const totalWithTime = dayShiftCount + nightShiftCount
+
+  // Active days and daily rate
+  const uniqueDates = new Set(contractorIncidents.map(i => i.date?.substring(0, 10)).filter(Boolean))
+  const activeDays = uniqueDates.size
+  const dates = [...uniqueDates].sort()
+  const firstDate = dates[0]
+  const lastDate = dates[dates.length - 1]
+
+  // Calculate span in days
+  let spanDays = 1
+  if (firstDate && lastDate && firstDate !== lastDate) {
+    const first = new Date(firstDate)
+    const last = new Date(lastDate)
+    spanDays = Math.max(1, Math.ceil((last - first) / (1000 * 60 * 60 * 24)) + 1)
+  }
+  const dailyRate = (total / Math.max(activeDays, 1)).toFixed(1)
+
+  // Description quality
+  const wordCounts = contractorIncidents.map(i => countWords(i.description))
+  const avgWordCount = wordCounts.length > 0
+    ? Math.round(wordCounts.reduce((a, b) => a + b, 0) / wordCounts.length)
+    : 0
+  const qualityCount = wordCounts.filter(wc => wc > 15).length
+  const qualityRate = total > 0 ? ((qualityCount / total) * 100).toFixed(1) : '0.0'
+  const maxWordCount = Math.max(...wordCounts, 0)
+  const filteredCounts = wordCounts.filter(w => w > 0)
+  const minWordCount = filteredCounts.length > 0 ? Math.min(...filteredCounts) : 0
+
+  // Flagged (poor quality) descriptions
+  const flaggedRecords = contractorIncidents
+    .filter(i => countWords(i.description) <= 5)
+    .slice(0, 5)
+    .map(i => ({
+      id: i.externalId,
+      date: i.date,
+      description: i.description,
+      wordCount: countWords(i.description),
+      reporter: i.reportedBy
+    }))
+
+  // Contractor average comparison (using allIncidents to get all contractors)
+  const allContractorMetrics = getContractorMetrics(allIncidents || incidents)
+  const otherContractors = allContractorMetrics.filter(c => c.name !== contractorName)
+  const avgTotal = otherContractors.length > 0
+    ? otherContractors.reduce((sum, c) => sum + c.totalObs, 0) / otherContractors.length
+    : 0
+  const avgNearMissRate = otherContractors.length > 0
+    ? otherContractors.reduce((sum, c) => sum + parseFloat(c.nearMissRate || 0), 0) / otherContractors.length
+    : 0
+  const avgQualityRate = otherContractors.length > 0
+    ? otherContractors.reduce((sum, c) => sum + parseFloat(c.qualityRate || 0), 0) / otherContractors.length
+    : 0
+  const avgActiveReporters = otherContractors.length > 0
+    ? otherContractors.reduce((sum, c) => sum + (c.activeReporters || 0), 0) / otherContractors.length
+    : 0
+
+  // This contractor's near miss rate
+  const nonPositive = total - typeBreakdown.positive
+  const nearMissRate = nonPositive > 0 ? ((typeBreakdown.nearMiss / nonPositive) * 100).toFixed(1) : '0.0'
+
+  // Monthly trend
+  const monthlyData = {}
+  contractorIncidents.forEach(i => {
+    if (i.date) {
+      const month = i.date.substring(0, 7)
+      monthlyData[month] = (monthlyData[month] || 0) + 1
+    }
+  })
+  const monthlyTrend = Object.entries(monthlyData)
+    .map(([month, count]) => ({ month, count }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+
+  // Duplicate descriptions (same description used multiple times by this contractor)
+  const descriptionCounts = {}
+  contractorIncidents.forEach(i => {
+    const desc = (i.description || '').toLowerCase().trim()
+    if (desc.length > 10) {
+      descriptionCounts[desc] = descriptionCounts[desc] || { count: 0, records: [] }
+      descriptionCounts[desc].count++
+      descriptionCounts[desc].records.push(i)
+    }
+  })
+  const duplicateDescriptions = Object.entries(descriptionCounts)
+    .filter(([_, data]) => data.count > 1)
+    .flatMap(([desc, data]) => data.records.map(r => ({
+      id: r.externalId,
+      date: r.date,
+      description: r.description,
+      duplicateCount: data.count,
+      reporter: r.reportedBy
+    })))
+    .slice(0, 10)
+
+  // Vague descriptions (low confidence from context classifier)
+  const vagueDescriptions = contractorIncidents
+    .map(i => {
+      const analysis = analyzeObservation(i.description, i.originalHazardCategory || i.location)
+      return {
+        id: i.externalId,
+        date: i.date,
+        description: i.description,
+        confidence: analysis.confidence,
+        reasoning: analysis.reasoning,
+        reporter: i.reportedBy
+      }
+    })
+    .filter(r => r.confidence < 65)
+    .slice(0, 10)
+
+  return {
+    name: contractorName,
+    total,
+    activeReporters,
+
+    // Type breakdown
+    typeBreakdown,
+    typeBreakdownPct,
+
+    // Top reporters for this contractor
+    topReporters,
+
+    // Hazards
+    topHazards,
+
+    // Time patterns
+    hourlyPattern: hourCounts.map((count, hour) => ({
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      count
+    })),
+    hasTimeData,
+    dayShiftPct: totalWithTime > 0 ? ((dayShiftCount / totalWithTime) * 100).toFixed(1) : '0.0',
+    nightShiftPct: totalWithTime > 0 ? ((nightShiftCount / totalWithTime) * 100).toFixed(1) : '0.0',
+
+    // Activity
+    activeDays,
+    spanDays,
+    firstDate,
+    lastDate,
+    dailyRate,
+
+    // Quality
+    avgWordCount,
+    qualityRate,
+    maxWordCount,
+    minWordCount,
+    flaggedRecords,
+    flaggedCount: contractorIncidents.filter(i => countWords(i.description) <= 5).length,
+
+    // Near miss rate
+    nearMissRate,
+
+    // Contractor comparison (vs other contractors average)
+    comparison: {
+      totalVsAvg: { contractor: total, avg: Math.round(avgTotal), better: total > avgTotal },
+      nearMissVsAvg: { contractor: parseFloat(nearMissRate), avg: avgNearMissRate.toFixed(1), better: parseFloat(nearMissRate) > avgNearMissRate },
+      qualityVsAvg: { contractor: parseFloat(qualityRate), avg: avgQualityRate.toFixed(1), better: parseFloat(qualityRate) > avgQualityRate },
+      reportersVsAvg: { contractor: activeReporters, avg: Math.round(avgActiveReporters), better: activeReporters > avgActiveReporters }
+    },
+
+    // Monthly trend
+    monthlyTrend,
+
+    // Data Quality Issues
+    duplicateDescriptions,
+    vagueDescriptions
+  }
+}
+
+/**
  * Find keywords that triggered a hazard classification
  * Checks CONTEXT_REDIRECTS, HAZARD_PHRASES, and HAZARD_PATTERNS
  */

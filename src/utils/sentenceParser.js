@@ -979,6 +979,8 @@ export const AMBIGUOUS_WORDS = {
   },
 
   // "Water" - could be Working on/Near Water or Worker Welfare
+  // NOTE: Most construction site "water" mentions are welfare-related (drinking, toilets, washing)
+  // Only specific drowning/water body contexts should trigger "Working on or Near Water"
   'water': {
     contexts: [
       // Worker Welfare - drinking water and amenities (HIGH CONFIDENCE)
@@ -990,27 +992,46 @@ export const AMBIGUOUS_WORDS = {
       { pattern: /washing\s+water|hand\s+washing|sanitary\s+water|hygiene/, hazard: 'Worker Welfare', confidence: 0.9 },
       { pattern: /water\s+shortage|water\s+issue|water\s+problem|water\s+complaint/, hazard: 'Worker Welfare', confidence: 0.85 },
       { pattern: /water\s+tank|water\s+storage/, hazard: 'Worker Welfare', confidence: 0.75 },
+      // Water filter/maintenance (welfare)
+      { pattern: /water\s+filter|filter.*replaced|filter.*not\s+replaced|water\s+filtration/, hazard: 'Worker Welfare', confidence: 0.95 },
+      // No water / water availability (welfare)
+      { pattern: /no\s+water|without\s+water|water\s+was\s+not|water\s+was\s+available/, hazard: 'Worker Welfare', confidence: 0.9 },
+      { pattern: /availability\s+of\s+water|water\s+in\s+toilet|water\s+in\s+washroom/, hazard: 'Worker Welfare', confidence: 0.9 },
+      // Water gallons/bottles thrown (housekeeping)
+      { pattern: /water\s+gallon|gallon.*water|water.*thrown|thrown.*water/, hazard: 'Housekeeping', confidence: 0.85 },
 
-      // Working on or Near Water - water hazards (HIGH CONFIDENCE)
+      // Environmental - sewage/wastewater (NOT drowning hazard)
+      { pattern: /sewage|wastewater|waste\s+water|toilet\s+overflow|overflowed/, hazard: 'Environmental', confidence: 0.95 },
+      { pattern: /spilled\s+from.*toilet|toilet.*spill|contaminated\s+ground/, hazard: 'Environmental', confidence: 0.9 },
+
+      // Respiratory Hazard - water spraying for dust suppression
+      { pattern: /sprinkling\s+water|water\s+sprinkling|spraying\s+water|water\s+spray/, hazard: 'Respiratory Hazard', confidence: 0.85 },
+      { pattern: /dust\s+suppression|without\s+sprinkling/, hazard: 'Respiratory Hazard', confidence: 0.85 },
+
+      // Working on or Near Water - ONLY for actual drowning/water body hazards (HIGH CONFIDENCE)
       { pattern: /drown|drowning|drowned|submersion|submerged/, hazard: 'Working on or Near Water', confidence: 0.98 },
       { pattern: /life\s+jacket|life\s+vest|life\s+buoy|life\s+ring|pfd|flotation\s+device/, hazard: 'Working on or Near Water', confidence: 0.95 },
       { pattern: /rescue\s+boat|buoyancy|flotation|man\s+overboard/, hazard: 'Working on or Near Water', confidence: 0.95 },
       { pattern: /fall\s+into\s+water|fell\s+into\s+water|fall\s+in\s+water|fell\s+in\s+water/, hazard: 'Working on or Near Water', confidence: 0.95 },
       { pattern: /work.*over\s+water|working\s+over\s+water|work.*near\s+water|working\s+near\s+water/, hazard: 'Working on or Near Water', confidence: 0.95 },
-      { pattern: /near\s+water|over\s+water|on\s+water|in\s+water|into\s+water|beside\s+water/, hazard: 'Working on or Near Water', confidence: 0.9 },
+      { pattern: /near\s+water|over\s+water|on\s+water|into\s+water|beside\s+water/, hazard: 'Working on or Near Water', confidence: 0.9 },
       { pattern: /water\s+body|water\s+edge|water\s+hazard|open\s+water/, hazard: 'Working on or Near Water', confidence: 0.9 },
-      { pattern: /river|sea|lake|pond|canal|creek|stream|harbour|harbor/, hazard: 'Working on or Near Water', confidence: 0.9 },
-      { pattern: /marine|offshore|dock|pier|jetty|wharf|quay|berth/, hazard: 'Working on or Near Water', confidence: 0.9 },
+      { pattern: /river|lake|pond|canal|creek|stream|harbour|harbor/, hazard: 'Working on or Near Water', confidence: 0.9 },
+      { pattern: /marine|offshore|pier|jetty|wharf|quay|berth/, hazard: 'Working on or Near Water', confidence: 0.9 },
       { pattern: /boat|vessel|barge|ferry|ship|tugboat/, hazard: 'Working on or Near Water', confidence: 0.85 },
       { pattern: /flood|flooding|flooded|flash\s+flood/, hazard: 'Working on or Near Water', confidence: 0.85 },
-      { pattern: /swimming|swim|wading|wade/, hazard: 'Working on or Near Water', confidence: 0.85 },
+      { pattern: /wading|wade/, hazard: 'Working on or Near Water', confidence: 0.85 },
       { pattern: /waterway|waterfront|seaside|riverside|lakeside/, hazard: 'Working on or Near Water', confidence: 0.85 },
+      // "inside the sea" - actual water hazard
+      { pattern: /inside\s+the\s+sea|in\s+the\s+sea|into\s+the\s+sea|near\s+the\s+sea/, hazard: 'Working on or Near Water', confidence: 0.95 },
 
       // Slip and Trip - water causing slipping
       { pattern: /water\s+spill|wet\s+floor|water\s+on\s+floor|water\s+leak|leaking\s+water/, hazard: 'Slip and Trip', confidence: 0.85 },
       { pattern: /slippery.*water|water.*slippery|puddle|pooling\s+water/, hazard: 'Slip and Trip', confidence: 0.85 },
     ],
-    default: { hazard: 'Working on or Near Water', confidence: 0.6 }
+    // DEFAULT: Worker Welfare (most construction site "water" mentions are welfare-related)
+    // NOT "Working on or Near Water" - drowning requires explicit water body context
+    default: { hazard: 'Worker Welfare', confidence: 0.5 }
   },
 
   // "Dust" - usually Respiratory Hazard

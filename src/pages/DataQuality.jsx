@@ -77,6 +77,7 @@ import { detectMisspellings } from '../utils/spellChecker'
 import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
 import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
+import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import QuickImportModal from '../components/import/QuickImportModal'
 
@@ -177,6 +178,7 @@ const DataQuality = () => {
   const [reporterSort, setReporterSort] = useState('total')
   const [contractorSort, setContractorSort] = useState('totalObs')
   const [selectedReporter, setSelectedReporter] = useState(null)
+  const [selectedContractor, setSelectedContractor] = useState(null)
   const [showDuplicates, setShowDuplicates] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showClassificationReview, setShowClassificationReview] = useState(false)
@@ -208,7 +210,7 @@ const DataQuality = () => {
   const { getPeriodRange } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, excludedReporters, setExcludedReporters } = useFilter()
 
   // Handle period change
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -474,16 +476,10 @@ const DataQuality = () => {
     )
   }, [filteredIncidents, openDrillDown])
 
-  // Contractor drill-down
+  // Contractor click - opens modal
   const handleContractorDrillDown = useCallback((contractor) => {
-    const records = filteredIncidents.filter(inc => inc.contractor === contractor.name)
-    openDrillDown(
-      `${contractor.name} - All Observations`,
-      records,
-      ['Data Quality', 'Contractor', contractor.name],
-      { contractor: contractor.name }
-    )
-  }, [filteredIncidents, openDrillDown])
+    setSelectedContractor(contractor.name)
+  }, [])
 
   // KPI drill-down
   const handleKPIDrillDown = useCallback((metric, title, filterFn) => {
@@ -2633,6 +2629,17 @@ const DataQuality = () => {
         data={reporterDeepDive}
       />
 
+      {/* Contractor Deep Dive Modal */}
+      <ContractorModal
+        isOpen={!!selectedContractor}
+        onClose={() => setSelectedContractor(null)}
+        contractorName={selectedContractor}
+        filteredIncidents={filteredIncidents}
+        allIncidents={incidents}
+        excludedReporters={excludedReporters}
+        setExcludedReporters={setExcludedReporters}
+      />
+
       {/* Drill-Down Modal for all other sections */}
       <DrillDownModal
         isOpen={drillDown.isOpen}
@@ -2642,6 +2649,7 @@ const DataQuality = () => {
         type={drillDown.type}
         breadcrumb={drillDown.breadcrumb}
         canGoBack={false}
+        source="Data Quality"
         onDrillDown={(observations) => {
           // Handle drill from monthly-breakdown to records view
           if (drillDown.type === 'monthly-breakdown' && observations) {

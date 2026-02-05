@@ -8,6 +8,7 @@ import { parseSentence, filterNoiseWords } from '../../utils/sentenceParser'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import ExportConfirmDialog from './ExportConfirmDialog'
+import HighlightedText from './HighlightedText'
 
 // Disclaimer text helper - includes Event ID for individual reports
 const getDisclaimerText = (eventId) => {
@@ -31,7 +32,9 @@ const DrillDownModal = ({
   onDrillDown,
   onBack,
   canGoBack = false,
-  breadcrumb = []
+  breadcrumb = [],
+  highlightKeywords = [],  // Keywords to highlight in descriptions
+  source = 'Unknown'  // Source page: 'Hazards Identification', 'Safety Outlook', etc.
 }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
 
@@ -156,8 +159,9 @@ const DrillDownModal = ({
                 breadcrumb={breadcrumb}
                 title={title}
                 isMobile={isMobile}
+                highlightKeywords={highlightKeywords}
                 copyContext={{
-                  source: 'Safety Outlook',
+                  source: source,
                   title: title,
                   breadcrumb: breadcrumb,
                   count: data.length
@@ -391,7 +395,7 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
 /**
  * Records Table View
  */
-const RecordsTable = ({ data, onViewDetails, isMobile = false, copyContext = {} }) => {
+const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords = [], copyContext = {} }) => {
   const [copied, setCopied] = React.useState(false)
 
   if (!data || data.length === 0) {
@@ -414,7 +418,8 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, copyContext = {} 
   const handleCopyAll = async () => {
     // Build context header
     const contextLines = []
-    contextLines.push('=== SAFETY OUTLOOK DRILL-DOWN COPY ===')
+    const sourceName = (copyContext.source || 'DRILL-DOWN').toUpperCase().replace(/\s+/g, ' ')
+    contextLines.push(`=== ${sourceName} DRILL-DOWN COPY ===`)
 
     // Extract type and category from title/breadcrumb
     const title = copyContext.title || 'Observations'
@@ -447,7 +452,7 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, copyContext = {} 
       }
     }
 
-    contextLines.push(`Source: Safety Outlook`)
+    contextLines.push(`Source: ${copyContext.source || 'Unknown'}`)
     contextLines.push(`Type: ${observationType}`)
     contextLines.push(`Hazard Category: ${hazardCategory}`)
     contextLines.push(`Count: ${data.length} observations`)
@@ -512,7 +517,14 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, copyContext = {} 
                 </span>
               </div>
               <p className={`text-surface-600 line-clamp-2 ${isMobile ? 'text-sm leading-relaxed' : 'text-sm'}`}>
-                {record.description || 'No description'}
+                {highlightKeywords.length > 0 ? (
+                  <HighlightedText
+                    text={record.description || 'No description'}
+                    keywords={highlightKeywords}
+                  />
+                ) : (
+                  record.description || 'No description'
+                )}
               </p>
               <div className={`flex items-center gap-3 sm:gap-4 mt-2 text-xs text-surface-500 flex-wrap`}>
                 {record.contractor && (

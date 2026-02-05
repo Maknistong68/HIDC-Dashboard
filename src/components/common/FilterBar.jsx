@@ -1,6 +1,137 @@
-import React, { useState } from 'react'
-import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Filter, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
+
+/**
+ * MultiSelectDropdown - Dropdown with checkboxes for multi-selection
+ */
+const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleOption = (optionValue) => {
+    const newValue = value.includes(optionValue)
+      ? value.filter(v => v !== optionValue)
+      : [...value, optionValue]
+    onChange(filter.key, newValue)
+  }
+
+  const clearSelection = (e) => {
+    e.stopPropagation()
+    onChange(filter.key, [])
+  }
+
+  const hasSelection = value.length > 0
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      {isMobile && (
+        <label className="block text-xs font-medium text-surface-500 mb-1">
+          {filter.label}
+        </label>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          flex items-center justify-between gap-2
+          appearance-none font-medium
+          bg-white border rounded-md cursor-pointer
+          transition-all duration-200
+          focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
+          ${isMobile ? 'w-full px-3 py-3 text-base h-12' : 'px-3 py-1.5 text-xs min-w-[160px]'}
+          ${hasSelection
+            ? 'border-primary-300 bg-primary-50 text-primary-700'
+            : 'border-surface-300 text-surface-700 hover:border-surface-400'
+          }
+        `}
+        aria-label={filter.label}
+        aria-expanded={isOpen}
+      >
+        <span className="truncate">
+          {hasSelection
+            ? `${value.length} excluded`
+            : filter.placeholder || `All ${filter.label}`
+          }
+        </span>
+        <div className="flex items-center gap-1">
+          {hasSelection && (
+            <X
+              size={14}
+              className="text-primary-500 hover:text-primary-700"
+              onClick={clearSelection}
+            />
+          )}
+          <ChevronDown
+            size={isMobile ? 18 : 14}
+            className={`text-surface-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className={`
+          absolute z-50 mt-1 bg-white border border-surface-200 rounded-lg shadow-lg
+          max-h-60 overflow-y-auto
+          ${isMobile ? 'left-0 right-0' : 'min-w-[200px]'}
+        `}>
+          {filter.options.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-surface-400">No options available</div>
+          ) : (
+            <>
+              {hasSelection && (
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 border-b border-surface-100"
+                >
+                  Clear selection ({value.length})
+                </button>
+              )}
+              {filter.options.map((option) => {
+                const isSelected = value.includes(option.value)
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleOption(option.value)}
+                    className={`
+                      w-full px-3 py-2 text-left text-sm flex items-center gap-2
+                      hover:bg-surface-50 transition-colors
+                      ${isSelected ? 'bg-primary-50' : ''}
+                    `}
+                  >
+                    <div className={`
+                      w-4 h-4 rounded border flex items-center justify-center flex-shrink-0
+                      ${isSelected
+                        ? 'bg-primary-500 border-primary-500'
+                        : 'border-surface-300'
+                      }
+                    `}>
+                      {isSelected && <Check size={12} className="text-white" />}
+                    </div>
+                    <span className="truncate">{option.label}</span>
+                  </button>
+                )
+              })}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /**
  * FilterBar - Consistent filter controls with animations
@@ -17,11 +148,11 @@ const FilterBarComponent = ({
   const [isExpanded, setIsExpanded] = useState(false)
 
   const hasActiveFilters = Object.values(activeFilters).some(
-    (v) => v !== '' && v !== null && v !== undefined
+    (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
   )
 
   const activeCount = Object.values(activeFilters).filter(
-    (v) => v !== '' && v !== null && v !== undefined
+    (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
   ).length
 
   // On mobile, show collapsed by default unless there are active filters
@@ -171,6 +302,13 @@ const FilterBarComponent = ({
                     aria-label={filter.label}
                   />
                 </div>
+              ) : filter.type === 'multiSelect' ? (
+                <MultiSelectDropdown
+                  filter={filter}
+                  value={activeFilters[filter.key] || []}
+                  onChange={onFilterChange}
+                  isMobile={isMobile}
+                />
               ) : null}
             </div>
           ))}
