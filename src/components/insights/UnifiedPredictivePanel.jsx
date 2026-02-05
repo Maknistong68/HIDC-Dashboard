@@ -34,7 +34,8 @@ import {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
   generateDynamicSliders,
-  calculateFullProjection
+  calculateFullProjection,
+  getTopKeywordsForFactor
 } from './ScenarioSimulatorEngine'
 
 // Slider styles for scenario simulator
@@ -598,24 +599,37 @@ const UnifiedPredictivePanel = ({
                       </span>
                     </div>
 
-                    {categorySliders.map(slider => (
-                      <ScenarioSlider
-                        key={slider.id}
-                        id={slider.id}
-                        label={slider.label}
-                        sublabel={slider.sublabel}
-                        value={sliders[slider.id] || 0}
-                        min={-50}
-                        max={100}
-                        unit="%"
-                        leftLabel="reduce"
-                        rightLabel="increase"
-                        colorClass={categoryKey}
-                        onChange={handleSliderChange}
-                        prevalence={slider.prevalence}
-                        maxReduction={slider.maxReduction}
-                      />
-                    ))}
+                    {categorySliders.map(slider => {
+                      // Get top keywords for this factor
+                      const topKeywords = getTopKeywordsForFactor(
+                        factorData,
+                        slider.factor,
+                        selectedHazard,
+                        5
+                      )
+
+                      return (
+                        <ScenarioSlider
+                          key={slider.id}
+                          id={slider.id}
+                          label={slider.label}
+                          sublabel={slider.sublabel}
+                          value={sliders[slider.id] || 0}
+                          min={-50}
+                          max={100}
+                          unit="%"
+                          leftLabel="reduce"
+                          rightLabel="increase"
+                          colorClass={categoryKey}
+                          onChange={handleSliderChange}
+                          prevalence={slider.prevalence}
+                          maxReduction={slider.maxReduction}
+                          topKeywords={topKeywords}
+                          effectiveness={category.effectiveness}
+                          categoryName={category.name}
+                        />
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -944,7 +958,7 @@ const RiskAssessmentSection = ({ data, onClick }) => {
 }
 
 /**
- * ScenarioSlider - Data-driven scenario slider with prevalence indicator
+ * ScenarioSlider - Data-driven scenario slider with prevalence indicator and "Why?" explanation
  */
 const ScenarioSlider = ({
   id,
@@ -959,11 +973,21 @@ const ScenarioSlider = ({
   colorClass,
   onChange,
   prevalence,
-  maxReduction
+  maxReduction,
+  topKeywords = [],
+  effectiveness = 0,
+  categoryName = ''
 }) => {
+  const [showExplanation, setShowExplanation] = useState(false)
   const displayValue = value > 0 ? `+${value}` : value.toString()
   const isPositive = value > 0
   const isNegative = value < 0
+
+  // Calculate actual impact based on slider value
+  const actualImpact = prevalence && effectiveness
+    ? (prevalence * effectiveness * (value / 100)).toFixed(1)
+    : 0
+  const effortPercent = value
 
   return (
     <div className="space-y-1.5 pl-2">
@@ -1005,6 +1029,96 @@ const ScenarioSlider = ({
         )}
         <span>{rightLabel}</span>
       </div>
+
+      {/* Why? Explanation Button */}
+      {prevalence !== null && prevalence !== undefined && maxReduction !== undefined && (
+        <button
+          onClick={() => setShowExplanation(!showExplanation)}
+          className="flex items-center gap-1 text-2xs text-primary-600 hover:text-primary-700 transition-colors mt-1"
+        >
+          {showExplanation ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          <HelpCircle size={10} />
+          <span>Why {maxReduction > 0 ? `-${maxReduction.toFixed(1)}%` : '0%'} max impact?</span>
+        </button>
+      )}
+
+      {/* Expandable Explanation Panel */}
+      {showExplanation && prevalence !== null && (
+        <div className="mt-2 p-3 bg-surface-50 rounded-lg border border-surface-200 text-xs space-y-3">
+          {/* Formula Breakdown */}
+          <div>
+            <p className="font-semibold text-surface-700 mb-1.5 flex items-center gap-1">
+              <Calculator size={12} className="text-primary-500" />
+              Impact Calculation
+            </p>
+            <div className="bg-white rounded p-2 border border-surface-200">
+              <div className="font-mono text-2xs text-surface-600 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>Prevalence</span>
+                  <span className="font-semibold">{prevalence.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>× Control Effectiveness</span>
+                  <span className="font-semibold">{(effectiveness * 100).toFixed(0)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>× Effort Applied</span>
+                  <span className={`font-semibold ${value > 0 ? 'text-green-600' : value < 0 ? 'text-red-500' : 'text-surface-500'}`}>
+                    {effortPercent}%
+                  </span>
+                </div>
+                <div className="border-t border-surface-200 pt-1 mt-1 flex items-center justify-between">
+                  <span className="font-semibold">= Current Impact</span>
+                  <span className={`font-bold ${parseFloat(actualImpact) > 0 ? 'text-green-600' : parseFloat(actualImpact) < 0 ? 'text-red-500' : 'text-surface-600'}`}>
+                    {parseFloat(actualImpact) > 0 ? '-' : ''}{Math.abs(parseFloat(actualImpact)).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p className="text-2xs text-surface-400 mt-1.5">
+              At 100% effort: {prevalence.toFixed(1)}% × {(effectiveness * 100).toFixed(0)}% = -{maxReduction.toFixed(1)}% reduction
+            </p>
+          </div>
+
+          {/* Control Category Info */}
+          {categoryName && (
+            <div className="flex items-center gap-2 text-2xs text-surface-500 bg-white rounded px-2 py-1.5 border border-surface-100">
+              <Info size={10} className="text-surface-400" />
+              <span>
+                <strong>{categoryName}</strong> controls have <strong>{(effectiveness * 100).toFixed(0)}%</strong> effectiveness (HSE/NIOSH standard)
+              </span>
+            </div>
+          )}
+
+          {/* Top Contributors */}
+          {topKeywords && topKeywords.length > 0 && (
+            <div>
+              <p className="font-semibold text-surface-700 mb-1.5 flex items-center gap-1">
+                <Target size={12} className="text-amber-500" />
+                Top Contributors ({prevalence.toFixed(1)}% of incidents)
+              </p>
+              <div className="space-y-1">
+                {topKeywords.map((kw, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-2xs">
+                    <span className="text-surface-400">•</span>
+                    <span className="text-surface-700 font-medium flex-1">{kw.keyword}</span>
+                    <span className="text-surface-500 bg-surface-100 px-1.5 py-0.5 rounded">
+                      {kw.count} observations
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No keywords message */}
+          {(!topKeywords || topKeywords.length === 0) && (
+            <div className="text-2xs text-surface-400 italic">
+              Keyword analysis not available for this factor.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

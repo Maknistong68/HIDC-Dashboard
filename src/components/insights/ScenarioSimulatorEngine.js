@@ -220,6 +220,170 @@ export const calculateProjectedChange = (sliders, prevalence) => {
 }
 
 // ============================================================================
+// KEYWORD AGGREGATION FOR FACTOR EXPLANATIONS
+// ============================================================================
+
+/**
+ * Get top keywords/phrases that contributed to a factor being detected
+ * Aggregates keyword matches across all observations for a specific factor
+ *
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {string} factorName - Name of the factor to get keywords for
+ * @param {string} hazardName - Optional: filter to specific hazard
+ * @param {number} limit - Maximum number of keywords to return (default: 5)
+ * @returns {Array<{keyword: string, count: number, type: string}>} Top keywords with counts
+ */
+export const getTopKeywordsForFactor = (factorData, factorName, hazardName = 'all', limit = 5) => {
+  if (!factorData?.byFactor || !factorName) {
+    return []
+  }
+
+  // Find the factor in the data
+  const factor = factorData.byFactor.find(f => f.name === factorName)
+  if (!factor || !factor.incidents) {
+    return []
+  }
+
+  // Filter incidents by hazard if specified
+  const incidents = hazardName === 'all'
+    ? factor.incidents
+    : factor.incidents.filter(i => i.location === hazardName)
+
+  if (incidents.length === 0) {
+    return []
+  }
+
+  // Import detectContributingFactorsWithDetails dynamically to avoid circular dependency
+  // We'll use a simpler approach: scan descriptions for known patterns
+  const keywordCounts = {}
+
+  // Get keywords for this factor from FACTOR_PHRASE_CONFIG (imported via window or passed)
+  // Since we can't import rootCauseEngine here, we'll extract keywords from incidents
+  // by looking at common phrases in descriptions
+
+  for (const incident of incidents) {
+    if (!incident.description) continue
+
+    const normalizedText = incident.description.toLowerCase()
+
+    // Extract meaningful phrases (2-4 words) that appear in the description
+    // Focus on common HSE terminology
+    const phrases = extractMeaningfulPhrases(normalizedText, factorName)
+
+    for (const phrase of phrases) {
+      if (!keywordCounts[phrase]) {
+        keywordCounts[phrase] = { keyword: phrase, count: 0, type: 'detected' }
+      }
+      keywordCounts[phrase].count++
+    }
+  }
+
+  // Convert to array, sort by count, and return top N
+  return Object.values(keywordCounts)
+    .filter(k => k.count >= 2) // Only include phrases that appear at least twice
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+}
+
+/**
+ * Extract meaningful phrases from text based on factor type
+ * Uses common HSE terminology patterns
+ */
+const extractMeaningfulPhrases = (text, factorName) => {
+  const phrases = []
+
+  // Factor-specific keyword patterns
+  const FACTOR_KEYWORDS = {
+    'Environment': [
+      'poor lighting', 'poor visibility', 'dusty', 'dust', 'weather', 'rain', 'wind',
+      'hot', 'cold', 'wet', 'slippery', 'muddy', 'dark', 'visibility', 'lighting',
+      'temperature', 'humidity', 'conditions', 'cluttered', 'congested', 'noisy'
+    ],
+    'Training': [
+      'training', 'untrained', 'inexperienced', 'new worker', 'lack of training',
+      'insufficient training', 'no training', 'unfamiliar', 'not trained',
+      'competency', 'skill', 'knowledge', 'awareness'
+    ],
+    'PPE': [
+      'ppe', 'helmet', 'gloves', 'goggles', 'safety glasses', 'vest', 'boots',
+      'harness', 'respirator', 'mask', 'ear protection', 'face shield',
+      'not wearing', 'without ppe', 'missing ppe', 'improper ppe'
+    ],
+    'Communication': [
+      'communication', 'miscommunication', 'not communicated', 'lack of communication',
+      'briefing', 'no briefing', 'toolbox talk', 'handover', 'shift change',
+      'radio', 'signal', 'warning', 'informed', 'not informed'
+    ],
+    'Supervision': [
+      'supervision', 'unsupervised', 'supervisor', 'no supervision', 'lack of supervision',
+      'foreman', 'overseer', 'monitoring', 'not monitored', 'left alone'
+    ],
+    'Housekeeping': [
+      'housekeeping', 'messy', 'untidy', 'clutter', 'debris', 'waste', 'spillage',
+      'tools lying', 'materials scattered', 'not cleaned', 'dirty', 'disorganized'
+    ],
+    'Barriers': [
+      'barrier', 'barricade', 'fence', 'guard rail', 'handrail', 'no barrier',
+      'missing barrier', 'broken barrier', 'insufficient barrier', 'demarcation'
+    ],
+    'Signage': [
+      'sign', 'signage', 'warning sign', 'no sign', 'missing sign', 'label',
+      'marking', 'not marked', 'unclear sign', 'faded sign'
+    ],
+    'Permit': [
+      'permit', 'ptw', 'permit to work', 'no permit', 'without permit',
+      'expired permit', 'invalid permit', 'hot work permit', 'confined space permit'
+    ],
+    'Planning': [
+      'planning', 'plan', 'no plan', 'poor planning', 'unplanned', 'preparation',
+      'risk assessment', 'jsa', 'method statement', 'procedure'
+    ],
+    'Competency': [
+      'competency', 'competent', 'not competent', 'qualified', 'not qualified',
+      'certified', 'not certified', 'license', 'authorization'
+    ],
+    'Documentations': [
+      'documentation', 'procedure', 'sop', 'work instruction', 'checklist',
+      'no procedure', 'outdated procedure', 'not following procedure'
+    ],
+    'Safety Devices': [
+      'safety device', 'interlock', 'emergency stop', 'e-stop', 'sensor',
+      'alarm', 'detector', 'cut-off', 'bypass', 'disabled'
+    ],
+    'Machine Guarding': [
+      'guard', 'guarding', 'machine guard', 'no guard', 'missing guard',
+      'removed guard', 'bypass guard', 'pinch point', 'nip point'
+    ],
+    'Inspections': [
+      'inspection', 'not inspected', 'no inspection', 'failed inspection',
+      'pre-use check', 'daily check', 'maintenance', 'defect'
+    ],
+    'Interfaces': [
+      'interface', 'handover', 'shift change', 'contractor', 'third party',
+      'coordination', 'simultaneous operations', 'simops'
+    ],
+    'Emergency Preparedness': [
+      'emergency', 'evacuation', 'fire', 'first aid', 'muster point',
+      'emergency exit', 'fire extinguisher', 'emergency response'
+    ],
+    'BBS': [
+      'bbs', 'behavior', 'behaviour', 'unsafe act', 'at risk behavior',
+      'shortcut', 'rushing', 'complacency', 'fatigue'
+    ]
+  }
+
+  const keywords = FACTOR_KEYWORDS[factorName] || []
+
+  for (const keyword of keywords) {
+    if (text.includes(keyword)) {
+      phrases.push(keyword)
+    }
+  }
+
+  return phrases
+}
+
+// ============================================================================
 // DYNAMIC SLIDER GENERATOR
 // ============================================================================
 
@@ -357,6 +521,7 @@ export default {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
   getTopFactorsForHazard,
+  getTopKeywordsForFactor,
   calculateInterventionEffect,
   calculateProjectedChange,
   generateDynamicSliders,
