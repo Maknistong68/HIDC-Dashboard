@@ -25,7 +25,9 @@ import {
   HelpCircle,
   AlertOctagon,
   MessageSquareWarning,
-  Flag
+  Flag,
+  Search,
+  X
 } from 'lucide-react'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -76,14 +78,7 @@ import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
 import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
 
-// Sub-region options for the filter dropdown
-const SUB_REGION_OPTIONS = [
-  { value: 'SUB REGION 1', label: 'Sub Region 1' },
-  { value: 'SUB REGION 2', label: 'Sub Region 2' },
-  { value: 'SUB REGION 3', label: 'Sub Region 3' },
-  { value: 'SUB REGION 4', label: 'Sub Region 4' },
-  { value: 'SUB REGION 5', label: 'Sub Region 5' },
-]
+import { SUB_REGION_OPTIONS } from '../utils/constants'
 import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import BatchImportModal from '../components/fileManager/BatchImportModal'
@@ -197,6 +192,7 @@ const DataQuality = () => {
   const [showObservationTester, setShowObservationTester] = useState(false)
   const [testObservation, setTestObservation] = useState('')
   const [testResult, setTestResult] = useState(null)
+  const [reporterSearch, setReporterSearch] = useState('')
 
   // Spell checker is always ready (hybrid approach - no async loading)
   const spellCheckerReady = true
@@ -246,7 +242,8 @@ const DataQuality = () => {
   }, [incidents, contractor])
 
   // Filter configuration - Contractor (parent), Site (child), and Sub-Region
-  const filterConfig = [
+  // Memoized to prevent unnecessary re-renders in FilterBar
+  const filterConfig = useMemo(() => [
     {
       key: 'contractor',
       type: 'select',
@@ -268,7 +265,7 @@ const DataQuality = () => {
       placeholder: 'All Sub-Regions',
       options: SUB_REGION_OPTIONS
     }
-  ]
+  ], [uniqueContractors, siteOptions])
 
   // Filtered incidents based on contractor, site, subRegion, and period
   // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
@@ -388,13 +385,22 @@ const DataQuality = () => {
   // Sort reporters
   const sortedReporters = useMemo(() => {
     if (!qualityData) return []
-    return [...qualityData.reporters].sort((a, b) => {
+
+    // Filter by search term first
+    let filtered = [...qualityData.reporters]
+    if (reporterSearch.trim()) {
+      const searchLower = reporterSearch.toLowerCase().trim()
+      filtered = filtered.filter(r => r.name.toLowerCase().includes(searchLower))
+    }
+
+    // Then sort (no slice limit - show all reporters)
+    return filtered.sort((a, b) => {
       if (reporterSort === 'total') return b.total - a.total
       if (reporterSort === 'nearMiss') return b.nearMiss - a.nearMiss
       if (reporterSort === 'quality') return parseFloat(b.qualityRate) - parseFloat(a.qualityRate)
       return 0
-    }).slice(0, 15)
-  }, [qualityData, reporterSort])
+    })
+  }, [qualityData, reporterSort, reporterSearch])
 
   // Sort contractors
   const sortedContractors = useMemo(() => {
@@ -1248,7 +1254,7 @@ const DataQuality = () => {
       )}
 
       {/* ROW 1: Duplicates & Spelling (2 columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Duplicates */}
         <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col min-h-[280px]">
           <div className="flex items-center justify-between mb-3">
@@ -1461,7 +1467,7 @@ const DataQuality = () => {
       </div>
 
       {/* ROW 1B: Foul Words & Vague Hazards (2 columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Foul Words */}
         <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col min-h-[280px]">
           <div className="flex items-center justify-between mb-3">
@@ -1622,7 +1628,7 @@ const DataQuality = () => {
 
       {/* ROW 2: Needs Review & Description Length (2 columns) */}
       {/* ROW 2: Needs Review & Description Quality (2 columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Needs Review (Unclassifiable + Flagged Records) */}
         <div className="bg-white border border-surface-200 rounded-lg p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
@@ -2223,7 +2229,7 @@ const DataQuality = () => {
       )}
 
       {/* ROW 3: Categorization & Contractor Quality (2 columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Categorization Before vs After Comparison */}
         <div className="bg-white border border-surface-200 rounded-lg p-4">
         <h3 className="text-xs font-semibold text-surface-700 uppercase tracking-wide mb-4 flex items-center gap-2">
@@ -2445,7 +2451,36 @@ const DataQuality = () => {
               </select>
             )}
           </div>
-          <div className={isMobile ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
+          <div className={isMobile ? 'flex items-center gap-2 flex-wrap' : 'flex items-center gap-3'}>
+            {/* Search Bar */}
+            <div className="relative">
+              <Search
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-surface-400"
+                size={14}
+              />
+              <input
+                type="text"
+                placeholder="Search reporters..."
+                value={reporterSearch}
+                onChange={(e) => setReporterSearch(e.target.value)}
+                className={`pl-8 pr-8 py-1.5 text-xs border border-surface-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                  isMobile ? 'w-36' : 'w-44'
+                }`}
+              />
+              {reporterSearch && (
+                <button
+                  onClick={() => setReporterSearch('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            {reporterSearch && (
+              <span className="text-xs text-surface-500">
+                Showing {sortedReporters.length} of {reporters.length}
+              </span>
+            )}
             {/* Performance Flags Summary */}
             <div className={`flex items-center gap-2 text-xs ${isMobile ? 'flex-wrap' : ''}`}>
               <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
