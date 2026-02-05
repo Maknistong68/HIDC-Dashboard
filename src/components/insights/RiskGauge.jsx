@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, HelpCircle, Calculator, Target, Activity } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react'
+import RiskExplanationModal from './RiskExplanationModal'
 
 /**
  * RiskGauge - Visual 5-level risk gauge showing where prediction falls on risk spectrum
@@ -23,7 +24,7 @@ const RiskGauge = ({
   factorData,
   weeklyHistory
 }) => {
-  const [showExplanation, setShowExplanation] = useState(false)
+  const [showWhyModal, setShowWhyModal] = useState(false)
   // Calculate risk level based on predicted vs average
   const riskAnalysis = useMemo(() => {
     if (predicted === undefined || predicted === null || average === undefined || average === null) {
@@ -70,23 +71,6 @@ const RiskGauge = ({
 
     return { level, label, color, percent, changePercent, isAbove }
   }, [predicted, average])
-
-  // Extract top contributing factors from factorData
-  const topFactors = useMemo(() => {
-    if (!factorData?.byFactor) return []
-
-    const factors = Object.entries(factorData.byFactor)
-      .map(([name, data]) => ({
-        name,
-        count: data.count || 0,
-        percentage: data.percentage || 0
-      }))
-      .filter(f => f.count > 0)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 4)
-
-    return factors
-  }, [factorData])
 
   // Analyze weekly trend pattern
   const trendAnalysis = useMemo(() => {
@@ -137,50 +121,6 @@ const RiskGauge = ({
       pattern
     }
   }, [weeklyHistory])
-
-  // Generate possible causes based on top factors
-  const possibleCauses = useMemo(() => {
-    if (!topFactors.length) return []
-
-    const causeMap = {
-      'Training': 'New workers joining or refresher training needed',
-      'Supervision': 'Shift changes or supervisory gaps',
-      'Environment': 'Weather conditions or site layout changes',
-      'Equipment': 'Equipment maintenance or new machinery introduction',
-      'Procedure': 'Process changes or procedure updates needed',
-      'Communication': 'Information flow gaps between teams',
-      'Housekeeping': 'Site organization or cleanup schedules',
-      'PPE': 'Personal protective equipment availability or compliance',
-      'Fatigue': 'Scheduling or overtime patterns',
-      'Awareness': 'Hazard visibility or safety signage'
-    }
-
-    return topFactors
-      .slice(0, 3)
-      .map(f => ({
-        factor: f.name,
-        cause: causeMap[f.name] || `Issues related to ${f.name.toLowerCase()}`
-      }))
-  }, [topFactors])
-
-  // Get threshold explanation
-  const getThresholdExplanation = () => {
-    const { changePercent, label } = riskAnalysis
-    switch (label) {
-      case 'Low':
-        return `≤ -30% below average (current: ${changePercent}%)`
-      case 'OK':
-        return `-10% to -30% below average (current: ${changePercent}%)`
-      case 'Medium':
-        return `-10% to +15% of average (current: ${changePercent > 0 ? '+' : ''}${changePercent}%)`
-      case 'High':
-        return `+15% to +40% above average (current: +${changePercent}%)`
-      case 'Critical':
-        return `> +40% above average (current: +${changePercent}%)`
-      default:
-        return ''
-    }
-  }
 
   const sizeClasses = {
     small: {
@@ -315,159 +255,28 @@ const RiskGauge = ({
         </div>
       )}
 
-      {/* Why? Explanation Button */}
+      {/* Why? Modal Trigger Button */}
       {showComparison && predicted !== undefined && average !== undefined && (
-        <button
-          onClick={() => setShowExplanation(!showExplanation)}
-          className="flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-700 transition-colors pt-1"
-        >
-          {showExplanation ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          <HelpCircle size={12} />
-          <span>Why is risk {riskAnalysis.label}?</span>
-        </button>
-      )}
+        <>
+          <button
+            onClick={() => setShowWhyModal(true)}
+            className="flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 transition-colors pt-1 px-2 py-1 rounded-md"
+          >
+            <HelpCircle size={14} />
+            <span>Why is risk {riskAnalysis.label}?</span>
+          </button>
 
-      {/* Expandable Explanation Panel */}
-      {showExplanation && (
-        <div className="mt-2 p-3 bg-surface-50 rounded-lg border border-surface-200 text-xs space-y-4">
-          {/* Calculation Breakdown */}
-          <div>
-            <p className="font-semibold text-surface-700 mb-2 flex items-center gap-1.5">
-              <Calculator size={14} className="text-primary-500" />
-              Calculation
-            </p>
-            <div className="bg-white rounded-lg p-3 border border-surface-200">
-              <div className="font-mono text-xs text-surface-600 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span>Predicted incidents</span>
-                  <span className="font-semibold">{predicted}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Historical average</span>
-                  <span className="font-semibold">{Math.round(average)}</span>
-                </div>
-                <div className="flex items-center justify-between text-surface-400">
-                  <span>Formula</span>
-                  <span>(predicted - avg) / avg × 100</span>
-                </div>
-                <div className="border-t border-surface-200 pt-1.5 mt-1.5 flex items-center justify-between">
-                  <span className="font-semibold">Result</span>
-                  <span className={`font-bold ${riskAnalysis.isAbove ? 'text-red-500' : 'text-green-500'}`}>
-                    ({predicted} - {Math.round(average)}) / {Math.round(average)} = {riskAnalysis.isAbove ? '+' : ''}{riskAnalysis.changePercent}%
-                  </span>
-                </div>
-              </div>
-              <div className="mt-2 pt-2 border-t border-surface-100">
-                <p className="text-2xs text-surface-500">
-                  <span className="font-medium">Threshold:</span> {getThresholdExplanation()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contributing Factors */}
-          {topFactors.length > 0 && (
-            <div>
-              <p className="font-semibold text-surface-700 mb-2 flex items-center gap-1.5">
-                <Target size={14} className="text-amber-500" />
-                Contributing Factors
-              </p>
-              <div className="space-y-2">
-                {topFactors.map((factor, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="text-surface-400">•</span>
-                    <span className="text-surface-700 font-medium flex-1">{factor.name}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-surface-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-amber-400 rounded-full"
-                          style={{ width: `${Math.min(factor.percentage, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-surface-500 text-2xs w-12 text-right">
-                        {factor.percentage.toFixed(0)}% recent
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Trend */}
-          {trendAnalysis && trendAnalysis.weeks.length > 0 && (
-            <div>
-              <p className="font-semibold text-surface-700 mb-2 flex items-center gap-1.5">
-                <Activity size={14} className="text-blue-500" />
-                Recent Trend
-              </p>
-              <div className="bg-white rounded-lg p-3 border border-surface-200">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  {trendAnalysis.weeks.map((week, idx) => (
-                    <div key={idx} className="flex-1 text-center">
-                      <div className="text-2xs text-surface-400 mb-1">Week {week.week}</div>
-                      <div className={`text-lg font-bold ${
-                        idx === trendAnalysis.weeks.length - 1
-                          ? (riskAnalysis.isAbove ? 'text-red-500' : 'text-green-500')
-                          : 'text-surface-600'
-                      }`}>
-                        {week.count}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Trend arrows between weeks */}
-                <div className="flex items-center justify-center gap-1 text-surface-400">
-                  {trendAnalysis.weeks.slice(0, -1).map((week, idx) => {
-                    const next = trendAnalysis.weeks[idx + 1]
-                    const diff = next.count - week.count
-                    return (
-                      <React.Fragment key={idx}>
-                        <span className="text-sm">{week.count}</span>
-                        <span className="text-xs">→</span>
-                      </React.Fragment>
-                    )
-                  })}
-                  <span className="text-sm">{trendAnalysis.weeks[trendAnalysis.weeks.length - 1]?.count}</span>
-                </div>
-                <div className="mt-2 pt-2 border-t border-surface-100 text-center">
-                  <span className="text-2xs text-surface-500">
-                    Pattern: <span className="font-medium capitalize">{trendAnalysis.pattern}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Possible Causes */}
-          {possibleCauses.length > 0 && riskAnalysis.level >= 2 && (
-            <div>
-              <p className="font-semibold text-surface-700 mb-2 flex items-center gap-1.5">
-                <HelpCircle size={14} className="text-purple-500" />
-                Possible Causes
-              </p>
-              <div className="space-y-1.5">
-                {possibleCauses.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-surface-600">
-                    <span className="text-surface-400 mt-0.5">•</span>
-                    <span>
-                      <span className="font-medium">{item.factor}:</span>{' '}
-                      {item.cause}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* No data message */}
-          {topFactors.length === 0 && !trendAnalysis && (
-            <div className="text-center py-2 text-surface-400">
-              <p>Detailed factor analysis not available.</p>
-              <p className="text-2xs mt-1">Factor data is extracted from observation descriptions.</p>
-            </div>
-          )}
-        </div>
+          {/* Risk Explanation Modal */}
+          <RiskExplanationModal
+            isOpen={showWhyModal}
+            onClose={() => setShowWhyModal(false)}
+            riskAnalysis={riskAnalysis}
+            factorData={factorData}
+            predicted={predicted}
+            average={average}
+            trendAnalysis={trendAnalysis}
+          />
+        </>
       )}
     </div>
   )

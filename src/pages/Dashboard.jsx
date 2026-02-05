@@ -37,6 +37,7 @@ import {
 } from '../utils/calculations'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 
 // Normalize hazard name for consistent grouping (fixes duplicates)
 // Memoized to prevent redundant string operations on filter changes
@@ -93,6 +94,8 @@ const Dashboard = () => {
   const trendChartRef = useRef(null)
   const topHazardsRef = useRef(null)
   const topObserversRef = useRef(null)
+  const topCompaniesRef = useRef(null)
+  const positiveNegativeRef = useRef(null)
   const dayOfWeekRef = useRef(null)
   const hourOfDayRef = useRef(null)
   const hazardsHeatmapRef = useRef(null)
@@ -105,6 +108,8 @@ const Dashboard = () => {
     trendChart: trendChartRef,
     topHazards: topHazardsRef,
     topObservers: topObserversRef,
+    topCompanies: topCompaniesRef,
+    positiveNegative: positiveNegativeRef,
     dayOfWeek: dayOfWeekRef,
     hourOfDay: hourOfDayRef,
     hazardsHeatmap: hazardsHeatmapRef,
@@ -268,6 +273,22 @@ const Dashboard = () => {
       filtered = filteredIncidents.filter(i =>
         i.type !== 'positive' && normalizeHazard(i.location) === normalizedFilter
       )
+    } else if (drillDown.chart === 'company') {
+      // Filter by contractor/company
+      filtered = filteredIncidents.filter(i =>
+        (i.contractor || 'Unknown') === drillDown.filter
+      )
+    } else if (drillDown.chart === 'positiveNegative') {
+      // Filter by positive or negative category
+      if (drillDown.filter === 'Negative') {
+        filtered = filteredIncidents.filter(i =>
+          ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr'].includes(i.type)
+        )
+      } else if (drillDown.filter === 'Positive') {
+        filtered = filteredIncidents.filter(i =>
+          ['leadership', 'positive'].includes(i.type)
+        )
+      }
     }
     return filtered
   }, [drillDown.chart, drillDown.filter, filteredIncidents])
@@ -456,6 +477,42 @@ const Dashboard = () => {
       }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10)
+  }, [filteredIncidents])
+
+  // Company data with open/closed breakdown (by contractor field)
+  const companyData = useMemo(() => {
+    const companyMap = {}
+    filteredIncidents.forEach(incident => {
+      const company = incident.contractor || 'Unknown'
+      if (!companyMap[company]) {
+        companyMap[company] = { name: company, open: 0, closed: 0, total: 0 }
+      }
+      companyMap[company].total++
+      if (incident.actionStatus === 'closed') {
+        companyMap[company].closed++
+      } else {
+        companyMap[company].open++
+      }
+    })
+    return Object.values(companyMap)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10)
+  }, [filteredIncidents])
+
+  // Positive vs Negative data for pie chart
+  const positiveNegativeData = useMemo(() => {
+    const negative = filteredIncidents.filter(i =>
+      ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr'].includes(i.type)
+    ).length
+
+    const positive = filteredIncidents.filter(i =>
+      ['leadership', 'positive'].includes(i.type)
+    ).length
+
+    return [
+      { name: 'Negative', value: negative, color: '#ef4444' },
+      { name: 'Positive', value: positive, color: '#22c55e' }
+    ]
   }, [filteredIncidents])
 
   // Top Hazards data - EXCLUDES positive observations (only counts non-positive)
@@ -874,6 +931,131 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Observations per Company + Positive vs Negative */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Observations per Company */}
+        <div ref={topCompaniesRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
+            Observations per Company
+            <InfoTooltip text="HOW THIS DATA IS COLLECTED: Every observation has a 'Contractor' or 'Company' field. We count how many observations each company has and rank them from most to least. The top 10 companies by observation count are shown. The bar colors show status: RED = still open, GREEN = closed. Click any company to see their observations broken down by month." />
+          </h3>
+          {companyData.length > 0 ? (
+            <div className="space-y-1">
+              {companyData.map((company, index) => {
+                const maxTotal = companyData[0]?.total || 1
+                const totalWidth = (company.total / maxTotal) * 100
+                const openPercent = company.total > 0 ? (company.open / company.total) * 100 : 0
+                const closedPercent = company.total > 0 ? (company.closed / company.total) * 100 : 0
+                const isActive = drillDown.chart === 'company' && drillDown.filter === company.name
+
+                return (
+                  <div
+                    key={company.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Drill down on ${company.name}: ${company.total} observations`}
+                    className={`relative cursor-pointer hover:bg-surface-50 focus:outline-none focus:ring-2 focus:ring-primary-500 ${isActive ? 'ring-2 ring-surface-800' : ''}`}
+                    onClick={() => handleDrillDown('company', company.name)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDrillDown('company', company.name)}
+                    style={{ opacity: drillDown.chart === 'company' && !isActive ? 0.5 : 1 }}
+                  >
+                    <div className="flex items-center justify-between p-1.5 relative z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-surface-400 w-4">{index + 1}</span>
+                        <span className="text-xs text-surface-700 truncate">{company.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {showOpenClosed && (
+                          <span className="text-xs text-surface-500">{company.open}o/{company.closed}c</span>
+                        )}
+                        <span className="text-xs font-bold text-surface-900">{company.total}</span>
+                      </div>
+                    </div>
+                    {showOpenClosed ? (
+                      <div className="absolute top-0 left-0 h-full flex overflow-hidden" style={{ width: `${totalWidth}%`, zIndex: 0 }}>
+                        {company.open > 0 && <div className="h-full bg-red-300" style={{ width: `${openPercent}%` }} title={`Open: ${company.open}`} />}
+                        {company.closed > 0 && <div className="h-full bg-green-300" style={{ width: `${closedPercent}%` }} title={`Closed: ${company.closed}`} />}
+                      </div>
+                    ) : (
+                      <div className="absolute top-0 left-0 h-full bg-purple-100" style={{ width: `${totalWidth}%`, zIndex: 0 }} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-surface-400 text-center py-4">No company data available</p>
+          )}
+        </div>
+
+        {/* Positive vs Negative Pie Chart */}
+        <div ref={positiveNegativeRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
+            Positive vs Negative Observations
+            <InfoTooltip text="HOW THIS IS CALCULATED: We categorize observations into two groups: NEGATIVE includes Unsafe Acts, Unsafe Conditions, Near Misses, and NCRs - these identify hazards or problems. POSITIVE includes Leadership and Positive Observations - these recognize good safety behaviors. Click on a segment to see the individual observations in that category." />
+          </h3>
+          {positiveNegativeData.some(d => d.value > 0) ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={positiveNegativeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                    onClick={(data) => handleDrillDown('positiveNegative', data.name)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {positiveNegativeData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        stroke={drillDown.chart === 'positiveNegative' && drillDown.filter === entry.name ? '#1f2937' : 'none'}
+                        strokeWidth={drillDown.chart === 'positiveNegative' && drillDown.filter === entry.name ? 3 : 0}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => {
+                      const total = positiveNegativeData.reduce((sum, d) => sum + d.value, 0)
+                      const percent = total > 0 ? Math.round((value / total) * 100) : 0
+                      return [`${value} (${percent}%)`, name]
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value, entry) => {
+                      const item = positiveNegativeData.find(d => d.name === value)
+                      const total = positiveNegativeData.reduce((sum, d) => sum + d.value, 0)
+                      const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
+                      return (
+                        <span className="text-xs text-surface-700">
+                          {value}: {item?.value} ({percent}%)
+                        </span>
+                      )
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center">
+              <p className="text-xs text-surface-400">No observation data available</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Observations by Day of Week + Hour of Day */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div ref={dayOfWeekRef}>
@@ -1121,9 +1303,9 @@ const Dashboard = () => {
         onClose={() => setViewingRecord(null)}
       />
 
-      {/* Drill-Down Modal for Hazards & Observers */}
+      {/* Drill-Down Modal for Hazards, Observers, Companies, and Positive/Negative */}
       <DrillDownModal
-        isOpen={drillDown.modalOpen && (drillDown.chart === 'hazards' || drillDown.chart === 'observers')}
+        isOpen={drillDown.modalOpen && ['hazards', 'observers', 'company', 'positiveNegative'].includes(drillDown.chart)}
         onClose={closeDrillDownModal}
         title={
           drillDown.level === 3 && drillDown.period
@@ -1136,11 +1318,19 @@ const Dashboard = () => {
         onBack={handleDrillDownBack}
         canGoBack={drillDown.level === 3}
         breadcrumb={[
-          drillDown.chart === 'hazards' ? 'Top Hazards' : 'Top Observers',
+          drillDown.chart === 'hazards' ? 'Top Hazards' :
+          drillDown.chart === 'observers' ? 'Top Observers' :
+          drillDown.chart === 'company' ? 'Companies' :
+          drillDown.chart === 'positiveNegative' ? 'Positive vs Negative' : '',
           drillDown.filter,
           ...(drillDown.level === 3 && drillDown.period ? [format(parseISO(drillDown.period + '-01'), 'MMM yyyy')] : [])
         ].filter(Boolean)}
-        source={drillDown.chart === 'hazards' ? 'Hazards Identification' : 'Observer Analytics'}
+        source={
+          drillDown.chart === 'hazards' ? 'Hazards Identification' :
+          drillDown.chart === 'observers' ? 'Observer Analytics' :
+          drillDown.chart === 'company' ? 'Company Analytics' :
+          drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' : 'Analytics'
+        }
       />
 
       {/* Heatmap Drill-Down Modal */}
