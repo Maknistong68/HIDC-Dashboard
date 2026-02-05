@@ -14,6 +14,14 @@ import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
 
 /**
  * ForecastChart - Line chart with historical data and forecast with confidence bands
+ *
+ * PREDICTION TRANSPARENCY PRINCIPLES:
+ * 1. Predictions are CLEARLY labeled with "[PREDICTED]" prefix
+ * 2. Confidence bands have increased opacity (0.25) for visibility
+ * 3. Data point count is displayed so users understand prediction basis
+ * 4. Dashed lines visually distinguish predictions from actuals
+ *
+ * Users should NEVER mistake predictions for facts.
  */
 const ForecastChart = ({ data, onPeriodChange }) => {
   const [forecastDays, setForecastDays] = useState(30)
@@ -84,6 +92,10 @@ const ForecastChart = ({ data, onPeriodChange }) => {
         )}
         {isForecast && (
           <>
+            {/* EXPLICIT PREDICTION LABEL - Users must know this is not actual data */}
+            <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
+              <span className="text-2xs font-bold text-amber-700">[PREDICTED]</span>
+            </div>
             <p className="text-sm">
               <span className="text-surface-500">Forecast:</span>{' '}
               <span className="font-semibold text-amber-600">{item.forecast}</span>
@@ -140,6 +152,15 @@ const ForecastChart = ({ data, onPeriodChange }) => {
         </div>
       </div>
 
+      {/* DATA POINT CONTEXT - Users should know what the prediction is based on */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+        <span className="font-semibold text-amber-700">[PREDICTED DATA]</span>
+        <span className="text-amber-600">
+          Based on {historical?.length || 0} historical data points.
+          Forecast values are estimates with {summary?.confidence || 'low'} confidence.
+        </span>
+      </div>
+
       {/* Chart */}
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -159,17 +180,19 @@ const ForecastChart = ({ data, onPeriodChange }) => {
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/* Reference line at transition point */}
+            {/* Reference line at transition point - EXPLICIT PREDICTION LABEL */}
             {historical.length > 0 && (
               <ReferenceLine
                 x={historical[historical.length - 1].dateLabel}
-                stroke="#94a3b8"
+                stroke="#d97706"
                 strokeDasharray="5 5"
+                strokeWidth={2}
                 label={{
-                  value: 'Forecast',
+                  value: '[PREDICTED] →',
                   position: 'top',
-                  fill: '#64748b',
-                  fontSize: 10
+                  fill: '#d97706',
+                  fontSize: 11,
+                  fontWeight: 'bold'
                 }}
               />
             )}
@@ -181,13 +204,13 @@ const ForecastChart = ({ data, onPeriodChange }) => {
               strokeDasharray="3 3"
             />
 
-            {/* Confidence band (forecast only) */}
+            {/* Confidence band (forecast only) - INCREASED OPACITY for visibility */}
             <Area
               type="monotone"
               dataKey="upper"
               stroke="none"
               fill="#f59e0b"
-              fillOpacity={0.1}
+              fillOpacity={0.25}
             />
             <Area
               type="monotone"
@@ -223,19 +246,19 @@ const ForecastChart = ({ data, onPeriodChange }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
+      {/* Legend - Clear distinction between actual and predicted */}
       <div className="flex items-center justify-center gap-6 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-0.5 bg-primary-500"></div>
-          <span className="text-surface-600">Historical</span>
+          <span className="text-surface-600">Actual Data</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-0.5 bg-amber-500" style={{ borderStyle: 'dashed' }}></div>
-          <span className="text-surface-600">Forecast</span>
+          <div className="w-4 h-0.5 bg-amber-500" style={{ borderTop: '2px dashed #f59e0b' }}></div>
+          <span className="text-amber-700 font-medium">[PREDICTED]</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-3 bg-amber-500 opacity-20 rounded-sm"></div>
-          <span className="text-surface-600">95% Confidence</span>
+          <div className="w-4 h-3 bg-amber-500 opacity-25 rounded-sm"></div>
+          <span className="text-surface-600">95% Confidence Band</span>
         </div>
       </div>
     </div>

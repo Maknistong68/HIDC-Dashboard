@@ -22,23 +22,28 @@ const PageLoadingFallback = () => (
   </div>
 )
 
-// Main tabs - always rendered but hidden via CSS display toggle
+// Main tabs - always rendered with smooth opacity transitions
 // This preserves useMemo calculations across ALL route changes (including /files)
 const MainTabs = () => {
   const { pathname } = useLocation()
 
+  const getPageClass = (path) => {
+    const isActive = pathname === path
+    return `page-container ${isActive ? 'page-visible page-tab-switch' : 'page-hidden'}`
+  }
+
   return (
-    <>
-      <div style={{ display: pathname === '/' ? 'block' : 'none' }}>
+    <div className="relative">
+      <div className={getPageClass('/')}>
         <Dashboard />
       </div>
-      <div style={{ display: pathname === '/data-control' ? 'block' : 'none' }}>
+      <div className={getPageClass('/data-control')}>
         <DataQuality />
       </div>
-      <div style={{ display: pathname === '/outlook' ? 'block' : 'none' }}>
+      <div className={getPageClass('/outlook')}>
         <SafetyOutlook />
       </div>
-    </>
+    </div>
   )
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { Target, ChevronRight } from 'lucide-react'
+import Tooltip from '../ui/Tooltip'
 
 // Static mapping for trend configs - defined outside component to avoid recreation
 const TREND_CONFIGS = {
@@ -92,7 +93,7 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
   const { percent, counts, isNew } = formatPercentWithCounts()
   const confidenceIndicator = getConfidenceIndicator()
 
-  return (
+  const buttonContent = (
     <button
       onClick={() => onSelect(hazard)}
       className={`
@@ -100,31 +101,29 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
         text-left group
         transition-all duration-200 ease-out
         ${isSelected
-          ? 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm scale-[1.01]'
-          : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
+          ? 'bg-primary-50 border-2 border-primary-400 shadow-sm'
+          : 'bg-white hover:bg-surface-50 border border-surface-200 hover:border-surface-300'
         }
       `}
-      title={hazard.confidence?.description || ''}
     >
       {/* Trend indicator badge */}
-      <span className={`flex-shrink-0 w-6 h-6 rounded ${trendConfig.bg} ${trendConfig.text} flex items-center justify-center text-xs font-bold transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`}>
+      <span className={`flex-shrink-0 w-6 h-6 rounded ${trendConfig.bg} ${trendConfig.text} flex items-center justify-center text-xs font-bold`}>
         {trendConfig.icon}
       </span>
 
       {/* Name and count */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
-          <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-800 font-semibold' : 'text-surface-800 font-medium'}`}>
+          <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-700 font-semibold' : 'text-surface-800 font-medium'}`}>
             {hazard.name}
           </p>
           {/* Confidence warning indicator */}
           {confidenceIndicator && (
-            <span
-              className={`text-xs ${confidenceIndicator.color}`}
-              title={confidenceIndicator.tooltip}
-            >
-              {confidenceIndicator.icon}
-            </span>
+            <Tooltip content={confidenceIndicator.tooltip} position="top" delay={200}>
+              <span className={`text-xs ${confidenceIndicator.color}`}>
+                {confidenceIndicator.icon}
+              </span>
+            </Tooltip>
           )}
         </div>
         <p className="text-xs text-surface-500">
@@ -146,7 +145,7 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
           </span>
           <ChevronRight
             size={16}
-            className={`transition-all duration-200 ${isSelected ? 'text-primary-600 translate-x-0.5' : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'}`}
+            className={`transition-colors duration-200 ${isSelected ? 'text-primary-500' : 'text-surface-400 group-hover:text-surface-500'}`}
           />
         </div>
         {/* Absolute counts for context */}
@@ -158,6 +157,17 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
       </div>
     </button>
   )
+
+  // Wrap with Tooltip if confidence description exists
+  if (hazard.confidence?.description) {
+    return (
+      <Tooltip content={hazard.confidence.description} position="right" delay={300}>
+        {buttonContent}
+      </Tooltip>
+    )
+  }
+
+  return buttonContent
 })
 
 HazardItem.displayName = 'HazardItem'

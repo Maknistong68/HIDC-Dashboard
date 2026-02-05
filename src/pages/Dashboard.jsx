@@ -54,7 +54,7 @@ const normalizeHazard = memoize((hazard) => {
 
 
 const Dashboard = () => {
-  const { projects, incidents, isLoading, showOpenClosed, siteClassifications } = useData()
+  const { projects, incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments } = useData()
   const { cutoffDates, getPeriodRange } = useDate()
 
   // Shared filter state from context
@@ -204,31 +204,39 @@ const Dashboard = () => {
     return sites.sort().map(site => ({ value: site, label: site }))
   }, [incidents, contractor])
 
-  // Filter configuration - Contractor (parent), Site (child), and Sub-Region
+  // Filter configuration - Contractor (parent), Site (child), and Sub-Region (conditional)
   // Memoized to prevent unnecessary re-renders in FilterBar
-  const filterConfig = useMemo(() => [
-    {
-      key: 'contractor',
-      type: 'select',
-      label: 'Contractor',
-      placeholder: 'All Contractors',
-      options: uniqueContractors
-    },
-    {
-      key: 'site',
-      type: 'select',
-      label: 'Site',
-      placeholder: 'All Sites',
-      options: siteOptions
-    },
-    {
-      key: 'subRegion',
-      type: 'select',
-      label: 'Sub-Region',
-      placeholder: 'All Sub-Regions',
-      options: SUB_REGION_OPTIONS
+  const filterConfig = useMemo(() => {
+    const config = [
+      {
+        key: 'contractor',
+        type: 'select',
+        label: 'Contractor',
+        placeholder: 'All Contractors',
+        options: uniqueContractors
+      },
+      {
+        key: 'site',
+        type: 'select',
+        label: 'Site',
+        placeholder: 'All Sites',
+        options: siteOptions
+      }
+    ]
+
+    // Only show Sub-Region filter if there are any site assignments
+    if (hasSubregionAssignments) {
+      config.push({
+        key: 'subRegion',
+        type: 'select',
+        label: 'Sub-Region',
+        placeholder: 'All Sub-Regions',
+        options: SUB_REGION_OPTIONS
+      })
     }
-  ], [uniqueContractors, siteOptions])
+
+    return config
+  }, [uniqueContractors, siteOptions, hasSubregionAssignments])
 
   // Filtered incidents based on contractor, site, subRegion, and period (for KPIs, charts, Top Hazards, Top Observers)
   // Note: Hazard categorization is done at import time, so no recategorization needed here

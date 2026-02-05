@@ -103,7 +103,7 @@ FactorSummary.displayName = 'FactorSummary'
  * Optimized with startTransition for smooth selections
  */
 const SafetyOutlook = () => {
-  const { incidents, siteClassifications } = useData()
+  const { incidents, siteClassifications, hasSubregionAssignments } = useData()
   const { getPeriodRange } = useDate()
 
   // Shared filter state from context
@@ -130,30 +130,38 @@ const SafetyOutlook = () => {
     return sites.sort().map(site => ({ value: site, label: site }))
   }, [incidents, contractor])
 
-  // Filter configuration - Contractor (parent), Site (child), and Sub-Region
-  const filterConfig = useMemo(() => [
-    {
-      key: 'contractor',
-      type: 'select',
-      label: 'Contractor',
-      placeholder: 'All Contractors',
-      options: uniqueContractors
-    },
-    {
-      key: 'site',
-      type: 'select',
-      label: 'Site',
-      placeholder: 'All Sites',
-      options: siteOptions
-    },
-    {
-      key: 'subRegion',
-      type: 'select',
-      label: 'Sub-Region',
-      placeholder: 'All Sub-Regions',
-      options: SUB_REGION_OPTIONS
+  // Filter configuration - Contractor (parent), Site (child), and Sub-Region (conditional)
+  const filterConfig = useMemo(() => {
+    const config = [
+      {
+        key: 'contractor',
+        type: 'select',
+        label: 'Contractor',
+        placeholder: 'All Contractors',
+        options: uniqueContractors
+      },
+      {
+        key: 'site',
+        type: 'select',
+        label: 'Site',
+        placeholder: 'All Sites',
+        options: siteOptions
+      }
+    ]
+
+    // Only show Sub-Region filter if there are any site assignments
+    if (hasSubregionAssignments) {
+      config.push({
+        key: 'subRegion',
+        type: 'select',
+        label: 'Sub-Region',
+        placeholder: 'All Sub-Regions',
+        options: SUB_REGION_OPTIONS
+      })
     }
-  ], [uniqueContractors, siteOptions])
+
+    return config
+  }, [uniqueContractors, siteOptions, hasSubregionAssignments])
 
   // Filtered incidents based on contractor, site, subRegion, and period
   const filteredIncidents = useMemo(() => {

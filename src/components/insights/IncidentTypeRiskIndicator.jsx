@@ -51,7 +51,7 @@ const IncidentTypeRiskIndicator = ({ data }) => {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-surface-700">
-                  {risk.label.split(' ')[0]}
+                  {(risk?.label || 'Unknown').split(' ')[0]}
                 </span>
                 {risk.alert && (
                   <AlertCircle size={12} className="text-safety-critical" />
@@ -104,7 +104,7 @@ const IncidentTypeRiskIndicator = ({ data }) => {
                 className="text-sm font-semibold"
                 style={{ color: highestRisk.color }}
               >
-                {highestRisk.label.split(' ')[0]}
+                {(highestRisk?.label || 'Unknown').split(' ')[0]}
               </span>
               <span className="text-xs px-1.5 py-0.5 rounded bg-surface-200 text-surface-600">
                 Score: {highestRisk.riskScore}

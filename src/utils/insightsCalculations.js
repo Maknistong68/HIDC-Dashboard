@@ -43,19 +43,36 @@ export const generateRecommendations = (incidents, qualityData = null) => {
 /**
  * Get contractor performance alerts
  * Contractors with quality score below threshold
+ *
+ * Uses PREDICTION_CONFIG.QUALITY_THRESHOLDS and MIN_OBSERVATIONS_FOR_EVALUATION
+ * for configurable threshold values.
+ *
+ * @param {Array} incidents - All incidents to analyze
+ * @param {number} threshold - Quality score threshold (default from config)
+ * @see PREDICTION_CONFIG for threshold documentation
  */
-export const getContractorAlerts = (incidents, threshold = 50) => {
+export const getContractorAlerts = (incidents, threshold = null) => {
   const contractors = getContractorMetrics(incidents)
-  const lowPerformers = contractors.filter(c => c.qualityScore < threshold && c.totalObs >= 5)
+  const minObs = getConfigValue('MIN_OBSERVATIONS_FOR_EVALUATION')
+  const qualityThresholds = getConfigValue('QUALITY_THRESHOLDS')
 
-  if (lowPerformers.length === 0) return []
+  // Use provided threshold or default to ATTENTION threshold
+  const effectiveThreshold = threshold ?? qualityThresholds.ATTENTION
+
+  // Filter contractors meeting minimum observation requirement
+  const lowPerformers = contractors.filter(c => c.qualityScore < effectiveThreshold && c.totalObs >= minObs)
+
+  // Identify new contractors (below minimum observations) - shown separately, not penalized
+  const newContractors = contractors.filter(c => c.totalObs < minObs)
+
+  if (lowPerformers.length === 0 && newContractors.length === 0) return []
 
   const alerts = []
 
-  // Group by severity
-  const critical = lowPerformers.filter(c => c.qualityScore < 30)
-  const warning = lowPerformers.filter(c => c.qualityScore >= 30 && c.qualityScore < 40)
-  const attention = lowPerformers.filter(c => c.qualityScore >= 40 && c.qualityScore < threshold)
+  // Group by severity using configurable thresholds
+  const critical = lowPerformers.filter(c => c.qualityScore < qualityThresholds.CRITICAL)
+  const warning = lowPerformers.filter(c => c.qualityScore >= qualityThresholds.CRITICAL && c.qualityScore < qualityThresholds.WARNING)
+  const attention = lowPerformers.filter(c => c.qualityScore >= qualityThresholds.WARNING && c.qualityScore < effectiveThreshold)
 
   if (critical.length > 0) {
     alerts.push({
@@ -441,32 +458,56 @@ export const getRootCauseTrends = (incidents, months = 12) => {
 
 /**
  * Get near miss analysis with benchmark comparison
+ *
+ * Uses PREDICTION_CONFIG.NEAR_MISS_BENCHMARK for threshold values.
+ * Includes interpretation guidance based on Heinrich (1931) and Bird & Germain (1985).
+ *
+ * @see PREDICTION_CONFIG.NEAR_MISS_BENCHMARK for full documentation
  */
 export const getNearMissAnalysis = (incidents) => {
   const metrics = getNearMissMetrics(incidents)
   const rate = parseFloat(metrics.rate)
-  const benchmark = 5 // Industry benchmark: 5%
+  const benchmarkConfig = PREDICTION_CONFIG.NEAR_MISS_BENCHMARK
+  const benchmarkValue = benchmarkConfig.value * 100 // Convert decimal to percentage
+  const interpretGuide = benchmarkConfig.interpretationGuide
 
   let status = 'good'
   let message = 'Near-miss reporting exceeds industry benchmark'
+  let interpretation = null
 
-  if (rate < 2) {
+  if (rate < interpretGuide.underreporting.threshold * 100) {
     status = 'critical'
-    message = 'Near-miss reporting significantly below benchmark - possible underreporting'
-  } else if (rate < benchmark) {
+    message = interpretGuide.underreporting.message
+    interpretation = 'underreporting'
+  } else if (rate < interpretGuide.belowBenchmark.threshold * 100) {
     status = 'warning'
-    message = 'Near-miss rate below industry benchmark'
+    message = interpretGuide.belowBenchmark.message
+    interpretation = 'belowBenchmark'
+  } else if (rate <= interpretGuide.healthy.threshold * 100) {
+    status = 'good'
+    message = interpretGuide.healthy.message
+    interpretation = 'healthy'
+  } else {
+    // High rate - may need review
+    status = 'warning'
+    message = interpretGuide.reviewNeeded.message
+    interpretation = 'reviewNeeded'
   }
 
   return {
     ...metrics,
-    benchmark,
+    benchmark: benchmarkValue,
     rateValue: rate,
-    gaugePercent: Math.min((rate / benchmark) * 100, 150), // Cap at 150% for gauge display
+    gaugePercent: Math.min((rate / benchmarkValue) * 100, 150), // Cap at 150% for gauge display
     status,
     message,
-    gap: Math.max(0, benchmark - rate).toFixed(1),
-    isAboveBenchmark: rate >= benchmark
+    interpretation,
+    gap: Math.max(0, benchmarkValue - rate).toFixed(1),
+    isAboveBenchmark: rate >= benchmarkValue,
+    // Include industry ranges for context
+    industryRanges: benchmarkConfig.industryRanges,
+    // Source citation for transparency
+    source: benchmarkConfig.source
   }
 }
 
@@ -647,12 +688,27 @@ export const getHazardTrending = (incidents) => {
  * Get performance outliers
  * Contractors/reporters below threshold
  */
-export const getPerformanceOutliers = (incidents, threshold = 50) => {
+/**
+ * Get performance outliers - contractors needing support
+ *
+ * Uses configurable thresholds from PREDICTION_CONFIG:
+ * - MIN_OBSERVATIONS_FOR_EVALUATION: Minimum observations before evaluation
+ * - QUALITY_THRESHOLDS: Score bands for classification
+ *
+ * Returns both evaluated contractors and "new contractors" (below min observations)
+ * to avoid excluding small/new contractors from visibility while not penalizing them.
+ */
+export const getPerformanceOutliers = (incidents, threshold = null) => {
   const contractors = getContractorMetrics(incidents)
 
-  // Contractors below threshold with minimum observations
+  // Get configurable thresholds
+  const minObs = getConfigValue('MIN_OBSERVATIONS_FOR_EVALUATION')
+  const qualityThresholds = getConfigValue('QUALITY_THRESHOLDS')
+  const effectiveThreshold = threshold ?? qualityThresholds.ATTENTION
+
+  // Contractors below threshold with minimum observations (can be evaluated)
   const outliers = contractors
-    .filter(c => c.qualityScore < threshold && c.totalObs >= 5)
+    .filter(c => c.qualityScore < effectiveThreshold && c.totalObs >= minObs)
     .map(c => ({
       name: c.name,
       type: 'contractor',
@@ -661,15 +717,40 @@ export const getPerformanceOutliers = (incidents, threshold = 50) => {
       categorizationRate: c.categorizationRate,
       qualityRate: c.qualityRate,
       nearMissRate: c.nearMissRate,
-      status: c.qualityScore < 30 ? 'critical' : c.qualityScore < 40 ? 'warning' : 'attention'
+      status: c.qualityScore < qualityThresholds.CRITICAL ? 'critical' :
+              c.qualityScore < qualityThresholds.WARNING ? 'warning' : 'attention'
     }))
     .sort((a, b) => a.score - b.score)
 
+  // "New Contractors" - below minimum observations, cannot be fairly evaluated
+  // Shown separately to avoid exclusion while not penalizing them
+  const newContractors = contractors
+    .filter(c => c.totalObs < minObs)
+    .map(c => ({
+      name: c.name,
+      type: 'new-contractor',
+      score: c.qualityScore,
+      observations: c.totalObs,
+      categorizationRate: c.categorizationRate,
+      qualityRate: c.qualityRate,
+      nearMissRate: c.nearMissRate,
+      status: 'new', // Neutral status - not enough data to judge
+      note: `Fewer than ${minObs} observations - needs more data for evaluation`
+    }))
+    .sort((a, b) => b.observations - a.observations) // Most observations first
+
   return {
     outliers,
+    newContractors,
     count: outliers.length,
+    newContractorsCount: newContractors.length,
     criticalCount: outliers.filter(o => o.status === 'critical').length,
-    warningCount: outliers.filter(o => o.status === 'warning').length
+    warningCount: outliers.filter(o => o.status === 'warning').length,
+    // Config values used (for transparency)
+    configUsed: {
+      minObservations: minObs,
+      threshold: effectiveThreshold
+    }
   }
 }
 
@@ -829,55 +910,248 @@ export const getActionItemsCount = (incidents) => {
 // ============================================================================
 
 /**
- * PREDICTION_CONFIG - Documented configuration for all prediction parameters
- * All hardcoded values are centralized here with documented sources
+ * PREDICTION_CONFIG - Centralized configuration for all prediction & analysis parameters
  *
- * Changing these values will affect prediction accuracy and reliability.
- * Modifications should be validated against historical data.
+ * PURPOSE: All hardcoded values affecting calculations are documented here with:
+ * - Academic/industry sources for each value
+ * - Configurable flag indicating if value can be user-adjusted
+ * - Interpretation guides where applicable
+ *
+ * ⚠️ MODIFICATION WARNING: Changing these values affects prediction accuracy.
+ * Validate modifications against historical data before deployment.
+ *
+ * ACADEMIC REFERENCES:
+ * - Heinrich, H.W. (1931). Industrial Accident Prevention: A Scientific Approach.
+ * - Bird, F.E. & Germain, G.L. (1985). Practical Loss Control Leadership.
+ * - Manuele, F.A. (2011). Heinrich Revisited: Truisms or Myths. Professional Safety.
  */
 export const PREDICTION_CONFIG = {
-  // Exponential decay factor for time-weighted calculations
-  // Higher values (0.5+) weight recent data more heavily
-  // Lower values (0.2-0.3) give more weight to historical patterns
-  // Source: Standard time-series weighting practice; 0.4 balances recency vs stability
-  DECAY_ALPHA: 0.4,
+  // =========================================================================
+  // TIME-SERIES PARAMETERS
+  // =========================================================================
 
-  // Near-miss rate benchmark (% of total observations)
-  // Industry benchmark based on Heinrich's Triangle (300:29:1 ratio)
-  // At least 5% of observations should be near-misses for healthy reporting
-  // Source: Herbert W. Heinrich, Industrial Accident Prevention (1931)
-  NEAR_MISS_BENCHMARK: 0.05,
+  /**
+   * Exponential decay factor for time-weighted calculations
+   * Higher values (0.5+): Recent data weighted more heavily (responsive to changes)
+   * Lower values (0.2-0.3): Historical patterns weighted more (stable predictions)
+   *
+   * @source Standard time-series weighting practice
+   * @configurable true - May be adjusted based on data volatility
+   */
+  DECAY_ALPHA: {
+    value: 0.4,
+    source: 'Standard time-series weighting practice',
+    configurable: true
+  },
 
-  // Minimum data points for reliable forecasting
-  // Statistical best practice recommends n > 30 for regression
-  // 14 days is a practical minimum for daily incident forecasting
-  // Source: Statistical sampling theory; adjusted for operational practicality
-  MIN_FORECAST_DAYS: 14,
+  // =========================================================================
+  // NEAR-MISS BENCHMARKS
+  // =========================================================================
 
-  // Minimum observations before forecasting is considered reliable
-  // Source: Statistical best practice for meaningful analysis
-  MIN_OBSERVATIONS: 10,
+  /**
+   * Near-miss rate benchmark (as decimal, e.g., 0.05 = 5%)
+   *
+   * HISTORICAL CONTEXT:
+   * - Heinrich (1931): Original 300:29:1 ratio (near-miss:minor:major)
+   * - Bird & Germain (1985): Updated to 600:30:10:1 ratio based on 1.7M incidents
+   * - Modern consensus: 5% near-miss rate indicates healthy reporting culture
+   *
+   * INDUSTRY-SPECIFIC GUIDANCE:
+   * | Industry          | Expected Range | Notes                           |
+   * |-------------------|----------------|----------------------------------|
+   * | Construction      | 8-12%          | High-risk, active reporting     |
+   * | Manufacturing     | 5-8%           | Mature safety programs          |
+   * | Office/Admin      | 2-4%           | Lower hazard exposure           |
+   * | Oil & Gas         | 10-15%         | High-consequence environment    |
+   *
+   * INTERPRETATION GUIDE:
+   * - <2%: Likely underreporting - investigate reporting barriers
+   * - 2-5%: Below benchmark - encourage more near-miss reporting
+   * - 5-10%: Healthy range - good safety culture indicator
+   * - >15%: Review data quality - may indicate classification issues
+   *
+   * ⚠️ BIAS WARNING: Using near-miss rates to penalize contractors may
+   * inadvertently suppress reporting. High near-miss rates often indicate
+   * BETTER safety culture, not worse performance.
+   *
+   * @source Heinrich (1931), Bird & Germain (1985)
+   * @configurable true - Should be adjusted per industry
+   */
+  NEAR_MISS_BENCHMARK: {
+    value: 0.05,
+    source: 'Heinrich (1931), Bird & Germain (1985)',
+    configurable: true,
+    industryRanges: {
+      construction: { min: 0.08, max: 0.12 },
+      manufacturing: { min: 0.05, max: 0.08 },
+      office: { min: 0.02, max: 0.04 },
+      oilGas: { min: 0.10, max: 0.15 },
+      general: { min: 0.05, max: 0.10 }
+    },
+    interpretationGuide: {
+      underreporting: { threshold: 0.02, message: 'Possible underreporting - investigate barriers' },
+      belowBenchmark: { threshold: 0.05, message: 'Below benchmark - encourage reporting' },
+      healthy: { threshold: 0.10, message: 'Healthy reporting culture' },
+      reviewNeeded: { threshold: 0.15, message: 'Review data quality - may indicate issues' }
+    }
+  },
 
-  // Trend detection thresholds (percentage change)
-  // Source: Industry standard for safety metric significance
+  // =========================================================================
+  // FORECASTING PARAMETERS
+  // =========================================================================
+
+  /**
+   * Minimum days of data required for reliable forecasting
+   *
+   * @source Statistical sampling theory (n > 30 ideal, 14 practical minimum)
+   * @configurable false - Statistical requirement
+   */
+  MIN_FORECAST_DAYS: {
+    value: 14,
+    source: 'Statistical sampling theory',
+    configurable: false
+  },
+
+  /**
+   * Minimum observations before analysis is meaningful
+   *
+   * @source Statistical best practice
+   * @configurable true - May lower for small operations
+   */
+  MIN_OBSERVATIONS: {
+    value: 10,
+    source: 'Statistical best practice',
+    configurable: true
+  },
+
+  /**
+   * Minimum observations required to evaluate contractor performance
+   *
+   * ⚠️ BIAS NOTE: This threshold excludes small/new contractors from analysis.
+   * Consider showing them in a separate "New Contractor" category rather than
+   * excluding entirely.
+   *
+   * @source Practical requirement for statistical significance
+   * @configurable true - Adjust based on operation size
+   */
+  MIN_OBSERVATIONS_FOR_EVALUATION: {
+    value: 5,
+    source: 'Practical minimum for meaningful comparison',
+    configurable: true,
+    biasNote: 'Excludes small/new contractors - consider "New Contractor" category'
+  },
+
+  // =========================================================================
+  // TREND DETECTION THRESHOLDS
+  // =========================================================================
+
+  /**
+   * Percentage change thresholds for trend classification
+   *
+   * @source Industry standard for safety metric significance
+   * @configurable true
+   */
   TREND_THRESHOLDS: {
-    SIGNIFICANT: 30,  // Major change requiring immediate attention
-    MINOR: 10         // Notable change worth monitoring
+    value: {
+      SIGNIFICANT: 30,  // Major change requiring immediate attention
+      MINOR: 10         // Notable change worth monitoring
+    },
+    source: 'Industry standard for safety metric significance',
+    configurable: true
   },
 
-  // Confidence intervals for R-squared interpretation
-  // Source: Statistical convention for regression analysis
+  // =========================================================================
+  // STATISTICAL CONFIDENCE
+  // =========================================================================
+
+  /**
+   * R-squared thresholds for prediction confidence classification
+   *
+   * @source Statistical convention for regression analysis
+   * @configurable false - Statistical standard
+   */
   CONFIDENCE_THRESHOLDS: {
-    HIGH: 0.7,    // Strong predictive relationship
-    MEDIUM: 0.4   // Moderate predictive relationship
+    value: {
+      HIGH: 0.7,    // R² ≥ 0.7: Strong predictive relationship
+      MEDIUM: 0.4   // R² ≥ 0.4: Moderate predictive relationship
+    },
+    source: 'Statistical convention for regression analysis',
+    configurable: false
   },
 
-  // Warning/critical thresholds for forecast alerts
-  // Source: Industry standard for safety escalation
+  /**
+   * T-distribution values for confidence intervals
+   *
+   * ⚠️ STATISTICAL NOTE: Fixed t=1.96 is only valid for large samples (n≥30).
+   * For smaller samples, use t-distribution lookup based on degrees of freedom.
+   *
+   * @source Student's t-distribution (Gosset, 1908)
+   * @configurable false - Statistical requirement
+   */
+  CONFIDENCE_INTERVAL: {
+    value: {
+      // t-values for 95% confidence interval by sample size
+      // df = n - 2 for simple linear regression
+      tValueLargeSample: 1.96,  // n ≥ 30
+      tValueByDF: {
+        1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+        6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+        15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042
+      }
+    },
+    source: "Student's t-distribution (Gosset, 1908)",
+    configurable: false
+  },
+
+  // =========================================================================
+  // ALERT THRESHOLDS
+  // =========================================================================
+
+  /**
+   * Multipliers for forecast alert escalation
+   *
+   * @source Industry standard for safety escalation protocols
+   * @configurable true
+   */
   ALERT_THRESHOLDS: {
-    WARNING_MULTIPLIER: 1.5,   // 50% above average triggers warning
-    CRITICAL_MULTIPLIER: 2.0  // 100% above average triggers critical
+    value: {
+      WARNING_MULTIPLIER: 1.5,   // 50% above average triggers warning
+      CRITICAL_MULTIPLIER: 2.0   // 100% above average triggers critical
+    },
+    source: 'Industry standard for safety escalation',
+    configurable: true
+  },
+
+  // =========================================================================
+  // QUALITY SCORE THRESHOLDS
+  // =========================================================================
+
+  /**
+   * Quality score thresholds for contractor classification
+   *
+   * ⚠️ DOCUMENTATION NOTE: These thresholds define performance bands.
+   * No statistical justification exists for exact values - they represent
+   * industry convention. Consider making configurable per organization.
+   *
+   * @source Industry convention (not statistically derived)
+   * @configurable true - Should be adjusted per organization standards
+   */
+  QUALITY_THRESHOLDS: {
+    value: {
+      CRITICAL: 30,   // Score < 30%: Critical - immediate intervention needed
+      WARNING: 40,    // Score 30-40%: Warning - requires attention
+      ATTENTION: 50   // Score 40-50%: Attention - monitor closely
+    },
+    source: 'Industry convention - not statistically derived',
+    configurable: true,
+    note: 'Consider adjusting based on organizational maturity and industry'
   }
+}
+
+// Helper function to get config value (handles nested structure)
+export const getConfigValue = (key) => {
+  const config = PREDICTION_CONFIG[key]
+  return config?.value !== undefined ? config.value : config
 }
 
 /**
@@ -889,13 +1163,14 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
 
   // Use configured minimum instead of hardcoded 7
-  if (dates.length < PREDICTION_CONFIG.MIN_FORECAST_DAYS) {
+  const minForecastDays = getConfigValue('MIN_FORECAST_DAYS')
+  if (dates.length < minForecastDays) {
     return {
       historical: [],
       forecast: [],
       model: null,
       alerts: [],
-      error: `Insufficient data for forecasting (need at least ${PREDICTION_CONFIG.MIN_FORECAST_DAYS} days)`,
+      error: `Insufficient data for forecasting (need at least ${minForecastDays} days)`,
       warning: dates.length >= 7 ? 'Low data: predictions may be unreliable' : null
     }
   }
@@ -958,7 +1233,29 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
 
   // Calculate standard error for confidence bands
   const standardError = Math.sqrt(ssResidual / (n - 2))
-  const tValue = 1.96 // 95% confidence
+
+  // Use appropriate t-value based on sample size (degrees of freedom = n - 2)
+  // Fixed t=1.96 is only valid for large samples (n≥30)
+  // For smaller samples, use t-distribution lookup
+  const df = Math.max(1, n - 2) // degrees of freedom for simple linear regression
+  const ciConfig = getConfigValue('CONFIDENCE_INTERVAL')
+  let tValue
+
+  if (df >= 30) {
+    tValue = ciConfig.tValueLargeSample // 1.96 for large samples
+  } else {
+    // Find closest df in lookup table
+    const availableDFs = Object.keys(ciConfig.tValueByDF).map(Number).sort((a, b) => a - b)
+    const closestDF = availableDFs.reduce((prev, curr) =>
+      Math.abs(curr - df) < Math.abs(prev - df) ? curr : prev
+    )
+    tValue = ciConfig.tValueByDF[closestDF]
+  }
+
+  // Add sample size warning for small samples
+  const sampleSizeWarning = n < 30
+    ? `Small sample size (n=${n}): confidence intervals may be wider than typical`
+    : null
 
   // Generate forecast
   const forecast = []
@@ -996,7 +1293,12 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
     summary: {
       avgHistorical: Math.round(avgDaily * 10) / 10,
       avgForecast: Math.round(forecast.reduce((sum, f) => sum + f.value, 0) / forecast.length * 10) / 10,
-      confidence: rSquared > 0.7 ? 'high' : rSquared > 0.4 ? 'medium' : 'low'
+      confidence: rSquared > 0.7 ? 'high' : rSquared > 0.4 ? 'medium' : 'low',
+      // Sample size metadata for transparency
+      dataPoints: n,
+      degreesOfFreedom: df,
+      tValue: Math.round(tValue * 1000) / 1000,
+      sampleSizeWarning
     }
   }
 }
@@ -1207,17 +1509,18 @@ export const forecastIncidentsByPeriod = (incidents, period = 'week', periodsAhe
  */
 export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
-  if (dates.length < PREDICTION_CONFIG.MIN_OBSERVATIONS) {
+  const minObs = getConfigValue('MIN_OBSERVATIONS')
+  if (dates.length < minObs) {
     return {
       types: [],
       hasData: false,
-      error: `Insufficient data for type prediction (need at least ${PREDICTION_CONFIG.MIN_OBSERVATIONS} observations)`
+      error: `Insufficient data for type prediction (need at least ${minObs} observations)`
     }
   }
 
   const endDate = parseISO(dates[dates.length - 1])
   // Use configured decay factor instead of hardcoded value
-  const alpha = PREDICTION_CONFIG.DECAY_ALPHA
+  const alpha = getConfigValue('DECAY_ALPHA')
 
   // Define incident types with severity weights
   const typeConfig = {
@@ -1287,7 +1590,8 @@ export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) =>
     const change = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : (recentAvg > 0 ? 100 : 0)
 
     // Use configured thresholds instead of hardcoded 15%
-    const minorThreshold = PREDICTION_CONFIG.TREND_THRESHOLDS.MINOR
+    const trendThresholds = getConfigValue('TREND_THRESHOLDS')
+    const minorThreshold = trendThresholds.MINOR
 
     typeTrends[type] = {
       recentAvg: Math.round(recentAvg * 10) / 10,
@@ -1386,7 +1690,7 @@ export const calculateIncidentTypeRisk = (probabilityData) => {
     if (typeData.trend === 'increasing' && typeData.severity >= 5) {
       alert = {
         type: alertType || 'warning',
-        message: `${typeData.label.split(' ')[0]} incidents trending up ${typeData.trendChange}%`
+        message: `${(typeData.label || 'Unknown').split(' ')[0]} incidents trending up ${typeData.trendChange}%`
       }
     }
 

@@ -514,24 +514,34 @@ export const DataProvider = ({ children }) => {
     }
   }, [])
 
-  // Get enriched sites with sub-regions and record counts
-  const getEnrichedSites = useCallback(() => {
+  // Base site data - only recalculates when incidents change (expensive part)
+  const baseSiteData = useMemo(() => {
     const siteMap = new Map()
-
     for (const incident of incidents) {
       const site = incident.site || 'Unknown'
       if (!siteMap.has(site)) {
-        siteMap.set(site, {
-          name: site,
-          recordCount: 0,
-          subRegion: siteClassifications[site] || ''
-        })
+        siteMap.set(site, { name: site, recordCount: 0 })
       }
       siteMap.get(site).recordCount++
     }
-
     return Array.from(siteMap.values())
-  }, [incidents, siteClassifications])
+  }, [incidents])
+
+  // Enriched sites - cheap lookup when siteClassifications changes
+  const enrichedSites = useMemo(() => {
+    return baseSiteData.map(site => ({
+      ...site,
+      subRegion: siteClassifications[site.name] || ''
+    }))
+  }, [baseSiteData, siteClassifications])
+
+  // Keep function for backward compatibility
+  const getEnrichedSites = useCallback(() => enrichedSites, [enrichedSites])
+
+  // Flag to indicate if any sites have subregion assignments
+  const hasSubregionAssignments = useMemo(() => {
+    return Object.keys(siteClassifications).length > 0
+  }, [siteClassifications])
 
   // ============================================
   // IMPORT TRACKING
@@ -569,6 +579,7 @@ export const DataProvider = ({ children }) => {
     storageStats,
     categorizationProgress,
     siteClassifications,
+    hasSubregionAssignments,
 
     // Project operations
     addProject,

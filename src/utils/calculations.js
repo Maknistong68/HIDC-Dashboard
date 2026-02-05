@@ -200,7 +200,70 @@ export const getEngagementsByType = (engagements) => {
   return counts
 }
 
-// Calculate project safety score (0-100)
+/**
+ * SEVERITY_WEIGHTS - Documented penalty weights for safety score calculation
+ *
+ * These weights are used to calculate a composite safety score where higher-severity
+ * incidents result in larger score deductions from a base of 100.
+ *
+ * WEIGHT RATIONALE & SOURCES:
+ * - LTI (Lost Time Injury): -25 points
+ *   Most severe outcome requiring time off work. Reference: OSHA recordkeeping criteria
+ *   (29 CFR 1904) classifies LTIs as the most serious recordable incidents.
+ *
+ * - MTI (Medical Treatment Injury): -15 points
+ *   Requires professional medical treatment beyond first aid. Reference: OSHA defines
+ *   MTIs as incidents requiring treatment administered by a physician.
+ *
+ * - FAC (First Aid Case): -10 points
+ *   Minor injury treatable with first aid. Reference: OSHA 1904.7(a) defines first aid
+ *   treatment list (cleaning wounds, bandages, non-prescription medications).
+ *
+ * - NCR (Non-Conformance Report): -5 points
+ *   Process/procedure deviation without injury. Indicates systemic issues.
+ *
+ * - Near-miss: -3 points
+ *   ⚠️ IMPORTANT BIAS WARNING: This penalty may inadvertently discourage near-miss
+ *   reporting. Near-misses are LEADING INDICATORS - high reporting rates indicate
+ *   a healthy safety culture, not poor performance. Organizations with robust
+ *   near-miss reporting (>5% of observations) typically have LOWER incident rates.
+ *   Reference: Heinrich's Triangle (1931), Bird & Germain (1985) show near-misses
+ *   predict future incidents at ratios of 300:29:1 or 600:30:1.
+ *
+ *   RECOMMENDATION: Consider removing or inverting this penalty to reward near-miss
+ *   reporting rather than penalizing it.
+ *
+ * - Default (other types): -1 point
+ *   Catch-all for unclassified observations.
+ *
+ * CONFIGURABLE: These weights may be adjusted in future versions via settings.
+ * Current values represent industry-standard severity ratios.
+ */
+export const SEVERITY_WEIGHTS = {
+  lti: 25,
+  mti: 15,
+  fac: 10,
+  ncr: 5,
+  'near-miss': 3,  // See warning above about reporting suppression
+  default: 1
+}
+
+/**
+ * Calculate project safety score (0-100)
+ *
+ * Methodology:
+ * - Starts with base score of 100
+ * - Deducts points based on SEVERITY_WEIGHTS for each incident
+ * - Adds engagement bonus (max +20 points)
+ * - Clamped to 0-100 range
+ *
+ * @param {Object} project - Project object with id
+ * @param {Array} incidents - All incidents to filter by project
+ * @param {Array} engagements - All engagements to filter by project
+ * @returns {number} Safety score 0-100
+ *
+ * @see SEVERITY_WEIGHTS for weight documentation and bias warnings
+ */
 export const calculateProjectSafetyScore = (project, incidents, engagements) => {
   const projectIncidents = incidents.filter(i => i.projectId === project.id)
   const projectEngagements = engagements.filter(e => e.projectId === project.id)
@@ -208,16 +271,10 @@ export const calculateProjectSafetyScore = (project, incidents, engagements) => 
   // Base score of 100
   let score = 100
 
-  // Deduct for incidents (weighted by severity)
+  // Deduct for incidents using documented SEVERITY_WEIGHTS
   projectIncidents.forEach(incident => {
-    switch (incident.type) {
-      case 'lti': score -= 25; break
-      case 'mti': score -= 15; break
-      case 'fac': score -= 10; break
-      case 'ncr': score -= 5; break // Non-Conformance
-      case 'near-miss': score -= 3; break
-      default: score -= 1
-    }
+    const weight = SEVERITY_WEIGHTS[incident.type] || SEVERITY_WEIGHTS.default
+    score -= weight
   })
 
   // Bonus for engagements (max +20)

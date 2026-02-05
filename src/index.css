@@ -22,6 +22,16 @@ body {
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Native app feel */
+  overscroll-behavior: none; /* Prevent pull-to-refresh and rubber-banding */
+  -webkit-user-select: none;
+  user-select: none; /* Prevent accidental text selection (re-enable on text inputs) */
+}
+
+/* Re-enable text selection where needed */
+input, textarea, [contenteditable="true"], .selectable {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* CSS Variables for Safety Colors (used by charts) */
@@ -925,4 +935,109 @@ a,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ========================================
+   NATIVE APP FEEL - PAGE TRANSITIONS
+   ======================================== */
+
+/* GPU-accelerated page container */
+.page-container {
+  will-change: opacity, transform;
+  transform: translateZ(0); /* Force GPU layer */
+  backface-visibility: hidden;
+}
+
+/* Page transition states */
+.page-hidden {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+}
+
+.page-visible {
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+
+/* Faster transition for tab switches */
+.page-tab-switch {
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+
+/* ========================================
+   NATIVE APP FEEL - INTERACTIVE ELEMENTS
+   ======================================== */
+
+/* Smooth button press effect */
+button:not(:disabled):active,
+[role="button"]:not(:disabled):active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease-out;
+}
+
+/* Card press effect */
+.card-pressable:active {
+  transform: scale(0.995);
+  transition: transform 0.1s ease-out;
+}
+
+/* Prevent context menu on long press (app-like) */
+.no-context-menu {
+  -webkit-touch-callout: none;
+}
+
+/* Smooth focus transitions */
+*:focus-visible {
+  transition: outline-offset 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+/* ========================================
+   NATIVE APP FEEL - SCROLLING
+   ======================================== */
+
+/* Momentum scrolling for scroll containers */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar but keep functionality (app-like) */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   NATIVE APP FEEL - PERFORMANCE HINTS
+   ======================================== */
+
+/* Hint browser to optimize these elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize elements that will animate */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* Release will-change after animation (add via JS) */
+.animation-done {
+  will-change: auto;
 }

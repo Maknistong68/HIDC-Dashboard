@@ -1,12 +1,22 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, HelpCircle, Info } from 'lucide-react'
 import RiskExplanationModal from './RiskExplanationModal'
 
 /**
  * Risk level thresholds with hysteresis
- * To prevent volatile flipping between levels, we require:
- * - To go UP a level: must exceed threshold by hysteresis amount
- * - To go DOWN a level: must fall below threshold by hysteresis amount
+ *
+ * HYSTERESIS EXPLANATION:
+ * To prevent volatile flipping between levels when values are near boundaries,
+ * we apply a ±5% buffer zone:
+ * - To go UP a level: must exceed threshold by 5%
+ * - To go DOWN a level: must fall below threshold by 5%
+ *
+ * Example: If current level is "Medium" (boundary at +15%), value must reach
+ * +20% to move to "High", not just +15.1%. This prevents rapid UI changes
+ * that could confuse users when values fluctuate near boundaries.
+ *
+ * ⚠️ TRANSPARENCY NOTE: Users should be informed that displayed level may
+ * differ from raw percentage due to this smoothing behavior.
  */
 const RISK_THRESHOLDS = {
   // changePercent boundaries for each level
@@ -17,6 +27,51 @@ const RISK_THRESHOLDS = {
   // Level 4 (Critical): > +40%
   boundaries: [-30, -10, 15, 40],
   hysteresis: 5 // +/- 5% buffer to prevent flipping
+}
+
+/**
+ * CONTEXT TYPE CONFIGURATION
+ *
+ * Different metrics have different interpretations of "increase":
+ * - 'risk': Increase = Bad (more incidents, higher risk)
+ * - 'positive': Increase = Good (more positive observations, better culture)
+ * - 'reporting': Increase = Neutral to Good (more near-misses may indicate better reporting)
+ *
+ * This prevents the "Increase=Red=Bad" assumption bias in trend coloring.
+ */
+const CONTEXT_TYPES = {
+  risk: {
+    increaseLabel: 'Increasing',
+    increaseColor: 'text-red-500',
+    increaseIsGood: false,
+    decreaseLabel: 'Decreasing',
+    decreaseColor: 'text-green-500',
+    decreaseIsGood: true
+  },
+  positive: {
+    increaseLabel: 'Improving',
+    increaseColor: 'text-green-500',
+    increaseIsGood: true,
+    decreaseLabel: 'Declining',
+    decreaseColor: 'text-amber-500',
+    decreaseIsGood: false
+  },
+  reporting: {
+    increaseLabel: 'More Reports',
+    increaseColor: 'text-blue-500',
+    increaseIsGood: true, // More reporting is generally good
+    decreaseLabel: 'Fewer Reports',
+    decreaseColor: 'text-amber-500',
+    decreaseIsGood: false // Fewer reports may indicate underreporting
+  },
+  neutral: {
+    increaseLabel: 'Increasing',
+    increaseColor: 'text-surface-600',
+    increaseIsGood: null, // No judgment
+    decreaseLabel: 'Decreasing',
+    decreaseColor: 'text-surface-600',
+    decreaseIsGood: null
+  }
 }
 
 /**
@@ -73,8 +128,19 @@ const calculateRiskLevelWithHysteresis = (changePercent, previousLevel) => {
  *  - confidence: 'low' | 'medium' | 'high'
  *  - size: 'small' | 'medium' | 'large'
  *  - trend: 'increasing' | 'stable' | 'decreasing'
+ *  - contextType: 'risk' | 'positive' | 'reporting' | 'neutral'
+ *    Determines how trends are colored (increase=bad vs increase=good)
+ *    Default: 'risk' (increase is bad, shown in red)
  *  - factorData: (optional) Factor data from aggregateContributingFactors for explanation
  *  - weeklyHistory: (optional) Recent weekly counts for trend analysis
+ *  - showHysteresisInfo: (optional) Show tooltip explaining hysteresis smoothing
+ *
+ * CONTEXT TYPE EXPLANATION:
+ * Different metrics interpret "increase" differently:
+ * - 'risk': Increase = Bad (more incidents)
+ * - 'positive': Increase = Good (more positive observations)
+ * - 'reporting': Increase = Good (more near-miss reports)
+ * - 'neutral': No judgment on direction
  */
 const RiskGauge = ({
   predicted,
@@ -82,7 +148,9 @@ const RiskGauge = ({
   confidence = 'medium',
   size = 'medium',
   trend = 'stable',
+  contextType = 'risk',
   showComparison = true,
+  showHysteresisInfo = false,
   factorData,
   weeklyHistory
 }) => {
@@ -209,11 +277,36 @@ const RiskGauge = ({
 
   const s = sizeClasses[size] || sizeClasses.medium
 
-  const getTrendIcon = () => {
-    if (trend === 'increasing') return <TrendingUp size={size === 'small' ? 12 : 14} className="text-red-500" />
-    if (trend === 'decreasing') return <TrendingDown size={size === 'small' ? 12 : 14} className="text-green-500" />
-    return <Minus size={size === 'small' ? 12 : 14} className="text-surface-400" />
+  // Get context-aware trend icon and color
+  const getTrendDisplay = () => {
+    const context = CONTEXT_TYPES[contextType] || CONTEXT_TYPES.risk
+    const iconSize = size === 'small' ? 12 : 14
+
+    if (trend === 'increasing') {
+      return {
+        icon: <TrendingUp size={iconSize} className={context.increaseColor} />,
+        label: context.increaseLabel,
+        color: context.increaseColor,
+        isGood: context.increaseIsGood
+      }
+    }
+    if (trend === 'decreasing') {
+      return {
+        icon: <TrendingDown size={iconSize} className={context.decreaseColor} />,
+        label: context.decreaseLabel,
+        color: context.decreaseColor,
+        isGood: context.decreaseIsGood
+      }
+    }
+    return {
+      icon: <Minus size={iconSize} className="text-surface-400" />,
+      label: 'Stable',
+      color: 'text-surface-400',
+      isGood: null
+    }
   }
+
+  const trendDisplay = getTrendDisplay()
 
   const getColorClasses = (color) => {
     switch (color) {
@@ -243,7 +336,9 @@ const RiskGauge = ({
           <span className={`font-bold ${colors.text} ${s.text}`}>
             {riskAnalysis.label}
           </span>
-          {getTrendIcon()}
+          <div className="flex items-center gap-1" title={trendDisplay.label}>
+            {trendDisplay.icon}
+          </div>
         </div>
       </div>
 
@@ -313,6 +408,18 @@ const RiskGauge = ({
             <div className={`w-1.5 h-3 rounded-full ${confidence === 'high' ? 'bg-primary-500' : 'bg-surface-200'}`} />
           </div>
           <span className="text-surface-500 capitalize">{confidence}</span>
+        </div>
+      )}
+
+      {/* Hysteresis info tooltip - explains level smoothing behavior */}
+      {showHysteresisInfo && (
+        <div className={`flex items-start gap-1.5 ${s.label} bg-surface-50 rounded p-2 mt-1`}>
+          <Info size={12} className="text-surface-400 mt-0.5 flex-shrink-0" />
+          <span className="text-surface-500 text-2xs leading-relaxed">
+            <strong>Smoothing active:</strong> Risk level uses a ±5% buffer to prevent rapid
+            changes near boundaries. The displayed level may differ slightly from raw percentage
+            to provide stable, actionable guidance.
+          </span>
         </div>
       )}
 

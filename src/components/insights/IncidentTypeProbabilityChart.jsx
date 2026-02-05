@@ -23,15 +23,17 @@ const IncidentTypeProbabilityChart = ({ data }) => {
 
   const { types, mostLikely } = data
 
-  // Prepare chart data
-  const chartData = types.map(t => ({
-    name: t.label.split(' ')[0], // Just "LTI", "MTI", etc.
-    fullName: t.label,
-    value: t.probability,
-    color: t.color,
-    trend: t.trend,
-    trendChange: t.trendChange
-  }))
+  // Prepare chart data with defensive coding for missing labels
+  const chartData = types
+    .filter(t => t && t.label) // Filter out entries without labels
+    .map(t => ({
+      name: (t.label || 'Unknown').split(' ')[0], // Just "LTI", "MTI", etc.
+      fullName: t.label || 'Unknown',
+      value: t.probability || 0,
+      color: t.color || '#94a3b8',
+      trend: t.trend || 'stable',
+      trendChange: t.trendChange || 0
+    }))
 
   const getTrendIcon = (trend, size = 12) => {
     if (trend === 'increasing') return <TrendingUp size={size} className="text-safety-critical" />
@@ -136,7 +138,7 @@ const IncidentTypeProbabilityChart = ({ data }) => {
                 className="text-sm font-semibold"
                 style={{ color: mostLikely.color }}
               >
-                {mostLikely.label.split(' ')[0]}
+                {(mostLikely?.label || 'Unknown').split(' ')[0]}
               </span>
               <span className="text-xs text-surface-500">
                 ({mostLikely.probability}%)
@@ -149,17 +151,17 @@ const IncidentTypeProbabilityChart = ({ data }) => {
 
       {/* Legend */}
       <div className="mt-3 space-y-1">
-        {types.slice(0, 4).map(t => (
+        {types.slice(0, 4).filter(t => t && t.label).map(t => (
           <div key={t.type} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: t.color }}
+                style={{ backgroundColor: t.color || '#94a3b8' }}
               />
-              <span className="text-surface-600">{t.label.split(' ')[0]}</span>
+              <span className="text-surface-600">{(t.label || 'Unknown').split(' ')[0]}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-surface-700">{t.probability}%</span>
+              <span className="font-medium text-surface-700">{t.probability || 0}%</span>
               {getTrendIcon(t.trend, 10)}
             </div>
           </div>

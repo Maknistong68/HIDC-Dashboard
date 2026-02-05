@@ -402,7 +402,20 @@ export const getCoverageMetrics = (incidents, daysInPeriod = 30) => {
 
 /**
  * Calculate overall data quality score (0-100)
- * Now uses settings for quality score weights
+ *
+ * CONFIGURABLE WEIGHTS:
+ * All 5 weight factors can be customized via settings.validation.qualityScoring.weights:
+ * - categorization: How well observations are categorized (default: 25%)
+ * - description: Quality of description text (default: 25%)
+ * - nearMiss: Near-miss reporting rate (default: 20%)
+ * - reporters: Reporter engagement rate (default: 15%)
+ * - dataIntegrity: Duplicate/data quality issues (default: 15%)
+ *
+ * ⚠️ BIAS NOTE: Weights automatically normalize to 100%. If you set custom weights
+ * that don't sum to 100, they will be proportionally adjusted.
+ *
+ * Note: Coverage metric was removed - it unfairly penalized contractors with
+ * different schedules (no night shifts, regional weekend patterns, etc.)
  */
 export const calculateQualityScore = (incidents) => {
   if (incidents.length === 0) return { score: 0, breakdown: {} }
@@ -412,15 +425,23 @@ export const calculateQualityScore = (incidents) => {
   const qualitySettings = settings.validation?.qualityScoring || {}
   const customWeights = qualitySettings.weights || {}
 
+  // Default weights with documentation
+  const defaultWeights = {
+    categorization: 25,  // How well observations are categorized
+    description: 25,     // Quality of description text
+    nearMiss: 20,        // Near-miss reporting rate (leading indicator)
+    reporters: 15,       // Reporter engagement rate
+    dataIntegrity: 15    // Low duplicate rate = high integrity
+  }
+
   // Use custom weights from settings if available, otherwise use defaults
-  // Note: Coverage metric removed - it unfairly penalizes contractors who don't work all days
-  // (different schedules, no night shifts, regional weekend patterns)
+  // ALL weights are now configurable
   const weights = {
-    categorization: customWeights.categorization || 25,
-    description: customWeights.description || 25,
-    nearMiss: 20,
-    reporters: 15,
-    dataIntegrity: 15
+    categorization: customWeights.categorization ?? defaultWeights.categorization,
+    description: customWeights.description ?? defaultWeights.description,
+    nearMiss: customWeights.nearMiss ?? defaultWeights.nearMiss,
+    reporters: customWeights.reporters ?? defaultWeights.reporters,
+    dataIntegrity: customWeights.dataIntegrity ?? defaultWeights.dataIntegrity
   }
 
   // Normalize weights to sum to 100
@@ -461,6 +482,10 @@ export const calculateQualityScore = (incidents) => {
     dataIntegrityScore * (normalizedWeights.dataIntegrity / 100)
   )
 
+  // Check if custom weights were applied (for transparency)
+  const customWeightsApplied = Object.keys(customWeights).length > 0
+  const weightsWereNormalized = totalWeight !== 100
+
   return {
     score,
     breakdown: {
@@ -470,7 +495,18 @@ export const calculateQualityScore = (incidents) => {
       reporters: { value: reporterEngagement, weight: Math.round(normalizedWeights.reporters), active: activeReporters, total: totalReporters },
       dataIntegrity: { value: dataIntegrityScore, weight: Math.round(normalizedWeights.dataIntegrity), status: dataIntegrityStatus, duplicateRate: duplicates.duplicateRate, duplicateCount: duplicates.totalDuplicates }
     },
-    settingsApplied: true
+    // Configuration transparency
+    settingsApplied: customWeightsApplied,
+    weightsUsed: weights,
+    normalizedWeights: {
+      categorization: Math.round(normalizedWeights.categorization),
+      description: Math.round(normalizedWeights.description),
+      nearMiss: Math.round(normalizedWeights.nearMiss),
+      reporters: Math.round(normalizedWeights.reporters),
+      dataIntegrity: Math.round(normalizedWeights.dataIntegrity)
+    },
+    weightsWereNormalized,
+    originalWeightSum: totalWeight
   }
 }
 
