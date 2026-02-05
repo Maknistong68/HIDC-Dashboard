@@ -457,6 +457,8 @@ const UnifiedPredictivePanel = ({
                     confidence={weekly?.confidence}
                     trend={weekly?.trend}
                     size="medium"
+                    factorData={factorData}
+                    weeklyHistory={hazardTrendData}
                   />
                 </div>
                 <div className="p-4">
