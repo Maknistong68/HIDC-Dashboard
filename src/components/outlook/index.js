@@ -7,3 +7,10 @@ export { default as HazardWhatIfSimulator } from './HazardWhatIfSimulator'
 export { default as FactorList } from './FactorList'
 export { default as FactorDetailPanel } from './FactorDetailPanel'
 export { default as RiskComparisonPanel } from './RiskComparisonPanel'
+
+// Scenario Simulator Compact components
+export { default as ScenarioSimulatorCompact } from './ScenarioSimulatorCompact'
+export { default as TrendingHazardSelector } from './TrendingHazardSelector'
+export { default as QuickActionPanel } from './QuickActionPanel'
+export { default as HazardSpecificActions } from './HazardSpecificActions'
+export { default as InterventionSliderGroup } from './InterventionSliderGroup'

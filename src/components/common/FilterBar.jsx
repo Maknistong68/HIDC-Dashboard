@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useTransition, useCallback } from 'react'
 import { Filter, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
 
@@ -7,6 +7,7 @@ import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
  */
 const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const dropdownRef = useRef(null)
 
   // Close dropdown when clicking outside
@@ -20,17 +21,22 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const toggleOption = (optionValue) => {
-    const newValue = value.includes(optionValue)
-      ? value.filter(v => v !== optionValue)
-      : [...value, optionValue]
-    onChange(filter.key, newValue)
-  }
+  // Use startTransition for non-blocking updates
+  const toggleOption = useCallback((optionValue) => {
+    startTransition(() => {
+      const newValue = value.includes(optionValue)
+        ? value.filter(v => v !== optionValue)
+        : [...value, optionValue]
+      onChange(filter.key, newValue)
+    })
+  }, [value, onChange, filter.key])
 
-  const clearSelection = (e) => {
+  const clearSelection = useCallback((e) => {
     e.stopPropagation()
-    onChange(filter.key, [])
-  }
+    startTransition(() => {
+      onChange(filter.key, [])
+    })
+  }, [onChange, filter.key])
 
   const hasSelection = value.length > 0
 

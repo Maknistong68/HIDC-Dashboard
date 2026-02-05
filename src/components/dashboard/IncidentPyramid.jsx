@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useTransition, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import DrillDownModal from '../common/DrillDownModal'
 import { InfoTooltip } from '../ui/Tooltip'
@@ -11,6 +11,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   const [selectedType, setSelectedType] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   // Safety pyramid levels (severity gradient) - Triangle shape: narrower at top, wider at bottom
   const pyramidLevels = [
@@ -72,25 +73,33 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
     },
   ]
 
-  const handleTypeClick = (typeKey) => {
-    setSelectedType(typeKey)
-    setSelectedMonth(null)
-    setModalOpen(true)
-  }
+  const handleTypeClick = useCallback((typeKey) => {
+    startTransition(() => {
+      setSelectedType(typeKey)
+      setSelectedMonth(null)
+      setModalOpen(true)
+    })
+  }, [])
 
-  const handleClose = () => {
-    setModalOpen(false)
-    setSelectedType(null)
-    setSelectedMonth(null)
-  }
+  const handleClose = useCallback(() => {
+    startTransition(() => {
+      setModalOpen(false)
+      setSelectedType(null)
+      setSelectedMonth(null)
+    })
+  }, [])
 
-  const handleBack = () => {
-    setSelectedMonth(null)
-  }
+  const handleBack = useCallback(() => {
+    startTransition(() => {
+      setSelectedMonth(null)
+    })
+  }, [])
 
-  const handleMonthSelect = (monthData) => {
-    setSelectedMonth(monthData.period)
-  }
+  const handleMonthSelect = useCallback((monthData) => {
+    startTransition(() => {
+      setSelectedMonth(monthData.period)
+    })
+  }, [])
 
   const filteredIncidents = useMemo(() => {
     if (!selectedType || !incidents.length) return []

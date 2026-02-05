@@ -90,6 +90,12 @@ export default {
         '18': '4.5rem',
         'touch': '2.75rem', // 44px alias for touch targets
       },
+      // Standardized chart heights
+      height: {
+        'chart-sm': '12rem',    // 192px - compact charts
+        'chart': '16rem',       // 256px - standard charts
+        'chart-lg': '20rem',    // 320px - large charts
+      },
       // Minimum width/height for touch targets
       minWidth: {
         'touch': '2.75rem', // 44px

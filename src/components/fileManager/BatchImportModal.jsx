@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import {
@@ -35,16 +35,30 @@ const BatchImportModal = ({ onClose }) => {
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
   const isProcessingRef = useRef(false)  // Ref to track processing state (survives re-renders)
+  const abortControllerRef = useRef(null)  // For cancelling async operations
+  const isMountedRef = useRef(true)  // Track if component is still mounted
+
+  // Cleanup on unmount - abort any pending operations
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   // Check if folder selection is supported (Chrome/Edge only)
   const isFolderSelectSupported = useMemo(() => {
     return 'webkitdirectory' in document.createElement('input')
   }, [])
 
-  // Safe close handler - prevents closing during processing
+  // Safe close handler - prevents closing during processing with user warning
   const handleClose = useCallback(() => {
     if (isProcessingRef.current || isProcessing) {
       console.warn('[BatchImport] Cannot close while processing')
+      alert('Import in progress. Please wait for all files to complete.')
       return
     }
     onClose()
@@ -94,6 +108,10 @@ const BatchImportModal = ({ onClose }) => {
     if (selectedFiles.length === 0) return
     if (isProcessingRef.current) return  // Prevent double-processing
 
+    // Create new AbortController for this batch
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     isProcessingRef.current = true
     setIsProcessing(true)
     const newResults = []
@@ -102,9 +120,18 @@ const BatchImportModal = ({ onClose }) => {
     const batchImportedIds = new Set()
 
     for (let i = 0; i < selectedFiles.length; i++) {
+      // Check if aborted before each file
+      if (signal.aborted || !isMountedRef.current) {
+        console.log('[BatchImport] Processing aborted')
+        break
+      }
+
+      // Safe state update - check if still mounted
+      if (!isMountedRef.current) break
       setCurrentFileIndex(i)
 
       // Update status to processing
+      if (!isMountedRef.current) break
       setSelectedFiles(prev => prev.map((f, idx) =>
         idx === i ? { ...f, status: 'processing' } : f
       ))
@@ -260,17 +287,24 @@ const BatchImportModal = ({ onClose }) => {
     // Verify completion before showing results
     console.log(`[BatchImport] Batch complete: ${newResults.filter(r => r.success).length} files imported, ${newResults.reduce((sum, r) => sum + (r.recordCount || 0), 0)} total records`)
 
-    setResults(newResults)
-    isProcessingRef.current = false
-    setIsProcessing(false)
-    setIsComplete(true)
-    setCurrentFileIndex(-1)
+    // Safe state updates - only if still mounted
+    if (isMountedRef.current) {
+      setResults(newResults)
+      isProcessingRef.current = false
+      setIsProcessing(false)
+      setIsComplete(true)
+      setCurrentFileIndex(-1)
+    } else {
+      isProcessingRef.current = false
+    }
 
     // Reload files list once at the end of batch import (avoids overlapping transactions)
     // Use silent: true to prevent showing global overlay over the modal
     try {
-      await reloadFiles({ silent: true })
-      console.log('[BatchImport] Files reloaded successfully')
+      if (isMountedRef.current) {
+        await reloadFiles({ silent: true })
+        console.log('[BatchImport] Files reloaded successfully')
+      }
     } catch (error) {
       console.error('[BatchImport] Error reloading files after batch:', error)
     }
@@ -323,15 +357,20 @@ const BatchImportModal = ({ onClose }) => {
   const totalExistingDataSkipped = results.reduce((sum, r) => sum + (r.existingDataSkippedCount || 0), 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" data-processing={isProcessing}>
+      {/* Backdrop - disable pointer events during processing */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleClose}
+        className={`absolute inset-0 bg-black/50 backdrop-blur-sm ${
+          isProcessing ? 'pointer-events-none' : ''
+        }`}
+        onClick={isProcessing ? undefined : handleClose}
       />
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col animate-scale-in">
+      {/* Modal - stop propagation to prevent backdrop clicks */}
+      <div
+        className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-surface-200">
           <div className="flex items-center gap-3">
@@ -350,15 +389,26 @@ const BatchImportModal = ({ onClose }) => {
               </p>
             </div>
           </div>
-          {!isProcessing && (
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-surface-100 rounded-lg transition-colors"
-              aria-label="Close"
-            >
-              <X size={20} className="text-surface-500" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Processing lock indicator */}
+            {isProcessing && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 rounded-full">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-blue-700">
+                  Processing... Do not close
+                </span>
+              </div>
+            )}
+            {!isProcessing && (
+              <button
+                onClick={handleClose}
+                className="p-2 hover:bg-surface-100 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X size={20} className="text-surface-500" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}

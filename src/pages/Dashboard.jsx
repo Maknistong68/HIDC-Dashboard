@@ -29,7 +29,7 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import { useExport } from '../hooks/useExport'
-import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../utils/constants'
+import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, SUB_REGION_OPTIONS } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -52,14 +52,6 @@ const normalizeHazard = memoize((hazard) => {
     .join(' ')
 }, 500) // Cache up to 500 unique hazard names
 
-// Sub-region options for the filter dropdown
-const SUB_REGION_OPTIONS = [
-  { value: 'SUB REGION 1', label: 'Sub Region 1' },
-  { value: 'SUB REGION 2', label: 'Sub Region 2' },
-  { value: 'SUB REGION 3', label: 'Sub Region 3' },
-  { value: 'SUB REGION 4', label: 'Sub Region 4' },
-  { value: 'SUB REGION 5', label: 'Sub Region 5' },
-]
 
 const Dashboard = () => {
   const { projects, incidents, isLoading, showOpenClosed, siteClassifications } = useData()
@@ -89,6 +81,12 @@ const Dashboard = () => {
 
   // All Records section state
   const [showAllRecords, setShowAllRecords] = useState(false)
+
+  // Collapsible section state
+  const [collapsedSections, setCollapsedSections] = useState({
+    temporal: true,  // Collapsed by default
+    heatmap: true,   // Collapsed by default
+  })
 
   // Heatmap scroll ref
   const heatmapScrollRef = useRef(null)
@@ -163,6 +161,10 @@ const Dashboard = () => {
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }, [])
 
+  const toggleSection = useCallback((section) => {
+    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }, [])
+
   // Handle drill-down - opens modal with level 2 (monthly breakdown)
   const handleDrillDown = useCallback((chart, filter) => {
     setDrillDown({ chart, filter, level: 2, period: null, modalOpen: true })
@@ -203,7 +205,8 @@ const Dashboard = () => {
   }, [incidents, contractor])
 
   // Filter configuration - Contractor (parent), Site (child), and Sub-Region
-  const filterConfig = [
+  // Memoized to prevent unnecessary re-renders in FilterBar
+  const filterConfig = useMemo(() => [
     {
       key: 'contractor',
       type: 'select',
@@ -225,7 +228,7 @@ const Dashboard = () => {
       placeholder: 'All Sub-Regions',
       options: SUB_REGION_OPTIONS
     }
-  ]
+  ], [uniqueContractors, siteOptions])
 
   // Filtered incidents based on contractor, site, subRegion, and period (for KPIs, charts, Top Hazards, Top Observers)
   // Note: Hazard categorization is done at import time, so no recategorization needed here
@@ -724,7 +727,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Filters Row */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -751,8 +754,14 @@ const Dashboard = () => {
 
       {/* Dashboard Content - wrapped for PDF export full-page capture */}
       <div ref={dashboardContentRef} className="space-y-3 bg-surface-50 p-2 -m-2">
-      {/* KPI Cards - Row 1 */}
-      <div ref={kpiCards1Ref} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Performance Overview Section */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-surface-500 uppercase tracking-wide">
+          Performance Overview
+        </h2>
+
+        {/* KPI Cards - Row 1 */}
+        <div ref={kpiCards1Ref} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <KPICard
           title="Total Observations"
           value={filteredIncidents.length}
@@ -787,8 +796,8 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* KPI Cards - Row 2 (Approval Status) */}
-      <div ref={kpiCards2Ref} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* KPI Cards - Row 2 (Approval Status) */}
+        <div ref={kpiCards2Ref} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <KPICard
           title="Closed"
           value={approvalCounts.closed}
@@ -821,27 +830,41 @@ const Dashboard = () => {
           color={approvalCounts.contractorInvestigation > 5 ? 'warning' : 'info'}
           info="HOW THIS IS CALCULATED: We count observations where the 'Approval Status' column shows 'Contractor Investigation'. These are typically more serious issues where the contractor needs to dig deeper - finding out what happened, why it happened, and how to prevent it in the future. Investigations take longer than simple reviews because they require gathering evidence and interviewing people. YELLOW (more than 5): Monitor these closely as investigations shouldn't drag on too long."
         />
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div ref={pyramidRef}>
-          <IncidentPyramid
-            data={incidentCounts}
-            pyramidData={pyramidData}
-            showOpenClosed={showOpenClosed}
-            incidents={filteredIncidents}
-          />
-        </div>
-        <div ref={trendChartRef}>
-          <IncidentTrendChart data={incidentTrend} />
         </div>
       </div>
 
-      {/* Top Hazards + Observers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Top Hazards */}
-        <div ref={topHazardsRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+      {/* Observation Analysis Section */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-surface-500 uppercase tracking-wide">
+          Observation Analysis
+        </h2>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div ref={pyramidRef}>
+            <IncidentPyramid
+              data={incidentCounts}
+              pyramidData={pyramidData}
+              showOpenClosed={showOpenClosed}
+              incidents={filteredIncidents}
+            />
+          </div>
+          <div ref={trendChartRef}>
+            <IncidentTrendChart data={incidentTrend} />
+          </div>
+        </div>
+      </div>
+
+      {/* Top Contributors Section */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-surface-500 uppercase tracking-wide">
+          Top Contributors
+        </h2>
+
+        {/* Top Hazards + Observers */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Top Hazards */}
+          <div ref={topHazardsRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Top Significant Hazards
             <InfoTooltip text="HOW THIS DATA IS COLLECTED: Every observation has a 'Hazard Category' or 'Location' field that describes what type of hazard was involved. We group all observations by their hazard type and count how many times each one appears, then show you the top 10 most common hazards. The bar colors show status: RED portion = still open (needs action), GREEN portion = closed (resolved). Click any bar to see the actual observations in that hazard category. Note: Positive observations are excluded since they report SAFE behaviors, not hazards." />
@@ -890,6 +913,8 @@ const Dashboard = () => {
                   </div>
                 )
               })}
+              {/* Drill-down hint */}
+              <p className="text-xs text-surface-400 text-center mt-2 opacity-60">Click any bar to explore details</p>
             </div>
           ) : (
             <p className="text-xs text-surface-400 text-center py-4">No hazard data available</p>
@@ -946,17 +971,19 @@ const Dashboard = () => {
                   </div>
                 )
               })}
+              {/* Drill-down hint */}
+              <p className="text-xs text-surface-400 text-center mt-2 opacity-60">Click any bar to explore details</p>
             </div>
           ) : (
             <p className="text-xs text-surface-400 text-center py-4">No observer data available</p>
           )}
         </div>
-      </div>
+        </div>
 
-      {/* Observations per Company + Positive vs Negative */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Observations per Company */}
-        <div ref={topCompaniesRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+        {/* Observations per Company + Positive vs Negative */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Observations per Company */}
+          <div ref={topCompaniesRef} className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Observations per Company
             <InfoTooltip text="HOW THIS DATA IS COLLECTED: Every observation has a 'Contractor' or 'Company' field. We count how many observations each company has and rank them from most to least. The top 10 companies by observation count are shown. The bar colors show status: RED = still open, GREEN = closed. Click any company to see their observations broken down by month." />
@@ -1004,6 +1031,8 @@ const Dashboard = () => {
                   </div>
                 )
               })}
+              {/* Drill-down hint */}
+              <p className="text-xs text-surface-400 text-center mt-2 opacity-60">Click any bar to explore details</p>
             </div>
           ) : (
             <p className="text-xs text-surface-400 text-center py-4">No company data available</p>
@@ -1069,6 +1098,8 @@ const Dashboard = () => {
                   />
                 </PieChart>
               </ResponsiveContainer>
+              {/* Drill-down hint */}
+              <p className="text-xs text-surface-400 text-center opacity-60">Click a segment to explore</p>
             </div>
           ) : (
             <div className="h-64 flex items-center justify-center">
@@ -1076,15 +1107,23 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
 
-      {/* Observations by Day of Week + Hour of Day */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div ref={dayOfWeekRef}>
-          <ObservationsByDayOfWeek incidents={filteredIncidents} />
-        </div>
-        <div ref={hourOfDayRef}>
-          <ObservationsByHourOfDay incidents={filteredIncidents} />
+      {/* Temporal Patterns Section */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-surface-500 uppercase tracking-wide">
+          Temporal Patterns
+        </h2>
+
+        {/* Observations by Day of Week + Hour of Day */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div ref={dayOfWeekRef}>
+            <ObservationsByDayOfWeek incidents={filteredIncidents} />
+          </div>
+          <div ref={hourOfDayRef}>
+            <ObservationsByHourOfDay incidents={filteredIncidents} />
+          </div>
         </div>
       </div>
 

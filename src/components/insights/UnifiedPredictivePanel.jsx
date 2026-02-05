@@ -37,6 +37,7 @@ import {
   calculateFullProjection,
   getTopKeywordsForFactor
 } from './ScenarioSimulatorEngine'
+import { ScenarioSimulatorCompact } from '../outlook'
 
 // Slider styles for scenario simulator
 const sliderStyles = `
@@ -176,6 +177,7 @@ const CATEGORY_CONFIG = {
  *  - filteredIncidents: Array of filtered incidents
  *  - selectedHazardName: (optional) Auto-sync with hazard selection from detail panel
  *  - hazardTrendData: (optional) Trend data for the selected hazard
+ *  - hazardTrendingData: (optional) Full trending hazards list from getHazardTrendingByPeriod
  *  - factorData: (optional) Factor data from aggregateContributingFactors
  */
 const UnifiedPredictivePanel = ({
@@ -183,6 +185,7 @@ const UnifiedPredictivePanel = ({
   filteredIncidents,
   selectedHazardName,
   hazardTrendData,
+  hazardTrendingData,
   factorData
 }) => {
   const [isExpanded, setIsExpanded] = useState(true)
@@ -581,170 +584,22 @@ const UnifiedPredictivePanel = ({
             </div>
           )}
 
-          {/* Scenario Simulator Section */}
-          <div className="border-t border-surface-200">
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-surface-50 to-surface-100">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-surface-700 uppercase tracking-wide">
-                  Scenario Simulator
-                </h4>
-                <span className="text-2xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                  Data-Driven
-                </span>
-              </div>
-              {hasChanges && (
-                <button
-                  onClick={handleReset}
-                  className="flex items-center gap-1 text-xs text-surface-500 hover:text-surface-700 transition-colors"
-                >
-                  <RefreshCw size={12} />
-                  Reset
-                </button>
-              )}
-            </div>
-
-            <div className="p-4">
-              <div className="bg-surface-50 rounded-lg p-4 space-y-4">
-                {/* Hazard Selector */}
-                <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Target size={16} className="text-primary-600" />
-                  <span className="text-sm font-medium text-surface-700">Focus on Hazard</span>
-                </div>
-                <select
-                  value={selectedHazard}
-                  onChange={handleHazardChange}
-                  className="w-full px-3 py-2 text-sm border border-surface-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="all">All Hazards ({filteredIncidents?.length || 0} observations)</option>
-                  {hazardOptions.map(({ name, count }) => (
-                    <option key={name} value={name}>
-                      {name} ({count} observations)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* HSE Hierarchy Info */}
-              <div className="bg-white rounded-lg p-3 border border-surface-200">
-                <div className="flex items-start gap-2">
-                  <Info size={14} className="text-surface-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-surface-600">
-                    <p className="font-medium text-surface-700 mb-1">HSE Hierarchy of Controls</p>
-                    <p>Sliders show your <strong>actual top contributing factors</strong>. Effect calculations are based on factor prevalence in your data and industry-standard control effectiveness.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Open Actions Slider (always shown if there are open actions) */}
-              {incidentStats.openActionsCount > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-amber-600" />
-                    <span className="text-sm font-semibold text-surface-700">Corrective Actions</span>
-                  </div>
-                  <ScenarioSlider
-                    id="actions"
-                    label="Close Open Actions"
-                    sublabel={`${incidentStats.openActionsCount} actions currently open`}
-                    value={actionsToClose}
-                    min={0}
-                    max={incidentStats.openActionsCount}
-                    unit=" actions"
-                    leftLabel="0 closed"
-                    rightLabel={`${incidentStats.openActionsCount} closed`}
-                    colorClass="actions"
-                    onChange={(_, v) => handleActionsChange(v)}
-                    prevalence={null}
-                  />
-                </div>
-              )}
-
-              {/* Dynamic Factor Sliders by HSE Category */}
-              {Object.entries(slidersByCategory).map(([categoryKey, categorySliders]) => {
-                if (categorySliders.length === 0) return null
-
-                const category = CONTROL_HIERARCHY[categoryKey]
-                const config = CATEGORY_CONFIG[categoryKey]
-                const Icon = config.icon
-
-                return (
-                  <div key={categoryKey} className="space-y-2">
-                    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${config.bgColor}`}>
-                      <Icon size={16} className={config.textColor} />
-                      <span className={`text-sm font-semibold ${config.textColor}`}>
-                        {category.name}
-                      </span>
-                      <span className={`text-2xs ${config.textColor} opacity-75`}>
-                        ({Math.round(category.effectiveness * 100)}% effectiveness)
-                      </span>
-                    </div>
-
-                    {categorySliders.map(slider => {
-                      // Get top keywords for this factor
-                      const topKeywords = getTopKeywordsForFactor(
-                        factorData,
-                        slider.factor,
-                        selectedHazard,
-                        5
-                      )
-
-                      return (
-                        <ScenarioSlider
-                          key={slider.id}
-                          id={slider.id}
-                          label={slider.label}
-                          sublabel={slider.sublabel}
-                          value={sliders[slider.id] || 0}
-                          min={-50}
-                          max={100}
-                          unit="%"
-                          leftLabel="reduce"
-                          rightLabel="increase"
-                          colorClass={categoryKey}
-                          onChange={handleSliderChange}
-                          prevalence={slider.prevalence}
-                          maxReduction={slider.maxReduction}
-                          topKeywords={topKeywords}
-                          effectiveness={category.effectiveness}
-                          categoryName={category.name}
-                        />
-                      )
-                    })}
-                  </div>
-                )
-              })}
-
-              {/* No factors message */}
-              {dynamicSliders.length === 0 && (
-                <div className="text-center py-4 text-sm text-surface-500">
-                  <p>No contributing factors detected in the data.</p>
-                  <p className="text-xs text-surface-400 mt-1">Factors are extracted from observation descriptions.</p>
-                </div>
-              )}
-
-              {/* Projection Result */}
-              {projection && viewMode === 'visual' && (
-                <InterventionComparison
-                  baseline={projection.baseline}
-                  projected={projection.projected}
-                  effects={projection.effects}
-                  changePercent={projection.changePercent}
-                  selectedHazard={selectedHazard}
-                  sliders={sliders}
-                />
-              )}
-
-              {projection && viewMode === 'numbers' && (
-                <ProjectedImpactBox
-                  projection={projection}
-                  hasChanges={hasChanges}
-                  onClick={() => hasChanges && openBreakdown('scenario')}
-                  selectedHazard={selectedHazard}
-                />
-              )}
-              </div>
-            </div>
+          {/* Scenario Simulator Compact */}
+          <div className="border-t border-surface-200 p-4">
+            <ScenarioSimulatorCompact
+              trendingHazards={hazardTrendingData || []}
+              factorData={factorData}
+              incidentStats={incidentStats}
+              prevalence={prevalence}
+              filteredIncidents={filteredIncidents}
+              hazardFilteredIncidents={hazardFilteredIncidents}
+              selectedHazard={selectedHazard}
+              onHazardChange={handleHazardChange}
+              weekly={weekly}
+              onProjectionChange={(proj) => {
+                // Optional: handle projection changes
+              }}
+            />
           </div>
 
           {/* Methodology Disclosure */}

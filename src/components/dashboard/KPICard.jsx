@@ -84,7 +84,7 @@ const KPICard = ({
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           {/* Title with tooltip - Responsive text size */}
-          <p className="text-xs sm:text-xs font-semibold text-surface-500 uppercase tracking-wide flex items-center gap-0.5">
+          <p className="text-xs sm:text-sm font-semibold text-surface-500 uppercase tracking-wide flex items-center gap-0.5">
             <span className="truncate">{title}</span>
             {info && <InfoTooltip text={info} />}
           </p>

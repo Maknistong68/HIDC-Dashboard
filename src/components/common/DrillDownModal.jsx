@@ -68,14 +68,14 @@ const DrillDownModal = ({
       {/* Backdrop with blur */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-      {/* Modal Container - Full screen on mobile, glassmorphism on desktop */}
+      {/* Modal Container - Bottom sheet on mobile, centered glassmorphism on desktop */}
       <div
         ref={containerRef}
         className={`
           relative w-full flex flex-col
           ${isMobile
-            ? 'h-full max-h-full animate-slide-up'
-            : 'max-w-5xl max-h-[90vh] animate-modal-in'
+            ? 'fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl animate-slide-up'
+            : 'max-w-5xl max-h-[90vh] rounded-2xl animate-modal-in'
           }
           ${isResizing ? 'select-none' : ''}
         `}
@@ -87,7 +87,7 @@ const DrillDownModal = ({
         {/* Glass Card */}
         <div className={`
           bg-white/95 sm:bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden h-full flex flex-col
-          ${isMobile ? 'border-0 rounded-none' : 'border rounded-2xl'}
+          ${isMobile ? 'border-0 rounded-t-2xl' : 'border rounded-2xl'}
         `}>
           {/* Header - Larger touch targets on mobile */}
           <div className={`
@@ -845,14 +845,14 @@ const RecordDetailsModal = ({ record, onClose }) => {
       {/* Darker backdrop for nested modal */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
-      {/* Modal - Full screen on mobile */}
+      {/* Modal - Bottom sheet on mobile */}
       <div
         ref={detailsContainerRef}
         className={`
           relative w-full flex flex-col
           ${isMobile
-            ? 'h-full max-h-full animate-slide-up'
-            : 'max-w-3xl max-h-[90vh] animate-modal-in'
+            ? 'fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl animate-slide-up'
+            : 'max-w-3xl max-h-[90vh] rounded-2xl animate-modal-in'
           }
           ${isDetailsResizing ? 'select-none' : ''}
         `}
@@ -861,7 +861,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
         <DetailsResizeHandles />
         <div className={`
           bg-white/95 sm:bg-white/90 backdrop-blur-2xl border-white/30 shadow-2xl overflow-hidden h-full flex flex-col
-          ${isMobile ? 'border-0 rounded-none' : 'border rounded-2xl'}
+          ${isMobile ? 'border-0 rounded-t-2xl' : 'border rounded-2xl'}
         `}>
           {/* Header - Larger touch targets on mobile */}
           <div className={`

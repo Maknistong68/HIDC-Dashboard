@@ -283,12 +283,17 @@ const HazardTrendChart = ({ data, hazardName, timePeriod }) => {
     }
   }, [isDragging, handleMouseUp, handleMouseMove])
 
+  // Tooltip renderer - MUST be before early return to maintain consistent hook count
+  const renderTooltip = useCallback((props) => (
+    <TradingTooltip {...props} activeDays={visibleDays} avgValue={avgValue} />
+  ), [visibleDays, avgValue])
+
   // Reset zoom
   const handleResetZoom = () => {
     setViewRange({ start: 0, end: allDays.length - 1 })
   }
 
-  // Early return for no data
+  // Early return for no data - after all hooks are called
   if (!data || !data.hasData) {
     return (
       <div className="flex flex-col items-center justify-center h-80 text-center p-4">
@@ -318,10 +323,6 @@ const HazardTrendChart = ({ data, hazardName, timePeriod }) => {
     if (trend === 'decreasing') return 'text-green-500'
     return 'text-surface-500'
   }
-
-  const renderTooltip = useCallback((props) => (
-    <TradingTooltip {...props} activeDays={visibleDays} avgValue={avgValue} />
-  ), [visibleDays, avgValue])
 
   const formatXAxisTick = (dateStr) => {
     const dayData = visibleDays.find(d => d.date === dateStr)

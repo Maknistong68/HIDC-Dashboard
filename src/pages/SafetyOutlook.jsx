@@ -556,6 +556,7 @@ const SafetyOutlook = () => {
           filteredIncidents={negativeIncidents}
           selectedHazardName={activeTab === 'hazards' ? selectedHazard?.name : null}
           hazardTrendData={activeTab === 'hazards' ? hazardTrendData : null}
+          hazardTrendingData={sortedHazards}
           factorData={factorData}
         />
       )}

@@ -517,6 +517,253 @@ export const calculateFullProjection = ({
   }
 }
 
+// ============================================================================
+// MULTI-HAZARD PROJECTION CALCULATOR
+// ============================================================================
+
+/**
+ * Calculate projection for multiple hazards combined
+ * Aggregates projections across selected hazards
+ *
+ * @param {Object} params - Calculation parameters
+ * @param {Array<string>} params.hazards - Array of hazard names
+ * @param {Object} params.sliders - Slider values by intervention ID
+ * @param {Object} params.factorData - Factor data from aggregateContributingFactors
+ * @param {Array} params.incidents - All incidents
+ * @param {Object} params.trendingData - Trending data from getHazardTrendingByPeriod
+ * @param {number} params.basePrediction - Base weekly prediction
+ * @param {number} params.openActionsCount - Number of open corrective actions
+ * @param {number} params.actionsToClose - Number of actions to close
+ * @returns {Object} Aggregated projection result
+ */
+export const calculateMultiHazardProjection = ({
+  hazards = [],
+  sliders = {},
+  factorData,
+  incidents = [],
+  trendingData = [],
+  basePrediction = 0,
+  openActionsCount = 0,
+  actionsToClose = 0
+}) => {
+  if (hazards.length === 0) {
+    // No hazards selected - return full projection
+    return calculateFullProjection({
+      basePrediction,
+      sliders,
+      factorData,
+      totalNegativeIncidents: incidents.length,
+      openActionsCount,
+      actionsToClose
+    })
+  }
+
+  // Calculate hazard-specific proportions
+  let totalHazardIncidents = 0
+  const hazardRatios = {}
+
+  for (const hazardName of hazards) {
+    const hazardIncidents = incidents.filter(i => i.location === hazardName)
+    hazardRatios[hazardName] = hazardIncidents.length
+    totalHazardIncidents += hazardIncidents.length
+  }
+
+  // Calculate proportion of total
+  const proportion = incidents.length > 0
+    ? totalHazardIncidents / incidents.length
+    : 0
+
+  // Adjust base prediction by proportion
+  const adjustedBasePrediction = Math.max(1, Math.round(basePrediction * proportion))
+
+  // Apply trend factor if available
+  let trendFactor = 1
+  for (const hazardName of hazards) {
+    const trend = trendingData.find(t => t.name === hazardName)
+    if (trend) {
+      // Weight by hazard's share of selected incidents
+      const weight = totalHazardIncidents > 0
+        ? hazardRatios[hazardName] / totalHazardIncidents
+        : 1 / hazards.length
+
+      // Calculate trend adjustment
+      if (trend.trendLevel?.level === 'significant-rise') {
+        trendFactor += 0.15 * weight
+      } else if (trend.trendLevel?.level === 'rising') {
+        trendFactor += 0.08 * weight
+      } else if (trend.trendLevel?.level === 'declining') {
+        trendFactor -= 0.05 * weight
+      } else if (trend.trendLevel?.level === 'significant-decline') {
+        trendFactor -= 0.1 * weight
+      }
+    }
+  }
+
+  const trendAdjustedPrediction = Math.max(1, Math.round(adjustedBasePrediction * trendFactor))
+
+  // Calculate projection with interventions
+  const result = calculateFullProjection({
+    basePrediction: trendAdjustedPrediction,
+    sliders,
+    factorData,
+    totalNegativeIncidents: totalHazardIncidents,
+    openActionsCount,
+    actionsToClose
+  })
+
+  return {
+    ...result,
+    hazards,
+    hazardCount: hazards.length,
+    totalHazardIncidents,
+    proportion: Math.round(proportion * 100),
+    trendFactor,
+    isMultiHazard: hazards.length > 1
+  }
+}
+
+// ============================================================================
+// QUICK ACTION PRESET APPLICATOR
+// ============================================================================
+
+import { QUICK_ACTION_PRESETS } from '../../utils/constants'
+
+/**
+ * Apply quick action preset and return modified slider values
+ *
+ * @param {string} actionId - ID of the quick action preset
+ * @param {Object} prevalence - Factor prevalence data
+ * @param {number} openActionsCount - Number of open corrective actions
+ * @returns {Object} { sliders, actionsToClose }
+ */
+export const applyQuickActionPreset = (actionId, prevalence = {}, openActionsCount = 0) => {
+  const preset = QUICK_ACTION_PRESETS.find(a => a.id === actionId)
+  if (!preset) {
+    return { sliders: {}, actionsToClose: 0 }
+  }
+
+  const sliders = {}
+  let actionsToClose = 0
+
+  for (const [key, value] of Object.entries(preset.effect)) {
+    if (key === 'actionsToClose') {
+      actionsToClose = value === 'max' ? openActionsCount : value
+    } else {
+      // Map effect keys to slider IDs
+      const sliderMapping = {
+        barriers: 'barriers',
+        guards: 'guards',
+        devices: 'devices',
+        signage: 'signage',
+        training: 'training',
+        inspections: 'inspections',
+        supervision: 'supervision',
+        permits: 'permits',
+        ppe: 'ppe'
+      }
+
+      const sliderId = sliderMapping[key] || key
+      sliders[sliderId] = value
+    }
+  }
+
+  return { sliders, actionsToClose }
+}
+
+// ============================================================================
+// HAZARD-SPECIFIC RECOMMENDATIONS
+// ============================================================================
+
+import { HAZARD_RECOMMENDED_ACTIONS } from '../../utils/constants'
+
+/**
+ * Get recommended actions for hazard, sorted by effectiveness
+ *
+ * @param {string} hazardName - Name of the hazard
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {Object} prevalence - Factor prevalence data
+ * @param {number} limit - Maximum number of recommendations to return
+ * @returns {Array} Sorted recommendations with calculated scores
+ */
+export const getRecommendedActionsForHazard = (hazardName, factorData, prevalence = {}, limit = 5) => {
+  const mapping = HAZARD_RECOMMENDED_ACTIONS[hazardName]
+  if (!mapping) {
+    return []
+  }
+
+  // Calculate effectiveness score for each recommendation
+  const scoredRecs = mapping.map(rec => {
+    // Check if factor exists in data
+    const factorPrevalence = prevalence[rec.factor]?.percentage || 0
+
+    // Score = base effect × prevalence weight × priority weight
+    const priorityWeight = rec.priority === 'high' ? 1.5 : 1
+    const score = rec.effect * (1 + factorPrevalence / 100) * priorityWeight
+
+    return {
+      ...rec,
+      prevalence: factorPrevalence,
+      score,
+      hasData: factorPrevalence > 0
+    }
+  })
+
+  // Sort by score descending
+  return scoredRecs
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+}
+
+/**
+ * Get recommended actions for multiple hazards, aggregated and deduplicated
+ *
+ * @param {Array<string>} hazardNames - Array of hazard names
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {Object} prevalence - Factor prevalence data
+ * @param {number} limit - Maximum number of recommendations to return
+ * @returns {Array} Aggregated and sorted recommendations
+ */
+export const getRecommendedActionsForMultipleHazards = (hazardNames, factorData, prevalence = {}, limit = 6) => {
+  if (!hazardNames || hazardNames.length === 0) {
+    return []
+  }
+
+  const aggregated = {}
+
+  for (const hazardName of hazardNames) {
+    const recs = getRecommendedActionsForHazard(hazardName, factorData, prevalence, 10)
+
+    for (const rec of recs) {
+      const key = rec.factor
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          ...rec,
+          hazards: [hazardName],
+          totalScore: rec.score
+        }
+      } else {
+        // Merge
+        aggregated[key].hazards.push(hazardName)
+        aggregated[key].totalScore += rec.score
+        // Use highest effect
+        if (rec.effect > aggregated[key].effect) {
+          aggregated[key].effect = rec.effect
+          aggregated[key].action = rec.action
+        }
+        // Upgrade priority if any is high
+        if (rec.priority === 'high') {
+          aggregated[key].priority = 'high'
+        }
+      }
+    }
+  }
+
+  // Sort by total score and return
+  return Object.values(aggregated)
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .slice(0, limit)
+}
+
 export default {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
@@ -526,5 +773,9 @@ export default {
   calculateProjectedChange,
   generateDynamicSliders,
   calculateActionClosureEffect,
-  calculateFullProjection
+  calculateFullProjection,
+  calculateMultiHazardProjection,
+  applyQuickActionPreset,
+  getRecommendedActionsForHazard,
+  getRecommendedActionsForMultipleHazards
 }

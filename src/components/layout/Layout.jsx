@@ -167,10 +167,8 @@ const Layout = ({ children }) => {
         </div>
       </main>
 
-      {/* Footer - hide on Data Control page */}
-      {location.pathname !== '/data-control' && (
-        <Footer />
-      )}
+      {/* Footer - show consistently on all pages */}
+      <Footer />
 
       {/* Confirm Dialog */}
       <ConfirmDialog

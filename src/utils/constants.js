@@ -1,6 +1,15 @@
 // Fallback category for observations requiring manual review
 export const FALLBACK_CATEGORY = 'General Site Issues'
 
+// Sub-region options for filter dropdowns
+export const SUB_REGION_OPTIONS = [
+  { value: 'SUB REGION 1', label: 'Sub Region 1' },
+  { value: 'SUB REGION 2', label: 'Sub Region 2' },
+  { value: 'SUB REGION 3', label: 'Sub Region 3' },
+  { value: 'SUB REGION 4', label: 'Sub Region 4' },
+  { value: 'SUB REGION 5', label: 'Sub Region 5' },
+]
+
 // Incident Types with severity levels
 export const INCIDENT_TYPES = [
   { value: 'lti', label: 'Lost Time Injury (LTI)', severity: 'critical', color: '#dc2626' },
@@ -3656,3 +3665,239 @@ export const CONTRIBUTING_FACTOR_COLORS = {
   'Environmental': '#8b5cf6',           // Purple - External conditions
   'Equipment Management': '#3b82f6'     // Blue - Maintenance/inspection failures
 }
+
+// =============================================================================
+// HAZARD_RECOMMENDED_ACTIONS - Maps hazards to recommended interventions
+// Used by Scenario Simulator Compact for hazard-specific recommendations
+// =============================================================================
+export const HAZARD_RECOMMENDED_ACTIONS = {
+  'Working at Height': [
+    { factor: 'Training', action: 'WAH Competency Assessment', priority: 'high', effect: 20 },
+    { factor: 'Barriers', action: 'Edge Protection Audit', priority: 'high', effect: 18 },
+    { factor: 'Inspections', action: 'Daily Scaffold Checks', priority: 'medium', effect: 12 },
+    { factor: 'PPE', action: 'Harness Inspection Program', priority: 'high', effect: 15 },
+    { factor: 'Supervision', action: 'WAH Supervisor Allocation', priority: 'medium', effect: 10 }
+  ],
+  'Mobile Plant & Equipment': [
+    { factor: 'Training', action: 'Operator Certification', priority: 'high', effect: 22 },
+    { factor: 'Barriers', action: 'Exclusion Zones', priority: 'high', effect: 20 },
+    { factor: 'Supervision', action: 'Banksman Allocation', priority: 'medium', effect: 15 },
+    { factor: 'Inspections', action: 'Pre-Start Checks', priority: 'high', effect: 18 },
+    { factor: 'Communication', action: 'Radio Protocol', priority: 'medium', effect: 10 }
+  ],
+  'Lifting': [
+    { factor: 'Planning', action: 'Lift Plan Reviews', priority: 'high', effect: 25 },
+    { factor: 'Competency', action: 'Rigger Certification', priority: 'high', effect: 20 },
+    { factor: 'Communication', action: 'Radio Protocol', priority: 'medium', effect: 12 },
+    { factor: 'Inspections', action: 'Lifting Gear Inspections', priority: 'high', effect: 18 },
+    { factor: 'Barriers', action: 'Exclusion Zone Enforcement', priority: 'medium', effect: 15 }
+  ],
+  'Confined Spaces': [
+    { factor: 'Permit', action: 'PTW Audit', priority: 'high', effect: 25 },
+    { factor: 'Training', action: 'Rescue Drill Training', priority: 'high', effect: 20 },
+    { factor: 'Supervision', action: 'Entry Supervisor', priority: 'medium', effect: 15 },
+    { factor: 'Safety Devices', action: 'Gas Detection Equipment', priority: 'high', effect: 22 },
+    { factor: 'Communication', action: 'Emergency Response Plan', priority: 'medium', effect: 12 }
+  ],
+  'Breaking Ground & Excavation': [
+    { factor: 'Permit', action: 'Dig Permit Compliance', priority: 'high', effect: 25 },
+    { factor: 'Barriers', action: 'Edge Protection', priority: 'high', effect: 20 },
+    { factor: 'Inspections', action: 'Daily Excavation Inspections', priority: 'high', effect: 18 },
+    { factor: 'Planning', action: 'Utility Detection Survey', priority: 'high', effect: 22 },
+    { factor: 'Supervision', action: 'Competent Person On-Site', priority: 'medium', effect: 15 }
+  ],
+  'Hot Work': [
+    { factor: 'Permit', action: 'Hot Work Permit Compliance', priority: 'high', effect: 25 },
+    { factor: 'Training', action: 'Fire Watch Training', priority: 'high', effect: 18 },
+    { factor: 'Safety Devices', action: 'Fire Extinguisher Placement', priority: 'high', effect: 20 },
+    { factor: 'Inspections', action: 'Post-Work Inspections', priority: 'medium', effect: 15 },
+    { factor: 'Housekeeping', action: 'Combustible Material Removal', priority: 'high', effect: 18 }
+  ],
+  'Energized System': [
+    { factor: 'Permit', action: 'LOTO Compliance Audit', priority: 'high', effect: 28 },
+    { factor: 'Training', action: 'Electrical Safety Training', priority: 'high', effect: 22 },
+    { factor: 'Barriers', action: 'Electrical Isolation Barriers', priority: 'high', effect: 20 },
+    { factor: 'Signage', action: 'Warning Sign Audit', priority: 'medium', effect: 12 },
+    { factor: 'Safety Devices', action: 'Earth Leakage Protection', priority: 'high', effect: 18 }
+  ],
+  'Fire': [
+    { factor: 'Housekeeping', action: 'Combustible Storage Audit', priority: 'high', effect: 22 },
+    { factor: 'Safety Devices', action: 'Fire Detection Systems', priority: 'high', effect: 20 },
+    { factor: 'Training', action: 'Fire Response Training', priority: 'high', effect: 18 },
+    { factor: 'Emergency Preparedness', action: 'Evacuation Drills', priority: 'medium', effect: 15 },
+    { factor: 'Inspections', action: 'Fire Equipment Inspections', priority: 'high', effect: 16 }
+  ],
+  'Temporary Works': [
+    { factor: 'Planning', action: 'TWC Design Review', priority: 'high', effect: 25 },
+    { factor: 'Inspections', action: 'Permission to Load Checks', priority: 'high', effect: 22 },
+    { factor: 'Competency', action: 'Designated Individual Training', priority: 'high', effect: 18 },
+    { factor: 'Documentations', action: 'Method Statement Review', priority: 'medium', effect: 15 },
+    { factor: 'Supervision', action: 'TWC Oversight', priority: 'medium', effect: 12 }
+  ],
+  'Driving': [
+    { factor: 'Training', action: 'Defensive Driving Training', priority: 'high', effect: 22 },
+    { factor: 'Supervision', action: 'Journey Management', priority: 'medium', effect: 15 },
+    { factor: 'Inspections', action: 'Vehicle Pre-Trip Inspections', priority: 'high', effect: 18 },
+    { factor: 'BBS', action: 'Driver Behavior Monitoring', priority: 'medium', effect: 14 },
+    { factor: 'Communication', action: 'Route Planning Brief', priority: 'medium', effect: 10 }
+  ],
+  'Working in Heat': [
+    { factor: 'Planning', action: 'Work-Rest Cycle Planning', priority: 'high', effect: 22 },
+    { factor: 'Environment', action: 'Shade/Cooling Stations', priority: 'high', effect: 20 },
+    { factor: 'Training', action: 'Heat Illness Awareness', priority: 'high', effect: 18 },
+    { factor: 'Supervision', action: 'TWL Monitoring', priority: 'medium', effect: 15 },
+    { factor: 'Communication', action: 'Heat Alert System', priority: 'medium', effect: 12 }
+  ],
+  'Working on or Near Live Roads': [
+    { factor: 'Barriers', action: 'Vehicle Intrusion Protection', priority: 'high', effect: 25 },
+    { factor: 'Planning', action: 'TTM Plan Review', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Traffic Marshal Training', priority: 'high', effect: 18 },
+    { factor: 'PPE', action: 'High-Visibility Clothing Audit', priority: 'medium', effect: 12 },
+    { factor: 'Communication', action: 'MOT Coordination', priority: 'medium', effect: 15 }
+  ],
+  'Working on or Near Water': [
+    { factor: 'Safety Devices', action: 'Lifebuoy Placement', priority: 'high', effect: 25 },
+    { factor: 'Training', action: 'Water Rescue Training', priority: 'high', effect: 22 },
+    { factor: 'PPE', action: 'Life Jacket Compliance', priority: 'high', effect: 20 },
+    { factor: 'Supervision', action: 'Buddy System Enforcement', priority: 'medium', effect: 15 },
+    { factor: 'Emergency Preparedness', action: 'Rescue Boat Availability', priority: 'high', effect: 18 }
+  ],
+  'Explosives & Blasting': [
+    { factor: 'Permit', action: 'Blasting Permit Compliance', priority: 'high', effect: 28 },
+    { factor: 'Competency', action: 'Shot Firer Certification', priority: 'high', effect: 25 },
+    { factor: 'Barriers', action: 'Blast Zone Exclusion', priority: 'high', effect: 22 },
+    { factor: 'Communication', action: 'Blast Warning System', priority: 'high', effect: 20 },
+    { factor: 'Inspections', action: 'Misfire Procedures', priority: 'high', effect: 18 }
+  ],
+  'Physical Hazard': [
+    { factor: 'Barriers', action: 'Struck-By Prevention Barriers', priority: 'high', effect: 20 },
+    { factor: 'PPE', action: 'Hard Hat/Safety Glasses Compliance', priority: 'high', effect: 18 },
+    { factor: 'Housekeeping', action: 'Overhead Work Exclusion Zones', priority: 'medium', effect: 15 },
+    { factor: 'Signage', action: 'Warning Sign Placement', priority: 'medium', effect: 12 },
+    { factor: 'Training', action: 'Hazard Awareness Training', priority: 'medium', effect: 14 }
+  ],
+  'Mechanical Hazard': [
+    { factor: 'Machine Guarding', action: 'Guard Installation Audit', priority: 'high', effect: 25 },
+    { factor: 'Safety Devices', action: 'Emergency Stop Checks', priority: 'high', effect: 20 },
+    { factor: 'Training', action: 'Machine-Specific Training', priority: 'high', effect: 18 },
+    { factor: 'Inspections', action: 'Moving Parts Inspection', priority: 'medium', effect: 15 },
+    { factor: 'Permit', action: 'LOTO Compliance', priority: 'high', effect: 22 }
+  ],
+  'COSHH': [
+    { factor: 'Documentations', action: 'COSHH Assessment Review', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Chemical Handling Training', priority: 'high', effect: 20 },
+    { factor: 'PPE', action: 'Chemical PPE Compliance', priority: 'high', effect: 18 },
+    { factor: 'Housekeeping', action: 'Chemical Storage Audit', priority: 'medium', effect: 15 },
+    { factor: 'Signage', action: 'MSDS Availability', priority: 'medium', effect: 12 }
+  ],
+  'Respiratory Hazard': [
+    { factor: 'PPE', action: 'Respirator Fit Testing', priority: 'high', effect: 22 },
+    { factor: 'Environment', action: 'Dust Suppression', priority: 'high', effect: 20 },
+    { factor: 'Training', action: 'RPE Training', priority: 'high', effect: 18 },
+    { factor: 'Inspections', action: 'Air Quality Monitoring', priority: 'high', effect: 20 },
+    { factor: 'Barriers', action: 'Isolation/Ventilation', priority: 'medium', effect: 15 }
+  ],
+  'Housekeeping': [
+    { factor: 'Supervision', action: 'Housekeeping Inspections', priority: 'high', effect: 20 },
+    { factor: 'Training', action: '5S/6S Training', priority: 'medium', effect: 15 },
+    { factor: 'Inspections', action: 'Daily Walkthrough Audits', priority: 'high', effect: 18 },
+    { factor: 'Communication', action: 'Clean-As-You-Go Campaign', priority: 'medium', effect: 12 },
+    { factor: 'BBS', action: 'Housekeeping Recognition', priority: 'medium', effect: 10 }
+  ],
+  'Site Security': [
+    { factor: 'Barriers', action: 'Access Control Audit', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Security Awareness Training', priority: 'medium', effect: 15 },
+    { factor: 'Inspections', action: 'Perimeter Inspections', priority: 'high', effect: 18 },
+    { factor: 'Communication', action: 'Visitor Management System', priority: 'medium', effect: 12 },
+    { factor: 'Signage', action: 'Restricted Area Signage', priority: 'medium', effect: 10 }
+  ],
+  'Access': [
+    { factor: 'Barriers', action: 'Safe Access Routes', priority: 'high', effect: 22 },
+    { factor: 'Signage', action: 'Wayfinding Signage', priority: 'medium', effect: 15 },
+    { factor: 'Housekeeping', action: 'Clear Access Pathways', priority: 'high', effect: 18 },
+    { factor: 'Inspections', action: 'Access Point Inspections', priority: 'medium', effect: 14 },
+    { factor: 'Training', action: 'Site Induction Routes', priority: 'medium', effect: 12 }
+  ],
+  'Worker Welfare': [
+    { factor: 'Environment', action: 'Welfare Facility Audit', priority: 'high', effect: 22 },
+    { factor: 'Inspections', action: 'Daily Welfare Checks', priority: 'high', effect: 18 },
+    { factor: 'Communication', action: 'Worker Feedback System', priority: 'medium', effect: 15 },
+    { factor: 'Supervision', action: 'Welfare Supervisor Assignment', priority: 'medium', effect: 12 },
+    { factor: 'Planning', action: 'Welfare Provision Planning', priority: 'medium', effect: 14 }
+  ],
+  'Tools': [
+    { factor: 'Inspections', action: 'Tool Inspection Program', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Tool-Specific Training', priority: 'high', effect: 18 },
+    { factor: 'Housekeeping', action: 'Tool Storage Audit', priority: 'medium', effect: 15 },
+    { factor: 'PPE', action: 'Tool-Related PPE Compliance', priority: 'medium', effect: 14 },
+    { factor: 'Safety Devices', action: 'Tool Safety Features Check', priority: 'medium', effect: 12 }
+  ],
+  'Traffic Management': [
+    { factor: 'Planning', action: 'TMP Review', priority: 'high', effect: 25 },
+    { factor: 'Barriers', action: 'Vehicle/Pedestrian Segregation', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Traffic Marshal Training', priority: 'high', effect: 18 },
+    { factor: 'Signage', action: 'Traffic Signage Audit', priority: 'medium', effect: 15 },
+    { factor: 'Supervision', action: 'Traffic Control Monitoring', priority: 'medium', effect: 12 }
+  ],
+  'Environmental': [
+    { factor: 'Planning', action: 'Environmental Impact Assessment', priority: 'high', effect: 22 },
+    { factor: 'Training', action: 'Spill Response Training', priority: 'high', effect: 18 },
+    { factor: 'Inspections', action: 'Environmental Compliance Audits', priority: 'high', effect: 20 },
+    { factor: 'Housekeeping', action: 'Waste Segregation Audit', priority: 'medium', effect: 15 },
+    { factor: 'Emergency Preparedness', action: 'Spill Kit Availability', priority: 'medium', effect: 14 }
+  ],
+  'Slip and Trip': [
+    { factor: 'Housekeeping', action: 'Walking Surface Audit', priority: 'high', effect: 22 },
+    { factor: 'Inspections', action: 'Daily Walkway Inspections', priority: 'high', effect: 18 },
+    { factor: 'Signage', action: 'Wet Floor/Hazard Signs', priority: 'medium', effect: 15 },
+    { factor: 'Environment', action: 'Drainage Improvements', priority: 'medium', effect: 14 },
+    { factor: 'PPE', action: 'Appropriate Footwear Audit', priority: 'medium', effect: 12 }
+  ],
+  'General Site Issues': [
+    { factor: 'Inspections', action: 'Comprehensive Site Audit', priority: 'high', effect: 20 },
+    { factor: 'Supervision', action: 'Increased Supervisor Presence', priority: 'medium', effect: 15 },
+    { factor: 'Training', action: 'General Safety Awareness', priority: 'medium', effect: 14 },
+    { factor: 'Communication', action: 'Safety Stand-Down', priority: 'medium', effect: 12 },
+    { factor: 'Housekeeping', action: 'General Housekeeping Drive', priority: 'medium', effect: 15 }
+  ]
+}
+
+// Quick Action Presets for Scenario Simulator
+export const QUICK_ACTION_PRESETS = [
+  {
+    id: 'engineering-boost',
+    label: 'Engineering+',
+    description: 'Boost engineering controls (barriers, guards, devices)',
+    icon: 'Settings',
+    color: 'blue',
+    effect: { barriers: 75, guards: 75, devices: 75, signage: 60 },
+    estimatedImpact: -15
+  },
+  {
+    id: 'admin-boost',
+    label: 'Admin+',
+    description: 'Increase administrative controls (training, supervision)',
+    icon: 'Shield',
+    color: 'indigo',
+    effect: { training: 80, inspections: 70, supervision: 60, permits: 75 },
+    estimatedImpact: -12
+  },
+  {
+    id: 'ppe-push',
+    label: 'PPE Push',
+    description: 'Maximum PPE compliance drive',
+    icon: 'User',
+    color: 'amber',
+    effect: { ppe: 100 },
+    estimatedImpact: -8
+  },
+  {
+    id: 'close-actions',
+    label: 'Close Actions',
+    description: 'Close all open corrective actions',
+    icon: 'CheckCircle',
+    color: 'green',
+    effect: { actionsToClose: 'max' },
+    estimatedImpact: -10
+  }
+]
