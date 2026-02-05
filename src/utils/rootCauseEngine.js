@@ -144,6 +144,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'color coding missing', 'colour coding', 'colour coding was',
       'color code updated', 'colour code updated', 'updated color coding',
       'security entry log', 'security log sheet', 'visitor log sheet',
+      'visitors sign in list', 'sign in list', 'visitor sign in', 'visitors log',
+      'visitor log', 'visitors log sheet', 'entry log sheet', 'entry exit log',
       // Misspellings
       'chek list', 'checklst', 'checlist', 'cehcklist', 'fristaid',
 
@@ -304,6 +306,7 @@ export const FACTOR_PHRASE_CONFIG = {
     strongPatterns: [
       // Missing PPE - specific phrases (including "did not wear" variations)
       'not wearing helmet', 'without helmet', 'no helmet', 'missing helmet',
+      'without safety helmet', 'no safety helmet', 'found this worker without',
       'did not wear helmet', 'didnt wear helmet', 'didn\'t wear helmet',
       'not wearing hard hat', 'without hard hat', 'no hard hat',
       'did not wear hard hat',
@@ -312,7 +315,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'not wearing goggles', 'without goggles', 'no goggles', 'missing goggles',
       'did not wear goggles', 'without safety goggles', 'without eye protection',
       'not wearing safety shoes', 'without safety shoes', 'no safety shoes',
-      'did not wear safety shoes', 'without shoes',
+      'did not wear safety shoes', 'without shoes', 'with out safety shoes',
+      'didnt wear safety glasses', 'didnt wear safety', 'didnt wear helmet',
       'not wearing boots', 'without boots', 'no boots', 'did not wear boots',
       'not wearing vest', 'without vest', 'no vest', 'missing vest',
       'did not wear vest', 'without reflective vest',
@@ -1044,6 +1048,13 @@ export const FACTOR_PHRASE_CONFIG = {
       'pipes stored at', 'materials kept on', 'material kept on',
       'stored improperly', 'improperly stored', 'improper arrangement',
       'improper materials arrangement', 'improperly placed on ground',
+      'poor materials arrangement', 'poor material arrangement',
+      'poor materials arrangements', 'poor material management',
+      'found poor materials', 'found poor material', 'properly arranging materials',
+      'not a designated storage area', 'not designated storage area',
+      'not in designated area', 'not in the designated area',
+      'placed near the security cabin', 'materials placed near',
+      'construction materials were placed', 'materials were placed near',
       'improperly placed on the ground', 'materials improperly placed',
       'material improperly placed', 'cement bags placed directly',
       'cement bags stacked on ground', 'cement bags on ground',
@@ -1193,7 +1204,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'bar found without a safety', 'bar without a safety cap', 'bar found without cap',
       'a steel bar was found without', 'steel bar was found without a safety cap',
       'timber with exposed nails', 'wood timber with nails', 'timber with nails',
+      'timbers were found full of nails', 'full of nails', 'found full of nails',
       'exposed nails', 'nails exposed', 'nails were not removed', 'nails not removed',
+      'railing protection', 'improve railing protection', 'railing not installed',
       'wood timber was disposed', 'disposed of but nails', 'nails were not',
       'on top of the pillars', 'falling object hazard', 'serious falling object',
       'potential injury hazard', 'posing a potential injury',
@@ -1881,6 +1894,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'tape removed', 'tape broken', 'tape torn', 'barrier tape not',
       'barrier tape missing', 'red and white tape not', 'red white tape not',
       'yellow tape not', 'safety tape not', 'safety tape missing',
+      'tape is being used on site', 'not compliant with neom', 'tape not compliant',
+      'warning tap not allowed', 'warning tape not allowed', 'tap not allowed',
 
       // === EXCLUSION ZONE ===
       'no exclusion zone', 'without exclusion zone', 'exclusion zone not',
@@ -2224,11 +2239,13 @@ export const FACTOR_PHRASE_CONFIG = {
       'waring sign', 'warining sign', 'saftey sign', 'safty sign'
     ],
     moderatePatterns: [
-      'sign', 'signs', 'signage', 'signages', 'signboard', 'sign board',
+      // NOTE: Removed 'sign' - too short, matches 'significant', 'assigned', etc.
+      // NOTE: Removed 'notice' - matches 'noticed', 'notified', etc. Use 'notice board' instead
+      'signs', 'signage', 'signages', 'signboard', 'sign board',
       'label', 'labels', 'marking', 'markings', 'placard', 'placards',
       'poster', 'posters', 'banner', 'banners',
       'warning sign', 'safety sign', 'caution sign', 'danger sign',
-      'hazard sign', 'notice', 'sticker', 'stickers'
+      'hazard sign', 'notice board', 'sticker', 'stickers'
     ],
     exclusionPatterns: [
       'inspection checklist', 'qr code', 'vvs', 'veri-fi',
@@ -2246,6 +2263,12 @@ export const FACTOR_PHRASE_CONFIG = {
       'no first aid', 'without first aid', 'first aid not', 'first aid missing',
       'first aid kit not', 'first aid kit missing', 'first aid kit expired',
       'no emergency', 'emergency equipment not', 'emergency kit not',
+      // Medical supplies not available
+      'atropine is not available', 'atropine not available', 'glucagon is not available',
+      'glucagon not available', 'amiodarone is not available', 'amiodarone not available',
+      'adrenaline is not available', 'adrenaline not available', 'epinephrine not available',
+      'airway kit are not available', 'airway kit not available', 'oral and nasal airway',
+      'nasal airway kit', 'medical supplies not available', 'medication not available',
       // Positive emergency preparedness
       'fire extinguisher available', 'fire extinguisher inspected',
       'first aid kit available', 'first aid kit inspected',
