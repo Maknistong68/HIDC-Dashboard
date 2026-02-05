@@ -438,37 +438,49 @@ const BatchImportModal = ({ onClose }) => {
                             'text-surface-400'
                           }
                         />
-                        <div className="min-w-0">
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-surface-800 truncate">
                             {item.file.name}
                           </p>
-                          <p className="text-xs text-surface-500">
-                            {item.status === 'success' ?
-                              <>
-                                {item.recordCount?.toLocaleString() || 0} records imported
-                                {item.skippedCount > 0 && (
-                                  <span className="text-amber-600 ml-1">
-                                    ({item.existingDataSkippedCount > 0 ? `${item.existingDataSkippedCount} existing` : ''}
-                                    {item.existingDataSkippedCount > 0 && item.withinBatchSkippedCount > 0 ? ', ' : ''}
-                                    {item.withinBatchSkippedCount > 0 ? `${item.withinBatchSkippedCount} in batch` : ''} skipped)
-                                  </span>
-                                )}
-                              </> :
-                            item.status === 'error' ?
-                              <span className="text-red-600">{item.error}</span> :
-                            item.status === 'duplicate' ?
-                              <span className="text-amber-600">{item.error}</span> :
-                            item.status === 'processing' ?
-                              'Processing...' :
-                              `${(item.file.size / 1024).toFixed(1)} KB`
-                            }
-                          </p>
+                          {item.status === 'processing' ? (
+                            <div className="mt-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                                <span className="text-xs text-blue-700 font-medium truncate">
+                                  {processingDetails.step || 'Processing...'}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-200"
+                                  style={{ width: `${processingDetails.progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-surface-500">
+                              {item.status === 'success' ?
+                                <>
+                                  {item.recordCount?.toLocaleString() || 0} records imported
+                                  {item.skippedCount > 0 && (
+                                    <span className="text-amber-600 ml-1">
+                                      ({item.existingDataSkippedCount > 0 ? `${item.existingDataSkippedCount} existing` : ''}
+                                      {item.existingDataSkippedCount > 0 && item.withinBatchSkippedCount > 0 ? ', ' : ''}
+                                      {item.withinBatchSkippedCount > 0 ? `${item.withinBatchSkippedCount} in batch` : ''} skipped)
+                                    </span>
+                                  )}
+                                </> :
+                              item.status === 'error' ?
+                                <span className="text-red-600">{item.error}</span> :
+                              item.status === 'duplicate' ?
+                                <span className="text-amber-600">{item.error}</span> :
+                                `${(item.file.size / 1024).toFixed(1)} KB`
+                              }
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {item.status === 'processing' && (
-                          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {item.status === 'success' && (
                           <Check size={20} className="text-green-600" />
                         )}
