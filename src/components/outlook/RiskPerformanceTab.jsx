@@ -245,15 +245,15 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
 
       {/* Collapsible weight editor */}
       {showEditor && (
-        <div className="bg-surface-50 rounded-lg p-4 space-y-3 border border-surface-100 animate-fade-in">
-          {/* Presets */}
+        <div className="bg-surface-50 rounded-lg px-3 py-2.5 space-y-2 border border-surface-100 animate-fade-in">
+          {/* Top row: presets + info hint + preset description */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-surface-400 font-medium mr-1">Preset:</span>
+            <span className="text-2xs text-surface-400 font-medium mr-0.5">Preset:</span>
             {Object.entries(PRESET_LABELS).map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => handlePresetChange(key)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-all ${
                   presetProfile === key
                     ? 'bg-primary-500 text-white shadow-sm'
                     : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
@@ -263,57 +263,44 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
               </button>
             ))}
             {presetProfile === 'custom' && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+              <span className="px-2 py-0.5 rounded-full text-2xs font-medium bg-amber-100 text-amber-700">
                 Custom
               </span>
             )}
+            <span className="text-2xs text-surface-400 italic ml-1 hidden sm:inline">
+              — {PRESET_DESCRIPTIONS[presetProfile] || PRESET_DESCRIPTIONS.custom}
+            </span>
           </div>
 
-          {/* Preset description */}
-          <p className="text-xs text-surface-500 italic pl-0.5">
-            {PRESET_DESCRIPTIONS[presetProfile] || PRESET_DESCRIPTIONS.custom}
-          </p>
-
-          {/* Director disclaimer */}
-          <div className="flex gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-2">
-            <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700 leading-relaxed">
-              These weights reflect your scoring priorities, not safety importance.
-              For example, increasing High-Risk Exposure weight means entities with
-              more major-hazard work will score higher. Inverted signals (Near-Miss Rate,
-              Positive Rate) score higher when reporting is <span className="font-semibold">low</span>,
-              so reducing their weight may mask reporting gaps.
+          {/* Compact info line */}
+          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded px-2 py-1">
+            <Info size={11} className="text-blue-400 flex-shrink-0" />
+            <p className="text-2xs text-blue-600">
+              Weights set scoring priorities, not safety importance. Inverted signals (Near-Miss, Positive Rate) score higher when reporting is <span className="font-semibold">low</span>.
             </p>
           </div>
 
-          {/* Sliders - 3 column grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-3">
+          {/* Sliders - always 3 columns on md+, single-line rows */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
             {Object.entries(SIGNAL_LABELS).map(([key, label]) => {
               const hint = SIGNAL_HINTS[key]
               return (
-                <div key={key} className="flex items-start gap-2.5">
-                  <div className="w-28 flex-shrink-0 pt-0.5">
-                    <span className="text-xs font-medium text-surface-700 truncate block">{label}</span>
-                    {hint && (
-                      <span className={`text-2xs leading-tight block mt-0.5 ${
-                        hint.inverted
-                          ? 'text-amber-600 font-medium'
-                          : 'text-surface-400'
-                      }`}>
-                        {hint.inverted && <AlertTriangle size={9} className="inline mr-0.5 -mt-px" />}
-                        {hint.text}
-                      </span>
-                    )}
-                  </div>
+                <div key={key} className="flex items-center gap-2" title={hint?.text}>
+                  <span className={`text-2xs w-24 truncate flex-shrink-0 ${
+                    hint?.inverted ? 'text-amber-600 font-medium' : 'text-surface-600'
+                  }`}>
+                    {hint?.inverted && <AlertTriangle size={9} className="inline mr-0.5 -mt-px" />}
+                    {label}
+                  </span>
                   <input
                     type="range"
                     min={5}
                     max={50}
                     value={entityWeights[key]}
                     onChange={(e) => handleSliderChange(key, parseInt(e.target.value))}
-                    className="unified-slider admin flex-1 h-2 mt-1"
+                    className="unified-slider admin flex-1 h-1.5"
                   />
-                  <span className="text-xs text-surface-500 font-mono w-8 text-right pt-0.5">{entityWeights[key]}%</span>
+                  <span className="text-2xs text-surface-500 font-mono w-7 text-right">{entityWeights[key]}%</span>
                 </div>
               )
             })}
