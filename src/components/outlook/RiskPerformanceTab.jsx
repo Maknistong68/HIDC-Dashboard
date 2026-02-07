@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, startTransition } from 'react'
-import { SlidersHorizontal, AlertTriangle, Info } from 'lucide-react'
+import { SlidersHorizontal, AlertTriangle, Info, ChevronRight } from 'lucide-react'
 import { calculateEntityRiskRanking } from '../../utils/insightsCalculations'
 import EntityRiskList from './EntityRiskList'
 import EntityDetailPanel from './EntityDetailPanel'
@@ -35,75 +35,78 @@ const SIGNAL_HINTS = {
   positiveRate:     { inverted: true }
 }
 
+const SIGNAL_RANGES = {
+  severityMix:      { min: 5, max: 35 },
+  trend:            { min: 5, max: 30 },
+  openActionRate:   { min: 5, max: 35 },
+  highRiskExposure: { min: 5, max: 25 },
+  nearMissRate:     { min: 5, max: 10 },
+  positiveRate:     { min: 5, max: 20 },
+}
+
 const PRESETS = {
   balanced: { severityMix: 25, trend: 20, openActionRate: 20, highRiskExposure: 15, nearMissRate: 10, positiveRate: 10 },
   operations: { severityMix: 30, trend: 25, openActionRate: 20, highRiskExposure: 15, nearMissRate: 5, positiveRate: 5 },
-  culture: { severityMix: 15, trend: 15, openActionRate: 15, highRiskExposure: 10, nearMissRate: 20, positiveRate: 25 },
+  culture: { severityMix: 20, trend: 20, openActionRate: 20, highRiskExposure: 10, nearMissRate: 10, positiveRate: 20 },
   compliance: { severityMix: 20, trend: 15, openActionRate: 30, highRiskExposure: 20, nearMissRate: 10, positiveRate: 5 }
 }
 
-const sliderStyles = `
-  .unified-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-    margin: 0;
-    padding: 0;
-  }
-  .unified-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-    margin-top: -4px;
-  }
-  .unified-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-  }
-  .unified-slider.risk-weight {
-    background: linear-gradient(to right, #e2e8f0 0%, #94a3b8 50%, #64748b 100%);
-  }
-  .unified-slider.risk-weight::-webkit-slider-thumb { background: #475569; }
-  .unified-slider.risk-weight::-moz-range-thumb { background: #475569; }
-`
+// Slider styles now in global index.css (.unified-slider)
 
+/**
+ * Normalize weights so they always sum to 100.
+ * Distributes remaining weight proportionally, then applies min/max
+ * constraints, and corrects any rounding residual on the largest weight.
+ */
 const normalizeWeights = (key, newValue, weights) => {
   const oldValue = weights[key]
-  const delta = newValue - oldValue
-  if (delta === 0) return weights
+  if (newValue === oldValue) return weights
 
   const otherKeys = Object.keys(weights).filter(k => k !== key)
-  const otherSum = otherKeys.reduce((s, k) => s + weights[k], 0)
+  const remaining = 100 - newValue
   const updated = { ...weights, [key]: newValue }
 
+  // Calculate target distribution for remaining weight
+  const otherSum = otherKeys.reduce((s, k) => s + weights[k], 0)
+
   if (otherSum > 0) {
-    otherKeys.forEach(k => {
-      const proportion = weights[k] / otherSum
-      updated[k] = Math.max(5, Math.round(weights[k] - delta * proportion))
+    // Distribute proportionally based on original values
+    let allocated = 0
+    otherKeys.forEach((k, idx) => {
+      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
+      if (idx === otherKeys.length - 1) {
+        // Last key gets remainder to guarantee sum = 100
+        updated[k] = Math.min(max, Math.max(min, remaining - allocated))
+      } else {
+        const proportion = weights[k] / otherSum
+        const target = Math.round(remaining * proportion)
+        updated[k] = Math.min(max, Math.max(min, target))
+        allocated += updated[k]
+      }
     })
   } else {
-    const each = Math.round((100 - newValue) / otherKeys.length)
-    otherKeys.forEach(k => { updated[k] = Math.max(5, each) })
+    const each = Math.floor(remaining / otherKeys.length)
+    otherKeys.forEach(k => {
+      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
+      updated[k] = Math.min(max, Math.max(min, each))
+    })
   }
 
+  // Final correction: ensure exact sum of 100
   const sum = Object.values(updated).reduce((s, v) => s + v, 0)
   if (sum !== 100) {
-    const largest = otherKeys.sort((a, b) => updated[b] - updated[a])[0]
-    updated[largest] += (100 - sum)
+    // Apply residual to the other key with the largest current weight
+    const sortedOthers = [...otherKeys].sort((a, b) => updated[b] - updated[a])
+    for (const k of sortedOthers) {
+      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
+      const adjusted = updated[k] + (100 - sum)
+      if (adjusted >= min && adjusted <= max) {
+        updated[k] = adjusted
+        break
+      }
+    }
   }
+
   return updated
 }
 
@@ -154,6 +157,24 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
       else s.low++
     })
     return s
+  }, [rankings])
+
+  // Top attention entity
+  const topAttention = useMemo(() => {
+    if (!rankings.length) return null
+    const top = rankings[0]
+    if (top.score <= 30) return null
+    let topConcern = null
+    if (top.signals) {
+      const sorted = Object.entries(top.signals)
+        .filter(([, v]) => v && typeof v.score === 'number')
+        .sort((a, b) => b[1].score - a[1].score)
+      if (sorted.length > 0) {
+        const [key, val] = sorted[0]
+        topConcern = { label: SIGNAL_LABELS[key] || key, score: val.score }
+      }
+    }
+    return { name: top.name, score: top.score, topConcern }
   }, [rankings])
 
   // Filter incidents for selected entity
@@ -212,19 +233,25 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
   if (!filteredIncidents?.length) {
     return (
       <div className="bg-white rounded-lg border border-surface-100 p-6 text-center">
-        <p className="text-sm text-surface-500">No data available for risk & performance analysis.</p>
+        <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-3">
+          <AlertTriangle size={24} className="text-surface-400" />
+        </div>
+        <h2 className="text-base font-semibold text-surface-800 mb-1">No Risk Data</h2>
+        <p className="text-xs text-surface-500">No data available for risk & performance analysis.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 flex-1 flex flex-col">
+    <div className="flex flex-col gap-3 flex-1 animate-fade-in">
       {/* Sub-tab row: dimension tabs + summary + Adjust */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
           {Object.entries(DIMENSION_LABELS).map(([key, label]) => (
             <button
               key={key}
+              role="tab"
+              aria-selected={dimension === key}
               onClick={() => handleDimensionChange(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 dimension === key
@@ -261,6 +288,8 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
           {/* Adjust button */}
           <button
             onClick={() => setShowEditor(e => !e)}
+            aria-expanded={showEditor}
+            aria-controls="risk-weight-editor"
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
               showEditor
                 ? 'bg-primary-100 text-primary-700'
@@ -273,10 +302,9 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
         </div>
       </div>
 
-      {/* Weight editor row (collapsible) */}
+      {/* Weight editor (full-width, collapsible) */}
       {showEditor && (
-        <div className="bg-surface-50 rounded-lg border border-surface-100 px-4 py-3 space-y-2.5 animate-fade-in">
-          <style>{sliderStyles}</style>
+        <div id="risk-weight-editor" className="bg-surface-50 rounded-lg border border-surface-100 px-4 py-3 space-y-2.5 animate-fade-in">
           {/* Presets */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-2xs text-surface-400 font-medium">Preset:</span>
@@ -298,10 +326,11 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
             )}
           </div>
 
-          {/* Sliders — 3 columns on lg, 2 on sm */}
+          {/* Sliders — 3 columns at full width */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
             {Object.entries(SIGNAL_LABELS).map(([key, label]) => {
               const hint = SIGNAL_HINTS[key]
+              const range = SIGNAL_RANGES[key] || { min: 5, max: 50 }
               return (
                 <div key={key} className="flex items-center gap-2">
                   <span className={`text-2xs w-24 truncate flex-shrink-0 ${
@@ -312,13 +341,14 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
                   </span>
                   <input
                     type="range"
-                    min={5}
-                    max={50}
+                    min={range.min}
+                    max={range.max}
                     value={entityWeights[key]}
                     onChange={(e) => handleSliderChange(key, parseInt(e.target.value))}
+                    aria-label={`${label} weight: ${entityWeights[key]}%`}
                     className="unified-slider risk-weight flex-1 h-1.5"
                   />
-                  <span className="text-2xs text-surface-500 font-mono w-7 text-right">{entityWeights[key]}%</span>
+                  <span className="text-2xs text-surface-500 font-mono w-7 text-right" aria-live="polite">{entityWeights[key]}%</span>
                 </div>
               )
             })}
@@ -334,8 +364,33 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
         </div>
       )}
 
+      {/* Top attention banner */}
+      {topAttention && (
+        <button
+          onClick={() => {
+            const match = rankings.find(r => r.name === topAttention.name)
+            if (match) handleEntitySelect(match)
+          }}
+          className="w-full flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-left hover:bg-red-100 transition-colors group"
+        >
+          <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-800">
+              Needs attention: {topAttention.name}
+              <span className="ml-2 text-red-600 font-bold">Score {topAttention.score}/100</span>
+            </p>
+            {topAttention.topConcern && (
+              <p className="text-xs text-red-600">
+                Top concern: {topAttention.topConcern.label} ({topAttention.topConcern.score}/100)
+              </p>
+            )}
+          </div>
+          <ChevronRight size={16} className="text-red-400 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      )}
+
       {/* Master-detail panels */}
-      <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)] animate-fade-in">
+      <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)]">
         {/* Left: Entity List */}
         <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
           <div className="flex items-center justify-between mb-1 flex-shrink-0">
@@ -352,12 +407,13 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
         </div>
 
         {/* Right: Detail Panel */}
-        <div className="flex-1 min-w-0 transition-all duration-200">
+        <div className="flex-1 min-w-0">
           <EntityDetailPanel
             entity={selectedEntity}
             incidents={entityIncidents}
             dimension={DIMENSION_LABELS[dimension]}
             totalIncidents={filteredIncidents.length}
+            rankings={rankings}
           />
         </div>
       </div>

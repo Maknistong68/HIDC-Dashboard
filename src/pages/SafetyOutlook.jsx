@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useCallback, useEffect, startTransition } from 'react'
-import { Target, AlertTriangle, Layers } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskComparisonPanel } from '../components/outlook'
-import { UnifiedPredictivePanel } from '../components/insights'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, PredictiveSimulationTab } from '../components/outlook'
+import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import { getHazardTrendingByPeriod, getIncidentPredictionSummary, getHazardDailyData } from '../utils/insightsCalculations'
+import { getHazardTrendingByPeriod, getHazardDailyData, getIncidentPredictionSummary } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
 import { SUB_REGION_OPTIONS } from '../utils/constants'
 
@@ -99,8 +99,19 @@ const FactorSummary = React.memo(({ factorData, totalIncidents }) => {
 FactorSummary.displayName = 'FactorSummary'
 
 /**
- * SafetyOutlook - Main page component with hazard list view
- * Optimized with startTransition for smooth selections
+ * MAIN TAB DEFINITIONS
+ */
+const MAIN_TABS = [
+  { id: 'correlations', label: 'Correlations', icon: Target },
+  { id: 'predictive', label: 'Predictive & Simulation', icon: Zap },
+  { id: 'risk', label: 'Risk & Performance', icon: Shield }
+]
+
+/**
+ * SafetyOutlook - Main page component with 3-tab layout
+ * Tab 1: Correlations (Hazards & Factors)
+ * Tab 2: Predictive & Simulation
+ * Tab 3: Risk & Performance
  */
 const SafetyOutlook = () => {
   const { incidents, siteClassifications, hasSubregionAssignments } = useData()
@@ -110,7 +121,8 @@ const SafetyOutlook = () => {
   const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion } = useFilter()
 
   // Local state
-  const [activeTab, setActiveTab] = useState('hazards') // 'hazards' or 'factors'
+  const [activeMainTab, setActiveMainTab] = useState('correlations')
+  const [activeSubTab, setActiveSubTab] = useState('hazards') // 'hazards' or 'factors'
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
 
@@ -195,16 +207,6 @@ const SafetyOutlook = () => {
     return getHazardTrendingByPeriod(filteredIncidents, period)
   }, [filteredIncidents, period])
 
-  // Filter to negative observations only for predictions (exclude positive types)
-  const negativeIncidents = useMemo(() => {
-    return filteredIncidents.filter(i => !isPositiveType(i.type))
-  }, [filteredIncidents])
-
-  // Calculate incident prediction data (negative observations only)
-  const incidentPrediction = useMemo(() => {
-    return getIncidentPredictionSummary(negativeIncidents)
-  }, [negativeIncidents])
-
   // Calculate contributing factors (negative observations only)
   const factorData = useMemo(() => {
     return aggregateContributingFactors(filteredIncidents, 'negative')
@@ -264,6 +266,32 @@ const SafetyOutlook = () => {
     }
   }, [selectedFactor?.name, factorData?.byFactor])
 
+  // Negative incidents (for Tab 2 - Predictive & Simulation)
+  const negativeIncidents = useMemo(() => {
+    return filteredIncidents.filter(i => !isPositiveType(i.type))
+  }, [filteredIncidents])
+
+  // Incident prediction summary (for Tab 2)
+  const incidentPrediction = useMemo(() => {
+    return getIncidentPredictionSummary(negativeIncidents)
+  }, [negativeIncidents])
+
+  // General daily trend data for all hazards (for Tab 2 forecast chart)
+  const allHazardTrendData = useMemo(() => {
+    if (!negativeIncidents.length) return { days: [], avgPerDay: 0, hasData: false }
+    const dateMap = new Map()
+    negativeIncidents.forEach(i => {
+      if (!i.date) return
+      const d = typeof i.date === 'string' ? i.date.split('T')[0] : i.date
+      dateMap.set(d, (dateMap.get(d) || 0) + 1)
+    })
+    const days = Array.from(dateMap.entries())
+      .map(([date, count]) => ({ date, label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    const avgPerDay = days.length > 0 ? negativeIncidents.length / days.length : 0
+    return { days, avgPerDay, totalCount: negativeIncidents.length, hasData: true }
+  }, [negativeIncidents])
+
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
   const detectedIncidentsCount = useMemo(() => {
     const incidentSet = new Set()
@@ -303,9 +331,9 @@ const SafetyOutlook = () => {
     }
   }, [sortedHazards, selectedHazard])
 
-  // Auto-select first factor when switching to factors tab or when data changes
+  // Auto-select first factor when switching to factors sub-tab or when data changes
   useEffect(() => {
-    if (activeTab !== 'factors') return
+    if (activeMainTab !== 'correlations' || activeSubTab !== 'factors') return
 
     if (factorData.byFactor.length === 0) {
       if (selectedFactor) {
@@ -328,7 +356,7 @@ const SafetyOutlook = () => {
         setSelectedFactor(factorData.byFactor[0])
       })
     }
-  }, [activeTab, factorData.byFactor, selectedFactor])
+  }, [activeMainTab, activeSubTab, factorData.byFactor, selectedFactor])
 
   // Handlers - use startTransition for non-urgent updates
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -365,13 +393,20 @@ const SafetyOutlook = () => {
     })
   }, [])
 
-  const handleTabChange = useCallback((tab) => {
-    setActiveTab(tab)
+  const handleMainTabChange = useCallback((tab) => {
+    startTransition(() => {
+      setActiveMainTab(tab)
+    })
+  }, [])
+
+  const handleSubTabChange = useCallback((tab) => {
+    setActiveSubTab(tab)
   }, [])
 
   // Check if we have data
   const hasData = filteredIncidents.length > 0 && sortedHazards.length > 0
 
+  // Empty state renders
   if (!incidents.length) {
     return (
       <div className="space-y-3">
@@ -425,7 +460,7 @@ const SafetyOutlook = () => {
   }
 
   return (
-    <div className="space-y-5 flex flex-col h-full">
+    <div className="space-y-4 flex flex-col">
       {/* Filters Row - consistent with Dashboard */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -439,134 +474,185 @@ const SafetyOutlook = () => {
         <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
       </div>
 
-      {/* Tab Toggle and Stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {/* Hazards Tab */}
-          <button
-            onClick={() => handleTabChange('hazards')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeTab === 'hazards'
-                ? 'bg-primary-100 text-primary-700'
-                : 'text-surface-600 hover:bg-surface-100'
-            }`}
-          >
-            <Target size={14} />
-            Hazards
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === 'hazards' ? 'bg-primary-200 text-primary-800' : 'bg-surface-200 text-surface-600'
-            }`}>
-              {sortedHazards.length}
-            </span>
-          </button>
-
-          {/* Factors Tab */}
-          <button
-            onClick={() => handleTabChange('factors')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeTab === 'factors'
-                ? 'bg-primary-100 text-primary-700'
-                : 'text-surface-600 hover:bg-surface-100'
-            }`}
-          >
-            <Layers size={14} />
-            Factors
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === 'factors' ? 'bg-primary-200 text-primary-800' : 'bg-surface-200 text-surface-600'
-            }`}>
-              {factorData.byFactor.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Show summary based on active tab */}
-        <div className="text-xs">
-          {activeTab === 'hazards' && <TrendSummary hazards={sortedHazards} />}
-          {activeTab === 'factors' && <FactorSummary factorData={factorData} totalIncidents={filteredIncidents.length} />}
-        </div>
+      {/* ==================== 3 MAIN TABS ==================== */}
+      <div role="tablist" aria-label="Safety Outlook tabs" className="flex items-center gap-1 overflow-x-auto border-b border-surface-200 pb-0">
+        {MAIN_TABS.map(tab => {
+          const Icon = tab.icon
+          const isActive = activeMainTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tabpanel-${tab.id}`}
+              id={`tab-${tab.id}`}
+              onClick={() => handleMainTabChange(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 -mb-px ${
+                isActive
+                  ? 'border-primary-600 text-primary-700'
+                  : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300'
+              }`}
+            >
+              <Icon size={15} />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Main content */}
-      <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-260px)] animate-fade-in">
-        {activeTab === 'hazards' ? (
-          <>
-            {/* Left: Hazard List */}
-            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
-              <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                <h2 className="text-sm font-semibold text-surface-800">Hazards</h2>
-                <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{sortedHazards.length}</span>
-              </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <HazardList
-                  hazards={sortedHazards}
-                  selected={selectedHazard}
-                  onSelect={handleHazardSelect}
-                />
-              </div>
+      {/* ==================== TAB CONTENT ==================== */}
+
+      {/* Tab 1: Correlations */}
+      {activeMainTab === 'correlations' && (
+        <TabErrorBoundary label="Correlations">
+        <div role="tabpanel" id="tabpanel-correlations" aria-labelledby="tab-correlations" className="flex flex-col gap-3 flex-1 animate-fade-in">
+          {/* Sub-tab Toggle (Hazards / Factors) + Summary */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div role="tablist" aria-label="Correlation sub-tabs" className="flex items-center gap-2">
+              {/* Hazards Sub-Tab */}
+              <button
+                role="tab"
+                aria-selected={activeSubTab === 'hazards'}
+                aria-controls="subtabpanel-hazards"
+                onClick={() => handleSubTabChange('hazards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeSubTab === 'hazards'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-surface-600 hover:bg-surface-100'
+                }`}
+              >
+                <Target size={14} />
+                Hazards
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  activeSubTab === 'hazards' ? 'bg-primary-200 text-primary-800' : 'bg-surface-200 text-surface-600'
+                }`}>
+                  {sortedHazards.length}
+                </span>
+              </button>
+
+              {/* Factors Sub-Tab */}
+              <button
+                role="tab"
+                aria-selected={activeSubTab === 'factors'}
+                aria-controls="subtabpanel-factors"
+                onClick={() => handleSubTabChange('factors')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeSubTab === 'factors'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-surface-600 hover:bg-surface-100'
+                }`}
+              >
+                <Layers size={14} />
+                Factors
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  activeSubTab === 'factors' ? 'bg-primary-200 text-primary-800' : 'bg-surface-200 text-surface-600'
+                }`}>
+                  {factorData.byFactor.length}
+                </span>
+              </button>
             </div>
 
-            {/* Right: Hazard Detail Panel */}
-            <div className="flex-1 min-w-0 transition-all duration-200">
-              <HazardDetailPanel
-                hazard={selectedHazard}
-                incidents={filteredIncidents}
-                timePeriod={period}
-                trendData={hazardTrendData}
-              />
+            {/* Show summary based on active sub-tab */}
+            <div className="text-xs">
+              {activeSubTab === 'hazards' && <TrendSummary hazards={sortedHazards} />}
+              {activeSubTab === 'factors' && <FactorSummary factorData={factorData} totalIncidents={filteredIncidents.length} />}
             </div>
-          </>
-        ) : (
-          <>
-            {/* Left: Factor List */}
-            <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
-              <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                <h2 className="text-sm font-semibold text-surface-800">Factors</h2>
-                <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{factorData.byFactor.length}</span>
-              </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <FactorList
-                  factors={factorData.byFactor}
-                  selected={selectedFactor}
-                  onSelect={handleFactorSelect}
-                  totalIncidents={factorData.analyzed}
-                  detectedCount={detectedIncidentsCount}
-                />
-              </div>
-            </div>
+          </div>
 
-            {/* Right: Factor Detail Panel */}
-            <div className="flex-1 min-w-0 transition-all duration-200">
-              <FactorDetailPanel
-                factor={selectedFactor}
-                totalIncidents={factorData.analyzed}
-                analyzedIncidents={factorData.analyzed}
-                allFactors={factorData.byFactor}
-                trendData={factorTrendData}
-                timePeriod={period}
-              />
-            </div>
-          </>
-        )}
-      </div>
+          {/* Main content */}
+          <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)]">
+            {activeSubTab === 'hazards' ? (
+              <>
+                {/* Left: Hazard List */}
+                <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
+                  <div className="flex items-center justify-between mb-1 flex-shrink-0">
+                    <h2 className="text-sm font-semibold text-surface-800">Hazards</h2>
+                    <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{sortedHazards.length}</span>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <HazardList
+                      hazards={sortedHazards}
+                      selected={selectedHazard}
+                      onSelect={handleHazardSelect}
+                    />
+                  </div>
+                </div>
 
-      {/* Risk Comparison Section */}
-      {filteredIncidents.length > 0 && (
-        <RiskComparisonPanel
-          incidents={filteredIncidents}
-          siteClassifications={siteClassifications}
-        />
+                {/* Right: Hazard Detail Panel */}
+                <div className="flex-1 min-w-0 transition-all duration-200">
+                  <HazardDetailPanel
+                    hazard={selectedHazard}
+                    incidents={filteredIncidents}
+                    timePeriod={period}
+                    trendData={hazardTrendData}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Left: Factor List */}
+                <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
+                  <div className="flex items-center justify-between mb-1 flex-shrink-0">
+                    <h2 className="text-sm font-semibold text-surface-800">Factors</h2>
+                    <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full">{factorData.byFactor.length}</span>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <FactorList
+                      factors={factorData.byFactor}
+                      selected={selectedFactor}
+                      onSelect={handleFactorSelect}
+                      totalIncidents={factorData.analyzed}
+                      detectedCount={detectedIncidentsCount}
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Factor Detail Panel */}
+                <div className="flex-1 min-w-0 transition-all duration-200">
+                  <FactorDetailPanel
+                    factor={selectedFactor}
+                    totalIncidents={factorData.analyzed}
+                    analyzedIncidents={factorData.analyzed}
+                    allFactors={factorData.byFactor}
+                    trendData={factorTrendData}
+                    timePeriod={period}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        </TabErrorBoundary>
       )}
 
-      {/* Unified Predictive Analysis Panel (negative observations only) */}
-      {negativeIncidents.length > 0 && incidentPrediction.hasData && (
-        <UnifiedPredictivePanel
-          incidentPrediction={incidentPrediction}
-          filteredIncidents={negativeIncidents}
-          selectedHazardName={activeTab === 'hazards' ? selectedHazard?.name : null}
-          hazardTrendData={activeTab === 'hazards' ? hazardTrendData : null}
-          hazardTrendingData={sortedHazards}
-          factorData={factorData}
-        />
+      {/* Tab 2: Predictive & Simulation */}
+      {activeMainTab === 'predictive' && (
+        <TabErrorBoundary label="Predictive & Simulation">
+        <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
+          <PredictiveSimulationTab
+            filteredIncidents={filteredIncidents}
+            negativeIncidents={negativeIncidents}
+            sortedHazards={sortedHazards}
+            factorData={factorData}
+            incidentPrediction={incidentPrediction}
+            hazardTrendData={allHazardTrendData}
+            selectedHazardName={selectedHazard?.name}
+            period={period}
+          />
+        </div>
+        </TabErrorBoundary>
+      )}
+
+      {/* Tab 3: Risk & Performance */}
+      {activeMainTab === 'risk' && (
+        <TabErrorBoundary label="Risk & Performance">
+        <div role="tabpanel" id="tabpanel-risk" aria-labelledby="tab-risk">
+          <RiskPerformanceTab
+            filteredIncidents={filteredIncidents}
+            siteClassifications={siteClassifications}
+          />
+        </div>
+        </TabErrorBoundary>
       )}
     </div>
   )

@@ -1,8 +1,71 @@
-import React, { useState, useMemo } from 'react'
-import { Building2, MapPin, Globe } from 'lucide-react'
+import React, { useState, useMemo, useCallback } from 'react'
+import { Building2, MapPin, Globe, SlidersHorizontal } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts'
 import { calculateRiskByDimension } from '../../utils/insightsCalculations'
 import { InfoTooltip } from '../ui/Tooltip'
+
+const RISK_LABELS = {
+  nearMiss: 'Near-Miss Reporting',
+  highRiskTrend: 'High-Risk Trend',
+  closure: 'High-Risk Closure',
+  positiveHighRisk: 'Positive High-Risk'
+}
+
+const PRESET_LABELS = {
+  balanced: 'Balanced',
+  operations: 'Operations',
+  culture: 'Culture',
+  compliance: 'Compliance'
+}
+
+const COMPARISON_WEIGHT_RANGE = { min: 5, max: 50 }
+
+/**
+ * Normalize weights so they always sum to 100.
+ * Distributes remaining weight proportionally, applies min/max,
+ * and corrects rounding residual on the largest weight.
+ */
+const normalizeWeights = (key, newValue, weights) => {
+  if (newValue === weights[key]) return weights
+
+  const otherKeys = Object.keys(weights).filter(k => k !== key)
+  const remaining = 100 - newValue
+  const updated = { ...weights, [key]: newValue }
+
+  const otherSum = otherKeys.reduce((s, k) => s + weights[k], 0)
+
+  if (otherSum > 0) {
+    let allocated = 0
+    otherKeys.forEach((k, idx) => {
+      if (idx === otherKeys.length - 1) {
+        updated[k] = Math.min(COMPARISON_WEIGHT_RANGE.max, Math.max(COMPARISON_WEIGHT_RANGE.min, remaining - allocated))
+      } else {
+        const proportion = weights[k] / otherSum
+        const target = Math.round(remaining * proportion)
+        updated[k] = Math.min(COMPARISON_WEIGHT_RANGE.max, Math.max(COMPARISON_WEIGHT_RANGE.min, target))
+        allocated += updated[k]
+      }
+    })
+  } else {
+    const each = Math.floor(remaining / otherKeys.length)
+    otherKeys.forEach(k => { updated[k] = Math.max(COMPARISON_WEIGHT_RANGE.min, each) })
+  }
+
+  // Final correction
+  const sum = Object.values(updated).reduce((s, v) => s + v, 0)
+  if (sum !== 100) {
+    const sortedOthers = [...otherKeys].sort((a, b) => updated[b] - updated[a])
+    for (const k of sortedOthers) {
+      const adjusted = updated[k] + (100 - sum)
+      if (adjusted >= COMPARISON_WEIGHT_RANGE.min && adjusted <= COMPARISON_WEIGHT_RANGE.max) {
+        updated[k] = adjusted
+        break
+      }
+    }
+  }
+
+  return updated
+}
 
 /**
  * Truncate text to a maximum length with ellipsis
@@ -26,8 +89,8 @@ const getRiskColor = (score) => {
  * Get status icon for factor
  */
 const getStatusIcon = (status) => {
-  if (status === 'good') return '✓'
-  if (status === 'critical') return '✗'
+  if (status === 'good') return '\u2713'
+  if (status === 'critical') return '\u2717'
   return '!'
 }
 
@@ -67,7 +130,7 @@ const CustomTooltip = ({ active, payload }) => {
                 <span className="text-surface-600">{factor.name}</span>
               </div>
               <span className="font-medium" style={{ color: getStatusColor(factor.status) }}>
-                {Math.round(factor.score)}%
+                {Math.round(factor.score)}% <span className="text-surface-400">({factor.weight}%w)</span>
               </span>
             </div>
           ))}
@@ -119,24 +182,39 @@ const TABS = [
 
 /**
  * RiskComparisonPanel - Shows risk scores across different dimensions
+ * With inline weight editor for director customization
  */
-const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
+const RiskComparisonPanel = ({
+  incidents,
+  siteClassifications = {},
+  riskWeights,
+  onRiskWeightsChange,
+  presetProfile,
+  onPresetChange,
+  presets
+}) => {
   const [activeTab, setActiveTab] = useState('contractor')
+  const [showEditor, setShowEditor] = useState(false)
+
+  const handleSliderChange = useCallback((key, value) => {
+    const newWeights = normalizeWeights(key, value, riskWeights)
+    onRiskWeightsChange(newWeights)
+  }, [riskWeights, onRiskWeightsChange])
 
   // Calculate risk data for each dimension
   const companyData = useMemo(() =>
-    calculateRiskByDimension(incidents, 'contractor'),
-    [incidents]
+    calculateRiskByDimension(incidents, 'contractor', {}, riskWeights),
+    [incidents, riskWeights]
   )
 
   const siteData = useMemo(() =>
-    calculateRiskByDimension(incidents, 'site'),
-    [incidents]
+    calculateRiskByDimension(incidents, 'site', {}, riskWeights),
+    [incidents, riskWeights]
   )
 
   const subregionData = useMemo(() =>
-    calculateRiskByDimension(incidents, 'subregion', siteClassifications),
-    [incidents, siteClassifications]
+    calculateRiskByDimension(incidents, 'subregion', siteClassifications, riskWeights),
+    [incidents, siteClassifications, riskWeights]
   )
 
   // Get current data based on active tab
@@ -168,8 +246,13 @@ const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
     return { total, avgScore, criticalCount }
   }, [currentData])
 
+  // Build dynamic tooltip text showing current weights
+  const tooltipText = useMemo(() => {
+    const w = riskWeights
+    return `Compare risk scores across Companies, Sites, and Subregions. Risk scores use rates (not counts) for fair comparison regardless of company size. Factors: Near-Miss Reporting (${w.nearMiss}%), High-Risk Trend (${w.highRiskTrend}% - compares current vs previous 30-day period), High-Risk Closure (${w.closure}%), Positive High-Risk (${w.positiveHighRisk}%). High-risk = 14 significant hazards. Green (70+) good, amber (50-70) warning, red (<50) critical.`
+  }, [riskWeights])
+
   // Dynamic chart height based on data count
-  // 36px per bar for comfortable spacing, min 150px, no max limit
   const chartHeight = currentData.length > 0
     ? Math.max(150, currentData.length * 36 + 20)
     : 150
@@ -179,13 +262,72 @@ const RiskComparisonPanel = ({ incidents, siteClassifications = {} }) => {
   return (
     <div className="bg-white rounded-lg border border-surface-200 p-4">
       {/* Section Header */}
-      <h3 className="text-sm font-medium text-surface-700 mb-3">Risk Comparison</h3>
+      <div className="flex items-center gap-2 mb-3">
+        <h3 className="text-sm font-medium text-surface-700">Risk Comparison</h3>
+        <button
+          onClick={() => setShowEditor(e => !e)}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-all ${
+            showEditor
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-400 hover:text-surface-600 hover:bg-surface-50'
+          }`}
+        >
+          <SlidersHorizontal size={11} />
+          Adjust
+        </button>
+      </div>
+
+      {/* Weight editor - visible when toggled */}
+      {showEditor && (
+        <div className="mb-4 p-3 bg-surface-50 rounded-lg border border-surface-100 space-y-3">
+          {/* Preset row */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-2xs text-surface-400 font-medium mr-1">Preset:</span>
+            {Object.keys(PRESET_LABELS).map(key => (
+              <button
+                key={key}
+                onClick={() => onPresetChange(key)}
+                className={`px-2.5 py-1 rounded-full text-2xs font-medium transition-all ${
+                  presetProfile === key
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'bg-white text-surface-600 hover:bg-surface-200 border border-surface-200'
+                }`}
+              >
+                {PRESET_LABELS[key]}
+              </button>
+            ))}
+            {presetProfile === 'custom' && (
+              <span className="px-2.5 py-1 rounded-full text-2xs font-medium bg-amber-100 text-amber-700">
+                Custom
+              </span>
+            )}
+          </div>
+
+          {/* Sliders for each risk factor */}
+          <div className="space-y-2">
+            {Object.entries(RISK_LABELS).map(([key, label]) => (
+              <div key={key} className="flex items-center gap-2">
+                <span className="text-2xs text-surface-600 font-medium w-32 shrink-0">{label}</span>
+                <input
+                  type="range"
+                  min={5}
+                  max={60}
+                  value={riskWeights[key]}
+                  onChange={(e) => handleSliderChange(key, parseInt(e.target.value))}
+                  className="unified-slider admin flex-1 h-1.5"
+                />
+                <span className="text-2xs text-surface-500 font-mono w-7 text-right">{riskWeights[key]}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Header with tooltip */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1">
           <span className="text-xs text-surface-500">Compare risk across dimensions</span>
-          <InfoTooltip text="Compare risk scores across Companies, Sites, and Subregions. Risk scores use rates (not counts) for fair comparison regardless of company size. Factors: Near-Miss Reporting (25%), High-Risk Trend (25% - compares current vs previous 30-day period), High-Risk Closure (25%), Positive High-Risk (25%). High-risk = 14 significant hazards. Green (70+) good, amber (50-70) warning, red (<50) critical." />
+          <InfoTooltip text={tooltipText} />
         </div>
       </div>
 

@@ -102,7 +102,7 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
         transition-all duration-200 ease-out
         ${isSelected
           ? 'bg-primary-50 border-2 border-primary-400 shadow-sm'
-          : 'bg-white hover:bg-surface-50 border border-surface-200 hover:border-surface-300'
+          : 'bg-white hover:bg-surface-50 border-2 border-surface-200 hover:border-surface-300'
         }
       `}
     >
@@ -161,7 +161,7 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
   // Wrap with Tooltip if confidence description exists
   if (hazard.confidence?.description) {
     return (
-      <Tooltip content={hazard.confidence.description} position="right" delay={300}>
+      <Tooltip content={hazard.confidence.description} position="right" delay={300} className="w-full">
         {buttonContent}
       </Tooltip>
     )
@@ -245,7 +245,7 @@ const HazardList = ({ hazards, selected, onSelect }) => {
       </div>
 
       {/* Hazard list - scrollable with smooth scroll */}
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1 scroll-smooth">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-1 pr-1 scroll-smooth">
         {sortedHazards.map((hazard) => (
           <HazardItem
             key={hazard.name}

@@ -114,11 +114,11 @@ const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
         transition-all duration-200 ease-out
         ${isSelected
           ? isUnclassified
-            ? 'bg-gray-100 ring-2 ring-gray-500 ring-inset shadow-sm scale-[1.01]'
-            : 'bg-primary-100 ring-2 ring-primary-500 ring-inset shadow-sm scale-[1.01]'
+            ? 'bg-gray-100 border-2 border-gray-500 shadow-sm'
+            : 'bg-primary-100 border-2 border-primary-500 shadow-sm'
           : isUnclassified
-            ? 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm border border-gray-300 hover:border-gray-400'
-            : 'bg-white hover:bg-primary-50 hover:shadow-sm border border-surface-200 hover:border-primary-200'
+            ? 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm border-2 border-gray-300 hover:border-gray-400'
+            : 'bg-white hover:bg-primary-50 hover:shadow-sm border-2 border-surface-200 hover:border-primary-200'
         }
       `}
     >
@@ -246,7 +246,7 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents = 0, detectedC
       </div>
 
       {/* Factor list - scrollable with smooth scroll */}
-      <div className="flex-1 overflow-y-auto space-y-1 pr-1 scroll-smooth">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-1 pr-1 scroll-smooth">
         {sortedFactors.map((factor) => (
           <FactorItem
             key={factor.name}

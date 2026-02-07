@@ -110,6 +110,24 @@ export const SUB_SIGNIFICANT_HAZARDS = [
 // Combines significant hazards + sub-significant hazards (26 total)
 export const ALL_HAZARDS = [...SIGNIFICANT_HAZARDS, ...SUB_SIGNIFICANT_HAZARDS]
 
+// PRIMARY_FACTORS - Directly cause harm (1.5x weight in risk prediction)
+export const PRIMARY_FACTORS = [
+  'Barriers', 'Safety Devices', 'Machine Guarding', 'Signage',
+  'Maintenance', 'Working at Height', 'Lifting Operations',
+  'Electrical Safety', 'Excavation & Trenching', 'Confined Space',
+  'Fire Safety', 'Mobile Plant & Equipment', 'Material Handling',
+  'Traffic Management', 'Housekeeping', 'Environment', 'PPE',
+  'No Authorization'
+]
+
+// CONTRIBUTING_FACTORS - Systemic enablers (1.0x weight in risk prediction)
+export const CONTRIBUTING_FACTORS = [
+  'Training', 'Supervision', 'BBS', 'Leadership',
+  'Planning', 'Permit', 'Documentations', 'Inspections',
+  'Communication', 'Procurement', 'Interfaces', 'Testing',
+  'Emergency Preparedness'
+]
+
 // =============================================================================
 // CRITICAL_HAZARD_KEYWORDS - ALWAYS win over location/context words
 // These are checked FIRST and override any other classification

@@ -1041,3 +1041,111 @@ button:not(:disabled):active,
 .animation-done {
   will-change: auto;
 }
+
+/* ========================================
+   UNIFIED SLIDER STYLES
+   Global slider styling for weight editors
+   across Safety Outlook components
+   ======================================== */
+
+.unified-slider,
+.sim-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.unified-slider:focus-visible,
+.sim-slider:focus-visible {
+  outline: 2px solid #3478f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(52, 120, 246, 0.15);
+}
+
+.unified-slider::-webkit-slider-thumb,
+.sim-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  margin-top: -4px;
+  transition: transform 0.15s ease;
+}
+
+.unified-slider::-webkit-slider-thumb:hover,
+.sim-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.unified-slider::-moz-range-thumb,
+.sim-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.unified-slider::-moz-range-thumb:hover,
+.sim-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* Variant: Risk weight (blue) */
+.unified-slider.risk-weight { background: #e2e8f0; }
+.unified-slider.risk-weight::-webkit-slider-thumb { background: #3478f6; }
+.unified-slider.risk-weight::-moz-range-thumb { background: #3478f6; }
+
+/* Variant: Engineering (yellow) */
+.unified-slider.engineering { background: #fef3c7; }
+.unified-slider.engineering::-webkit-slider-thumb { background: #f59e0b; }
+.unified-slider.engineering::-moz-range-thumb { background: #f59e0b; }
+
+/* Variant: Admin (blue) */
+.unified-slider.admin { background: #dbeafe; }
+.unified-slider.admin::-webkit-slider-thumb { background: #3b82f6; }
+.unified-slider.admin::-moz-range-thumb { background: #3b82f6; }
+
+/* Variant: PPE (green) */
+.unified-slider.ppe { background: #dcfce7; }
+.unified-slider.ppe::-webkit-slider-thumb { background: #22c55e; }
+.unified-slider.ppe::-moz-range-thumb { background: #22c55e; }
+
+/* Variant: Environmental (teal) */
+.unified-slider.environmental { background: #ccfbf1; }
+.unified-slider.environmental::-webkit-slider-thumb { background: #14b8a6; }
+.unified-slider.environmental::-moz-range-thumb { background: #14b8a6; }
+
+/* Variant: Administrative (indigo) */
+.unified-slider.administrative { background: linear-gradient(to right, #fecaca 0%, #e0e7ff 50%, #d1fae5 100%); }
+.unified-slider.administrative::-webkit-slider-thumb { background: #6366f1; }
+.unified-slider.administrative::-moz-range-thumb { background: #6366f1; }
+
+/* Variant: Corrective Actions (amber gradient) */
+.sim-slider.actions,
+.unified-slider.actions { background: linear-gradient(to right, #fef3c7 0%, #d1fae5 100%); }
+.sim-slider.actions::-webkit-slider-thumb,
+.unified-slider.actions::-webkit-slider-thumb { background: #f59e0b; }
+.sim-slider.actions::-moz-range-thumb,
+.unified-slider.actions::-moz-range-thumb { background: #f59e0b; }
+
+/* Disabled state */
+.unified-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.unified-slider:disabled::-webkit-slider-thumb { cursor: not-allowed; }
+.unified-slider:disabled::-moz-range-thumb { cursor: not-allowed; }

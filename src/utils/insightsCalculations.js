@@ -5,7 +5,7 @@
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES } from './constants'
+import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
 import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType } from './rootCauseEngine'
 
@@ -763,8 +763,10 @@ export const getPerformanceOutliers = (incidents, threshold = null) => {
  * Based on observation-based metrics focused on Major Hazards (14 Significant Hazards)
  * All factors use RATES (not counts) to be size-bias free across companies
  */
-export const calculateRiskScore = (incidents) => {
+export const calculateRiskScore = (incidents, customWeights) => {
   if (incidents.length === 0) return { score: 0, level: 'unknown', factors: [] }
+
+  const w = customWeights || { nearMiss: 25, highRiskTrend: 25, closure: 25, positiveHighRisk: 25 }
 
   const factors = []
   let totalWeight = 0
@@ -798,12 +800,12 @@ export const calculateRiskScore = (incidents) => {
   const allHighRiskObs = incidents.filter(isHighRisk)
   const totalHighRisk = allHighRiskObs.length
 
-  // Factor 1: Near-Miss Reporting (weight: 25)
+  // Factor 1: Near-Miss Reporting
   const nearMiss = getNearMissAnalysis(incidents)
   const nmScore = Math.min(100, (nearMiss.rateValue / 5) * 100)
-  factors.push({ name: 'Near-Miss Reporting', score: nmScore, weight: 25, status: nearMiss.status })
-  weightedSum += nmScore * 25
-  totalWeight += 25
+  factors.push({ name: 'Near-Miss Reporting', score: nmScore, weight: w.nearMiss, status: nearMiss.status })
+  weightedSum += nmScore * w.nearMiss
+  totalWeight += w.nearMiss
 
   // Factor 2: High-Risk Trend (weight: 25) - SIZE-BIAS FREE using rates
   // Compares current period rate vs previous period rate
@@ -843,28 +845,28 @@ export const calculateRiskScore = (incidents) => {
   factors.push({
     name: 'High-Risk Trend',
     score: Math.round(trendScore),
-    weight: 25,
+    weight: w.highRiskTrend,
     status: trendStatus,
     detail: trendDetail
   })
-  weightedSum += trendScore * 25
-  totalWeight += 25
+  weightedSum += trendScore * w.highRiskTrend
+  totalWeight += w.highRiskTrend
 
-  // Factor 3: High-Risk Closure Rate (weight: 25)
+  // Factor 3: High-Risk Closure Rate
   // Higher closure rate is better
   const closedHighRisk = allHighRiskObs.filter(i => i.actionStatus === 'closed').length
   const closureRate = totalHighRisk > 0 ? (closedHighRisk / totalHighRisk) * 100 : 100
   factors.push({
     name: 'High-Risk Closure',
     score: Math.round(closureRate),
-    weight: 25,
+    weight: w.closure,
     status: closureRate < 50 ? 'critical' : closureRate < 70 ? 'warning' : 'good',
     detail: `${closedHighRisk} of ${totalHighRisk} closed`
   })
-  weightedSum += closureRate * 25
-  totalWeight += 25
+  weightedSum += closureRate * w.closure
+  totalWeight += w.closure
 
-  // Factor 4: Positive High-Risk Rate (weight: 25)
+  // Factor 4: Positive High-Risk Rate
   // Higher positive rate indicates proactive safety culture
   const positiveHighRisk = allHighRiskObs.filter(i => isPositiveType(i.type)).length
   const positiveRate = totalHighRisk > 0 ? (positiveHighRisk / totalHighRisk) * 100 : 0
@@ -872,12 +874,12 @@ export const calculateRiskScore = (incidents) => {
   factors.push({
     name: 'Positive High-Risk',
     score: Math.round(positiveScore),
-    weight: 25,
+    weight: w.positiveHighRisk,
     status: positiveRate < 10 ? 'critical' : positiveRate < 25 ? 'warning' : 'good',
     detail: `${positiveHighRisk} positive observations`
   })
-  weightedSum += positiveScore * 25
-  totalWeight += 25
+  weightedSum += positiveScore * w.positiveHighRisk
+  totalWeight += w.positiveHighRisk
 
   const score = Math.round(weightedSum / totalWeight)
 
@@ -1767,7 +1769,9 @@ export const getIncidentPredictionSummary = (incidents) => {
 
 /**
  * Detect anomalies using Z-score method
- * Values beyond threshold standard deviations from mean
+ * Values beyond threshold standard deviations from mean.
+ * Uses Bessel-corrected (sample) variance for unbiased SD estimate.
+ * Requires minimum 14 data points for reliable detection.
  */
 export const detectZScoreAnomalies = (incidents, threshold = 2.5) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
@@ -1780,22 +1784,26 @@ export const detectZScoreAnomalies = (incidents, threshold = 2.5) => {
   const dailyCounts = {}
   incidents.forEach(i => {
     if (!i.date) return
-    const dateKey = i.date.substring(0, 10)
-    const d = parseISO(dateKey)
-    if (d >= startDate && d <= endDate) {
-      dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1
-    }
+    const dateKey = typeof i.date === 'string' ? i.date.substring(0, 10) : ''
+    if (!dateKey) return
+    try {
+      const d = parseISO(dateKey)
+      if (d >= startDate && d <= endDate) {
+        dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1
+      }
+    } catch { /* skip invalid dates */ }
   })
 
   const values = Object.values(dailyCounts)
-  if (values.length < 7) return { anomalies: [], stats: null }
+  if (values.length < 14) return { anomalies: [], stats: null }
 
-  // Calculate mean and standard deviation
-  const mean = values.reduce((a, b) => a + b, 0) / values.length
-  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length
+  // Calculate mean and sample standard deviation (Bessel's correction: n-1)
+  const n = values.length
+  const mean = values.reduce((a, b) => a + b, 0) / n
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (n - 1)
   const stdDev = Math.sqrt(variance)
 
-  if (stdDev === 0) return { anomalies: [], stats: { mean, stdDev: 0 } }
+  if (stdDev === 0) return { anomalies: [], stats: { mean, stdDev: 0, sampleSize: n } }
 
   // Find anomalies
   const anomalies = []
@@ -1808,8 +1816,8 @@ export const detectZScoreAnomalies = (incidents, threshold = 2.5) => {
         value: count,
         zScore: Math.round(zScore * 100) / 100,
         type: zScore > 0 ? 'spike' : 'drop',
-        severity: Math.abs(zScore) >= 3 ? 'high' : 'medium',
-        deviation: Math.round((count - mean) / mean * 100)
+        severity: Math.abs(zScore) >= 3 ? 'high' : Math.abs(zScore) >= 2.5 ? 'medium' : 'low',
+        deviation: mean > 0 ? Math.round((count - mean) / mean * 100) : 0
       })
     }
   })
@@ -1819,14 +1827,27 @@ export const detectZScoreAnomalies = (incidents, threshold = 2.5) => {
     stats: {
       mean: Math.round(mean * 10) / 10,
       stdDev: Math.round(stdDev * 10) / 10,
-      threshold
+      threshold,
+      sampleSize: n
     }
   }
 }
 
 /**
+ * Calculate quartile with linear interpolation (inclusive method)
+ */
+const interpolateQuartile = (sorted, p) => {
+  const pos = (sorted.length - 1) * p
+  const lower = Math.floor(pos)
+  const upper = Math.ceil(pos)
+  if (lower === upper) return sorted[lower]
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (pos - lower)
+}
+
+/**
  * Detect anomalies using IQR (Interquartile Range) method
- * More robust to outliers than Z-score
+ * More robust to outliers than Z-score.
+ * Uses interpolated quartiles for accuracy.
  */
 export const detectIQRAnomalies = (incidents) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
@@ -1839,39 +1860,43 @@ export const detectIQRAnomalies = (incidents) => {
   const dailyCounts = {}
   incidents.forEach(i => {
     if (!i.date) return
-    const dateKey = i.date.substring(0, 10)
-    const d = parseISO(dateKey)
-    if (d >= startDate && d <= endDate) {
-      dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1
-    }
+    const dateKey = typeof i.date === 'string' ? i.date.substring(0, 10) : ''
+    if (!dateKey) return
+    try {
+      const d = parseISO(dateKey)
+      if (d >= startDate && d <= endDate) {
+        dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1
+      }
+    } catch { /* skip invalid dates */ }
   })
 
   const entries = Object.entries(dailyCounts).sort((a, b) => a[1] - b[1])
   const values = entries.map(e => e[1])
 
-  if (values.length < 7) return { anomalies: [], stats: null }
+  if (values.length < 14) return { anomalies: [], stats: null }
 
-  // Calculate quartiles
-  const q1Index = Math.floor(values.length * 0.25)
-  const q3Index = Math.floor(values.length * 0.75)
-  const q1 = values[q1Index]
-  const q3 = values[q3Index]
+  // Calculate quartiles with interpolation
+  const q1 = interpolateQuartile(values, 0.25)
+  const median = interpolateQuartile(values, 0.5)
+  const q3 = interpolateQuartile(values, 0.75)
   const iqr = q3 - q1
-  const median = values[Math.floor(values.length / 2)]
 
   const lowerBound = q1 - 1.5 * iqr
   const upperBound = q3 + 1.5 * iqr
+  const extremeLower = q1 - 3 * iqr
+  const extremeUpper = q3 + 3 * iqr
 
   // Find anomalies
   const anomalies = []
   Object.entries(dailyCounts).forEach(([date, count]) => {
     if (count < lowerBound || count > upperBound) {
+      const isExtreme = count > extremeUpper || count < extremeLower
       anomalies.push({
         date,
         dateLabel: format(parseISO(date), 'MMM dd, yyyy'),
         value: count,
         type: count > upperBound ? 'spike' : 'drop',
-        severity: count > q3 + 3 * iqr || count < q1 - 3 * iqr ? 'high' : 'medium',
+        severity: isExtreme ? 'high' : 'medium',
         bounds: { lower: Math.round(lowerBound), upper: Math.round(upperBound) }
       })
     }
@@ -1879,12 +1904,22 @@ export const detectIQRAnomalies = (incidents) => {
 
   return {
     anomalies: anomalies.sort((a, b) => Math.abs(b.value - median) - Math.abs(a.value - median)),
-    stats: { q1, median, q3, iqr, lowerBound: Math.round(lowerBound), upperBound: Math.round(upperBound) }
+    stats: {
+      q1: Math.round(q1 * 10) / 10,
+      median: Math.round(median * 10) / 10,
+      q3: Math.round(q3 * 10) / 10,
+      iqr: Math.round(iqr * 10) / 10,
+      lowerBound: Math.round(lowerBound),
+      upperBound: Math.round(upperBound),
+      sampleSize: values.length
+    }
   }
 }
 
 /**
  * Detect change points (sudden shifts in baseline)
+ * Uses chi-square-like significance test: filters by both relative change
+ * AND absolute magnitude to avoid false alarms on low counts.
  */
 export const detectChangePoints = (incidents, windowDays = 7) => {
   const dates = incidents.map(i => i.date).filter(Boolean).sort()
@@ -1893,13 +1928,19 @@ export const detectChangePoints = (incidents, windowDays = 7) => {
   const endDate = parseISO(dates[dates.length - 1])
   const startDate = subMonths(endDate, 2)
 
-  // Daily counts
+  // Build daily count index for O(n) lookup instead of O(n*d) filtering
+  const countIndex = {}
+  incidents.forEach(i => {
+    if (!i.date) return
+    const dateKey = typeof i.date === 'string' ? i.date.substring(0, 10) : ''
+    if (dateKey) countIndex[dateKey] = (countIndex[dateKey] || 0) + 1
+  })
+
   const dailyCounts = []
   let currentDate = startDate
   while (currentDate <= endDate) {
     const dateKey = format(currentDate, 'yyyy-MM-dd')
-    const count = incidents.filter(i => i.date && i.date.substring(0, 10) === dateKey).length
-    dailyCounts.push({ date: dateKey, count })
+    dailyCounts.push({ date: dateKey, count: countIndex[dateKey] || 0 })
     currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
   }
 
@@ -1908,30 +1949,44 @@ export const detectChangePoints = (incidents, windowDays = 7) => {
   // Calculate rolling averages
   const windows = []
   for (let i = windowDays; i < dailyCounts.length - windowDays; i++) {
-    const before = dailyCounts.slice(i - windowDays, i).reduce((s, d) => s + d.count, 0) / windowDays
-    const after = dailyCounts.slice(i, i + windowDays).reduce((s, d) => s + d.count, 0) / windowDays
+    const beforeCounts = dailyCounts.slice(i - windowDays, i)
+    const afterCounts = dailyCounts.slice(i, i + windowDays)
+    const beforeSum = beforeCounts.reduce((s, d) => s + d.count, 0)
+    const afterSum = afterCounts.reduce((s, d) => s + d.count, 0)
+    const before = beforeSum / windowDays
+    const after = afterSum / windowDays
     const change = before > 0 ? ((after - before) / before) * 100 : (after > 0 ? 100 : 0)
+
+    // Chi-square significance: (observed - expected)^2 / expected
+    // Use before-window average as expected value
+    const expected = before > 0 ? before : 0.5
+    const chiSquare = Math.pow(after - expected, 2) / expected
+    // Chi-square critical value for 1 df, p<0.01 = 6.63
+    const isSignificant = chiSquare >= 6.63 && Math.abs(change) >= 30
 
     windows.push({
       date: dailyCounts[i].date,
       before: Math.round(before * 10) / 10,
       after: Math.round(after * 10) / 10,
-      change: Math.round(change)
+      change: Math.round(change),
+      chiSquare: Math.round(chiSquare * 100) / 100,
+      significant: isSignificant
     })
   }
 
-  // Find significant change points (>50% change)
+  // Find statistically significant change points
   const changePoints = windows
-    .filter(w => Math.abs(w.change) >= 50)
+    .filter(w => w.significant)
     .map(w => ({
       date: w.date,
       dateLabel: format(parseISO(w.date), 'MMM dd, yyyy'),
       type: w.change > 0 ? 'increase' : 'decrease',
       magnitude: Math.abs(w.change),
       before: w.before,
-      after: w.after
+      after: w.after,
+      chiSquare: w.chiSquare
     }))
-    .sort((a, b) => b.magnitude - a.magnitude)
+    .sort((a, b) => b.chiSquare - a.chiSquare)
     .slice(0, 5) // Top 5 change points
 
   return { changePoints, windows }
@@ -1945,24 +2000,32 @@ export const getAnomalyAnalysis = (incidents) => {
   const iqr = detectIQRAnomalies(incidents)
   const changePoints = detectChangePoints(incidents)
 
-  // Merge and deduplicate anomalies
+  // Merge and deduplicate anomalies — preserve data from both methods
   const allAnomalies = new Map()
 
   zScore.anomalies.forEach(a => {
-    allAnomalies.set(a.date, { ...a, method: 'z-score' })
+    allAnomalies.set(a.date, { ...a, methods: ['Z-Score'], zScore: a.zScore })
   })
 
   iqr.anomalies.forEach(a => {
     if (allAnomalies.has(a.date)) {
-      allAnomalies.get(a.date).confirmedBy = 'both'
+      const existing = allAnomalies.get(a.date)
+      existing.methods.push('IQR')
+      existing.bounds = a.bounds
+      // Upgrade severity if either method flags 'high'
+      if (a.severity === 'high') existing.severity = 'high'
     } else {
-      allAnomalies.set(a.date, { ...a, method: 'iqr' })
+      allAnomalies.set(a.date, { ...a, methods: ['IQR'] })
     }
   })
 
   const anomalies = Array.from(allAnomalies.values())
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 10) // Top 10 most recent
+    // Sort by confirmation (both methods first) then recency
+    .sort((a, b) => {
+      if (a.methods.length !== b.methods.length) return b.methods.length - a.methods.length
+      return b.date.localeCompare(a.date)
+    })
+    .slice(0, 10) // Top 10
 
   // Get affected incidents for drill-down
   anomalies.forEach(anomaly => {
@@ -2479,14 +2542,14 @@ export const calculateLeadershipVisibility = (incidents) => {
 /**
  * Calculate composite safety culture score
  */
-export const calculateSafetyCultureScore = (incidents) => {
+export const calculateSafetyCultureScore = (incidents, customWeights) => {
   const velocity = calculateObservationVelocity(incidents)
   const diversity = calculateReporterDiversityIndex(incidents)
   const proactiveRatio = calculateProactiveReactiveRatio(incidents)
   const leadership = calculateLeadershipVisibility(incidents)
 
   // Weight each component
-  const weights = {
+  const weights = customWeights || {
     velocity: 20,
     diversity: 25,
     proactive: 35,
@@ -4054,7 +4117,7 @@ export const predictSeasonalRisk = (incidents, daysAhead = 7) => {
  * @param {Object} siteClassifications - Map of site names to sub-region values (required for subregion dimension)
  * @returns {Array} Sorted array of { name, score, level, incidentCount }
  */
-export const calculateRiskByDimension = (incidents, dimension, siteClassifications = {}) => {
+export const calculateRiskByDimension = (incidents, dimension, siteClassifications = {}, riskWeights) => {
   if (!incidents || incidents.length === 0) return []
 
   // Group incidents by the specified dimension
@@ -4090,7 +4153,7 @@ export const calculateRiskByDimension = (incidents, dimension, siteClassificatio
   const results = []
 
   groups.forEach((groupIncidents, name) => {
-    const riskData = calculateRiskScore(groupIncidents)
+    const riskData = calculateRiskScore(groupIncidents, riskWeights)
 
     results.push({
       name,
@@ -4105,4 +4168,405 @@ export const calculateRiskByDimension = (incidents, dimension, siteClassificatio
   results.sort((a, b) => a.score - b.score)
 
   return results
+}
+
+// ============================================================================
+// ENTITY RISK RANKING
+// Ranks Contractors / Sites / SubRegions by 6 weighted signals (0-100 each)
+// ============================================================================
+
+/**
+ * Calculate entity risk ranking across 6 signals.
+ * Each signal scored 0-100 (higher = riskier). Composite = weighted average.
+ *
+ * @param {Array} incidents - Filtered incident records
+ * @param {'contractor'|'site'|'subregion'} dimension
+ * @param {Object} siteClassifications - Map of site → sub-region
+ * @param {Object} weights - { severityMix, trend, openActionRate, highRiskExposure, nearMissRate, positiveRate }
+ * @returns {Array} Sorted array of entity risk objects (riskiest first)
+ */
+export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', siteClassifications = {}, weights = {}) => {
+  if (!incidents || incidents.length === 0) return []
+
+  const w = {
+    severityMix: weights.severityMix ?? 25,
+    trend: weights.trend ?? 20,
+    openActionRate: weights.openActionRate ?? 20,
+    highRiskExposure: weights.highRiskExposure ?? 15,
+    nearMissRate: weights.nearMissRate ?? 10,
+    positiveRate: weights.positiveRate ?? 10
+  }
+  const totalWeight = Object.values(w).reduce((s, v) => s + v, 0) || 1
+
+  // Group incidents by dimension
+  const groups = new Map()
+  incidents.forEach(i => {
+    let key
+    switch (dimension) {
+      case 'site': key = i.site; break
+      case 'subregion': key = siteClassifications[i.site] || 'Unclassified'; break
+      default: key = i.contractor; break
+    }
+    if (!key) return
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(i)
+  })
+
+  const today = new Date()
+  const results = []
+
+  groups.forEach((items, name) => {
+    const total = items.length
+    // Low confidence if < 10 incidents (too few for reliable signal scoring)
+    const lowConfidence = total < 10
+
+    // Pre-process items in single pass for performance
+    let severeCount = 0, openActions = 0, majorCount = 0, nmCount = 0, posCount = 0
+    let current30 = 0, prev30 = 0
+    items.forEach(i => {
+      const t = (i.severity || i.type || '').toLowerCase()
+      if (t === 'lti' || t === 'mti') severeCount++
+      if (t === 'near-miss') nmCount++
+      if (isPositiveType(i.type)) posCount++
+      if (i.actionStatus === 'open' || i.actionStatus === 'in-progress') openActions++
+      if (MAJOR_HAZARDS.includes(i.hazardCategory) || MAJOR_HAZARDS.includes(i.location)) majorCount++
+      if (i.date) {
+        try {
+          const d = differenceInDays(today, parseISO(i.date))
+          if (d <= 30) current30++
+          else if (d <= 60) prev30++
+        } catch { /* skip invalid dates */ }
+      }
+    })
+
+    // Signal 1 — Severity Mix: % of LTI + MTI
+    const severityMixScore = Math.min(100, Math.round((severeCount / total) * 100))
+
+    // Signal 2 — Trend: current 30d vs previous 30d
+    let trendScore
+    if (prev30 === 0) {
+      trendScore = current30 > 0 ? 70 : 30
+    } else {
+      const ratio = current30 / prev30
+      trendScore = Math.min(100, Math.round(ratio * 50))
+    }
+
+    // Signal 3 — Open Action Rate
+    const openActionScore = Math.min(100, Math.round((openActions / total) * 100))
+
+    // Signal 4 — High-Risk Exposure (MAJOR_HAZARDS)
+    const highRiskScore = Math.min(100, Math.round((majorCount / total) * 100))
+
+    // Signal 5 — Near-Miss Rate (inverted: low NM = high risk, high NM = good culture)
+    // Uses sigmoid-like mapping: target ~20% near-miss rate among negatives
+    const nmRate = total > 0 ? (nmCount / total) * 100 : 0
+    // Sigmoid mapping: 0% → 100 (worst), ~20% → 50 (neutral), 40%+ → ~10 (best)
+    const nearMissScore = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp((nmRate - 15) / 5)))))
+
+    // Signal 6 — Positive Rate (inverted: low positive = high risk, high positive = good culture)
+    // Target ~30% positive observation rate
+    const posRate = total > 0 ? (posCount / total) * 100 : 0
+    // Sigmoid mapping: 0% → 100 (worst), ~30% → 50 (neutral), 60%+ → ~10 (best)
+    const positiveScore = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp((posRate - 25) / 8)))))
+
+    // Composite
+    const composite = Math.round(
+      (severityMixScore * w.severityMix +
+       trendScore * w.trend +
+       openActionScore * w.openActionRate +
+       highRiskScore * w.highRiskExposure +
+       nearMissScore * w.nearMissRate +
+       positiveScore * w.positiveRate) / totalWeight
+    )
+    const score = Math.max(0, Math.min(100, composite))
+    const riskLevel = score > 60 ? 'High' : score > 30 ? 'Moderate' : 'Low'
+
+    results.push({
+      name,
+      score,
+      riskLevel,
+      lowConfidence,
+      incidentCount: total,
+      signals: {
+        severityMix: { score: severityMixScore, detail: `${severeCount}/${total} severe` },
+        trend: { score: trendScore, detail: `${current30} cur / ${prev30} prev (30d)` },
+        openActionRate: { score: openActionScore, detail: `${openActions}/${total} open` },
+        highRiskExposure: { score: highRiskScore, detail: `${majorCount}/${total} major hazard` },
+        nearMissRate: { score: nearMissScore, detail: `${nmCount} near-misses (${nmRate.toFixed(0)}%)` },
+        positiveRate: { score: positiveScore, detail: `${posCount} positive (${posRate.toFixed(0)}%)` }
+      }
+    })
+  })
+
+  // Sort riskiest first
+  results.sort((a, b) => b.score - a.score)
+
+  // Add rank
+  results.forEach((r, i) => { r.rank = i + 1 })
+
+  return results
+}
+
+// ============================================================================
+// PREDICTIVE RISK PROFILE
+// Hybrid: Weighted Composite Risk Index per hazard + Bayesian Escalation Probability
+// ============================================================================
+
+/**
+ * Calculate predictive risk profile combining hazard-level scoring with
+ * Bayesian escalation probability. Pure arithmetic, no ML libraries.
+ *
+ * @param {Array} incidents - All incident records
+ * @returns {{ escalationProbability, hazardRiskRanking, riskDrivers }}
+ */
+export const calculatePredictiveRiskProfile = (incidents) => {
+  if (!incidents || incidents.length === 0) {
+    return {
+      escalationProbability: { value: 0, label: 'Low', confidence: 'none', trend: 'stable' },
+      hazardRiskRanking: [],
+      riskDrivers: []
+    }
+  }
+
+  const today = new Date()
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dataStartDate = parseISO(dates[0])
+  const dataEndDate = parseISO(dates[dates.length - 1])
+  const totalDays = Math.max(1, differenceInDays(dataEndDate, dataStartDate))
+  const isSparseOverall = incidents.length < 50 || totalDays < 90
+
+  // Severity weights for scoring
+  const severityWeight = { lti: 10, mti: 5, fac: 2, 'near-miss': 1 }
+
+  // Get hazard trending data (reuse existing function)
+  const trendingData = getHazardTrendingByPeriod(incidents, 3)
+
+  // Get open/overdue actions
+  const openActions = incidents.filter(i =>
+    i.actionStatus === 'open' || i.actionStatus === 'in-progress'
+  )
+  const openActionsByHazard = {}
+  openActions.forEach(i => {
+    const h = i.location || 'Unspecified'
+    openActionsByHazard[h] = (openActionsByHazard[h] || 0) + 1
+  })
+
+  // Max values for normalization (computed across all hazards)
+  const totalIncidents = incidents.length
+  const maxOpenActions = Math.max(1, ...Object.values(openActionsByHazard))
+
+  // ── Part 1: Hazard-Level Risk Scoring ──
+
+  const hazardRiskRanking = trendingData
+    .filter(h => !h.hasNoData)
+    .map(h => {
+      const hazardName = h.name
+      const hazardIncidents = incidents.filter(i => i.location === hazardName)
+      const count = hazardIncidents.length
+      const isSparse = count < 5
+
+      // Signal 1: Frequency (20%) — is this hazard over-represented?
+      const frequencyRatio = totalIncidents > 0 ? count / totalIncidents : 0
+      const frequencyScore = Math.min(100, frequencyRatio * 100 * ALL_HAZARDS.length)
+
+      // Signal 2: Severity (25%) — weighted severity of incidents
+      const totalSeverity = hazardIncidents.reduce((sum, i) => {
+        return sum + (severityWeight[i.type] || 0)
+      }, 0)
+      const avgSeverity = count > 0 ? totalSeverity / count : 0
+      const severityScore = Math.min(100, (avgSeverity / 10) * 100)
+
+      // Signal 3: Trend (25%) — getting worse or better?
+      const changePercent = h.changePercent || 0
+      // Map changePercent to 0-100: -100% → 0, 0% → 50, +100% → 100
+      const trendScore = Math.min(100, Math.max(0, 50 + (changePercent / 2)))
+
+      // Signal 4: Open Actions (15%) — unresolved risk
+      const hazardOpenActions = openActionsByHazard[hazardName] || 0
+      const openActionsScore = Math.min(100, (hazardOpenActions / maxOpenActions) * 100)
+
+      // Signal 5: Factor Concentration (15%) — one root cause dominating?
+      const rootCauseData = getRootCauseBreakdown(hazardIncidents)
+      let concentrationScore = 0
+      let topFactor = null
+      if (rootCauseData.hasData && rootCauseData.topCause) {
+        topFactor = rootCauseData.topCause.name
+        const topPct = parseFloat(rootCauseData.topCause.percentage)
+        // Higher concentration = higher risk (single point of failure)
+        concentrationScore = Math.min(100, topPct)
+
+        // Apply factor weight: primary factors get 1.5x, contributing get 1.0x
+        if (PRIMARY_FACTORS.some(f => topFactor.toLowerCase().includes(f.toLowerCase()))) {
+          concentrationScore = Math.min(100, concentrationScore * 1.5)
+        }
+      }
+
+      // Weighted composite score
+      let riskScore = (
+        frequencyScore * 0.20 +
+        severityScore * 0.25 +
+        trendScore * 0.25 +
+        openActionsScore * 0.15 +
+        concentrationScore * 0.15
+      )
+
+      // Sparse data penalty
+      if (isSparse) {
+        riskScore = riskScore * (count / 5)
+      }
+
+      riskScore = Math.round(Math.min(100, Math.max(0, riskScore)))
+
+      const level = riskScore >= 75 ? 'Critical' : riskScore >= 50 ? 'High' : riskScore >= 25 ? 'Moderate' : 'Low'
+
+      // Count severe incidents for driver explanations
+      const ltiCount = hazardIncidents.filter(i => i.type === 'lti').length
+      const mtiCount = hazardIncidents.filter(i => i.type === 'mti').length
+
+      return {
+        hazard: hazardName,
+        riskScore,
+        level,
+        signals: {
+          frequency: Math.round(frequencyScore),
+          severity: Math.round(severityScore),
+          trend: Math.round(trendScore),
+          openActions: Math.round(openActionsScore),
+          factorConcentration: Math.round(concentrationScore)
+        },
+        topFactor,
+        openActions: hazardOpenActions,
+        confidence: isSparse ? 'low' : 'normal',
+        ltiCount,
+        mtiCount,
+        changePercent: Math.round(changePercent),
+        incidentCount: count
+      }
+    })
+    .sort((a, b) => b.riskScore - a.riskScore)
+
+  // ── Part 2: Bayesian Escalation Probability ──
+
+  // Base rate: severe incidents (LTI + MTI) per day over last 180 days
+  const lookbackDays = 180
+  const lookbackStart = subDays(today, lookbackDays)
+  const recentIncidents = incidents.filter(i => {
+    if (!i.date) return false
+    try {
+      return parseISO(i.date.substring(0, 10)) >= lookbackStart
+    } catch { return false }
+  })
+  const severeCount = recentIncidents.filter(i => i.type === 'lti' || i.type === 'mti').length
+  const effectiveDays = Math.min(lookbackDays, totalDays)
+
+  let pBase
+  if (isSparseOverall) {
+    // Laplace smoothing for sparse data
+    pBase = (severeCount + 1) / (effectiveDays + 90)
+  } else {
+    pBase = severeCount / Math.max(1, effectiveDays)
+  }
+
+  // Multiplier 1: Near-miss reporting rate
+  const nearMissAnalysis = getNearMissAnalysis(incidents)
+  const nmRate = nearMissAnalysis.rateValue || 0
+  const mNearMiss = nmRate < 2 ? 1.5 : nmRate > 8 ? 0.7 : 1.0
+
+  // Multiplier 2: Incident type trend (from predictIncidentTypeProbability)
+  const typeProbData = predictIncidentTypeProbability(incidents, 6)
+  let mTrend = 1.0
+  if (typeProbData.hasData) {
+    const severeTypes = typeProbData.types.filter(t => t.type === 'lti' || t.type === 'mti')
+    const anyIncreasing = severeTypes.some(t => t.trend === 'increasing')
+    const anyDecreasing = severeTypes.every(t => t.trend === 'decreasing')
+    if (anyIncreasing) mTrend = 1.3
+    else if (anyDecreasing) mTrend = 0.8
+  }
+
+  // Multiplier 3: Overdue open actions
+  const overdueAlerts = getOverdueActionAlerts(incidents)
+  const overdueCount = overdueAlerts.reduce((sum, a) => sum + (a.metric || 0), 0)
+  const mOpenActions = overdueCount > 10 ? 1.4 : overdueCount > 5 ? 1.2 : 1.0
+
+  // Multiplier 4: Hazard concentration — top 3 hazards share of total
+  const top3Count = hazardRiskRanking.slice(0, 3).reduce((sum, h) => sum + h.incidentCount, 0)
+  const concentrationPct = totalIncidents > 0 ? (top3Count / totalIncidents) * 100 : 0
+  const mConcentration = concentrationPct > 60 ? 1.3 : 1.0
+
+  // Calculate adjusted probability
+  const pAdjusted = pBase * mNearMiss * mTrend * mOpenActions * mConcentration
+  let p30day = 1 - Math.pow(1 - pAdjusted, 30)
+
+  // Clamp: 1% floor, 95% ceiling
+  p30day = Math.max(0.01, Math.min(0.95, p30day))
+  const pct = Math.round(p30day * 100)
+
+  const escalationLabel = pct > 60 ? 'High' : pct > 30 ? 'Elevated' : pct > 10 ? 'Moderate' : 'Low'
+
+  // Trend from type probability data
+  let escalationTrend = 'stable'
+  if (typeProbData.hasData) {
+    const severeTypes = typeProbData.types.filter(t => t.type === 'lti' || t.type === 'mti')
+    if (severeTypes.some(t => t.trend === 'increasing')) escalationTrend = 'worsening'
+    else if (severeTypes.every(t => t.trend === 'decreasing') && severeTypes.length > 0) escalationTrend = 'improving'
+  }
+
+  const escalationProbability = {
+    value: pct,
+    label: escalationLabel,
+    confidence: isSparseOverall ? 'low' : 'normal',
+    trend: escalationTrend
+  }
+
+  // ── Top 3 Risk Drivers ──
+
+  const driverCandidates = []
+
+  // Driver candidates from hazard signals
+  hazardRiskRanking.forEach(h => {
+    if (h.signals.severity >= 60) {
+      const severeLabel = h.ltiCount > 0
+        ? `${h.ltiCount} LTI${h.ltiCount > 1 ? 's' : ''}`
+        : `${h.mtiCount} MTI${h.mtiCount > 1 ? 's' : ''}`
+      driverCandidates.push({
+        signal: 'severity',
+        hazard: h.hazard,
+        strength: h.signals.severity,
+        explanation: `${h.hazard} has the highest severity score (${h.riskScore}/100) with ${severeLabel} this period`
+      })
+    }
+    if (h.changePercent > 20 && h.signals.trend >= 60) {
+      driverCandidates.push({
+        signal: 'trend',
+        hazard: h.hazard,
+        strength: h.signals.trend,
+        explanation: `${h.hazard} incidents increased ${h.changePercent}% compared to previous period`
+      })
+    }
+    if (h.openActions > 3) {
+      const overdueItems = openActions.filter(i => {
+        if (i.location !== h.hazard || !i.date) return false
+        const age = differenceInDays(today, parseISO(i.date.substring(0, 10)))
+        return age > 30
+      })
+      if (overdueItems.length > 0) {
+        driverCandidates.push({
+          signal: 'openActions',
+          hazard: h.hazard,
+          strength: h.signals.openActions,
+          explanation: `${overdueItems.length} open action${overdueItems.length > 1 ? 's' : ''} older than 30 days in ${h.hazard}`
+        })
+      }
+    }
+  })
+
+  // Sort by strength descending, pick top 3
+  driverCandidates.sort((a, b) => b.strength - a.strength)
+  const riskDrivers = driverCandidates.slice(0, 3)
+
+  return {
+    escalationProbability,
+    hazardRiskRanking,
+    riskDrivers
+  }
 }

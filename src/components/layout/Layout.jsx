@@ -158,7 +158,7 @@ const Layout = ({ children }) => {
 
       {/* Main Content - Responsive padding */}
       <main
-        className={`pt-14 min-h-[calc(100vh-56px-48px)] ${isMobile ? 'p-3' : 'p-4'}`}
+        className={`pt-14 ${isMobile ? 'p-3' : 'p-4'}`}
         role="main"
         aria-label="Main content"
       >
