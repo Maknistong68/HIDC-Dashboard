@@ -36,7 +36,7 @@ const Layout = ({ children }) => {
   const hasData = incidents.length > 0
 
   return (
-    <div className="min-h-screen bg-surface-50 flex flex-col">
+    <div className="min-h-screen bg-surface-50">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary-600 focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -179,7 +179,7 @@ const Layout = ({ children }) => {
       {/* Main Content - Responsive padding */}
       <main
         id="main-content"
-        className={`pt-14 flex-1 ${isMobile ? 'p-3' : 'p-4'}`}
+        className={`pt-14 ${isMobile ? 'p-3' : 'p-4'}`}
         role="main"
         aria-label="Main content"
       >
