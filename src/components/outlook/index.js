@@ -26,3 +26,9 @@ export { default as ActionAgingPanel } from './ActionAgingPanel'
 export { default as EntityRiskRanking } from './EntityRiskRanking'
 export { default as EntityRiskList } from './EntityRiskList'
 export { default as EntityDetailPanel } from './EntityDetailPanel'
+
+// Predictive & Simulation feature additions
+export { default as MonteCarloHeatmap } from './MonteCarloHeatmap'
+export { default as ScenarioComparisonPanel } from './ScenarioComparisonPanel'
+export { default as IncidentVelocityTimeline } from './IncidentVelocityTimeline'
+export { default as LeadingIndicatorTracker } from './LeadingIndicatorTracker'

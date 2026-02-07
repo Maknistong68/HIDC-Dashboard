@@ -28,6 +28,10 @@ import TrendingHazardSelector from './TrendingHazardSelector'
 import QuickActionPanel from './QuickActionPanel'
 import HazardSpecificActions from './HazardSpecificActions'
 import InterventionSliderGroup from './InterventionSliderGroup'
+import MonteCarloHeatmap from './MonteCarloHeatmap'
+import IncidentVelocityTimeline from './IncidentVelocityTimeline'
+import LeadingIndicatorTracker from './LeadingIndicatorTracker'
+import ScenarioComparisonPanel from './ScenarioComparisonPanel'
 import {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
@@ -150,6 +154,9 @@ const PredictiveSimulationTab = ({
   const [sliders, setSliders] = useState({})
   const [actionsToClose, setActionsToClose] = useState(0)
   const [expandedCategory, setExpandedCategory] = useState(null)
+
+  // Scenario comparison state (lifted to survive tab switches)
+  const [savedScenarios, setSavedScenarios] = useState([])
 
   const { weekly, monthly, typeProbability, typeRisk } = incidentPrediction || {}
 
@@ -286,6 +293,25 @@ const PredictiveSimulationTab = ({
   const handleApplyRecommendation = useCallback((factor, effect) => {
     setActiveQuickAction(null)
     setSliders(prev => ({ ...prev, [factor.toLowerCase()]: effect }))
+  }, [])
+
+  // Scenario comparison handlers
+  const handleSaveScenario = useCallback((scenario) => {
+    setSavedScenarios(prev => prev.length >= 4 ? prev : [...prev, scenario])
+  }, [])
+
+  const handleDeleteScenario = useCallback((timestamp) => {
+    setSavedScenarios(prev => prev.filter(s => s.timestamp !== timestamp))
+  }, [])
+
+  const handleLoadScenario = useCallback((scenario) => {
+    setSliders(scenario.sliders || {})
+    setActionsToClose(scenario.actionsToClose || 0)
+    if (scenario.hazards?.length) {
+      setSelectedHazards(scenario.hazards)
+      setSelectAllTrending(false)
+    }
+    setActiveQuickAction(null)
   }, [])
 
   const handleReset = useCallback(() => {
@@ -586,8 +612,27 @@ const PredictiveSimulationTab = ({
         </div>
       </div>
 
+      {/* ==================== MONTE CARLO HEATMAP ==================== */}
+      <MonteCarloHeatmap
+        negativeIncidents={negativeIncidents}
+        sortedHazards={sortedHazards}
+        period={period}
+      />
+
       {/* ==================== ANOMALY DETECTION ==================== */}
       <AnomalyDetectionPanel negativeIncidents={negativeIncidents} />
+
+      {/* ==================== INCIDENT VELOCITY TIMELINE ==================== */}
+      <IncidentVelocityTimeline
+        negativeIncidents={negativeIncidents}
+        period={period}
+      />
+
+      {/* ==================== LEADING INDICATORS ==================== */}
+      <LeadingIndicatorTracker
+        filteredIncidents={filteredIncidents}
+        negativeIncidents={negativeIncidents}
+      />
       </>
       )}
 
@@ -780,6 +825,20 @@ const PredictiveSimulationTab = ({
               hazardTrendData={hazardTrendData}
             />
           </div>
+
+          {/* ==================== SCENARIO COMPARISON ==================== */}
+          <ScenarioComparisonPanel
+            currentProjection={projection}
+            weekly={weekly}
+            sliders={sliders}
+            actionsToClose={actionsToClose}
+            effectiveSelectedHazards={effectiveSelectedHazards}
+            hasChanges={hasChanges}
+            savedScenarios={savedScenarios}
+            onSaveScenario={handleSaveScenario}
+            onDeleteScenario={handleDeleteScenario}
+            onLoadScenario={handleLoadScenario}
+          />
         </div>
       </div>
       )}

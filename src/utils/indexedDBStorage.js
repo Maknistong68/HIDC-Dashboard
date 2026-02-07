@@ -278,6 +278,52 @@ export const getAllRecords = async () => {
 }
 
 /**
+ * Get all records in chunks using a cursor, yielding to the event loop between chunks.
+ * This prevents the main thread from blocking during large (60K+) record loads.
+ *
+ * @param {number} chunkSize - Records per chunk (default 5000)
+ * @param {function} onChunk - Called after each chunk with (loadedSoFar, total)
+ * @returns {Promise<Array>} - All records
+ */
+export const getRecordsChunked = async (chunkSize = 5000, onChunk) => {
+  try {
+    const db = await getDB()
+
+    // Fast count first
+    const total = await db.count(STORES.RECORDS)
+    if (total === 0) return []
+
+    const allRecords = []
+    const tx = db.transaction(STORES.RECORDS, 'readonly')
+    let cursor = await tx.store.openCursor()
+    let chunkCount = 0
+
+    while (cursor) {
+      allRecords.push(cursor.value)
+      chunkCount++
+
+      if (chunkCount >= chunkSize) {
+        // Report progress
+        if (onChunk) onChunk(allRecords.length, total)
+        chunkCount = 0
+        // Yield to event loop so UI can update
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      }
+
+      cursor = await cursor.continue()
+    }
+
+    // Final progress report
+    if (onChunk) onChunk(allRecords.length, total)
+
+    return allRecords
+  } catch (error) {
+    if (import.meta.env.DEV) console.error('[IndexedDB] FAILED to load records chunked:', error)
+    throw error
+  }
+}
+
+/**
  * Get records by file ID
  * @param {number} fileId
  * @returns {Promise<Array>}

@@ -37,7 +37,7 @@ export default defineConfig({
     parsingReportPlugin(),
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'HIDC Dashboard',

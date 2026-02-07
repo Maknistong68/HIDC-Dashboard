@@ -24,11 +24,10 @@ import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
-import ExportMenu from '../components/dashboard/ExportMenu'
 import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
-import { useExport } from '../hooks/useExport'
+import Skeleton from '../components/ui/Skeleton'
 import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, SUB_REGION_OPTIONS } from '../utils/constants'
 import {
   getIncidentCountsByType,
@@ -110,23 +109,6 @@ const Dashboard = () => {
   const dayOfWeekRef = useRef(null)
   const hourOfDayRef = useRef(null)
   const hazardsHeatmapRef = useRef(null)
-
-  // Chart refs object for export
-  const chartRefs = {
-    kpiCards1: kpiCards1Ref,
-    kpiCards2: kpiCards2Ref,
-    pyramid: pyramidRef,
-    trendChart: trendChartRef,
-    topHazards: topHazardsRef,
-    topObservers: topObserversRef,
-    topCompanies: topCompaniesRef,
-    positiveNegative: positiveNegativeRef,
-    dayOfWeek: dayOfWeekRef,
-    hourOfDay: hourOfDayRef,
-    hazardsHeatmap: hazardsHeatmapRef,
-  }
-
-  // Export hook is called after filteredIncidents is defined (see below)
 
   // Auto-scroll heatmap to end (most recent months) on load
   useEffect(() => {
@@ -270,10 +252,6 @@ const Dashboard = () => {
       return true
     })
   }, [incidents, contractor, site, subRegion, siteClassifications, period])
-
-  // Export hook - dashboardContentRef for PDF full-page capture, chartRefs for PowerPoint
-  // Note: filteredIncidents is passed for summary statistics in exports
-  const { isExporting, exportProgress, handleExportPDF, handleExportPPTX } = useExport(dashboardContentRef, chartRefs, filters, filteredIncidents)
 
   // Heatmap uses ALL incidents (not filtered by "This Month")
   // Contractor/site/subRegion filters apply to heatmap
@@ -728,8 +706,17 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-4">
+        {/* KPI row skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton.KPICard key={i} />
+          ))}
+        </div>
+        {/* Chart skeleton */}
+        <Skeleton.Chart height={240} />
+        {/* Table skeleton */}
+        <Skeleton.Table rows={5} cols={4} />
       </div>
     )
   }
@@ -753,15 +740,6 @@ const Dashboard = () => {
 
         {/* Time Period Toggle */}
         <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
-
-        {/* Export Button (compact icon) */}
-        <ExportMenu
-          onExportPDF={handleExportPDF}
-          onExportPPTX={handleExportPPTX}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-          compact
-        />
       </div>
 
       {/* Dashboard Content - wrapped for PDF export full-page capture */}

@@ -46,14 +46,19 @@ export const LoadingProvider = ({ children }) => {
     }, 400)
   }, [])
 
+  const updateMessage = useCallback((msg) => {
+    setMessage(msg)
+  }, [])
+
   const value = useMemo(() => ({
     isLoading,
     progress,
     message,
     startLoading,
     updateProgress,
+    updateMessage,
     finishLoading
-  }), [isLoading, progress, message, startLoading, updateProgress, finishLoading])
+  }), [isLoading, progress, message, startLoading, updateProgress, updateMessage, finishLoading])
 
   return (
     <LoadingContext.Provider value={value}>

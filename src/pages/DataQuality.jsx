@@ -33,6 +33,7 @@ import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { useDate } from '../context/DateContext'
 import { InfoTooltip } from '../components/ui/Tooltip'
+import Skeleton from '../components/ui/Skeleton'
 import {
   BarChart,
   Bar,
@@ -835,8 +836,14 @@ const DataQuality = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton.KPICard key={i} />
+          ))}
+        </div>
+        <Skeleton.Chart height={200} />
+        <Skeleton.Table rows={6} cols={5} />
       </div>
     )
   }

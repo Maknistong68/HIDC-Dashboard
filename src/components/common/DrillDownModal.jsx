@@ -1,22 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
 import { useData } from '../../context/DataContext'
-import { parseSentence, filterNoiseWords } from '../../utils/sentenceParser'
+import { parseSentence } from '../../utils/sentenceParser'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
-import ExportConfirmDialog from './ExportConfirmDialog'
 import HighlightedText from './HighlightedText'
-
-// Disclaimer text helper - includes Event ID for individual reports
-const getDisclaimerText = (eventId) => {
-  if (eventId) {
-    return `Please review this report before sharing. Use Event ID: ${eventId} to verify against source records.`
-  }
-  return 'Please review this report before sharing.'
-}
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -573,11 +563,10 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
 }
 
 /**
- * Record Details Modal (Glassmorphism) with PDF Export
+ * Record Details Modal (Glassmorphism)
  */
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
-  const [showExportConfirm, setShowExportConfirm] = useState(false)
   const { updateIncident } = useData()
   const copyTimerRef = useRef(null)
 
@@ -641,217 +630,6 @@ const RecordDetailsModal = ({ record, onClose }) => {
     }
   }
 
-  // PDF Export function
-  const handleDownloadPDF = () => {
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const pageWidth = 210
-    const pageHeight = 297
-    const margin = 15
-    const contentWidth = pageWidth - margin * 2
-    let y = margin
-
-    const addWrappedText = (text, x, startY, maxWidth, lineHeight = 5) => {
-      const lines = pdf.splitTextToSize(text || '-', maxWidth)
-      pdf.text(lines, x, startY)
-      return startY + lines.length * lineHeight
-    }
-
-    // Top accent line
-    pdf.setFillColor(59, 130, 246)
-    pdf.rect(0, 0, pageWidth, 2.5, 'F')
-
-    // Header background
-    pdf.setFillColor(249, 250, 251)
-    pdf.rect(0, 2.5, pageWidth, 22, 'F')
-
-    pdf.setFontSize(16)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(31, 41, 55)
-    pdf.text('EVENT REPORT', margin, 14)
-    pdf.setFontSize(9)
-    pdf.setTextColor(107, 114, 128)
-    pdf.text(formatDate(record.date), pageWidth - margin, 14, { align: 'right' })
-
-    // Type badge
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(59, 130, 246)
-    pdf.text((record.type || 'observation').toUpperCase(), margin, 21)
-    y = 30
-
-    // Contractor/Site subheader
-    if (record.contractor || record.site) {
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(55, 65, 81)
-      const subParts = [record.contractor, record.site].filter(Boolean)
-      pdf.text(subParts.join(' - '), pageWidth / 2, y, { align: 'center' })
-      y = 40
-    } else {
-      y = 37
-    }
-
-    // Divider
-    pdf.setDrawColor(229, 231, 235)
-    pdf.setLineWidth(0.3)
-    pdf.line(margin, y - 5, pageWidth - margin, y - 5)
-
-    // Details Section with background
-    pdf.setFillColor(249, 250, 251)
-    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
-    pdf.setFontSize(11)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(31, 41, 55)
-    pdf.text('DETAILS', margin + 2, y + 3)
-    y += 10
-
-    const col1X = margin
-    const col2X = margin + contentWidth / 2 + 5
-    const labelColor = [107, 114, 128]
-    const valueColor = [31, 41, 55]
-
-    // Row 1: Date & Contractor
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...labelColor)
-    pdf.text('DATE', col1X, y)
-    pdf.text('CONTRACTOR', col2X, y)
-    y += 4
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...valueColor)
-    pdf.text(formatDate(record.date), col1X, y)
-    pdf.text(record.contractor || '-', col2X, y)
-    y += 8
-
-    // Row 2: Site & Hazard
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...labelColor)
-    pdf.text('SITE', col1X, y)
-    pdf.text('HAZARD CATEGORY', col2X, y)
-    y += 4
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...valueColor)
-    pdf.text(record.site || '-', col1X, y)
-    pdf.text(record.location || '-', col2X, y)
-    y += 8
-
-    // Row 3: Reporter & Status
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...labelColor)
-    pdf.text('REPORTED BY', col1X, y)
-    pdf.text('STATUS', col2X, y)
-    y += 4
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...valueColor)
-    pdf.text(record.reportedBy || '-', col1X, y)
-    pdf.text(getStatusInfo(record.actionStatus).label, col2X, y)
-    y += 12
-
-    // Divider
-    pdf.setDrawColor(229, 231, 235)
-    pdf.line(margin, y - 3, pageWidth - margin, y - 3)
-
-    // Description Section with background
-    pdf.setFillColor(249, 250, 251)
-    pdf.rect(margin, y - 2, contentWidth, 7, 'F')
-    pdf.setFontSize(11)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(31, 41, 55)
-    pdf.text('DESCRIPTION', margin + 2, y + 3)
-    y += 10
-
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(55, 65, 81)
-    y = addWrappedText(record.description || 'No description provided.', margin, y, contentWidth, 5)
-    y += 8
-
-    // Additional Info
-    if (record.bodyPart || record.correctiveAction) {
-      pdf.setDrawColor(229, 231, 235)
-      pdf.line(margin, y - 3, pageWidth - margin, y - 3)
-
-      pdf.setFillColor(249, 250, 251)
-      pdf.rect(margin, y - 2, contentWidth, 7, 'F')
-      pdf.setFontSize(11)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(31, 41, 55)
-      pdf.text('ADDITIONAL INFORMATION', margin + 2, y + 3)
-      y += 10
-
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-
-      if (record.bodyPart) {
-        pdf.setFont('helvetica', 'bold')
-        pdf.setTextColor(...labelColor)
-        pdf.text('Body Part:', margin, y)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...valueColor)
-        pdf.text(record.bodyPart, margin + 25, y)
-        y += 6
-      }
-      if (record.correctiveAction) {
-        pdf.setFont('helvetica', 'bold')
-        pdf.setTextColor(...labelColor)
-        pdf.text('Corrective Action:', margin, y)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...valueColor)
-        y = addWrappedText(record.correctiveAction, margin, y + 5, contentWidth, 5)
-      }
-    }
-
-    // Footer with disclaimer
-    const footerY = pageHeight - 28
-
-    // Separator line
-    pdf.setDrawColor(229, 231, 235)
-    pdf.setLineWidth(0.3)
-    pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5)
-
-    // Disclaimer text with Event ID
-    pdf.setFontSize(7)
-    pdf.setFont('helvetica', 'italic')
-    pdf.setTextColor(107, 114, 128)
-    const disclaimerText = getDisclaimerText(record.externalId)
-    const disclaimerLines = pdf.splitTextToSize(disclaimerText, contentWidth)
-    pdf.text(disclaimerLines, margin, footerY)
-
-    // Bottom footer bar
-    pdf.setFillColor(249, 250, 251)
-    pdf.rect(0, pageHeight - 12, pageWidth, 12, 'F')
-
-    // Reference ID (prominent)
-    if (record.externalId) {
-      pdf.setFontSize(8)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(59, 130, 246)
-      pdf.text(`Reference ID: ${record.externalId}`, margin, pageHeight - 5)
-    }
-
-    // Branding and date
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(156, 163, 175)
-    pdf.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth - margin, pageHeight - 5, { align: 'right' })
-
-    pdf.save(`Event-Report-${record.date || 'report'}.pdf`)
-  }
-
-  // Handle export button click - show confirmation first
-  const handleExportClick = () => {
-    setShowExportConfirm(true)
-  }
-
-  // Handle confirmed export
-  const handleConfirmExport = () => {
-    handleDownloadPDF()
-  }
-
   const statusInfo = getStatusInfo(record.actionStatus)
   const StatusIcon = statusInfo.icon
 
@@ -893,31 +671,17 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 </span>
                 <span className={`text-surface-500 ${isMobile ? 'text-xs order-2' : 'text-sm'}`}>{formatDate(record.date)}</span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                <button
-                  onClick={handleExportClick}
-                  className={`
-                    flex items-center gap-1.5 font-medium text-white bg-blue-600
-                    hover:bg-blue-700 active:bg-blue-800 rounded-lg transition-colors
-                    ${isMobile ? 'px-3 h-10 text-sm' : 'px-3 py-1.5 text-sm'}
-                  `}
-                  title="Download PDF"
-                >
-                  <Download size={isMobile ? 18 : 14} />
-                  <span className={isMobile ? 'hidden xs:inline' : ''}>PDF</span>
-                </button>
-                <button
-                  onClick={onClose}
-                  className={`
-                    rounded-xl hover:bg-surface-100/80 active:bg-surface-200/80
-                    text-surface-400 hover:text-surface-600 transition-colors
-                    ${isMobile ? 'p-3 -mr-1' : 'p-2'}
-                  `}
-                  aria-label="Close modal"
-                >
-                  <X size={isMobile ? 24 : 20} />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className={`
+                  rounded-xl hover:bg-surface-100/80 active:bg-surface-200/80
+                  text-surface-400 hover:text-surface-600 transition-colors
+                  ${isMobile ? 'p-3 -mr-1' : 'p-2'}
+                `}
+                aria-label="Close modal"
+              >
+                <X size={isMobile ? 24 : 20} />
+              </button>
             </div>
           </div>
 
@@ -1031,14 +795,6 @@ const RecordDetailsModal = ({ record, onClose }) => {
           </div>
         </div>
       </div>
-
-      {/* Export Confirmation Dialog */}
-      <ExportConfirmDialog
-        isOpen={showExportConfirm}
-        onClose={() => setShowExportConfirm(false)}
-        onConfirm={handleConfirmExport}
-        exportType="Report"
-      />
     </div>
   )
 }

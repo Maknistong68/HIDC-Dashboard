@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Target, ShieldCheck, Eye, EyeOff, Trash2, FolderOpen, Gauge } from 'lucide-react'
 import { useData } from '../../context/DataContext'
@@ -10,9 +10,21 @@ import useIsMobile from '../../hooks/useIsMobile'
 
 const Layout = ({ children }) => {
   const location = useLocation()
-  const { showOpenClosed, setShowOpenClosed, incidents, clearData } = useData()
+  const { showOpenClosed, setShowOpenClosed, incidents, clearData, isImporting } = useData()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const isMobile = useIsMobile(768) // Use md breakpoint for nav switch
+
+  // Guard navigation while importing
+  const guardNavClick = useCallback((e) => {
+    if (isImporting) {
+      const confirmed = window.confirm(
+        'A file import is in progress. Navigating away may interrupt it. Continue?'
+      )
+      if (!confirmed) {
+        e.preventDefault()
+      }
+    }
+  }, [isImporting])
 
   // Main navigation tabs (3 tabs together)
   const navItems = [
@@ -54,6 +66,7 @@ const Layout = ({ children }) => {
                     <NavLink
                       key={path}
                       to={path}
+                      onClick={guardNavClick}
                       className={`
                         flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                         transition-all duration-200 ease-out
@@ -81,6 +94,7 @@ const Layout = ({ children }) => {
                 {/* File Manager button */}
                 <NavLink
                   to="/files"
+                  onClick={guardNavClick}
                   className={`
                     flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium
                     transition-all duration-200 ease-out

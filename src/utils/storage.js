@@ -10,6 +10,7 @@
 import {
   isIndexedDBSupported,
   getAllRecords,
+  getRecordsChunked,
   addRecords,
   createFile,
   getAllFiles,
@@ -210,6 +211,37 @@ export const loadIncidents = async () => {
     // Final fallback
     const fallbackData = getData('INCIDENTS') || []
     return fallbackData
+  }
+}
+
+/**
+ * Load all incidents in chunks (prevents main-thread blocking for 60K+ records).
+ * Falls back to bulk load if IndexedDB chunked loading fails.
+ *
+ * @param {function} onChunk - Called with (loaded, total) after each chunk
+ * @returns {Promise<Array>}
+ */
+export const loadIncidentsChunked = async (onChunk) => {
+  try {
+    const useIDB = await shouldUseIndexedDB()
+
+    if (useIDB) {
+      await migrateToIndexedDB()
+      return await getRecordsChunked(5000, onChunk)
+    }
+
+    // Fallback to localStorage (no chunking needed for small data)
+    const localData = getData('INCIDENTS') || []
+    return localData
+  } catch (error) {
+    if (import.meta.env.DEV) console.error('[Storage] Chunked load failed, falling back to bulk:', error)
+    // Fallback to bulk load
+    try {
+      return await loadIncidents()
+    } catch (fallbackError) {
+      if (import.meta.env.DEV) console.error('[Storage] Bulk fallback also failed:', fallbackError)
+      return getData('INCIDENTS') || []
+    }
   }
 }
 

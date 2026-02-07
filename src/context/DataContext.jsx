@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
-  loadIncidents,
+  loadIncidentsChunked,
   saveIncidentsWithFile,
   getImportedFiles,
   deleteImportedFile,
@@ -45,9 +45,11 @@ export const DataProvider = ({ children }) => {
   const [storageStats, setStorageStats] = useState(null)
   const [categorizationProgress, setCategorizationProgress] = useState(null)
   const [siteClassifications, setSiteClassifications] = useState({})
+  const [isImporting, setIsImporting] = useState(false)
 
   // Global loading overlay
-  const { startLoading, updateProgress, finishLoading } = useLoading()
+  const { startLoading, updateProgress, updateMessage, finishLoading } = useLoading()
+  const setMessage = updateMessage
 
   // Load data on mount
   useEffect(() => {
@@ -110,8 +112,13 @@ export const DataProvider = ({ children }) => {
     startLoading('Loading data...')
     try {
       updateProgress(10)
-      // Load incidents from IndexedDB (with localStorage fallback)
-      const storedIncidents = await loadIncidents()
+      // Load incidents from IndexedDB in chunks (prevents main-thread blocking)
+      const storedIncidents = await loadIncidentsChunked((loaded, total) => {
+        // Map chunk progress to 10-40% of the overall bar
+        const chunkPercent = total > 0 ? (loaded / total) : 1
+        updateProgress(10 + Math.round(chunkPercent * 30))
+        setMessage(`Loading records... ${loaded.toLocaleString()} of ${total.toLocaleString()}`)
+      })
 
       // Ensure it's an array
       const validIncidents = Array.isArray(storedIncidents) ? storedIncidents : []
@@ -164,7 +171,7 @@ export const DataProvider = ({ children }) => {
       setIsLoading(false)
       finishLoading()
     }
-  }, [startLoading, updateProgress, finishLoading])
+  }, [startLoading, updateProgress, setMessage, finishLoading])
 
   // Project CRUD
   const addProject = useCallback((project) => {
@@ -541,6 +548,8 @@ export const DataProvider = ({ children }) => {
     incidents,
     files,
     isLoading,
+    isImporting,
+    setIsImporting,
     importWarnings,
     lastImportStats,
     showOpenClosed,
@@ -592,6 +601,7 @@ export const DataProvider = ({ children }) => {
     incidents,
     files,
     isLoading,
+    isImporting,
     importWarnings,
     lastImportStats,
     showOpenClosed,

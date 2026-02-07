@@ -10,6 +10,7 @@ import {
 } from '../../utils/excelParser'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
+import useNavigationGuard from '../../hooks/useNavigationGuard'
 
 /**
  * BatchImportModal - Import multiple files at once
@@ -20,7 +21,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * - Summary of results
  */
 const BatchImportModal = ({ onClose }) => {
-  const { addIncidentsWithFile, incidents, reloadFiles } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -43,11 +44,20 @@ const BatchImportModal = ({ onClose }) => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
+      setIsImporting(false)
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
     }
-  }, [])
+  }, [setIsImporting])
+
+  // Sync isImporting with DataContext so Layout can show indicator
+  useEffect(() => {
+    setIsImporting(isProcessing)
+  }, [isProcessing, setIsImporting])
+
+  // Block browser close/reload while importing
+  useNavigationGuard(isProcessing)
 
   // Check if folder selection is supported (Chrome/Edge only)
   const isFolderSelectSupported = useMemo(() => {

@@ -1,8 +1,9 @@
-import React, { Suspense, lazy } from 'react'
+import React, { Suspense, lazy, useRef } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import InstallPrompt from './components/common/InstallPrompt'
+import ServiceWorkerUpdatePrompt from './components/common/ServiceWorkerUpdatePrompt'
 import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 
@@ -22,10 +23,17 @@ const PageLoadingFallback = () => (
   </div>
 )
 
-// Main tabs - always rendered with smooth opacity transitions
-// This preserves useMemo calculations across ALL route changes (including /files)
+// Main tabs - deferred rendering: mount on first visit, stay mounted after
+// Dashboard always mounted (landing page). Others mount when navigated to.
+// Once mounted, tabs stay mounted (preserving useMemo calculations across route changes).
 const MainTabs = () => {
   const { pathname } = useLocation()
+  const visitedRef = useRef(new Set(['/']))
+
+  // Track visited tabs (useRef avoids re-render)
+  if (['/data-control', '/outlook'].includes(pathname)) {
+    visitedRef.current.add(pathname)
+  }
 
   const getPageClass = (path) => {
     const isActive = pathname === path
@@ -37,12 +45,16 @@ const MainTabs = () => {
       <div className={getPageClass('/')}>
         <Dashboard />
       </div>
-      <div className={getPageClass('/data-control')}>
-        <DataQuality />
-      </div>
-      <div className={getPageClass('/outlook')}>
-        <SafetyOutlook />
-      </div>
+      {visitedRef.current.has('/data-control') && (
+        <div className={getPageClass('/data-control')}>
+          <DataQuality />
+        </div>
+      )}
+      {visitedRef.current.has('/outlook') && (
+        <div className={getPageClass('/outlook')}>
+          <SafetyOutlook />
+        </div>
+      )}
     </div>
   )
 }
@@ -55,6 +67,7 @@ function App() {
     <ErrorBoundary>
       <Layout>
         <InstallPrompt />
+        <ServiceWorkerUpdatePrompt />
         {/* Main tabs - conditionally rendered for performance */}
         <MainTabs />
 
