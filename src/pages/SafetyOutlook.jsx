@@ -460,7 +460,7 @@ const SafetyOutlook = () => {
   }
 
   return (
-    <div className="space-y-4 flex flex-col">
+    <div className="space-y-4">
       {/* Filters Row - consistent with Dashboard */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -560,7 +560,7 @@ const SafetyOutlook = () => {
           </div>
 
           {/* Main content */}
-          <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)]">
+          <div className="flex gap-3 flex-1 min-h-[320px]">
             {activeSubTab === 'hazards' ? (
               <>
                 {/* Left: Hazard List */}
