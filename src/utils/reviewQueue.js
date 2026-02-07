@@ -93,7 +93,7 @@ export const getReviewQueue = () => {
     const stored = localStorage.getItem(REVIEW_QUEUE_KEY)
     return stored ? JSON.parse(stored) : []
   } catch (error) {
-    console.warn('Error reading review queue:', error)
+    // error handled silently
     return []
   }
 }
@@ -147,7 +147,7 @@ export const addToReviewQueue = (observation, result) => {
 
     return true
   } catch (error) {
-    console.warn('Error adding to review queue:', error)
+    // error handled silently
     return false
   }
 }
@@ -172,7 +172,7 @@ export const markAsReviewed = (itemId, correctCategory) => {
     localStorage.setItem(REVIEW_QUEUE_KEY, JSON.stringify(queue))
     return true
   } catch (error) {
-    console.warn('Error marking item as reviewed:', error)
+    // error handled silently
     return false
   }
 }
@@ -200,7 +200,7 @@ export const clearReviewQueue = () => {
   try {
     localStorage.removeItem(REVIEW_QUEUE_KEY)
   } catch (error) {
-    console.warn('Error clearing review queue:', error)
+    // error handled silently
   }
 }
 
@@ -285,7 +285,7 @@ export const getUnknownTerms = () => {
     const stored = localStorage.getItem(UNKNOWN_TERMS_KEY)
     return stored ? JSON.parse(stored) : {}
   } catch (error) {
-    console.warn('Error reading unknown terms:', error)
+    // error handled silently
     return {}
   }
 }
@@ -314,7 +314,7 @@ export const addUnknownTerms = (terms) => {
       localStorage.setItem(UNKNOWN_TERMS_KEY, JSON.stringify(existing))
     }
   } catch (error) {
-    console.warn('Error adding unknown terms:', error)
+    // error handled silently
   }
 }
 
@@ -338,7 +338,7 @@ export const clearUnknownTerms = () => {
   try {
     localStorage.removeItem(UNKNOWN_TERMS_KEY)
   } catch (error) {
-    console.warn('Error clearing unknown terms:', error)
+    // error handled silently
   }
 }
 
@@ -352,7 +352,7 @@ export const removeUnknownTerm = (term) => {
     delete terms[term.toLowerCase()]
     localStorage.setItem(UNKNOWN_TERMS_KEY, JSON.stringify(terms))
   } catch (error) {
-    console.warn('Error removing unknown term:', error)
+    // error handled silently
   }
 }
 

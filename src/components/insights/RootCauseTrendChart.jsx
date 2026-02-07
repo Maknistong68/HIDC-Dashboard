@@ -47,8 +47,8 @@ const RootCauseTrendChart = ({ data, onPointClick }) => {
       return (
         <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-surface-200">
           <p className="font-semibold text-surface-800 text-sm mb-1">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} className="text-xs" style={{ color: entry.color }}>
+          {payload.map((entry) => (
+            <p key={entry.name} className="text-xs" style={{ color: entry.color }}>
               {entry.name}: {entry.value}
             </p>
           ))}

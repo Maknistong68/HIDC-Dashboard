@@ -36,7 +36,14 @@ const CalculationBreakdownModal = ({ isOpen, onClose, type, data }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') onClose() }}
+      aria-label="Close modal"
+    >
       <div
         className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col"
         onClick={e => e.stopPropagation()}

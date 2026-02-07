@@ -66,13 +66,13 @@ const ForecastAlertCard = ({ alerts }) => {
 
   return (
     <div className="space-y-2">
-      {alerts.map((alert, index) => {
+      {alerts.map((alert) => {
         const config = getAlertConfig(alert.type)
         const Icon = config.icon
 
         return (
           <div
-            key={index}
+            key={`${alert.type}-${alert.message}`}
             className={`p-3 rounded-lg border ${config.bg} ${config.border}`}
           >
             <div className="flex items-start gap-3">

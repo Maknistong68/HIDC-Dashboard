@@ -20,7 +20,7 @@ export const useExport = (dashboardRef, chartRefs, filters, incidents = []) => {
       // Use single dashboard ref for full page capture
       await exportToPDF(dashboardRef, filters, incidents, setExportProgress)
     } catch (error) {
-      console.error('PDF export failed:', error)
+      if (import.meta.env.DEV) console.error('PDF export failed:', error)
       setExportError('Failed to export PDF. Please try again.')
     } finally {
       setIsExporting(false)
@@ -38,7 +38,7 @@ export const useExport = (dashboardRef, chartRefs, filters, incidents = []) => {
       // PowerPoint still uses individual chart refs
       await exportToPPTX(chartRefs, filters, incidents, setExportProgress)
     } catch (error) {
-      console.error('PPTX export failed:', error)
+      if (import.meta.env.DEV) console.error('PPTX export failed:', error)
       setExportError('Failed to export PowerPoint. Please try again.')
     } finally {
       setIsExporting(false)

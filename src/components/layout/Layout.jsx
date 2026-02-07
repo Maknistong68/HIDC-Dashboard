@@ -25,6 +25,12 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-surface-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary-600 focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+      >
+        Skip to main content
+      </a>
       {/* Frosted Glass Header */}
       <header className="fixed top-0 left-0 right-0 h-14 glass border-b border-surface-200/50 shadow-soft z-50 safe-area-top">
         <div className="h-full px-2 sm:px-4 flex items-center justify-between max-w-[1800px] mx-auto">
@@ -158,6 +164,7 @@ const Layout = ({ children }) => {
 
       {/* Main Content - Responsive padding */}
       <main
+        id="main-content"
         className={`pt-14 ${isMobile ? 'p-3' : 'p-4'}`}
         role="main"
         aria-label="Main content"

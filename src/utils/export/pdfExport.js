@@ -71,7 +71,7 @@ export const exportToPDF = async (dashboardRef, filterInfo, incidents = [], onPr
       pdf.addImage(imageDataUrl, 'PNG', xOffset, margin + headerHeight, finalWidth, finalHeight)
 
     } catch (error) {
-      console.error('Failed to capture dashboard:', error)
+      if (import.meta.env.DEV) console.error('Failed to capture dashboard:', error)
       throw error
     }
   }

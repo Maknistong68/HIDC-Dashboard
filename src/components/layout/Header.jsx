@@ -54,6 +54,7 @@ const Header = () => {
           onClick={handleExport}
           className="flex items-center gap-2 px-3 py-2 text-sm text-surface-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
           title="Export Data"
+          aria-label="Export data"
         >
           <Download size={18} />
           <span className="hidden sm:inline">Export</span>
@@ -63,10 +64,11 @@ const Header = () => {
         <button
           className="relative p-2 text-surface-600 hover:bg-white/50 rounded-lg transition-colors backdrop-blur-sm"
           title="Notifications"
+          aria-label={`Notifications${totalAlerts > 0 ? `, ${totalAlerts} unread` : ''}`}
         >
           <Bell size={20} />
           {totalAlerts > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center" aria-hidden="true">
               {totalAlerts > 99 ? '99+' : totalAlerts}
             </span>
           )}

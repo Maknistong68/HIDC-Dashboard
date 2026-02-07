@@ -37,10 +37,11 @@ const InstallPrompt = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
 
     // Check if installed
-    window.addEventListener('appinstalled', () => {
+    const handleAppInstalled = () => {
       setIsInstalled(true)
       setShowPrompt(false)
-    })
+    }
+    window.addEventListener('appinstalled', handleAppInstalled)
 
     // Show prompt after 3 seconds for browsers that support it
     const timer = setTimeout(() => {
@@ -51,6 +52,7 @@ const InstallPrompt = () => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      window.removeEventListener('appinstalled', handleAppInstalled)
       clearTimeout(timer)
     }
   }, [])

@@ -232,8 +232,8 @@ const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
               label={{ value: 'Avg', position: 'right', fill: '#64748b', fontSize: 10 }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell key={index} fill={getRiskColor(entry.riskLevel)} />
+              {chartData.map((entry) => (
+                <Cell key={entry.name} fill={getRiskColor(entry.riskLevel)} />
               ))}
             </Bar>
           </BarChart>
@@ -248,9 +248,9 @@ const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
             Key Insights
           </div>
           <div className="flex flex-wrap gap-2">
-            {currentInsights.slice(0, 3).map((insight, index) => (
+            {currentInsights.slice(0, 3).map((insight) => (
               <div
-                key={index}
+                key={insight.message}
                 className="px-3 py-1.5 bg-surface-50 border border-surface-200 rounded-lg text-xs text-surface-700"
               >
                 {insight.message}
@@ -263,6 +263,7 @@ const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
       {/* Summary points */}
       {summary && summary.length > 0 && (
         <div className="text-xs text-surface-500 border-t border-surface-100 pt-3 space-y-1">
+          {/* key={index} acceptable: summary is a static string array with no reordering */}
           {summary.map((point, index) => (
             <p key={index}>• {point}</p>
           ))}

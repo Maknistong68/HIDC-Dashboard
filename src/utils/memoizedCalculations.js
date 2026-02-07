@@ -363,7 +363,6 @@ export const clearAllCaches = () => {
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
-  console.log('[Cache] All caches cleared')
 }
 
 /**
@@ -375,7 +374,6 @@ export const clearDataCaches = () => {
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
-  console.log('[Cache] Data caches cleared (normalization caches retained)')
 }
 
 /**

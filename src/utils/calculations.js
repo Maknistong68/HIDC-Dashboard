@@ -77,9 +77,7 @@ export const fixMiscategorizedMajorHazards = (incidents) => {
     return incident
   })
 
-  if (fixedCount > 0) {
-    console.log(`[Migration] Fixed ${fixedCount} mis-categorized Major Hazard records`)
-  }
+  // fixedCount tracked internally for silent migration
 
   return fixed
 }

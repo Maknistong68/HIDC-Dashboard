@@ -114,7 +114,6 @@ export const categorizeIncrementally = async (records, mode = 'trust-excel', onP
     }
   }
 
-  console.log(`[Categorization] ${needsUpdate.length} records need updating, ${unchanged.length} already current`)
 
   if (needsUpdate.length === 0) {
     return { updated: [], unchanged, totalUpdated: 0 }
@@ -163,12 +162,10 @@ export const runBackgroundCategorization = async (onProgress = null, onComplete 
     // Check if we need to run (based on stored version)
     const lastVersion = await getSetting('lastCategorizationVersion') || 0
     if (lastVersion >= CATEGORIZATION_VERSION) {
-      console.log('[Categorization] All records already at current version')
       if (onComplete) onComplete({ processed: 0, updated: 0, skipped: true })
       return { processed: 0, updated: 0, skipped: true }
     }
 
-    console.log(`[Categorization] Starting background update (v${lastVersion} → v${CATEGORIZATION_VERSION})...`)
 
     // Get all records
     const records = await getAllRecords()
@@ -192,7 +189,6 @@ export const runBackgroundCategorization = async (onProgress = null, onComplete 
     // Persist updates
     if (totalUpdated > 0) {
       await persistCategorizationUpdates(updated)
-      console.log(`[Categorization] Updated ${totalUpdated} records`)
     }
 
     // Mark as complete
@@ -203,7 +199,7 @@ export const runBackgroundCategorization = async (onProgress = null, onComplete 
 
     return result
   } catch (error) {
-    console.error('[Categorization] Error during background update:', error)
+    if (import.meta.env.DEV) console.error('[Categorization] Error during background update:', error)
     throw error
   }
 }
@@ -216,7 +212,6 @@ export const runBackgroundCategorization = async (onProgress = null, onComplete 
  * @returns {Promise<{ processed: number }>}
  */
 export const forceRecategorizeAll = async (mode = 'reclassify-all', onProgress = null) => {
-  console.log('[Categorization] Force recategorizing all records...')
 
   // Get all records
   const records = await getAllRecords()
@@ -233,8 +228,6 @@ export const forceRecategorizeAll = async (mode = 'reclassify-all', onProgress =
 
   // Update version
   await setSetting('lastCategorizationVersion', CATEGORIZATION_VERSION)
-
-  console.log(`[Categorization] Force recategorized ${categorized.length} records`)
 
   return { processed: categorized.length }
 }

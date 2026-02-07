@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, startTransition } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
@@ -658,4 +658,4 @@ const SafetyOutlook = () => {
   )
 }
 
-export default SafetyOutlook
+export default memo(SafetyOutlook)

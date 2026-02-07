@@ -23,3 +23,16 @@ npm-debug.log*
 
 # Claude settings
 .claude/
+
+# Build artifacts
+.vercel/
+parsing-report.json
+
+# Editor files
+*.swp
+*.swo
+*.sublime-*
+
+# Windows
+nul
+Thumbs.db

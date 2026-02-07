@@ -71,8 +71,8 @@ const PredictionMethodologyDisclosure = ({ methodology }) => {
             </p>
           </div>
 
-          {methodologyDetails.map((method, index) => (
-            <div key={index} className="space-y-2">
+          {methodologyDetails.map((method) => (
+            <div key={method.title} className="space-y-2">
               <h4 className="text-sm font-semibold text-surface-700">
                 {method.title}
               </h4>
@@ -80,6 +80,7 @@ const PredictionMethodologyDisclosure = ({ methodology }) => {
                 {method.description}
               </p>
               <ul className="space-y-1 ml-4">
+                {/* key={idx} acceptable: static detail strings that never reorder */}
                 {method.details.map((detail, idx) => (
                   <li key={idx} className="text-xs text-surface-600 list-disc">
                     {detail}

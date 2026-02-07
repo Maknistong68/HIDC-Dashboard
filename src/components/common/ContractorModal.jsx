@@ -112,7 +112,14 @@ const ContractorModal = ({
   if (!data) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
+          aria-label="Close modal"
+        />
         <div className="relative bg-white rounded-2xl shadow-2xl p-8 text-center">
           <Building2 size={48} className="mx-auto text-surface-300 mb-4" />
           <p className="text-surface-500">No data available for this contractor</p>
@@ -145,6 +152,10 @@ const ContractorModal = ({
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
+        aria-label="Close modal"
       />
 
       {/* Modal */}

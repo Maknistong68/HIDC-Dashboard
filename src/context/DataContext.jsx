@@ -71,7 +71,7 @@ export const DataProvider = ({ children }) => {
       setStorageStats(stats)
       updateProgress(100)
     } catch (error) {
-      console.error('[DataContext] Error reloading incidents:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error reloading incidents:', error)
     } finally {
       finishLoading()
     }
@@ -96,7 +96,7 @@ export const DataProvider = ({ children }) => {
       setStorageStats(stats)
       if (!silent) updateProgress(100)
     } catch (error) {
-      console.error('[DataContext] Error reloading files:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error reloading files:', error)
     } finally {
       if (!silent) {
         finishLoading()
@@ -106,50 +106,33 @@ export const DataProvider = ({ children }) => {
 
   // Load all data from storage
   const loadData = useCallback(async () => {
-    console.log('[DataContext] ========== LOAD DATA START ==========')
-    console.log('[DataContext] Timestamp:', new Date().toISOString())
     setIsLoading(true)
     startLoading('Loading data...')
     try {
       updateProgress(10)
       // Load incidents from IndexedDB (with localStorage fallback)
-      console.log('[DataContext] Step 1: Loading incidents...')
       const storedIncidents = await loadIncidents()
-      console.log(`[DataContext] Step 1 complete: Received ${storedIncidents?.length ?? 'null'} incidents`)
 
       // Ensure it's an array
       const validIncidents = Array.isArray(storedIncidents) ? storedIncidents : []
-      if (!Array.isArray(storedIncidents)) {
-        console.warn('[DataContext] WARNING: storedIncidents was not an array:', typeof storedIncidents)
-      }
       updateProgress(40)
 
-      console.log(`[DataContext] Setting incidents state with ${validIncidents.length} records`)
       setIncidents(validIncidents)
 
       // Load file list
-      console.log('[DataContext] Step 2: Loading file list...')
       const fileList = await getImportedFiles()
-      console.log(`[DataContext] Step 2 complete: Loaded ${fileList.length} files`)
       setFiles(fileList)
       updateProgress(70)
 
       // Get storage statistics
-      console.log('[DataContext] Step 3: Getting storage statistics...')
       const stats = await getStorageStatistics()
-      console.log('[DataContext] Step 3 complete: Storage stats:', stats)
       setStorageStats(stats)
       updateProgress(85)
 
       // Load site classifications
-      console.log('[DataContext] Step 4: Loading site classifications...')
       const classifications = await getSiteClassifications()
-      console.log(`[DataContext] Step 4 complete: ${Object.keys(classifications).length} site classifications`)
       setSiteClassifications(classifications)
       updateProgress(90)
-
-      console.log(`[DataContext] ========== LOAD DATA SUCCESS ==========`)
-      console.log(`[DataContext] Summary: ${validIncidents.length} incidents from ${fileList.length} files`)
 
       updateProgress(100)
 
@@ -160,26 +143,26 @@ export const DataProvider = ({ children }) => {
         },
         (result) => {
           if (result.updated > 0) {
-            console.log(`[DataContext] Background categorization updated ${result.updated} records`)
             // Reload incidents to get updated categories (silent - no overlay)
             getAllRecords().then(records => {
               setIncidents(Array.isArray(records) ? records : [])
-            }).catch(console.error)
+            }).catch(err => {
+              if (import.meta.env.DEV) console.error('[DataContext] Error reloading after categorization:', err)
+            })
           }
           setCategorizationProgress(null)
         }
-      ).catch(console.error)
+      ).catch(err => {
+        if (import.meta.env.DEV) console.error('[DataContext] Background categorization error:', err)
+      })
 
     } catch (error) {
-      console.error('[DataContext] ========== LOAD DATA FAILED ==========')
-      console.error('[DataContext] Error:', error)
-      console.error('[DataContext] Error stack:', error.stack)
+      if (import.meta.env.DEV) console.error('[DataContext] Error loading data:', error)
       setIncidents([])
       setFiles([])
     } finally {
       setIsLoading(false)
       finishLoading()
-      console.log('[DataContext] ========== LOAD DATA END ==========')
     }
   }, [startLoading, updateProgress, finishLoading])
 
@@ -226,11 +209,9 @@ export const DataProvider = ({ children }) => {
   // Add multiple incidents with file tracking (main import method)
   // Set importOptions.skipReload = true during batch operations to prevent overlapping transactions
   const addIncidentsWithFile = useCallback(async (newIncidents, fileInfo, importOptions = {}) => {
-    console.log(`[DataContext] addIncidentsWithFile() called - ${newIncidents.length} records, file: ${fileInfo.fileName}`)
     try {
       // Apply categorization with the import mode
       const mode = importOptions.classificationMode || 'trust-excel'
-      console.log(`[DataContext] Categorizing with mode: ${mode}`)
       const categorizedIncidents = categorizeForImport(newIncidents, mode)
 
       // Assign IDs if needed
@@ -238,16 +219,13 @@ export const DataProvider = ({ children }) => {
         ...incident,
         id: incident.id || generateId()
       }))
-      console.log(`[DataContext] Prepared ${incidentsWithIds.length} records with IDs`)
 
       // Save to IndexedDB with file tracking
-      console.log('[DataContext] Calling saveIncidentsWithFile...')
       const result = await saveIncidentsWithFile(incidentsWithIds, {
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize || 0,
         fileHash: fileInfo.fileHash || null
       })
-      console.log(`[DataContext] Save complete - fileId: ${result.fileId}, recordCount: ${result.recordCount}`)
 
       // Clear data caches since data changed (keep normalization caches)
       clearDataCaches()
@@ -259,33 +237,27 @@ export const DataProvider = ({ children }) => {
         ...incident,
         fileId: result.fileId
       }))
-      console.log(`[DataContext] Updating React state with ${incidentsWithFileId.length} new records`)
-      setIncidents(prev => {
-        const newTotal = prev.length + incidentsWithFileId.length
-        console.log(`[DataContext] State update: ${prev.length} existing + ${incidentsWithFileId.length} new = ${newTotal} total`)
-        return [...prev, ...incidentsWithFileId]
-      })
+      setIncidents(prev => [...prev, ...incidentsWithFileId])
 
       // Skip reload during batch operations to prevent overlapping IndexedDB transactions
       // The caller (BatchImportModal) will call reloadFiles() once at the end
       if (!importOptions.skipReload) {
         // Only reload files list (lightweight) to update the file management UI
-        console.log('[DataContext] Reloading files list...')
         await reloadFiles()
 
         // Update storage stats in background
-        getStorageStatistics().then(stats => setStorageStats(stats)).catch(console.error)
+        getStorageStatistics().then(stats => setStorageStats(stats)).catch(err => {
+          if (import.meta.env.DEV) console.error('[DataContext] Error getting storage stats:', err)
+        })
       }
 
-      console.log(`[DataContext] addIncidentsWithFile() complete - fileId: ${result.fileId}`)
       return {
         fileId: result.fileId,
         recordCount: result.recordCount,
         incidents: incidentsWithIds
       }
     } catch (error) {
-      console.error('[DataContext] CRITICAL ERROR in addIncidentsWithFile:', error)
-      console.error('[DataContext] Error stack:', error.stack)
+      if (import.meta.env.DEV) console.error('[DataContext] CRITICAL ERROR in addIncidentsWithFile:', error)
       throw error
     }
   }, [])
@@ -308,7 +280,7 @@ export const DataProvider = ({ children }) => {
     try {
       await updateRecord(id, updates)
     } catch (error) {
-      console.error('[DataContext] Error updating record in IndexedDB:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error updating record in IndexedDB:', error)
     }
   }, [])
 
@@ -331,7 +303,7 @@ export const DataProvider = ({ children }) => {
       try {
         await updateRecord(foundIncident.id, updates)
       } catch (error) {
-        console.error('[DataContext] Error updating record in IndexedDB:', error)
+        if (import.meta.env.DEV) console.error('[DataContext] Error updating record in IndexedDB:', error)
       }
     }
   }, [])  // No dependencies - uses functional update
@@ -344,7 +316,7 @@ export const DataProvider = ({ children }) => {
       await deleteRecord(id)
       clearDataCaches()
     } catch (error) {
-      console.error('[DataContext] Error deleting record from IndexedDB:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error deleting record from IndexedDB:', error)
     }
   }, [])
 
@@ -364,10 +336,9 @@ export const DataProvider = ({ children }) => {
       await reloadIncidents()
       await reloadFiles()
 
-      console.log(`[DataContext] Deleted file ${fileId} with ${result.deletedRecords} records`)
       return result
     } catch (error) {
-      console.error('[DataContext] Error deleting file:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error deleting file:', error)
       throw error
     }
   }, [])
@@ -401,10 +372,9 @@ export const DataProvider = ({ children }) => {
       await reloadIncidents()
       await reloadFiles()
 
-      console.log(`[DataContext] Replaced file ${fileId}: ${result.deleted} deleted, ${result.added} added`)
       return result
     } catch (error) {
-      console.error('[DataContext] Error replacing file:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error replacing file:', error)
       throw error
     }
   }, [])
@@ -414,7 +384,7 @@ export const DataProvider = ({ children }) => {
     try {
       return await getFileById(fileId)
     } catch (error) {
-      console.error('[DataContext] Error getting file:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error getting file:', error)
       return null
     }
   }, [])
@@ -443,9 +413,8 @@ export const DataProvider = ({ children }) => {
       updateProgress(80)
       clearAllCaches()
       updateProgress(100)
-      console.log('[DataContext] All data cleared')
     } catch (error) {
-      console.error('[DataContext] Error clearing data:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error clearing data:', error)
     } finally {
       finishLoading()
     }
@@ -487,7 +456,7 @@ export const DataProvider = ({ children }) => {
         return updated
       })
     } catch (error) {
-      console.error('[DataContext] Error updating site classification:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error updating site classification:', error)
       throw error
     }
   }, [])
@@ -509,7 +478,7 @@ export const DataProvider = ({ children }) => {
         return updated
       })
     } catch (error) {
-      console.error('[DataContext] Error updating site classifications batch:', error)
+      if (import.meta.env.DEV) console.error('[DataContext] Error updating site classifications batch:', error)
       throw error
     }
   }, [])

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react'
 
 const LoadingContext = createContext()
 
@@ -14,8 +14,14 @@ export const LoadingProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('')
+  const finishTimeoutRef = useRef(null)
 
   const startLoading = useCallback((loadingMessage = 'Loading...') => {
+    // Clear any pending finish timeout
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current)
+      finishTimeoutRef.current = null
+    }
     setIsLoading(true)
     setProgress(0)
     setMessage(loadingMessage)
@@ -27,11 +33,16 @@ export const LoadingProvider = ({ children }) => {
 
   const finishLoading = useCallback(() => {
     setProgress(100)
+    // Clear any previous finish timeout
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current)
+    }
     // Delay hiding for smooth exit animation
-    setTimeout(() => {
+    finishTimeoutRef.current = setTimeout(() => {
       setIsLoading(false)
       setProgress(0)
       setMessage('')
+      finishTimeoutRef.current = null
     }, 400)
   }, [])
 

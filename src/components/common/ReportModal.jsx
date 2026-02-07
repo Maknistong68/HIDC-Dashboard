@@ -471,7 +471,7 @@ const ReportModal = ({ record, onClose }) => {
                   </div>
                   <div className="space-y-2">
                     {record.history.map((item, index) => (
-                      <div key={index} className="flex gap-3 text-sm">
+                      <div key={`${item.date}-${item.action}-${index}`} className="flex gap-3 text-sm">
                         <div className="text-xs text-surface-400 w-24 flex-shrink-0">
                           {item.date}
                         </div>

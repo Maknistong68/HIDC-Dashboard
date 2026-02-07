@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   FileText,
   CheckCircle,
@@ -38,6 +38,10 @@ import {
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+
+// O(1) lookup maps for hazard sorting (avoids O(n) findIndex in sort comparator)
+const SIGNIFICANT_HAZARDS_MAP = new Map(SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
+const SUB_SIGNIFICANT_HAZARDS_MAP = new Map(SUB_SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
 
 // Normalize hazard name for consistent grouping (fixes duplicates)
 // Memoized to prevent redundant string operations on filter changes
@@ -579,8 +583,8 @@ const Dashboard = () => {
         // Use case-insensitive comparison because normalizeHazard may change case of words like "on", "or"
         const lowerA = a.name.toLowerCase()
         const lowerB = b.name.toLowerCase()
-        const isSignificantA = SIGNIFICANT_HAZARDS.some(h => h.toLowerCase() === lowerA)
-        const isSignificantB = SIGNIFICANT_HAZARDS.some(h => h.toLowerCase() === lowerB)
+        const isSignificantA = SIGNIFICANT_HAZARDS_MAP.has(lowerA)
+        const isSignificantB = SIGNIFICANT_HAZARDS_MAP.has(lowerB)
 
         // If both are significant or both are not, sort by count
         if (isSignificantA === isSignificantB) {
@@ -621,10 +625,10 @@ const Dashboard = () => {
     const hazards = Array.from(hazardSet).sort((a, b) => {
       const lowerA = a.toLowerCase()
       const lowerB = b.toLowerCase()
-      const significantIndexA = SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerA)
-      const significantIndexB = SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerB)
-      const subIndexA = SUB_SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerA)
-      const subIndexB = SUB_SIGNIFICANT_HAZARDS.findIndex(h => h.toLowerCase() === lowerB)
+      const significantIndexA = SIGNIFICANT_HAZARDS_MAP.get(lowerA) ?? -1
+      const significantIndexB = SIGNIFICANT_HAZARDS_MAP.get(lowerB) ?? -1
+      const subIndexA = SUB_SIGNIFICANT_HAZARDS_MAP.get(lowerA) ?? -1
+      const subIndexB = SUB_SIGNIFICANT_HAZARDS_MAP.get(lowerB) ?? -1
 
       // Both are significant hazards - sort by priority order
       if (significantIndexA !== -1 && significantIndexB !== -1) return significantIndexA - significantIndexB
@@ -1420,4 +1424,4 @@ const Dashboard = () => {
   )
 }
 
-export default Dashboard
+export default memo(Dashboard)

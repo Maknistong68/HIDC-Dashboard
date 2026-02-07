@@ -35,7 +35,7 @@ export const captureElement = async (element, options = {}) => {
     })
     return dataUrl
   } catch (error) {
-    console.error('Error capturing element:', error)
+    if (import.meta.env.DEV) console.error('Error capturing element:', error)
     throw error
   } finally {
     // Remove export-mode class and scrollbar style
@@ -62,7 +62,7 @@ export const captureAllCharts = async (chartRefs, onProgress) => {
       try {
         images[key] = await captureElement(ref.current)
       } catch (error) {
-        console.warn(`Failed to capture ${key}:`, error)
+        // error handled silently
         images[key] = null
       }
     }

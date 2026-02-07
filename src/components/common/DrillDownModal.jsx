@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, Sparkles, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Download, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import jsPDF from 'jspdf'
 import { analyzeObservation } from '../../utils/contextClassifier'
@@ -397,6 +397,14 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
  */
 const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords = [], copyContext = {} }) => {
   const [copied, setCopied] = React.useState(false)
+  const copyTimerRef = useRef(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   if (!data || data.length === 0) {
     return (
@@ -471,9 +479,10 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
     try {
       await navigator.clipboard.writeText(fullText)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Copy failed:', err)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Copy failed silently
     }
   }
 
@@ -570,6 +579,14 @@ const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const { updateIncident } = useData()
+  const copyTimerRef = useRef(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   // Flag for miscategorization
   const isFlagged = record._flaggedMiscategorized
@@ -600,7 +617,8 @@ const RecordDetailsModal = ({ record, onClose }) => {
   const handleCopyEventId = () => {
     navigator.clipboard.writeText(record.externalId)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   const formatDate = (dateStr) => {
@@ -1257,6 +1275,14 @@ const ContextAnalysisSection = ({ record }) => {
 const ParsingAnalysisSection = ({ record }) => {
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [copiedField, setCopiedField] = React.useState(null)
+  const copyFieldTimerRef = useRef(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
+    }
+  }, [])
 
   // Parse the description on-the-fly
   const parsing = React.useMemo(() => {
@@ -1275,9 +1301,10 @@ const ParsingAnalysisSection = ({ record }) => {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedField(field)
-      setTimeout(() => setCopiedField(null), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+      if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
+      copyFieldTimerRef.current = setTimeout(() => setCopiedField(null), 2000)
+    } catch {
+      // Copy failed silently
     }
   }
 
@@ -1298,7 +1325,8 @@ const ParsingAnalysisSection = ({ record }) => {
     ]
     await navigator.clipboard.writeText(lines.join('\n'))
     setCopiedField('all')
-    setTimeout(() => setCopiedField(null), 2000)
+    if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
+    copyFieldTimerRef.current = setTimeout(() => setCopiedField(null), 2000)
   }
 
   const summary = parsing.summary || {}

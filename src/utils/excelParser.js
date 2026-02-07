@@ -159,8 +159,6 @@ export const mapNEOMColumns = (headers) => {
   const mappings = {}
   const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
 
-  // DEBUG: Log headers to diagnose mapping issues
-  console.log('[mapNEOMColumns] Normalized headers:', normalizedHeaders)
 
   // Map NEOM header names to internal field names
   const columnMap = {
@@ -194,11 +192,9 @@ export const mapNEOMColumns = (headers) => {
     )
     if (index !== -1 && !Object.values(mappings).includes(index)) {
       mappings[field] = index
-      console.log(`[mapNEOMColumns] Substring match: "${header}" found in column ${index}`)
     }
   })
 
-  console.log('[mapNEOMColumns] Final mappings:', mappings)
   return mappings
 }
 
@@ -887,11 +883,6 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // ============================================
   // (When mode is reclassify-all, we skip the "trust Excel" step below)
 
-  // DEBUG: Check for misclassification issues
-  const isDebugTarget = mainText.includes('safety officer') || mainText.includes('scaffold') || mainText.includes('excavat') || mainText.includes('msds') || mainText.includes('chemical')
-  if (isDebugTarget) {
-    console.log('[DEBUG categorizeHazard] Input:', { description: description?.substring(0, 80), mainText: mainText?.substring(0, 80) })
-  }
 
   // ============================================
   // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
@@ -901,7 +892,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // ============================================
   const criticalCategory = checkCriticalKeywords(mainText)
   if (criticalCategory && isAllowedForOtherSource(criticalCategory)) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 0 CRITICAL_KEYWORD hit:', criticalCategory)
+
     return criticalCategory
   }
 
@@ -913,7 +904,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // ============================================
   const redirectCategory = checkContextRedirects(mainText)
   if (redirectCategory && isAllowedForOtherSource(redirectCategory)) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 1 CONTEXT_REDIRECT hit:', redirectCategory)
+
     return redirectCategory // Immediate return - no further checking
   }
 
@@ -942,19 +933,19 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // NOTE: All STEP 2 returns check isAllowedForOtherSource AND isExcludedTerm
   // This ensures exclusion rules (e.g., 'wastewater' not being "Working on or Near Water") are respected
   if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 2a analyzeObservation shouldOverride:', contextResult.category, contextResult.confidence)
+
     return contextResult.category
   }
 
   // If controlLink strategy found a specific hazard, use it (control issues linked to hazards)
   if (controlLinkFound && contextResult.votes.controlLink.confidence >= 70 && isAllowedForOtherSource(contextResult.votes.controlLink.category) && !isExcludedTerm(text, contextResult.votes.controlLink.category)) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 2b controlLink found:', contextResult.votes.controlLink.category)
+
     return contextResult.votes.controlLink.category
   }
 
   // If voting found a valid category with any consensus, prefer it over keyword matching
   if (hasValidVotingResult && contextResult.confidence >= 50 && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
-    if (isDebugTarget) console.log('[DEBUG] STEP 2c voting consensus:', contextResult.category, contextResult.consensusLevel)
+
     return contextResult.category
   }
 
@@ -971,7 +962,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   if (sentenceResult.category && sentenceResult.confidence >= 0.7 && sentenceResult.isMainSubject) {
     // Verify the category is valid and not excluded
     if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category) && isAllowedForOtherSource(sentenceResult.category)) {
-      if (isDebugTarget) console.log('[DEBUG] STEP 3 sentenceAwareness hit:', sentenceResult.category)
+
       return sentenceResult.category
     }
   }
@@ -1344,9 +1335,6 @@ const isPositiveObservation = (type, classification, description) => {
 const MAX_DATA_ROWS = 2000
 
 export const transformRows = (rows, headers, columnMappings, projectId, existingIncidents = [], importOptions = {}) => {
-  // DEBUG: Log detected column mappings
-  console.log('[Import] Column mappings:', JSON.stringify(columnMappings, null, 2))
-  console.log('[Import] Classification column index:', columnMappings['classification'])
 
   // Get classification mode from import options (default: trust-excel)
   const classificationMode = importOptions.classificationMode || 'trust-excel'
@@ -1370,7 +1358,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
   const dataRows = rows.slice(0, MAX_DATA_ROWS)
   if (rows.length > MAX_DATA_ROWS) {
     warnings.rowLimitApplied = true
-    console.log(`Import limited to ${MAX_DATA_ROWS} rows (${rows.length - MAX_DATA_ROWS} footer/warning rows excluded)`)
   }
 
   // Get current settings for processing
@@ -1386,20 +1373,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     const rawType = getValue('type') || ''
     const classification = (getValue('classification') || '').toString().trim()
 
-    // DEBUG: Comprehensive classification tracing
-    const rawClassValue = getValue('classification')
-    console.log(`[Import] Row ${index + 1}: rawClassValue="${rawClassValue}" (type: ${typeof rawClassValue})`)
-    console.log(`[Import] Row ${index + 1}: classification after trim="${classification}" (length: ${classification.length})`)
-    if (classification) {
-      // Check for hidden characters
-      const charCodes = [...classification].map(c => c.charCodeAt(0))
-      console.log(`[Import] Row ${index + 1}: charCodes=[${charCodes.join(',')}]`)
-    }
-
-    // DEBUG: Log when Type column contains "Incident"
-    if (rawType && rawType.toString().toLowerCase().trim() === 'incident') {
-      console.log(`[Import] Row ${index + 1}: Type="${rawType}" detected as Incident → will map to FAC`)
-    }
     const dateValue = getValue('date')
     const timeValue = getValue('time') // Dedicated time column
     const rawDescription = getValue('description') || ''
@@ -1720,32 +1693,24 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     let classMapping = findMapping(classification)
     const typeMapping = findMapping(type)
 
-    // DEBUG: Log mapping lookup results
-    console.log(`[Import] Row ${index + 1}: findMapping("${classification}") =`, classMapping)
-    console.log(`[Import] Row ${index + 1}: findMapping("${type}") =`, typeMapping)
 
     // FALLBACK: Direct case-insensitive match if findMapping failed
     if (!classMapping && classification) {
       const lowerClass = classification.toLowerCase()
       if (lowerClass === 'unsafe act') {
         classMapping = { type: 'incident', incidentType: 'unsafe-act' }
-        console.log(`[Import] Row ${index + 1}: Direct match for "Unsafe Act" → unsafe-act`)
       } else if (lowerClass === 'unsafe condition') {
         classMapping = { type: 'incident', incidentType: 'unsafe-condition' }
-        console.log(`[Import] Row ${index + 1}: Direct match for "Unsafe Condition" → unsafe-condition`)
       } else if (lowerClass === 'near miss') {
         classMapping = { type: 'incident', incidentType: 'near-miss' }
-        console.log(`[Import] Row ${index + 1}: Direct match for "Near Miss" → near-miss`)
       } else if (lowerClass === 'positive observation' || lowerClass === 'positive') {
         classMapping = { type: 'incident', incidentType: 'positive' }
-        console.log(`[Import] Row ${index + 1}: Direct match for "Positive" → positive`)
       }
     }
 
     // Classification takes priority when it has a specific (non-generic) mapping
     if (classMapping && !classMapping.needsMapping) {
       mapping = classMapping
-      console.log(`[Import] Row ${index + 1}: Using Classification mapping → ${classMapping.incidentType}`)
     } else if (typeMapping && !typeMapping.needsMapping) {
       // Type column has a valid mapping
       mapping = typeMapping
@@ -1754,7 +1719,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       const normalizedType = (type || '').toString().toLowerCase().trim()
       if (normalizedType === 'incident') {
         mapping = { type: 'incident', incidentType: 'fac', autoClassified: false }
-        console.log(`[Import] Row ${index + 1}: Type="${type}" → Fallback mapping to FAC`)
       } else {
         // Try any available mapping
         mapping = typeMapping || classMapping
@@ -1767,8 +1731,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       mapping = { type: 'incident', incidentType: autoClassifiedType, autoClassified: true }
     }
 
-    // DEBUG: Log final mapping result
-    console.log(`[Import] Row ${index + 1}: FINAL type="${mapping.incidentType}" (autoClassified: ${mapping.autoClassified || false})`)
 
     incidents.push({
       externalId: eventId,

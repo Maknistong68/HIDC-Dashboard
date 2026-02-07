@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, memo } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
@@ -43,7 +43,6 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  Legend,
   PieChart,
   Pie,
   Cell,
@@ -664,8 +663,7 @@ const DataQuality = () => {
     const report = lines.join('\n')
     navigator.clipboard.writeText(report).then(() => {
       alert('Spelling report copied to clipboard!')
-    }).catch(err => {
-      console.error('Failed to copy:', err)
+    }).catch(() => {
       alert('Failed to copy report')
     })
   }
@@ -2717,4 +2715,4 @@ const DataQuality = () => {
   )
 }
 
-export default DataQuality
+export default memo(DataQuality)

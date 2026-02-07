@@ -42,9 +42,7 @@ let useIndexedDB = null
  */
 const shouldUseIndexedDB = async () => {
   if (useIndexedDB === null) {
-    console.log('[Storage] Checking IndexedDB support for the first time...')
     useIndexedDB = await isIndexedDBSupported()
-    console.log(`[Storage] IndexedDB support result: ${useIndexedDB}`)
   }
   return useIndexedDB
 }
@@ -75,7 +73,7 @@ export const getData = (key) => {
     const data = localStorage.getItem(STORAGE_KEYS[key])
     return data ? JSON.parse(data) : null
   } catch (error) {
-    console.error(`Error reading ${key} from localStorage:`, error)
+    if (import.meta.env.DEV) console.error(`Error reading ${key} from localStorage:`, error)
     return null
   }
 }
@@ -88,7 +86,7 @@ export const saveData = (key, data) => {
     localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data))
     return true
   } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error)
+    if (import.meta.env.DEV) console.error(`Error saving ${key} to localStorage:`, error)
     return false
   }
 }
@@ -101,7 +99,7 @@ export const clearData = (key) => {
     localStorage.removeItem(STORAGE_KEYS[key])
     return true
   } catch (error) {
-    console.error(`Error clearing ${key} from localStorage:`, error)
+    if (import.meta.env.DEV) console.error(`Error clearing ${key} from localStorage:`, error)
     return false
   }
 }
@@ -123,7 +121,7 @@ export const clearAllData = async () => {
 
     return true
   } catch (error) {
-    console.error('Error clearing all data:', error)
+    if (import.meta.env.DEV) console.error('Error clearing all data:', error)
     return false
   }
 }
@@ -137,29 +135,20 @@ export const clearAllData = async () => {
  * This runs once on first load after IndexedDB is enabled
  */
 export const migrateToIndexedDB = async () => {
-  console.log('[Migration] Checking migration status...')
-  console.log('[Migration] hse_migrated_to_idb flag:', localStorage.getItem(STORAGE_KEYS.MIGRATED_TO_IDB))
-
   if (isMigrated()) {
-    console.log('[Migration] Already migrated to IndexedDB - skipping')
     return { success: true, skipped: true }
   }
 
   if (!(await shouldUseIndexedDB())) {
-    console.log('[Migration] IndexedDB not supported, using localStorage')
     return { success: false, reason: 'IndexedDB not supported' }
   }
 
   try {
-    console.log('[Migration] Starting localStorage → IndexedDB migration...')
-
     // Get existing incidents from localStorage
     const incidents = getData('INCIDENTS') || []
-    console.log(`[Migration] Found ${incidents.length} records in localStorage`)
 
     if (incidents.length > 0) {
       // Create a file record for the migrated data
-      console.log('[Migration] Creating file record for migrated data...')
       const fileId = await createFile({
         fileName: 'Migrated from localStorage',
         fileSize: 0,
@@ -167,39 +156,28 @@ export const migrateToIndexedDB = async () => {
         status: 'active',
         migratedFrom: 'localStorage'
       })
-      console.log(`[Migration] File record created with ID: ${fileId}`)
 
       // Add all records to IndexedDB with the file reference
-      console.log('[Migration] Adding records to IndexedDB...')
       await addRecords(incidents, fileId)
-
-      console.log(`[Migration] Migrated ${incidents.length} records to IndexedDB`)
-    } else {
-      console.log('[Migration] No records in localStorage to migrate')
     }
 
     // Migrate settings
     const settings = getData('SETTINGS')
     if (settings) {
-      console.log('[Migration] Migrating settings...')
       for (const [key, value] of Object.entries(settings)) {
         await setSetting(key, value)
       }
-      console.log('[Migration] Migrated settings to IndexedDB')
     }
 
     // Mark as migrated
-    console.log('[Migration] Setting migration flag...')
     markMigrated()
 
     // Clear localStorage incidents (keep settings as backup)
     clearData('INCIDENTS')
 
-    console.log('[Migration] Migration complete!')
     return { success: true, recordsMigrated: incidents.length }
   } catch (error) {
-    console.error('[Migration] CRITICAL ERROR during migration:', error)
-    console.error('[Migration] Error stack:', error.stack)
+    if (import.meta.env.DEV) console.error('[Migration] CRITICAL ERROR during migration:', error)
     return { success: false, error: error.message }
   }
 }
@@ -212,35 +190,25 @@ export const migrateToIndexedDB = async () => {
  * Load all incidents (from IndexedDB or localStorage)
  */
 export const loadIncidents = async () => {
-  console.log('[Storage] loadIncidents() called')
   try {
     // Try IndexedDB first
     const useIDB = await shouldUseIndexedDB()
-    console.log(`[Storage] Using IndexedDB: ${useIDB}`)
 
     if (useIDB) {
       // Run migration if needed
-      console.log('[Storage] Running migration check...')
       await migrateToIndexedDB()
 
-      console.log('[Storage] Fetching records from IndexedDB...')
       const records = await getAllRecords()
-      console.log(`[Storage] Successfully loaded ${records.length} records from IndexedDB`)
       return records
     }
 
     // Fallback to localStorage
-    console.log('[Storage] Falling back to localStorage')
     const localData = getData('INCIDENTS') || []
-    console.log(`[Storage] Loaded ${localData.length} records from localStorage`)
     return localData
   } catch (error) {
-    console.error('[Storage] CRITICAL ERROR loading incidents:', error)
-    console.error('[Storage] Error stack:', error.stack)
+    if (import.meta.env.DEV) console.error('[Storage] CRITICAL ERROR loading incidents:', error)
     // Final fallback
-    console.log('[Storage] Attempting final fallback to localStorage')
     const fallbackData = getData('INCIDENTS') || []
-    console.log(`[Storage] Fallback loaded ${fallbackData.length} records`)
     return fallbackData
   }
 }
@@ -285,7 +253,7 @@ export const saveIncidents = async (incidents) => {
     // Fallback to localStorage
     return saveData('INCIDENTS', incidents)
   } catch (error) {
-    console.error('Error saving incidents:', error)
+    if (import.meta.env.DEV) console.error('Error saving incidents:', error)
     return saveData('INCIDENTS', incidents)
   }
 }
@@ -297,14 +265,11 @@ export const saveIncidents = async (incidents) => {
  * @returns {Promise<{ fileId: number, recordCount: number }>}
  */
 export const saveIncidentsWithFile = async (incidents, fileInfo) => {
-  console.log(`[Storage] saveIncidentsWithFile() called - ${incidents.length} records, file: ${fileInfo.fileName}`)
   try {
     const useIDB = await shouldUseIndexedDB()
-    console.log(`[Storage] Using IndexedDB for save: ${useIDB}`)
 
     if (useIDB) {
       // Create file record
-      console.log('[Storage] Creating file record in IndexedDB...')
       const fileId = await createFile({
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize || 0,
@@ -312,25 +277,19 @@ export const saveIncidentsWithFile = async (incidents, fileInfo) => {
         recordCount: incidents.length,
         status: 'active'
       })
-      console.log(`[Storage] File record created with ID: ${fileId}`)
 
       // Add records with file reference
-      console.log(`[Storage] Adding ${incidents.length} records to IndexedDB...`)
       await addRecords(incidents, fileId)
-      console.log(`[Storage] Successfully saved ${incidents.length} records with fileId: ${fileId}`)
 
       return { fileId, recordCount: incidents.length }
     }
 
     // Fallback: append to localStorage
-    console.log('[Storage] Using localStorage fallback for save')
     const existing = getData('INCIDENTS') || []
     saveData('INCIDENTS', [...existing, ...incidents])
-    console.log(`[Storage] Saved to localStorage. Total: ${existing.length + incidents.length} records`)
     return { fileId: null, recordCount: incidents.length }
   } catch (error) {
-    console.error('[Storage] CRITICAL ERROR saving incidents with file:', error)
-    console.error('[Storage] Error stack:', error.stack)
+    if (import.meta.env.DEV) console.error('[Storage] CRITICAL ERROR saving incidents with file:', error)
     throw error
   }
 }
@@ -348,7 +307,7 @@ export const checkFileHashExists = async (hash) => {
     // No hash tracking in localStorage
     return undefined
   } catch (error) {
-    console.error('Error checking file hash:', error)
+    if (import.meta.env.DEV) console.error('Error checking file hash:', error)
     return undefined
   }
 }
@@ -364,7 +323,7 @@ export const getImportedFiles = async () => {
     // No file tracking in localStorage
     return []
   } catch (error) {
-    console.error('Error getting imported files:', error)
+    if (import.meta.env.DEV) console.error('Error getting imported files:', error)
     return []
   }
 }
@@ -381,7 +340,7 @@ export const deleteImportedFile = async (fileId) => {
     // Not supported in localStorage
     return { deletedRecords: 0 }
   } catch (error) {
-    console.error('Error deleting file:', error)
+    if (import.meta.env.DEV) console.error('Error deleting file:', error)
     throw error
   }
 }
@@ -413,7 +372,7 @@ export const getStorageStatistics = async () => {
       isIndexedDB: false
     }
   } catch (error) {
-    console.error('Error getting storage statistics:', error)
+    if (import.meta.env.DEV) console.error('Error getting storage statistics:', error)
     return { fileCount: 0, recordCount: 0, estimatedSize: 0, estimatedSizeMB: '0' }
   }
 }
@@ -441,7 +400,7 @@ export const exportAllData = async () => {
       settings: getData('SETTINGS') || {},
     }
   } catch (error) {
-    console.error('Error exporting data:', error)
+    if (import.meta.env.DEV) console.error('Error exporting data:', error)
     throw error
   }
 }
@@ -485,7 +444,7 @@ export const importAllData = async (data) => {
 
     return { success: true }
   } catch (error) {
-    console.error('Error importing data:', error)
+    if (import.meta.env.DEV) console.error('Error importing data:', error)
     return { success: false, error: error.message }
   }
 }
@@ -551,6 +510,6 @@ export const saveSettings = async (settings) => {
       }
     }
   } catch (error) {
-    console.error('Error saving settings to IndexedDB:', error)
+    if (import.meta.env.DEV) console.error('Error saving settings to IndexedDB:', error)
   }
 }

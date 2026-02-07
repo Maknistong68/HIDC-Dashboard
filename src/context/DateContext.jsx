@@ -8,7 +8,7 @@
  * - Date utility functions
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getCurrentDate,
   getToday,
@@ -45,29 +45,34 @@ export const DateProvider = ({ children }) => {
   // Current date state - updates at midnight
   const [currentDate, setCurrentDate] = useState(getCurrentDate)
   const [lastRefresh, setLastRefresh] = useState(getCurrentDate)
+  const intervalRef = useRef(null)
 
-  // Check for day change and update
+  // Update date at midnight instead of polling every 60 seconds
   useEffect(() => {
-    const checkDayChange = () => {
-      const now = getCurrentDate()
-      const today = getToday()
+    // Calculate ms until midnight
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    const msUntilMidnight = midnight - now
 
-      // Check if day has changed since last update
-      if (currentDate.toDateString() !== now.toDateString()) {
-        console.log('[DateContext] Day changed, refreshing date state')
-        setCurrentDate(now)
-        setLastRefresh(now)
-      }
+    // Set timeout for midnight, then switch to daily interval
+    const timeout = setTimeout(() => {
+      setCurrentDate(new Date())
+      setLastRefresh(new Date())
+      // After midnight, set daily interval
+      const interval = setInterval(() => {
+        setCurrentDate(new Date())
+        setLastRefresh(new Date())
+      }, 24 * 60 * 60 * 1000)
+      // Store interval for cleanup
+      intervalRef.current = interval
+    }, msUntilMidnight)
+
+    return () => {
+      clearTimeout(timeout)
+      if (intervalRef.current) clearInterval(intervalRef.current)
     }
-
-    // Check every minute for day change
-    const interval = setInterval(checkDayChange, 60000)
-
-    // Also check immediately
-    checkDayChange()
-
-    return () => clearInterval(interval)
-  }, [currentDate])
+  }, [])
 
   // Manual refresh function
   const refreshDate = useCallback(() => {

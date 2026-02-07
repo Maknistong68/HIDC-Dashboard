@@ -22,8 +22,8 @@ const IncidentTrendChart = ({ data }) => {
     return (
       <div className="bg-white/95 backdrop-blur-sm border border-surface-200 rounded-lg shadow-medium p-3 animate-fade-in">
         <p className="text-xs font-medium text-surface-700 mb-2">{label}</p>
-        {payload.map((entry, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs">
+        {payload.map((entry) => (
+          <div key={entry.name} className="flex items-center gap-2 text-xs">
             <span
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: entry.color }}
