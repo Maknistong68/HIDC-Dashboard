@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
-import { Shield, BarChart3, Activity, Info, Lightbulb, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Shield, BarChart3, Activity, Info, Lightbulb, CheckCircle2 } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 import {
   ResponsiveContainer,
@@ -77,30 +77,6 @@ const SIGNAL_ACTIONS = {
   highRiskExposure: 'verifying risk controls for major hazards',
   nearMissRate: 'encouraging near-miss reporting',
   positiveRate: 'promoting positive safety observations'
-}
-
-const PRESET_LABELS = {
-  balanced: 'Balanced',
-  operations: 'Operations',
-  culture: 'Culture',
-  compliance: 'Compliance'
-}
-
-const PRESET_DESCRIPTIONS = {
-  balanced: 'Equal emphasis across all risk signals — general-purpose view',
-  operations: 'Emphasizes severity and incident trends — for operational oversight',
-  culture: 'Emphasizes near-miss and positive reporting — for safety culture assessment',
-  compliance: 'Emphasizes open actions and exposure — for regulatory readiness',
-  custom: 'You\u2019ve adjusted the weights manually'
-}
-
-const SIGNAL_HINTS = {
-  severityMix:      { text: 'Higher weight = severity dominates score', inverted: false },
-  trend:            { text: 'Higher weight = recent trends drive score', inverted: false },
-  openActionRate:   { text: 'Higher weight = unresolved actions penalized more', inverted: false },
-  highRiskExposure: { text: 'Higher weight = major hazard work weighted more', inverted: false },
-  nearMissRate:     { text: 'Low reporting increases risk score', inverted: true },
-  positiveRate:     { text: 'Fewer positives increases risk score', inverted: true }
 }
 
 const getSignalBarColor = (score) => {
@@ -312,7 +288,7 @@ EntityTrendChart.displayName = 'EntityTrendChart'
  * EntityDetailPanel - Right panel showing detail for selected entity
  * Mirrors HazardDetailPanel structure and styling
  */
-const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, showEditor, entityWeights, presetProfile, onPresetChange, onSliderChange }) => {
+const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeTab, setActiveTab] = useState('signals')
   const prevEntityRef = useRef(null)
@@ -417,72 +393,6 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, showE
           )
         )}
       </div>
-
-      {/* Inline weight editor (collapsible) */}
-      {showEditor && entityWeights && (
-        <div className="px-4 py-3 border-b border-surface-100 bg-surface-50 space-y-2">
-          {/* Presets row */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-2xs text-surface-400 font-medium">Preset:</span>
-            {Object.entries(PRESET_LABELS).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => onPresetChange(key)}
-                className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-all ${
-                  presetProfile === key
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            {presetProfile === 'custom' && (
-              <span className="px-2 py-0.5 rounded-full text-2xs font-medium bg-amber-100 text-amber-700">
-                Custom
-              </span>
-            )}
-          </div>
-          <p className="text-2xs text-surface-400 italic">
-            {PRESET_DESCRIPTIONS[presetProfile] || PRESET_DESCRIPTIONS.custom}
-          </p>
-
-          {/* Compact sliders */}
-          <div className="grid grid-cols-1 gap-y-1.5">
-            {Object.entries(SIGNAL_LABELS).map(([key, label]) => {
-              const hint = SIGNAL_HINTS[key]
-              return (
-                <div key={key} className="flex items-center gap-2" title={hint?.text}>
-                  <span className={`text-2xs w-28 truncate flex-shrink-0 ${
-                    hint?.inverted ? 'text-amber-600 font-medium' : 'text-surface-600'
-                  }`}>
-                    {hint?.inverted && <AlertTriangle size={9} className="inline mr-0.5 -mt-px" />}
-                    {label}
-                  </span>
-                  <input
-                    type="range"
-                    min={5}
-                    max={50}
-                    value={entityWeights[key]}
-                    onChange={(e) => onSliderChange(key, parseInt(e.target.value))}
-                    className="unified-slider risk-weight flex-1"
-                    style={{ height: '6px' }}
-                  />
-                  <span className="text-2xs text-surface-500 font-mono w-7 text-right">{entityWeights[key]}%</span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Info line */}
-          <div className="flex items-center gap-1.5">
-            <Info size={10} className="text-blue-400 flex-shrink-0" />
-            <p className="text-2xs text-blue-600 leading-snug">
-              Weights set scoring <span className="font-medium">priorities</span>, not safety importance.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Tab selector */}
       <div className="flex items-center gap-1 px-4 py-3 border-b border-surface-100 bg-surface-50">
