@@ -4,7 +4,6 @@ import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
 import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, PredictiveSimulationTab } from '../components/outlook'
-import SafetyForecastBar from '../components/outlook/SafetyForecastBar'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -474,9 +473,6 @@ const SafetyOutlook = () => {
         </div>
         <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
       </div>
-
-      {/* Safety Weather Forecast */}
-      <SafetyForecastBar incidents={filteredIncidents} />
 
       {/* ==================== 3 MAIN TABS ==================== */}
       <div role="tablist" aria-label="Safety Outlook tabs" className="flex items-center gap-1 overflow-x-auto border-b border-surface-200 pb-0">
