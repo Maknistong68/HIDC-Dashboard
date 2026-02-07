@@ -165,3 +165,84 @@ export function runMonteCarloSimulation({
     setTimeout(processChunk, 0)
   })
 }
+
+/**
+ * Transform Monte Carlo results into plain-language risk summaries per hazard
+ * @param {Object} result - Output of runMonteCarloSimulation
+ * @param {Object} hazardStats - Output of computeHazardStats
+ * @param {Object[]} sortedHazards - Hazard trend data array
+ * @returns {Object[]} Ranked hazard risk summaries
+ */
+export function getHazardExceedanceSummary(result, hazardStats, sortedHazards) {
+  if (!result?.hazards?.length || !result.cells?.length) return []
+
+  const trendMap = {}
+  for (const h of (sortedHazards || [])) {
+    trendMap[h.name] = h.trendLevel?.level || 'stable'
+  }
+
+  const trendMultiplier = {
+    'significant-rise': 1.5,
+    'rising': 1.2,
+    'stable': 1.0,
+    'declining': 0.8,
+    'significant-decline': 0.6
+  }
+
+  const summaries = result.hazards.map((name, idx) => {
+    const row = result.cells[idx]
+    if (!row?.length) return null
+
+    const week1 = row[0]
+    const stats = hazardStats?.[name] || { mean: 0, stddev: 0 }
+    const weeklyMean = Math.round(stats.mean * 7)
+    const trend = trendMap[name] || 'stable'
+    const mult = trendMultiplier[trend] || 1.0
+
+    const exceedanceProb = Math.round((week1.probability || 0) * 100)
+    const sortScore = exceedanceProb * mult
+
+    // Count how many of 6 weeks exceeded threshold
+    const weeksExceeded = row.filter(w => w.probability > 0.5).length
+
+    // Determine risk level
+    let riskLevel = 'Low'
+    let riskColor = 'green'
+    if (exceedanceProb >= 70) { riskLevel = 'High'; riskColor = 'red' }
+    else if (exceedanceProb >= 50) { riskLevel = 'Elevated'; riskColor = 'amber' }
+    else if (exceedanceProb >= 30) { riskLevel = 'Moderate'; riskColor = 'amber' }
+
+    // Build plain-language sentence
+    const trendWord = trend === 'significant-rise' ? 'Trending sharply upward'
+      : trend === 'rising' ? 'Trending upward'
+      : trend === 'declining' ? 'Trending downward'
+      : trend === 'significant-decline' ? 'Trending sharply downward'
+      : 'Relatively stable'
+
+    const sentence = weeksExceeded > 0
+      ? `${weeksExceeded} of the last 6 weeks exceeded normal levels. ${trendWord}.`
+      : `Within normal levels for recent weeks. ${trendWord}.`
+
+    // 6-week probability strip data
+    const weeklyProbs = row.map(w => Math.round((w.probability || 0) * 100))
+
+    return {
+      name,
+      exceedanceProb,
+      sortScore,
+      riskLevel,
+      riskColor,
+      sentence,
+      trend,
+      weeklyMean,
+      weeklyProbs,
+      weeksExceeded,
+      avgProjected: Math.round(week1.avg || 0),
+      p95: week1.p95 || 0
+    }
+  }).filter(Boolean)
+
+  summaries.sort((a, b) => b.sortScore - a.sortScore)
+
+  return summaries
+}
