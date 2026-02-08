@@ -1,12 +1,12 @@
 import React, { Suspense, lazy, useRef } from 'react'
-import { Routes, Route, Navigate, useLocation, useBlocker } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import InstallPrompt from './components/common/InstallPrompt'
 import ServiceWorkerUpdatePrompt from './components/common/ServiceWorkerUpdatePrompt'
 import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
-import { ImportLockProvider, useImportLock } from './context/ImportLockContext'
+import { ImportLockProvider } from './context/ImportLockContext'
 
 // Direct imports for main tabs (instant switching)
 import Dashboard from './pages/Dashboard'
@@ -63,12 +63,7 @@ const MainTabs = () => {
 // Inner component that uses the import lock for route blocking
 function AppContent() {
   const { pathname } = useLocation()
-  const { isLocked } = useImportLock()
   const isMainTab = ['/', '/data-control', '/outlook'].includes(pathname)
-
-  // Block ALL route transitions when import is in progress
-  // This prevents React Router from changing routes regardless of how navigation was triggered
-  useBlocker(() => isLocked)
 
   return (
     <>
