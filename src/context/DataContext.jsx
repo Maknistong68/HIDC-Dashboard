@@ -520,6 +520,20 @@ export const DataProvider = ({ children }) => {
     return Object.keys(siteClassifications).length > 0
   }, [siteClassifications])
 
+  // Compute assigned sub-regions (only show sub-regions that have at least one site assigned)
+  const assignedSubRegions = useMemo(() => {
+    const regions = new Set(Object.values(siteClassifications).filter(Boolean))
+    // Import SUB_REGION_OPTIONS inline to avoid circular dependency
+    const SUB_REGION_OPTIONS = [
+      { value: 'SUB REGION 1', label: 'Sub Region 1' },
+      { value: 'SUB REGION 2', label: 'Sub Region 2' },
+      { value: 'SUB REGION 3', label: 'Sub Region 3' },
+      { value: 'SUB REGION 4', label: 'Sub Region 4' },
+      { value: 'SUB REGION 5', label: 'Sub Region 5' },
+    ]
+    return SUB_REGION_OPTIONS.filter(opt => regions.has(opt.value))
+  }, [siteClassifications])
+
   // ============================================
   // IMPORT TRACKING
   // ============================================
@@ -561,6 +575,7 @@ export const DataProvider = ({ children }) => {
     categorizationProgress,
     siteClassifications,
     hasSubregionAssignments,
+    assignedSubRegions,
 
     // Project operations
     addProject,

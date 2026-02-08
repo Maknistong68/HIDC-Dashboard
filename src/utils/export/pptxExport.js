@@ -255,8 +255,8 @@ const calculateSummary = (incidents) => {
   const bySite = {}
 
   incidents.forEach(incident => {
-    const contractor = incident.contractor || 'Unassigned'
-    const site = incident.site || 'Unassigned'
+    const contractor = incident.contractor || 'Unknown'
+    const site = incident.site || 'Unknown'
     const isClosed = incident.actionStatus === 'closed'
 
     if (!byContractor[contractor]) {

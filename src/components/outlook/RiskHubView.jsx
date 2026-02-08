@@ -292,7 +292,7 @@ const WhereSection = ({ hazardIncidents, siteClassifications = {}, isExpanded, o
     if (!hazardIncidents?.length) return []
     const counts = {}
     hazardIncidents.forEach(i => {
-      const site = i.site || i.projectName || 'Unknown'
+      const site = i.site || 'Unknown'
       counts[site] = (counts[site] || 0) + 1
     })
     return Object.entries(counts)
@@ -310,7 +310,7 @@ const WhereSection = ({ hazardIncidents, siteClassifications = {}, isExpanded, o
     if (!hazardIncidents?.length) return []
     const counts = {}
     hazardIncidents.forEach(i => {
-      const site = i.site || i.projectName || ''
+      const site = i.site || 'Unknown'
       const subRegion = siteClassifications[site] || 'Unassigned'
       counts[subRegion] = (counts[subRegion] || 0) + 1
     })

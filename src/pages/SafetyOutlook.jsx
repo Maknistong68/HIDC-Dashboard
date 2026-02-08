@@ -9,7 +9,6 @@ import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
-import { SUB_REGION_OPTIONS } from '../utils/constants'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -114,7 +113,7 @@ const MAIN_TABS = [
  * Tab 3: Risk & Performance
  */
 const SafetyOutlook = () => {
-  const { incidents, siteClassifications, hasSubregionAssignments } = useData()
+  const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
   const { getPeriodRange } = useDate()
 
   // Shared filter state from context
@@ -168,12 +167,12 @@ const SafetyOutlook = () => {
         type: 'select',
         label: 'Sub-Region',
         placeholder: 'All Sub-Regions',
-        options: SUB_REGION_OPTIONS
+        options: assignedSubRegions
       })
     }
 
     return config
-  }, [uniqueContractors, siteOptions, hasSubregionAssignments])
+  }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
 
   // Filtered incidents based on contractor, site, subRegion, and period
   const filteredIncidents = useMemo(() => {

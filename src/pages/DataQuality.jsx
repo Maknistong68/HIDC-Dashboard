@@ -78,7 +78,6 @@ import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
 import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
 
-import { SUB_REGION_OPTIONS } from '../utils/constants'
 import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import BatchImportModal from '../components/fileManager/BatchImportModal'
@@ -174,7 +173,7 @@ const KPIMiniCard = ({ title, value, unit, status, icon: Icon, subtitle, onClick
 }
 
 const DataQuality = () => {
-  const { incidents, isLoading, importWarnings, updateIncident, siteClassifications, hasSubregionAssignments } = useData()
+  const { incidents, isLoading, importWarnings, updateIncident, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
   const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
   const [expandedSection, setExpandedSection] = useState(null)
   const [reporterSort, setReporterSort] = useState('total')
@@ -268,12 +267,12 @@ const DataQuality = () => {
         type: 'select',
         label: 'Sub-Region',
         placeholder: 'All Sub-Regions',
-        options: SUB_REGION_OPTIONS
+        options: assignedSubRegions
       })
     }
 
     return config
-  }, [uniqueContractors, siteOptions, hasSubregionAssignments])
+  }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
 
   // Filtered incidents based on contractor, site, subRegion, and period
   // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array

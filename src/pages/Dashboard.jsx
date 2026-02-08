@@ -28,7 +28,7 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, SUB_REGION_OPTIONS } from '../utils/constants'
+import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -61,7 +61,7 @@ const normalizeHazard = memoize((hazard) => {
 
 
 const Dashboard = () => {
-  const { projects, incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments } = useData()
+  const { projects, incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
   const { cutoffDates, getPeriodRange } = useDate()
 
   // Shared filter state from context
@@ -221,12 +221,12 @@ const Dashboard = () => {
         type: 'select',
         label: 'Sub-Region',
         placeholder: 'All Sub-Regions',
-        options: SUB_REGION_OPTIONS
+        options: assignedSubRegions
       })
     }
 
     return config
-  }, [uniqueContractors, siteOptions, hasSubregionAssignments])
+  }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
 
   // Filtered incidents based on contractor, site, subRegion, and period (for KPIs, charts, Top Hazards, Top Observers)
   // Note: Hazard categorization is done at import time, so no recategorization needed here
@@ -559,8 +559,8 @@ const Dashboard = () => {
   const subregionContributionData = useMemo(() => {
     const counts = {}
     filteredIncidents.forEach(i => {
-      const site = i.site || i.project
-      const subregion = (site && siteClassifications[site]) || 'Unassigned'
+      const site = i.site || 'Unknown'
+      const subregion = siteClassifications[site] || 'Unassigned'
       counts[subregion] = (counts[subregion] || 0) + 1
     })
     const sorted = Object.entries(counts)
