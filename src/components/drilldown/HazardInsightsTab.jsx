@@ -1,0 +1,165 @@
+import React, { useMemo, useState } from 'react'
+import { Eye, ChevronRight, Info } from 'lucide-react'
+import { getHazardInsights } from '../../utils/insightsCalculations'
+import { detectContributingFactors, getKeywordsForFactor } from '../../utils/rootCauseEngine'
+import HazardRiskSummary from './HazardRiskSummary'
+import HazardRootCauseChart from './HazardRootCauseChart'
+import HazardActionStatus from './HazardActionStatus'
+import HazardTemporalPatterns from './HazardTemporalPatterns'
+import HazardContractorBreakdown from './HazardContractorBreakdown'
+import HazardRecommendations from './HazardRecommendations'
+
+/**
+ * HazardInsightsTab - Main container for hazard insights in DrillDownModal
+ * Orchestrates all insight panels in a responsive grid layout
+ *
+ * Layout (Desktop 2-column):
+ * +---------------------------+---------------------------+
+ * |   HazardRiskSummary       |   HazardActionStatus      |
+ * +---------------------------+---------------------------+
+ * |         HazardRootCauseChart (Full Width)             |
+ * +-------------------------------------------------------+
+ * |   HazardTemporalPatterns  |  HazardContractorBreakdown|
+ * +---------------------------+---------------------------+
+ * |         HazardRecommendations (Full Width)            |
+ * +-------------------------------------------------------+
+ * |        [View All Records] Button                      |
+ * +-------------------------------------------------------+
+ */
+const HazardInsightsTab = ({
+  hazardName,
+  hazardIncidents = [],
+  allIncidents = [],
+  onViewRecords,
+  onFilterByRootCause,
+  isMobile = false
+}) => {
+  const [showDataSource, setShowDataSource] = useState(false)
+
+  // Calculate insights for this hazard
+  const insights = useMemo(() => {
+    return getHazardInsights(allIncidents, hazardName)
+  }, [allIncidents, hazardName])
+
+  // Handle root cause bar click - filter observations and callback
+  const handleRootCauseClick = (factorName) => {
+    if (!factorName || !onFilterByRootCause) return
+
+    // Filter observations that have this factor detected
+    const factorObservations = hazardIncidents.filter(incident => {
+      const factors = detectContributingFactors(incident.description, hazardName)
+      return factors.includes(factorName)
+    })
+
+    // Get keywords for highlighting
+    const keywords = getKeywordsForFactor(factorName)
+
+    onFilterByRootCause(factorObservations, factorName, keywords)
+  }
+
+  if (!insights.hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-3">
+          <Info size={24} className="text-surface-400" />
+        </div>
+        <h3 className="text-base font-semibold text-surface-700 mb-1">No Insights Available</h3>
+        <p className="text-sm text-surface-500 text-center max-w-xs">
+          Not enough data to generate insights for "{hazardName}".
+          {hazardIncidents.length === 0 && ' No observations found for this hazard.'}
+        </p>
+        {hazardIncidents.length > 0 && (
+          <button
+            onClick={() => onViewRecords && onViewRecords()}
+            className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+          >
+            <Eye size={16} />
+            View {hazardIncidents.length} Record{hazardIncidents.length !== 1 ? 's' : ''}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`space-y-3 ${isMobile ? '' : ''}`}>
+      {/* Row 1: Risk Summary + Action Status */}
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        <HazardRiskSummary
+          risk={insights.risk}
+          trend={insights.trend}
+          isMobile={isMobile}
+        />
+        <HazardActionStatus
+          actions={insights.actions}
+          isMobile={isMobile}
+        />
+      </div>
+
+      {/* Row 2: Root Cause Chart (Full Width) */}
+      <HazardRootCauseChart
+        rootCauses={insights.rootCauses}
+        onBarClick={onFilterByRootCause ? handleRootCauseClick : null}
+        isMobile={isMobile}
+      />
+
+      {/* Row 3: Temporal Patterns + Contractor Breakdown */}
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        <HazardTemporalPatterns
+          temporal={insights.temporal}
+          isMobile={isMobile}
+        />
+        <HazardContractorBreakdown
+          contractors={insights.contractors}
+          isMobile={isMobile}
+        />
+      </div>
+
+      {/* Row 4: Recommendations (Full Width) */}
+      <HazardRecommendations
+        recommendations={insights.recommendations}
+        isMobile={isMobile}
+      />
+
+      {/* View All Records Button */}
+      {onViewRecords && hazardIncidents.length > 0 && (
+        <button
+          onClick={onViewRecords}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
+        >
+          <Eye size={18} />
+          View All {insights.totalCount} Records
+          <ChevronRight size={16} />
+        </button>
+      )}
+
+      {/* Data Source Info (collapsible) */}
+      <div className="pt-2 border-t border-surface-100">
+        <button
+          onClick={() => setShowDataSource(!showDataSource)}
+          className="flex items-center gap-1.5 text-2xs text-surface-400 hover:text-surface-600 transition-colors"
+        >
+          <Info size={12} />
+          <span>Data based on {insights.totalCount} observations</span>
+          <ChevronRight
+            size={12}
+            className={`transition-transform ${showDataSource ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {showDataSource && (
+          <div className="mt-2 p-2 bg-surface-50 rounded text-2xs text-surface-500 space-y-1">
+            <p>Hazard Category: <span className="font-medium text-surface-700">{hazardName}</span></p>
+            <p>Total Observations: <span className="font-medium text-surface-700">{insights.totalCount}</span></p>
+            <p>Risk Score: <span className="font-medium text-surface-700">{insights.risk?.score}/100</span></p>
+            <p>Trend: <span className="font-medium text-surface-700">
+              {insights.trend?.direction === 'up' ? `+${insights.trend.percentChange}%` :
+               insights.trend?.direction === 'down' ? `-${Math.abs(insights.trend.percentChange)}%` : 'Stable'}
+            </span></p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default React.memo(HazardInsightsTab)

@@ -1556,10 +1556,12 @@ const Dashboard = () => {
         title={
           drillDown.level === 3 && drillDown.period
             ? `${drillDown.filter} - ${format(parseISO(drillDown.period + '-01'), 'MMMM yyyy')}`
-            : `${drillDown.filter} - Monthly Breakdown`
+            : drillDown.chart === 'hazards' && drillDown.level === 2
+              ? `${drillDown.filter} Insights`
+              : `${drillDown.filter} - Monthly Breakdown`
         }
-        data={drillDown.level === 3 ? drillDownData : monthlyBreakdown}
-        type={drillDown.level === 3 ? 'records' : 'monthly'}
+        data={drillDown.level === 3 ? drillDownData : drillDown.chart === 'hazards' && drillDown.level === 2 ? getFilteredBySelection : monthlyBreakdown}
+        type={drillDown.level === 3 ? 'records' : drillDown.chart === 'hazards' && drillDown.level === 2 ? 'records' : 'monthly'}
         onDrillDown={handleMonthSelect}
         onBack={handleDrillDownBack}
         canGoBack={drillDown.level === 3}
@@ -1577,6 +1579,12 @@ const Dashboard = () => {
           drillDown.chart === 'company' ? 'Company Analytics' :
           drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' : 'Analytics'
         }
+        showInsights={drillDown.chart === 'hazards' && drillDown.level === 2}
+        insightsData={drillDown.chart === 'hazards' && drillDown.level === 2 ? {
+          hazardName: drillDown.filter,
+          hazardIncidents: getFilteredBySelection,
+          allIncidents: filteredIncidents
+        } : null}
       />
 
       {/* Heatmap Drill-Down Modal */}
@@ -1592,6 +1600,12 @@ const Dashboard = () => {
         type="records"
         breadcrumb={['Heatmap', heatmapDrillDown.hazard, heatmapDrillDown.month ? format(parseISO(heatmapDrillDown.month + '-01'), 'MMM yyyy') : ''].filter(Boolean)}
         source="Hazards Identification"
+        showInsights={heatmapDrillDown.hazard && heatmapDrillDownData.length > 0}
+        insightsData={heatmapDrillDown.hazard ? {
+          hazardName: heatmapDrillDown.hazard,
+          hazardIncidents: heatmapDrillDownData,
+          allIncidents: heatmapIncidents
+        } : null}
       />
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag, BarChart3, List } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { analyzeObservation } from '../../utils/contextClassifier'
 import { useData } from '../../context/DataContext'
@@ -8,26 +8,61 @@ import { parseSentence } from '../../utils/sentenceParser'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
+import { HazardInsightsTab } from '../drilldown'
 
 /**
  * Glassmorphism Drill-Down Modal
  * Centered on screen with Apple-style blur effect
  * Supports: Chart → Months/Weeks → Observations hierarchy
+ * With optional Insights tab for hazard drill-downs
  */
 const DrillDownModal = ({
   isOpen,
   onClose,
   title,
   data = [],
-  type = 'monthly', // 'monthly' | 'records'
+  type = 'monthly', // 'monthly' | 'records' | 'insights'
   onDrillDown,
   onBack,
   canGoBack = false,
   breadcrumb = [],
   highlightKeywords = [],  // Keywords to highlight in descriptions
-  source = 'Unknown'  // Source page: 'Hazards Identification', 'Safety Outlook', etc.
+  source = 'Unknown',  // Source page: 'Hazards Identification', 'Safety Outlook', etc.
+  // New props for insights tab
+  showInsights = false,  // Whether to show the Insights/Records tab bar
+  insightsData = null    // { hazardName, hazardIncidents, allIncidents }
 }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
+  const [activeTab, setActiveTab] = useState(showInsights ? 'insights' : 'records')
+  const [filteredRecords, setFilteredRecords] = useState(null)
+  const [filterTitle, setFilterTitle] = useState('')
+  const [filterKeywords, setFilterKeywords] = useState([])
+
+  // Reset tab when modal opens with insights
+  useEffect(() => {
+    if (isOpen && showInsights) {
+      setActiveTab('insights')
+      setFilteredRecords(null)
+      setFilterTitle('')
+      setFilterKeywords([])
+    }
+  }, [isOpen, showInsights])
+
+  // Handle filter from insights tab (root cause click)
+  const handleFilterByRootCause = useCallback((records, factorName, keywords) => {
+    setFilteredRecords(records)
+    setFilterTitle(`${factorName} Observations`)
+    setFilterKeywords(keywords || [])
+    setActiveTab('records')
+  }, [])
+
+  // Handle view all records from insights tab
+  const handleViewRecords = useCallback(() => {
+    setFilteredRecords(null)
+    setFilterTitle('')
+    setFilterKeywords([])
+    setActiveTab('records')
+  }, [])
 
   // Resizable functionality
   const {
@@ -125,6 +160,52 @@ const DrillDownModal = ({
             </div>
           </div>
 
+          {/* Tab Bar for Insights/Records - Only when showInsights is true */}
+          {showInsights && type === 'records' && (
+            <div className={`border-b border-surface-200/50 bg-surface-50/80 ${isMobile ? 'px-4 py-2' : 'px-6 py-2'}`}>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setActiveTab('insights')
+                    setFilteredRecords(null)
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'insights'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-surface-600 hover:bg-surface-100'
+                  }`}
+                >
+                  <BarChart3 size={14} />
+                  Insights
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('records')
+                    setFilteredRecords(null)
+                    setFilterTitle('')
+                    setFilterKeywords([])
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'records'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-surface-600 hover:bg-surface-100'
+                  }`}
+                >
+                  <List size={14} />
+                  Records
+                  <span className="text-xs bg-surface-200 text-surface-600 px-1.5 py-0.5 rounded-full ml-1">
+                    {filteredRecords ? filteredRecords.length : data.length}
+                  </span>
+                </button>
+                {filteredRecords && filterTitle && (
+                  <span className="text-xs text-surface-500 ml-2">
+                    Filtered: {filterTitle}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Content - Responsive padding */}
           <div className={`overflow-y-auto flex-1 touch-scroll ${isMobile ? 'p-4' : 'p-6'}`}>
             {type === 'monthly' && (
@@ -143,7 +224,7 @@ const DrillDownModal = ({
               />
             )}
 
-            {type === 'records' && (
+            {type === 'records' && !showInsights && (
               <RecordsTable
                 data={data}
                 onViewDetails={setSelectedRecord}
@@ -159,6 +240,34 @@ const DrillDownModal = ({
                 }}
               />
             )}
+
+            {type === 'records' && showInsights && activeTab === 'insights' && insightsData && (
+              <HazardInsightsTab
+                hazardName={insightsData.hazardName}
+                hazardIncidents={insightsData.hazardIncidents || data}
+                allIncidents={insightsData.allIncidents || []}
+                onViewRecords={handleViewRecords}
+                onFilterByRootCause={handleFilterByRootCause}
+                isMobile={isMobile}
+              />
+            )}
+
+            {type === 'records' && showInsights && activeTab === 'records' && (
+              <RecordsTable
+                data={filteredRecords || data}
+                onViewDetails={setSelectedRecord}
+                breadcrumb={filterTitle ? [...breadcrumb, filterTitle] : breadcrumb}
+                title={filterTitle || title}
+                isMobile={isMobile}
+                highlightKeywords={filterKeywords.length > 0 ? filterKeywords : highlightKeywords}
+                copyContext={{
+                  source: source,
+                  title: filterTitle || title,
+                  breadcrumb: filterTitle ? [...breadcrumb, filterTitle] : breadcrumb,
+                  count: filteredRecords ? filteredRecords.length : data.length
+                }}
+              />
+            )}
           </div>
 
           {/* Footer hint - Safe area for mobile */}
@@ -169,7 +278,8 @@ const DrillDownModal = ({
             <p className={`text-surface-400 text-center ${isMobile ? 'text-xs' : 'text-xs'}`}>
               {type === 'monthly' ? (isMobile ? 'Tap a period to view' : 'Click a period to view observations') :
                type === 'monthly-breakdown' ? (isMobile ? 'Tap metrics to see observations' : 'Click metrics to see contributing observations') :
-               `${data.length} observation${data.length !== 1 ? 's' : ''} found`}
+               showInsights && activeTab === 'insights' ? 'Click chart elements to explore data' :
+               `${filteredRecords ? filteredRecords.length : data.length} observation${(filteredRecords ? filteredRecords.length : data.length) !== 1 ? 's' : ''} found`}
             </p>
           </div>
         </div>

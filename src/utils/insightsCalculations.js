@@ -7,7 +7,7 @@ import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMon
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
 import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
-import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType } from './rootCauseEngine'
+import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType, detectContributingFactors } from './rootCauseEngine'
 
 // Re-export the new keyword-based root cause detection as extractDeviationsForHazard
 // for backward compatibility with existing components
@@ -4735,5 +4735,282 @@ export const calculateDataSourceBreakdown = (incidents) => {
     biasMessage,
     confidenceLevel,
     confidenceScore
+  }
+}
+
+// ============================================================================
+// HAZARD INSIGHTS FOR DRILL-DOWN MODAL
+// Aggregates risk, trend, root causes, temporal, contractors, actions, recommendations
+// ============================================================================
+
+/**
+ * Get comprehensive insights for a specific hazard
+ * Used in DrillDownModal Insights tab for HSE managers
+ *
+ * @param {Array} allIncidents - All incident records
+ * @param {string} hazardName - The hazard category to analyze
+ * @returns {Object} Complete hazard insights package
+ */
+export const getHazardInsights = (allIncidents, hazardName) => {
+  if (!allIncidents?.length || !hazardName) {
+    return {
+      hasData: false,
+      hazardName,
+      risk: null,
+      trend: null,
+      rootCauses: [],
+      temporal: null,
+      contractors: [],
+      actions: null,
+      recommendations: []
+    }
+  }
+
+  // Filter incidents for this specific hazard (case-insensitive to handle title-cased display names)
+  const hazardNameLower = hazardName.toLowerCase()
+  const hazardIncidents = allIncidents.filter(i =>
+    i.location && i.location.toLowerCase() === hazardNameLower
+  )
+
+  if (hazardIncidents.length === 0) {
+    return {
+      hasData: false,
+      hazardName,
+      risk: null,
+      trend: null,
+      rootCauses: [],
+      temporal: null,
+      contractors: [],
+      actions: null,
+      recommendations: []
+    }
+  }
+
+  const today = new Date()
+
+  // ── 1. Risk Summary ──
+  // Calculate risk score based on severity mix, open actions, and trend
+  const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
+  const negativeIncidents = hazardIncidents.filter(i => negativeTypes.includes(i.type))
+  const severeIncidents = hazardIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type))
+  const openIncidents = hazardIncidents.filter(i => i.actionStatus !== 'closed')
+
+  // Simple risk score: weighted by severity and open actions
+  let riskScore = 0
+  riskScore += (severeIncidents.length / Math.max(1, hazardIncidents.length)) * 40 // Severity: 40 points max
+  riskScore += (openIncidents.length / Math.max(1, hazardIncidents.length)) * 30 // Open actions: 30 points max
+  riskScore += Math.min(30, (negativeIncidents.length / 10) * 10) // Volume: 30 points max
+
+  riskScore = Math.min(100, Math.round(riskScore))
+  const riskLevel = riskScore >= 70 ? 'high' : riskScore >= 40 ? 'medium' : 'low'
+
+  // Check if this is a major hazard
+  const isMajorHazard = MAJOR_HAZARDS.includes(hazardName)
+
+  // ── 2. Trend Direction ──
+  const trendingData = getHazardTrending(allIncidents)
+  const hazardTrend = trendingData.find(h => h.hazard === hazardName) || null
+
+  let trendDirection = 'stable'
+  let trendPercentChange = 0
+  if (hazardTrend) {
+    trendDirection = hazardTrend.trend
+    trendPercentChange = hazardTrend.changePercent || 0
+  }
+
+  // ── 3. Root Causes (Top 5) - Using text analysis from rootCauseEngine ──
+  // Analyze each incident's description to detect contributing factors
+  const factorCounts = {}
+  hazardIncidents.forEach(incident => {
+    if (!incident.description) return
+    const factors = detectContributingFactors(incident.description, hazardName)
+    factors.forEach(factor => {
+      factorCounts[factor] = (factorCounts[factor] || 0) + 1
+    })
+  })
+
+  // Sort by count and take top 5
+  const totalWithFactors = Object.values(factorCounts).reduce((a, b) => a + b, 0)
+  const factorColors = {
+    'Inspections': '#ef4444',
+    'PPE': '#f97316',
+    'Training': '#eab308',
+    'Housekeeping': '#22c55e',
+    'Supervision': '#3b82f6',
+    'Communication': '#8b5cf6',
+    'Procedures': '#ec4899',
+    'Equipment': '#06b6d4',
+    'Environmental': '#14b8a6',
+    'Fatigue': '#f59e0b'
+  }
+  const topRootCauses = Object.entries(factorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalWithFactors > 0 ? Math.round((count / totalWithFactors) * 100) : 0,
+      color: factorColors[name] || '#6b7280'
+    }))
+
+  // ── 4. Action Status ──
+  const actionCounts = {
+    open: hazardIncidents.filter(i => i.actionStatus === 'open').length,
+    inProgress: hazardIncidents.filter(i => i.actionStatus === 'in-progress').length,
+    closed: hazardIncidents.filter(i => i.actionStatus === 'closed').length
+  }
+  const closureRate = hazardIncidents.length > 0
+    ? Math.round((actionCounts.closed / hazardIncidents.length) * 100)
+    : 0
+
+  // Overdue actions (> 30 days old and still open)
+  const overdueActions = hazardIncidents.filter(i => {
+    if (i.actionStatus === 'closed' || !i.date) return false
+    try {
+      const age = differenceInDays(today, parseISO(i.date.substring(0, 10)))
+      return age > 30
+    } catch {
+      return false
+    }
+  })
+
+  // ── 5. Temporal Patterns (Day of Week) ──
+  const dayOfWeekData = getObservationsByDayOfWeek(hazardIncidents)
+  const peakDay = dayOfWeekData.reduce((max, d) => d.count > max.count ? d : max, { count: 0 })
+
+  // ── 6. Contractor Breakdown (Top 5) ──
+  const contractorCounts = {}
+  hazardIncidents.forEach(i => {
+    const contractor = i.contractor || 'Unknown'
+    contractorCounts[contractor] = (contractorCounts[contractor] || 0) + 1
+  })
+
+  const topContractors = Object.entries(contractorCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / hazardIncidents.length) * 100)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  // ── 7. Recommendations ──
+  const recommendations = []
+
+  // Recommendation 1: High severity
+  if (severeIncidents.length > 0) {
+    recommendations.push({
+      id: 'severity',
+      priority: 'HIGH',
+      title: 'Address Severe Incidents',
+      message: `${severeIncidents.length} severe incident${severeIncidents.length > 1 ? 's' : ''} (LTI/MTI/FAC) in this hazard category require immediate investigation.`,
+      icon: 'AlertTriangle',
+      color: 'red'
+    })
+  }
+
+  // Recommendation 2: Overdue actions
+  if (overdueActions.length > 0) {
+    recommendations.push({
+      id: 'overdue',
+      priority: overdueActions.length > 5 ? 'HIGH' : 'MEDIUM',
+      title: 'Close Overdue Actions',
+      message: `${overdueActions.length} action${overdueActions.length > 1 ? 's' : ''} open > 30 days. Oldest is ${Math.max(...overdueActions.map(o => {
+        try {
+          return differenceInDays(today, parseISO(o.date.substring(0, 10)))
+        } catch { return 30 }
+      }))} days old.`,
+      icon: 'Clock',
+      color: 'amber'
+    })
+  }
+
+  // Recommendation 3: Root cause focus
+  if (topRootCauses.length > 0 && topRootCauses[0].percentage > 30) {
+    recommendations.push({
+      id: 'rootcause',
+      priority: 'MEDIUM',
+      title: `Focus on ${topRootCauses[0].name}`,
+      message: `${topRootCauses[0].percentage}% of observations cite "${topRootCauses[0].name}" as a contributing factor. Target this for maximum impact.`,
+      icon: 'Target',
+      color: 'blue'
+    })
+  }
+
+  // Recommendation 4: Trending up
+  if (trendDirection === 'up' && trendPercentChange > 20) {
+    recommendations.push({
+      id: 'trend',
+      priority: 'HIGH',
+      title: 'Investigate Rising Trend',
+      message: `This hazard increased ${Math.round(trendPercentChange)}% vs previous period. Identify and address root cause promptly.`,
+      icon: 'TrendingUp',
+      color: 'red'
+    })
+  }
+
+  // Recommendation 5: Peak day focus
+  if (peakDay.count > 0) {
+    recommendations.push({
+      id: 'temporal',
+      priority: 'LOW',
+      title: `Increase Vigilance on ${peakDay.day}`,
+      message: `${peakDay.day} accounts for ${peakDay.percentage}% of observations. Consider additional supervision on this day.`,
+      icon: 'Calendar',
+      color: 'indigo'
+    })
+  }
+
+  // Recommendation 6: Contractor focus
+  if (topContractors.length > 0 && topContractors[0].percentage > 40) {
+    recommendations.push({
+      id: 'contractor',
+      priority: 'MEDIUM',
+      title: `Review ${topContractors[0].name} Performance`,
+      message: `${topContractors[0].percentage}% of this hazard's observations involve ${topContractors[0].name}. Consider targeted training or supervision.`,
+      icon: 'Users',
+      color: 'purple'
+    })
+  }
+
+  // Sort by priority
+  const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+  recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+
+  // Limit to top 3 most important
+  const topRecommendations = recommendations.slice(0, 3)
+
+  return {
+    hasData: true,
+    hazardName,
+    totalCount: hazardIncidents.length,
+    risk: {
+      score: riskScore,
+      level: riskLevel,
+      isMajorHazard,
+      severeCount: severeIncidents.length,
+      openCount: openIncidents.length
+    },
+    trend: {
+      direction: trendDirection,
+      percentChange: Math.round(trendPercentChange),
+      previousCount: hazardTrend?.previousCount || 0,
+      currentCount: hazardTrend?.currentCount || 0
+    },
+    rootCauses: topRootCauses,
+    temporal: {
+      dayOfWeek: dayOfWeekData,
+      peakDay: peakDay.day,
+      peakDayCount: peakDay.count,
+      peakDayPercentage: parseFloat(peakDay.percentage || '0')
+    },
+    contractors: topContractors,
+    actions: {
+      ...actionCounts,
+      total: hazardIncidents.length,
+      closureRate,
+      overdueCount: overdueActions.length
+    },
+    recommendations: topRecommendations
   }
 }
