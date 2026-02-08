@@ -128,7 +128,7 @@ export const ImportLockProvider = ({ children }) => {
       {/* Render blocking overlay and modal at app root level */}
       {isLocked && modalComponent && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{ isolation: 'isolate' }}
         >
           {/* Blocking backdrop - prevents all interaction outside modal */}
@@ -139,20 +139,9 @@ export const ImportLockProvider = ({ children }) => {
             onMouseDown={(e) => e.stopPropagation()}
           />
 
-          {/* Processing warning banner at top */}
-          <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 text-center shadow-lg z-10">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span className="font-medium">
-                Import in progress — Do not close or navigate away
-              </span>
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            </div>
-          </div>
-
-          {/* Modal container */}
+          {/* Modal container - centered with proper constraints */}
           <div
-            className="relative z-20 max-h-[90vh] overflow-hidden"
+            className="relative z-20 w-full max-w-2xl max-h-[90vh] overflow-hidden"
             style={{ pointerEvents: 'auto' }}
           >
             {modalComponent}
