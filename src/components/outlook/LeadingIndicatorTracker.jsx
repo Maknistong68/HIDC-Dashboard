@@ -153,7 +153,7 @@ const LeadingIndicatorTracker = ({ filteredIncidents, negativeIncidents }) => {
       {
         key: 'nearMiss',
         icon: ICONS.nearMiss,
-        label: 'Near-Miss Ratio',
+        label: 'Proactive Reporting',
         value: `${(nearMissRatio * 100).toFixed(0)}%`,
         status: nearMissRatio >= 0.4 ? 'good' : nearMissRatio >= 0.2 ? 'warning' : 'poor',
         sparkData: nearMissSpark,
@@ -180,7 +180,7 @@ const LeadingIndicatorTracker = ({ filteredIncidents, negativeIncidents }) => {
       {
         key: 'reportingVelocity',
         icon: ICONS.reportingVelocity,
-        label: 'Report Velocity',
+        label: 'Reporting Trend',
         value: `${velocityRatio.toFixed(1)}x`,
         status: velocityRatio >= 0.8 && velocityRatio <= 1.3 ? 'good' : velocityRatio > 1.3 ? 'warning' : 'poor',
         sparkData: velocitySpark,
@@ -189,7 +189,7 @@ const LeadingIndicatorTracker = ({ filteredIncidents, negativeIncidents }) => {
       {
         key: 'hazardCoverage',
         icon: ICONS.hazardCoverage,
-        label: 'Hazard Coverage',
+        label: 'Site Coverage',
         value: `${(coverageRate * 100).toFixed(0)}%`,
         unit: `(${observedHazards.size}/${allHazards.size})`,
         status: coverageRate >= 0.7 ? 'good' : coverageRate >= 0.4 ? 'warning' : 'poor',

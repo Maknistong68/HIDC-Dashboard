@@ -764,6 +764,232 @@ export const getRecommendedActionsForMultipleHazards = (hazardNames, factorData,
     .slice(0, limit)
 }
 
+// ============================================================================
+// THREE FIXED SCENARIOS CALCULATOR
+// ============================================================================
+
+/**
+ * Calculate three fixed scenarios for executive view:
+ * 1. No Change - Current trajectory
+ * 2. Minimum Controls - PPE + basic training + supervision
+ * 3. Best Controls - Engineering controls + close 10 actions
+ *
+ * @param {Object} params - Calculation parameters
+ * @returns {Object} { noChange, minControls, bestControls }
+ */
+export const calculateThreeFixedScenarios = ({
+  incidentPrediction,
+  factorData,
+  negativeIncidents,
+  prevalence,
+  topRiskHazard,
+  sortedHazards
+}) => {
+  const totalNegative = negativeIncidents?.length || 0
+
+  // Base weekly prediction
+  const basePrediction = incidentPrediction?.weekly?.predicted ||
+    Math.round((totalNegative / 30) * 7) || 5
+
+  // Get trend factor
+  let trendFactor = 1.0
+  if (topRiskHazard?.trend === 'significant-rise') trendFactor = 1.3
+  else if (topRiskHazard?.trend === 'rising') trendFactor = 1.15
+  else if (topRiskHazard?.trend === 'declining') trendFactor = 0.9
+  else if (topRiskHazard?.trend === 'significant-decline') trendFactor = 0.75
+
+  // ── Scenario 1: No Change ──
+  // Project forward with current trend
+  const noChangeProjected = Math.round(basePrediction * trendFactor)
+  const noChangeRiskChange = Math.round((trendFactor - 1) * 100)
+
+  const noChange = {
+    projected: noChangeProjected,
+    riskChange: Math.max(0, noChangeRiskChange), // Show as positive (increase)
+    trend: topRiskHazard?.trend || 'stable',
+    expectedType: 'Based on historical distribution',
+    expectedSeverity: trendFactor > 1.1 ? 'Elevated' : 'Normal'
+  }
+
+  // ── Scenario 2: Minimum Controls ──
+  // Apply: PPE (50%), Training (30%), Supervision (30%)
+  const minSliders = { ppe: 50, training: 30, supervision: 30 }
+
+  let minEffect = 0
+  // PPE: 30% effectiveness × prevalence × 50% effort
+  const ppePrev = prevalence['PPE']?.percentage || 15
+  minEffect += ppePrev * 0.30 * 0.5
+
+  // Training: 50% effectiveness × prevalence × 30% effort
+  const trainingPrev = prevalence['Training']?.percentage || 20
+  minEffect += trainingPrev * 0.50 * 0.3
+
+  // Supervision: 50% effectiveness × prevalence × 30% effort
+  const supervisionPrev = prevalence['Supervision']?.percentage || 10
+  minEffect += supervisionPrev * 0.50 * 0.3
+
+  const minReduction = Math.round(Math.min(35, minEffect))
+
+  const minControls = {
+    projected: Math.round(basePrediction * (1 - minReduction / 100)),
+    riskReduction: minReduction,
+    sliders: minSliders,
+    timeEstimate: '2-3 weeks to see effect',
+    controls: ['PPE compliance', 'Training programs', 'Supervision level']
+  }
+
+  // ── Scenario 3: Best Controls ──
+  // Apply: Engineering (75%), plus close 10 actions
+  const bestSliders = { barriers: 75, guards: 50, training: 50, inspections: 50 }
+
+  let bestEffect = 0
+  // Engineering controls: 75% effectiveness × prevalence × 75% effort
+  const barriersPrev = prevalence['Barriers']?.percentage || 10
+  bestEffect += barriersPrev * 0.75 * 0.75
+
+  const guardsPrev = prevalence['Machine Guarding']?.percentage || 5
+  bestEffect += guardsPrev * 0.75 * 0.5
+
+  // Additional admin controls
+  bestEffect += trainingPrev * 0.50 * 0.5
+  const inspectionsPrev = prevalence['Inspections']?.percentage || 8
+  bestEffect += inspectionsPrev * 0.50 * 0.5
+
+  // Action closure effect (closing 10 actions = ~10% reduction)
+  bestEffect += 10
+
+  const bestReduction = Math.round(Math.min(55, bestEffect))
+
+  const bestControls = {
+    projected: Math.round(basePrediction * (1 - bestReduction / 100)),
+    riskReduction: bestReduction,
+    sliders: bestSliders,
+    actionsToClose: 10,
+    timeEstimate: '4-6 weeks to see effect',
+    costBenefit: 'High ROI - addresses root cause',
+    controls: ['Engineering barriers', 'Machine guards', 'Close 10 actions']
+  }
+
+  return { noChange, minControls, bestControls }
+}
+
+// ============================================================================
+// SINGLE BEST ACTION DETERMINATION
+// ============================================================================
+
+/**
+ * Determine the single best action for maximum risk reduction
+ *
+ * Priority scoring:
+ * 1. Base effect score from factor prevalence × control effectiveness
+ * 2. +30% boost for engineering controls
+ * 3. +40% boost if hazard is trending up
+ * 4. -50% penalty if data source is biased
+ * 5. Return TOP 1 only
+ *
+ * @param {Object} params - Input parameters
+ * @returns {Object} Best action recommendation
+ */
+export const determineSingleBestAction = ({
+  factorData,
+  prevalence,
+  topRiskHazard,
+  sortedHazards,
+  dataSourceBreakdown
+}) => {
+  if (!factorData?.byFactor?.length) {
+    return null
+  }
+
+  // Get top factors with their prevalence
+  const candidates = []
+
+  for (const factor of factorData.byFactor.slice(0, 10)) {
+    if (factor.isUnclassified || factor.name === 'Unclassified') continue
+
+    const factorPrev = prevalence[factor.name]?.percentage || 0
+    if (factorPrev < 2) continue // Skip very low prevalence factors
+
+    // Find control category and effectiveness
+    let controlCategory = null
+    let effectiveness = 0.5
+    let intervention = null
+
+    for (const [catKey, cat] of Object.entries(CONTROL_HIERARCHY)) {
+      const found = cat.interventions.find(i => i.factor === factor.name)
+      if (found) {
+        controlCategory = catKey
+        effectiveness = cat.effectiveness
+        intervention = found
+        break
+      }
+    }
+
+    if (!intervention) continue
+
+    // Base score: prevalence × effectiveness
+    let score = factorPrev * effectiveness
+
+    // Engineering control boost (+30%)
+    if (controlCategory === 'engineering') {
+      score *= 1.3
+    }
+
+    // Trending hazard boost (+40% if hazard is rising)
+    const isRising = topRiskHazard?.trend === 'significant-rise' || topRiskHazard?.trend === 'rising'
+    if (isRising) {
+      score *= 1.4
+    }
+
+    // Bias penalty (-50% if biased data)
+    if (dataSourceBreakdown?.hasBias) {
+      score *= 0.5
+    }
+
+    // Calculate expected risk reduction
+    const riskReduction = Math.round(factorPrev * effectiveness)
+
+    candidates.push({
+      factor: factor.name,
+      action: intervention.label,
+      category: CONTROL_HIERARCHY[controlCategory].name,
+      categoryKey: controlCategory,
+      score,
+      riskReduction,
+      prevalence: factorPrev,
+      effectiveness,
+      hazardName: topRiskHazard?.name || null
+    })
+  }
+
+  if (candidates.length === 0) {
+    return null
+  }
+
+  // Sort by score descending and pick top 1
+  candidates.sort((a, b) => b.score - a.score)
+  const best = candidates[0]
+
+  // Determine confidence based on data quality
+  let confidence = 'medium'
+  if (!dataSourceBreakdown?.hasBias && best.prevalence > 10) {
+    confidence = 'high'
+  } else if (dataSourceBreakdown?.hasBias || best.prevalence < 5) {
+    confidence = 'low'
+  }
+
+  // Build reasoning
+  const reasoning = `${best.factor} appears in ${best.prevalence.toFixed(1)}% of incidents. ` +
+    `${best.category} controls have ${Math.round(best.effectiveness * 100)}% effectiveness. ` +
+    `${topRiskHazard?.name ? `Focus on ${topRiskHazard.name} area.` : ''}`
+
+  return {
+    ...best,
+    confidence,
+    reasoning
+  }
+}
+
 export default {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
@@ -777,5 +1003,7 @@ export default {
   calculateMultiHazardProjection,
   applyQuickActionPreset,
   getRecommendedActionsForHazard,
-  getRecommendedActionsForMultipleHazards
+  getRecommendedActionsForMultipleHazards,
+  calculateThreeFixedScenarios,
+  determineSingleBestAction
 }

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
-import { Shield, BarChart3, Activity, Info, Lightbulb, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Shield, BarChart3, Activity, Info, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 import {
   ResponsiveContainer,
@@ -35,7 +35,7 @@ const getTrendArrow = (detail) => {
 }
 
 const SIGNAL_LABELS = {
-  severityMix: 'Severity Mix',
+  severityMix: 'Injury Severity',
   trend: 'Trend (30d)',
   openActionRate: 'Open Actions',
   highRiskExposure: 'High-Risk Exposure',
@@ -490,25 +490,11 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
             Score is {entity.score >= benchmark.avg ? 'above' : 'below'} the {benchmark.total}-entity average of {benchmark.avg}. Higher score = higher risk.
           </p>
         )}
-        {insightData && (
-          insightData.isLow && !insightData.hasContradiction ? (
-            <div className="mt-2 flex items-start gap-2 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">
-              <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-emerald-800">Low risk profile. Continue monitoring.</p>
-            </div>
-          ) : (
-            <div className="mt-2 bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Lightbulb size={14} className="text-amber-500 flex-shrink-0" />
-                <span className="text-xs font-semibold text-amber-800">Executive Brief</span>
-              </div>
-              <ul className="space-y-1 pl-5">
-                {insightData.bullets.map((b, i) => (
-                  <li key={i} className="text-xs text-amber-800 list-disc leading-relaxed">{b}</li>
-                ))}
-              </ul>
-            </div>
-          )
+        {insightData && insightData.isLow && !insightData.hasContradiction && (
+          <div className="mt-2 flex items-start gap-2 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">
+            <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-emerald-800">Low risk profile. Continue monitoring.</p>
+          </div>
         )}
       </div>
 

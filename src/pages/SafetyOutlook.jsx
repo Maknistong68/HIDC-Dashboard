@@ -3,7 +3,7 @@ import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, PredictiveSimulationTab } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, ExecutivePredictiveView } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -629,14 +629,13 @@ const SafetyOutlook = () => {
       {activeMainTab === 'predictive' && (
         <TabErrorBoundary label="Predictive & Simulation">
         <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
-          <PredictiveSimulationTab
+          <ExecutivePredictiveView
             filteredIncidents={filteredIncidents}
             negativeIncidents={negativeIncidents}
             sortedHazards={sortedHazards}
             factorData={factorData}
             incidentPrediction={incidentPrediction}
             hazardTrendData={allHazardTrendData}
-            selectedHazardName={selectedHazard?.name}
             period={period}
           />
         </div>

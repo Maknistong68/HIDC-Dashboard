@@ -11,7 +11,7 @@ const DEFAULT_ENTITY_WEIGHTS = { severityMix: 25, trend: 20, openActionRate: 20,
 const DIMENSION_LABELS = { contractor: 'Contractor', site: 'Site', subregion: 'SubRegion' }
 
 const SIGNAL_LABELS = {
-  severityMix: 'Severity Mix',
+  severityMix: 'Injury Severity',
   trend: 'Trend (30d)',
   openActionRate: 'Open Actions',
   highRiskExposure: 'High-Risk Exp.',
@@ -54,60 +54,13 @@ const PRESETS = {
 // Slider styles now in global index.css (.unified-slider)
 
 /**
- * Normalize weights so they always sum to 100.
- * Distributes remaining weight proportionally, then applies min/max
- * constraints, and corrects any rounding residual on the largest weight.
+ * Update a single weight independently (no redistribution).
+ * Each slider controls its own value within min/max range.
  */
-const normalizeWeights = (key, newValue, weights) => {
-  const oldValue = weights[key]
-  if (newValue === oldValue) return weights
-
-  const otherKeys = Object.keys(weights).filter(k => k !== key)
-  const remaining = 100 - newValue
-  const updated = { ...weights, [key]: newValue }
-
-  // Calculate target distribution for remaining weight
-  const otherSum = otherKeys.reduce((s, k) => s + weights[k], 0)
-
-  if (otherSum > 0) {
-    // Distribute proportionally based on original values
-    let allocated = 0
-    otherKeys.forEach((k, idx) => {
-      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
-      if (idx === otherKeys.length - 1) {
-        // Last key gets remainder to guarantee sum = 100
-        updated[k] = Math.min(max, Math.max(min, remaining - allocated))
-      } else {
-        const proportion = weights[k] / otherSum
-        const target = Math.round(remaining * proportion)
-        updated[k] = Math.min(max, Math.max(min, target))
-        allocated += updated[k]
-      }
-    })
-  } else {
-    const each = Math.floor(remaining / otherKeys.length)
-    otherKeys.forEach(k => {
-      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
-      updated[k] = Math.min(max, Math.max(min, each))
-    })
-  }
-
-  // Final correction: ensure exact sum of 100
-  const sum = Object.values(updated).reduce((s, v) => s + v, 0)
-  if (sum !== 100) {
-    // Apply residual to the other key with the largest current weight
-    const sortedOthers = [...otherKeys].sort((a, b) => updated[b] - updated[a])
-    for (const k of sortedOthers) {
-      const { min, max } = SIGNAL_RANGES[k] || { min: 5, max: 50 }
-      const adjusted = updated[k] + (100 - sum)
-      if (adjusted >= min && adjusted <= max) {
-        updated[k] = adjusted
-        break
-      }
-    }
-  }
-
-  return updated
+const updateWeight = (key, newValue, weights) => {
+  const { min, max } = SIGNAL_RANGES[key] || { min: 5, max: 50 }
+  const clamped = Math.min(max, Math.max(min, newValue))
+  return { ...weights, [key]: clamped }
 }
 
 const loadWeights = () => {
@@ -225,7 +178,7 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
   }, [])
 
   const handleSliderChange = useCallback((key, value) => {
-    const newWeights = normalizeWeights(key, value, entityWeights)
+    const newWeights = updateWeight(key, value, entityWeights)
     setEntityWeights(newWeights)
     setPresetProfile('custom')
   }, [entityWeights])

@@ -32,3 +32,17 @@ export { default as MonteCarloHeatmap } from './MonteCarloHeatmap'
 export { default as ScenarioComparisonPanel } from './ScenarioComparisonPanel'
 export { default as IncidentVelocityTimeline } from './IncidentVelocityTimeline'
 export { default as LeadingIndicatorTracker } from './LeadingIndicatorTracker'
+
+// Redesign components
+export { default as SafetyStatusBanner } from './SafetyStatusBanner'
+export { default as RiskTimeline } from './RiskTimeline'
+export { default as HazardRiskCards } from './HazardRiskCards'
+export { default as IncidentTypeOutlook } from './IncidentTypeOutlook'
+export { default as DataConfidenceFooter } from './DataConfidenceFooter'
+
+// Executive Predictive View (Tab 2 replacement)
+export { default as ExecutivePredictiveView } from './ExecutivePredictiveView'
+export { default as RiskForecastPanel } from './RiskForecastPanel'
+export { default as ConfidenceBiasIndicator } from './ConfidenceBiasIndicator'
+export { default as ThreeScenarioPanel } from './ThreeScenarioPanel'
+export { default as SingleActionRecommendation } from './SingleActionRecommendation'

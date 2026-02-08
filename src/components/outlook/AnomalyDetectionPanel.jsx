@@ -66,9 +66,9 @@ const AnomalyDetectionPanel = ({ negativeIncidents }) => {
       <div className="bg-white rounded-lg border border-surface-200 p-4">
         <div className="flex items-center gap-2 mb-2">
           <Zap size={16} className="text-surface-400" />
-          <h3 className="text-sm font-semibold text-surface-700">Anomaly Detection</h3>
+          <h3 className="text-sm font-semibold text-surface-700">Unusual Patterns</h3>
         </div>
-        <p className="text-xs text-surface-500">No significant anomalies detected in the current data.</p>
+        <p className="text-xs text-surface-500">No unusual patterns detected in the last 90 days.</p>
       </div>
     )
   }
@@ -84,7 +84,7 @@ const AnomalyDetectionPanel = ({ negativeIncidents }) => {
       >
         <div className="flex items-center gap-2">
           <Zap size={16} className="text-amber-500" />
-          <h3 className="text-sm font-semibold text-surface-800">Anomaly Detection</h3>
+          <h3 className="text-sm font-semibold text-surface-800">Unusual Patterns Detected</h3>
           <div className="flex items-center gap-1.5">
             {spikes > 0 && (
               <span className="text-2xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
@@ -112,7 +112,7 @@ const AnomalyDetectionPanel = ({ negativeIncidents }) => {
           {allAnomalies.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wide mb-2">
-                Anomalies ({allAnomalies.length})
+                Unusual Days ({allAnomalies.length})
               </h4>
               <div className="space-y-2 max-h-[30vh] md:max-h-48 overflow-y-auto">
                 {allAnomalies.slice(0, displayLimit).map((anomaly, idx) => (
@@ -164,7 +164,7 @@ const AnomalyDetectionPanel = ({ negativeIncidents }) => {
           {changePointData.changePoints?.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wide mb-2">
-                Significant Change Points
+                Trend Shifts
               </h4>
               <div className="space-y-2">
                 {changePointData.changePoints.slice(0, 5).map((cp, idx) => (

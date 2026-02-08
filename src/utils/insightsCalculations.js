@@ -4224,9 +4224,46 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
     let severeCount = 0, openActions = 0, majorCount = 0, nmCount = 0, posCount = 0
     let current30 = 0, prev30 = 0
     items.forEach(i => {
-      const t = (i.severity || i.type || '').toLowerCase()
-      if (t === 'lti' || t === 'mti') severeCount++
-      if (t === 'near-miss') nmCount++
+      // Check both severity and type fields for reliable detection
+      const sev = (i.severity || '').toLowerCase()
+      const typ = (i.type || '').toLowerCase()
+      const combined = `${sev} ${typ}`
+
+      // Severe injury detection - comprehensive HSE terminology
+      // Tier 1: Most severe (fatality)
+      // Tier 2: Recordable injuries (LTI, MTI, RWC)
+      // Tier 3: Serious descriptors
+      const isSevere = (
+        // Fatality / Death
+        combined.includes('fatal') ||
+        combined.includes('death') ||
+        combined.includes('deceased') ||
+        // Lost Time Injury
+        combined.includes('lti') ||
+        combined.includes('lost time') ||
+        combined.includes('lost-time') ||
+        // Medical Treatment Injury
+        combined.includes('mti') ||
+        combined.includes('medical treatment') ||
+        // Restricted Work Case
+        combined.includes('rwc') ||
+        combined.includes('rwdc') ||
+        combined.includes('restricted work') ||
+        combined.includes('restricted duty') ||
+        // Serious injury descriptors
+        combined.includes('serious injury') ||
+        combined.includes('major injury') ||
+        combined.includes('severe injury') ||
+        combined.includes('critical injury') ||
+        combined.includes('permanent') ||
+        combined.includes('hospitali') ||  // hospitalized, hospitalization
+        combined.includes('amputation')
+      )
+      if (isSevere) severeCount++
+
+      // Near-miss detection (various formats)
+      const isNearMiss = combined.includes('near-miss') || combined.includes('near miss') || combined.includes('nearmiss')
+      if (isNearMiss) nmCount++
       if (isPositiveType(i.type)) posCount++
       if (i.actionStatus === 'open' || i.actionStatus === 'in-progress') openActions++
       if (MAJOR_HAZARDS.includes(i.hazardCategory) || MAJOR_HAZARDS.includes(i.location)) majorCount++
@@ -4568,5 +4605,117 @@ export const calculatePredictiveRiskProfile = (incidents) => {
     escalationProbability,
     hazardRiskRanking,
     riskDrivers
+  }
+}
+
+// ============================================================================
+// DATA SOURCE BREAKDOWN & BIAS DETECTION
+// ============================================================================
+
+/**
+ * Calculate data source breakdown for bias detection
+ * Rule: No single source > 40% of observations indicates balanced data
+ *
+ * Sources categorized:
+ * - inspections: Scheduled safety inspections
+ * - observations: General safety observations
+ * - incidents: Actual incidents (LTI, MTI, FAC)
+ * - nearMisses: Near miss reports
+ *
+ * @param {Array} incidents - All incident records
+ * @returns {Object} { sources, hasBias, dominantSource, biasMessage, confidenceLevel, confidenceScore }
+ */
+export const calculateDataSourceBreakdown = (incidents) => {
+  if (!incidents?.length) {
+    return {
+      sources: { inspections: 0, observations: 0, incidents: 0, nearMisses: 0 },
+      hasBias: false,
+      dominantSource: null,
+      biasMessage: null,
+      confidenceLevel: 'low',
+      confidenceScore: 0
+    }
+  }
+
+  // Categorize by source type
+  const sources = {
+    inspections: 0,
+    observations: 0,
+    incidents: 0,
+    nearMisses: 0
+  }
+
+  for (const inc of incidents) {
+    const type = (inc.type || '').toLowerCase()
+    const source = (inc.source || '').toLowerCase()
+
+    // Check source field first if available
+    if (source.includes('inspection')) {
+      sources.inspections++
+    } else if (source.includes('observation') || source.includes('bbs')) {
+      sources.observations++
+    } else if (type === 'near-miss' || type === 'nearmiss' || type === 'nm') {
+      sources.nearMisses++
+    } else if (type === 'lti' || type === 'mti' || type === 'fac' || type === 'rwc') {
+      sources.incidents++
+    } else if (type === 'safe' || type === 'positive' || type === 'unsafe' || type === 'negative') {
+      sources.observations++
+    } else {
+      // Default to observations for unclassified
+      sources.observations++
+    }
+  }
+
+  const total = incidents.length
+  const BIAS_THRESHOLD = 0.40 // 40% threshold
+
+  // Find dominant source
+  let dominantSource = null
+  let maxPercentage = 0
+
+  for (const [key, count] of Object.entries(sources)) {
+    const pct = count / total
+    if (pct > maxPercentage) {
+      maxPercentage = pct
+      dominantSource = key
+    }
+  }
+
+  const hasBias = maxPercentage > BIAS_THRESHOLD
+
+  // Build bias message
+  let biasMessage = null
+  if (hasBias) {
+    const sourceName = {
+      inspections: 'inspection',
+      observations: 'observation',
+      incidents: 'incident',
+      nearMisses: 'near-miss'
+    }[dominantSource] || dominantSource
+
+    biasMessage = `Reliability reduced: ${Math.round(maxPercentage * 100)}% of data from ${sourceName} reports. Consider diversifying data sources.`
+  }
+
+  // Calculate confidence score (0-100)
+  // Factors: data volume, source balance, recency
+  const volumeScore = Math.min(100, (total / 100) * 100) // 100 records = max score
+  const balanceScore = hasBias ? 50 : 100
+  const confidenceScore = Math.round((volumeScore * 0.6) + (balanceScore * 0.4))
+
+  // Determine confidence level
+  let confidenceLevel = 'medium'
+  if (confidenceScore >= 75 && !hasBias) {
+    confidenceLevel = 'high'
+  } else if (confidenceScore < 40 || (hasBias && total < 50)) {
+    confidenceLevel = 'low'
+  }
+
+  return {
+    sources,
+    hasBias,
+    dominantSource,
+    biasMessage,
+    confidenceLevel,
+    confidenceScore
   }
 }

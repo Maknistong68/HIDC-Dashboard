@@ -37,6 +37,10 @@ import {
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { Link } from 'react-router-dom'
+
+const SUBREGION_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
+const SUBREGION_OTHERS_COLOR = '#94a3b8'
 
 // O(1) lookup maps for hazard sorting (avoids O(n) findIndex in sort comparator)
 const SIGNIFICANT_HAZARDS_MAP = new Map(SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
@@ -529,6 +533,53 @@ const Dashboard = () => {
       { name: 'Positive', value: positive, color: '#22c55e' }
     ]
   }, [filteredIncidents])
+
+  // Hazard Classification: Eltizam vs Other (excludes positive observations)
+  const hazardClassificationData = useMemo(() => {
+    const nonPositive = filteredIncidents.filter(i => i.type !== 'positive')
+    let eltizam = 0
+    let other = 0
+    nonPositive.forEach(i => {
+      const normalized = normalizeHazard(i.location)
+      if (normalized && normalized !== 'Not Specified') {
+        if (SIGNIFICANT_HAZARDS_MAP.has(normalized.toLowerCase())) {
+          eltizam++
+        } else {
+          other++
+        }
+      }
+    })
+    return [
+      { name: 'Eltizam Hazards', value: eltizam, color: '#eab308' },
+      { name: 'Other Hazards', value: other, color: '#8b5cf6' },
+    ]
+  }, [filteredIncidents])
+
+  // Subregion Contribution: top 6 subregions + Others
+  const subregionContributionData = useMemo(() => {
+    const counts = {}
+    filteredIncidents.forEach(i => {
+      const site = i.site || i.project
+      const subregion = (site && siteClassifications[site]) || 'Unassigned'
+      counts[subregion] = (counts[subregion] || 0) + 1
+    })
+    const sorted = Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    const top6 = sorted.slice(0, 6)
+    const rest = sorted.slice(6)
+    const othersValue = rest.reduce((sum, d) => sum + d.value, 0)
+
+    const result = top6.map((d, i) => ({
+      ...d,
+      color: SUBREGION_COLORS[i] || SUBREGION_OTHERS_COLOR,
+    }))
+    if (othersValue > 0) {
+      result.push({ name: 'Others', value: othersValue, color: SUBREGION_OTHERS_COLOR })
+    }
+    return result
+  }, [filteredIncidents, siteClassifications])
 
   // Top Hazards data - EXCLUDES positive observations (only counts non-positive)
   // Significant Hazards (13 official categories) are prioritized first
@@ -1100,12 +1151,156 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Hazard Distribution Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Donut 1: Hazard Classification */}
+        <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
+            Hazard Classification
+            <InfoTooltip text="Breakdown of observations by hazard classification. Eltizam Hazards are the 14 NEOM significant hazard categories. Other Hazards are all remaining hazard types. Source: observations, inspections, incidents (excludes positive observations)." />
+          </h3>
+          {hazardClassificationData.some(d => d.value > 0) ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={hazardClassificationData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {hazardClassificationData.map((entry, index) => (
+                      <Cell key={`hazclass-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => {
+                      const total = hazardClassificationData.reduce((sum, d) => sum + d.value, 0)
+                      const percent = total > 0 ? Math.round((value / total) * 100) : 0
+                      return [`${value} (${percent}%)`, name]
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value) => {
+                      const item = hazardClassificationData.find(d => d.name === value)
+                      const total = hazardClassificationData.reduce((sum, d) => sum + d.value, 0)
+                      const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
+                      return (
+                        <span className="text-xs text-surface-700">
+                          {value}: {item?.value} ({percent}%)
+                        </span>
+                      )
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center">
+              <p className="text-xs text-surface-400">No hazard data available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Donut 2: Subregion Contribution */}
+        <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
+          {hasSubregionAssignments ? (
+            <>
+              <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
+                Subregion Contribution
+                <InfoTooltip text="Distribution of observations across subregions. Click a segment to filter the dashboard by that subregion. Shows top 6 subregions with remaining grouped as Others." />
+              </h3>
+              {subregionContributionData.some(d => d.value > 0) ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={subregionContributionData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                        onClick={(data) => {
+                          if (data.name !== 'Others' && data.name !== 'Unassigned') {
+                            handleFilterChange('subRegion', data.name)
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {subregionContributionData.map((entry, index) => (
+                          <Cell key={`subreg-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => {
+                          const total = subregionContributionData.reduce((sum, d) => sum + d.value, 0)
+                          const percent = total > 0 ? Math.round((value / total) * 100) : 0
+                          return [`${value} (${percent}%)`, name]
+                        }}
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        }}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        formatter={(value) => {
+                          const item = subregionContributionData.find(d => d.name === value)
+                          const total = subregionContributionData.reduce((sum, d) => sum + d.value, 0)
+                          const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
+                          return (
+                            <span className="text-xs text-surface-700">
+                              {value}: {item?.value} ({percent}%)
+                            </span>
+                          )
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-surface-400 text-center opacity-60">Click a segment to filter</p>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center">
+                  <p className="text-xs text-surface-400">No subregion data available</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center gap-3">
+              <div className="text-center">
+                <Database className="w-8 h-8 text-surface-300 mx-auto mb-2" />
+                <p className="text-sm font-medium text-surface-600">Subregion data not assigned</p>
+                <p className="text-xs text-surface-400 mt-1">Please complete subregional assignment to view this chart.</p>
+              </div>
+              <Link
+                to="/files"
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 underline"
+              >
+                Go to File Manager
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Temporal Patterns Section */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-surface-500 uppercase tracking-wide">
-          Temporal Patterns
-        </h2>
-
         {/* Observations by Day of Week + Hour of Day */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div ref={dayOfWeekRef}>
