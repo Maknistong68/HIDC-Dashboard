@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import { Eye, ChevronRight, Info } from 'lucide-react'
 import { getHazardInsights } from '../../utils/insightsCalculations'
 import { detectContributingFactors, getKeywordsForFactor } from '../../utils/rootCauseEngine'
-import HazardRiskSummary from './HazardRiskSummary'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
 import HazardTemporalPatterns from './HazardTemporalPatterns'
@@ -14,9 +13,9 @@ import HazardRecommendations from './HazardRecommendations'
  * Orchestrates all insight panels in a responsive grid layout
  *
  * Layout (Desktop 2-column):
- * +---------------------------+---------------------------+
- * |   HazardRiskSummary       |   HazardActionStatus      |
- * +---------------------------+---------------------------+
+ * +-------------------------------------------------------+
+ * |              HazardActionStatus (Full Width)          |
+ * +-------------------------------------------------------+
  * |         HazardRootCauseChart (Full Width)             |
  * +-------------------------------------------------------+
  * |   HazardTemporalPatterns  |  HazardContractorBreakdown|
@@ -83,18 +82,11 @@ const HazardInsightsTab = ({
 
   return (
     <div className={`space-y-3 ${isMobile ? '' : ''}`}>
-      {/* Row 1: Risk Summary + Action Status */}
-      <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-        <HazardRiskSummary
-          risk={insights.risk}
-          trend={insights.trend}
-          isMobile={isMobile}
-        />
-        <HazardActionStatus
-          actions={insights.actions}
-          isMobile={isMobile}
-        />
-      </div>
+      {/* Row 1: Action Status (Full Width) */}
+      <HazardActionStatus
+        actions={insights.actions}
+        isMobile={isMobile}
+      />
 
       {/* Row 2: Root Cause Chart (Full Width) */}
       <HazardRootCauseChart
@@ -150,7 +142,6 @@ const HazardInsightsTab = ({
           <div className="mt-2 p-2 bg-surface-50 rounded text-2xs text-surface-500 space-y-1">
             <p>Hazard Category: <span className="font-medium text-surface-700">{hazardName}</span></p>
             <p>Total Observations: <span className="font-medium text-surface-700">{insights.totalCount}</span></p>
-            <p>Risk Score: <span className="font-medium text-surface-700">{insights.risk?.score}/100</span></p>
             <p>Trend: <span className="font-medium text-surface-700">
               {insights.trend?.direction === 'up' ? `+${insights.trend.percentChange}%` :
                insights.trend?.direction === 'down' ? `-${Math.abs(insights.trend.percentChange)}%` : 'Stable'}
