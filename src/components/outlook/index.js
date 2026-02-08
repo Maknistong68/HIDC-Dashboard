@@ -43,6 +43,7 @@ export { default as DataConfidenceFooter } from './DataConfidenceFooter'
 // Executive Predictive View (Tab 2 replacement)
 export { default as ExecutivePredictiveView } from './ExecutivePredictiveView'
 export { default as RiskForecastPanel } from './RiskForecastPanel'
+export { default as TopCriticalHazardsPanel } from './TopCriticalHazardsPanel'
 export { default as ConfidenceBiasIndicator } from './ConfidenceBiasIndicator'
 export { default as ThreeScenarioPanel } from './ThreeScenarioPanel'
 export { default as SingleActionRecommendation } from './SingleActionRecommendation'

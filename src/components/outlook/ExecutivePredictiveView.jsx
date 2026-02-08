@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react'
 import { AlertCircle, Database } from 'lucide-react'
 import RiskForecastPanel from './RiskForecastPanel'
+import TopCriticalHazardsPanel from './TopCriticalHazardsPanel'
 import ConfidenceBiasIndicator from './ConfidenceBiasIndicator'
 import ThreeScenarioPanel from './ThreeScenarioPanel'
 import SingleActionRecommendation from './SingleActionRecommendation'
@@ -40,10 +41,14 @@ const ExecutivePredictiveView = ({
   const [isSimulating, setIsSimulating] = useState(false)
   const abortRef = useRef({ current: false })
 
-  // Get top hazard names for Monte Carlo
+  // Get top hazard names for Monte Carlo - sort by volume to ensure high-volume hazards get simulated
   const hazardNames = useMemo(() => {
     if (!sortedHazards?.length) return []
-    return sortedHazards.slice(0, 10).map(h => h.name)
+    return [...sortedHazards]
+      .filter(h => !h.hasNoData)
+      .sort((a, b) => b.totalCount - a.totalCount)
+      .slice(0, 10)
+      .map(h => h.name)
   }, [sortedHazards])
 
   // Compute hazard stats for Monte Carlo
@@ -179,7 +184,14 @@ const ExecutivePredictiveView = ({
             period={period}
           />
 
-          {/* Panel B: Confidence & Bias */}
+          {/* Panel B: Top Critical Hazards (by volume) */}
+          <TopCriticalHazardsPanel
+            sortedHazards={sortedHazards}
+            hazardRiskSummaries={hazardRiskSummaries}
+            isSimulating={isSimulating}
+          />
+
+          {/* Panel C: Confidence & Bias */}
           <ConfidenceBiasIndicator
             dataSourceBreakdown={dataSourceBreakdown}
             incidentCount={filteredIncidents?.length || 0}

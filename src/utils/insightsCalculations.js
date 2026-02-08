@@ -5,7 +5,7 @@
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS } from './constants'
+import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
 import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType, detectContributingFactors } from './rootCauseEngine'
 
@@ -3061,7 +3061,7 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       ? { level: 'no-data', icon: '○', label: 'No Data', color: 'muted', sortOrder: 5 }
       : getTrendLevel(changePercent, isNew, curr)
 
-    return {
+    const hazardObj = {
       name: hazard,
       previousCount: prev,
       currentCount: curr,
@@ -3071,15 +3071,25 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       hasNoData,
       trendLevel,
       isMajor: MAJOR_HAZARDS.includes(hazard),
+      isSignificantHazard: SIGNIFICANT_HAZARDS.includes(hazard),
       confidence,
       isSignificant,
       // Include weighted values for debugging/advanced analysis
       _weightedPrev: isAllTime ? prevWeighted : undefined,
       _weightedCurr: isAllTime ? currWeighted : undefined
     }
+    return hazardObj
   })
 
-  // Sort: hazards with data first (by trend level), then no-data hazards alphabetically
+  // Calculate max volume for normalization across all hazards with data
+  const maxVolume = Math.max(...trending.filter(h => !h.hasNoData).map(h => h.totalCount), 100)
+
+  // Calculate priority scores now that we know maxVolume
+  trending.forEach(h => {
+    h.priorityScore = calculateHazardPriorityScoreInternal(h, maxVolume)
+  })
+
+  // Sort: hazards with data first (by priority score), then no-data hazards alphabetically
   return trending
     .filter(h => h.name !== 'Unspecified')
     .sort((a, b) => {
@@ -3087,17 +3097,46 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       if (a.hasNoData !== b.hasNoData) {
         return a.hasNoData ? 1 : -1
       }
-      // For hazards with data, sort by trend level
+      // For hazards with data, sort by composite priority score
       if (!a.hasNoData) {
-        const levelDiff = a.trendLevel.sortOrder - b.trendLevel.sortOrder
-        if (levelDiff !== 0) return levelDiff
-        // Within same level, sort by total count (higher first)
+        const scoreDiff = b.priorityScore - a.priorityScore
+        if (Math.abs(scoreDiff) >= 1) return scoreDiff
+        // Tie-breaker: higher total count wins
         return b.totalCount - a.totalCount
       }
       // For no-data hazards, sort alphabetically
       return a.name.localeCompare(b.name)
     })
 }
+
+/**
+ * Internal priority score calculation (used within getHazardTrendingByPeriod)
+ */
+const calculateHazardPriorityScoreInternal = (hazard, maxVolume = 100) => {
+  const { totalCount, trendLevel, name, hasNoData } = hazard
+  if (hasNoData) return 0
+
+  // Volume: 0-60 pts (logarithmic scale)
+  const volumeScore = Math.min(60, Math.round(
+    Math.log10(totalCount + 1) / Math.log10(maxVolume + 1) * 60
+  ))
+
+  // Trend: 0-30 pts
+  const trendScores = {
+    'significant-rise': 30, 'rising': 22, 'stable': 15,
+    'declining': 8, 'significant-decline': 0, 'new': 20, 'no-data': 0
+  }
+  const trendScore = trendScores[trendLevel?.level] || 15
+
+  // Significance: 0-10 pts
+  const significanceBonus = SIGNIFICANT_HAZARDS.includes(name) ? 10 :
+                            SUB_SIGNIFICANT_HAZARDS.includes(name) ? 5 : 0
+
+  return volumeScore + trendScore + significanceBonus
+}
+
+// Export internal function for external use
+export const calculateHazardPriorityScore = calculateHazardPriorityScoreInternal
 
 /**
  * Get root causes for specific hazard
