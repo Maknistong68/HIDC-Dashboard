@@ -370,7 +370,7 @@ export const HAZARD_EXCLUSIONS = {
     'workers falling in', 'vehicles falling in', 'equipment falling in',
     'open ditch', 'ditch without', 'open ditches', 'ditches in the area',
     'open trench', 'trench without', 'deep trench', 'deep trenches',
-    'open manhole', 'manhole without', 'manhole was observed',
+    // NOTE: 'open manhole' exclusions removed — many are legitimate fall-from-height hazards
     'access to the excavation', 'egress to the excavation',
     'access and egress to the excavation', 'inside the excavation',
     'chamber preparations', 'shuttering activities inside the excavation',
@@ -885,11 +885,9 @@ export const CONTEXT_REDIRECTS = {
   'standing at the unprotected edges of deep excavations': 'Breaking Ground & Excavation',
   'workers are standing at the unprotected edges': 'Breaking Ground & Excavation',
 
-  // Open manhole → Confined Spaces or Breaking Ground & Excavation
-  'open manhole was observed on site without any protective barrier': 'Confined Spaces',
-  'open manhole was observed': 'Confined Spaces',
-  'open manhole without': 'Confined Spaces',
-  'open manhole': 'Confined Spaces',
+  // Open manhole — removed blanket Confined Spaces override
+  // Many open manhole observations are about fall hazards (WAH), not confined space entry
+  // Let the classifier determine the correct category from description context
 
   // Confined space with barricade issues
   'barricades at the edge of the confined space are incomplete': 'Confined Spaces',
@@ -3043,7 +3041,9 @@ export const HAZARD_PATTERNS = {
     'power cable', 'electrical connection', 'grounding', 'earthing', 'socket', 'outlet',
     'plug', 'conduit', 'busbar', 'electrical tape', 'insulation tape', 'wire splice',
     'mccb', 'mcb', 'rcd', 'elcb', 'power distribution', 'electrical panel', 'db board',
-    'control panel', 'motor', 'pump', 'compressor', 'inverter', 'ups', 'battery bank'
+    'control panel', 'motor', 'pump', 'compressor', 'inverter', 'ups', 'battery bank',
+    'distribution panel', 'db panel', 'electrical db', 'tower light', 'genset',
+    'octopus socket', 'multi socket', 'earth pin', 'earthing rod'
   ],
   'Explosives & Blasting': [
     // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
@@ -3112,7 +3112,9 @@ export const HAZARD_PATTERNS = {
     'vertical lifeline', 'horizontal lifeline', 'edge of slab', 'floor opening',
     'void', 'shaft opening', 'stairwell opening', 'leading edge', 'perimeter edge',
     'scaffolding access', 'ladder climbing', 'roofing work', 'structural steel',
-    'formwork deck', 'elevated walkway', 'aerial work', 'skylight', 'fragile roof'
+    'formwork deck', 'elevated walkway', 'aerial work', 'skylight', 'fragile roof',
+    'manlift', 'man lift', 'stakkabox', 'stakka box', 'fbh', 'full body harness',
+    'retractable lifeline', 'manhole'
   ],
   'COSHH': [
     'coshh', 'chemical', 'hazardous substance', 'toxic', 'corrosive', 'irritant',
@@ -3238,13 +3240,17 @@ export const HAZARD_PATTERNS = {
     'drinking water', 'potable water', 'water station', 'water cooler',
     // Rest areas
     'rest area', 'break room', 'shade area', 'resting place', 'shelter',
+    'rest shelter',
     // Medical facilities
     'first aid room', 'medical facility', 'clinic',
     // Changing facilities
     'changing room', 'locker room', 'locker',
     // Other welfare
     'prayer room', 'worship area', 'recreation', 'recreational facility',
-    'hand washing', 'hygiene'
+    'hand washing', 'hygiene',
+    // Additional welfare facilities
+    'water filter', 'water igloo', 'security cabin', 'ac unit', 'air conditioner',
+    'ventilation fan', 'gym', 'pedestal fan'
   ],
   'Tools': [
     'tool', 'hand tool', 'power tool', 'equipment', 'wrench', 'hammer', 'screwdriver',
@@ -3275,7 +3281,9 @@ export const HAZARD_PATTERNS = {
     'working in heat', 'heat', 'hot surface', 'burn hazard', 'thermal', 'steam',
     'hot pipe', 'hot equipment', 'molten', 'furnace', 'oven', 'kiln', 'boiler',
     'heat exchanger', 'insulation', 'lagging', 'heat exposure', 'scalding', 'scald',
-    'heat stress', 'hydration', 'shade', 'cooling', 'rest break'
+    'heat stress', 'hydration', 'shade', 'cooling', 'rest break',
+    'drinking water', 'water igloo', 'ice', 'welfare flag', 'heat flag',
+    'heat index', 'personal hydration', 'water jug', 'restricted hours', 'direct sunlight'
   ],
   'Working on or Near Water': [
     'working on water', 'working near water', 'over water', 'near water', 'water work',
@@ -3298,7 +3306,9 @@ export const HAZARD_PHRASES = {
   'Energized System': [
     'live wire', 'electrical isolation', 'lockout tagout', 'arc flash', 'electrical work',
     'live electrical', 'energized equipment', 'de-energize', 'electrical hazard',
-    'power isolation', 'electrical safety'
+    'power isolation', 'electrical safety',
+    'cable management', 'cable routing', 'cable splicing', 'poor cable',
+    'unsafe electrical', 'electrical cable', 'exposed cable', 'live cable', 'damaged cable'
   ],
   'Explosives & Blasting': [
     'blasting operation', 'blasting activity', 'drill and blast', 'controlled blasting',
@@ -3309,7 +3319,7 @@ export const HAZARD_PHRASES = {
   'Working at Height': [
     'working at height', 'work at height', 'fall protection', 'edge protection', 'roof work',
     'working on roof', 'ladder work', 'scaffold work', 'elevated work', 'above ground',
-    'fall from height', 'height work', 'working above'
+    'fall from height', 'height work', 'working above', 'open manhole'
   ],
   'Hot Work': [
     'hot work permit', 'hot work', 'welding work', 'cutting work', 'grinding work',

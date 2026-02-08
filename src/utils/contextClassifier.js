@@ -987,13 +987,15 @@ const strategyCleanText = (rawText, expandedText) => {
   // Strip reference text
   const stripped = stripReferenceText(rawText)
 
-  // If no noise was removed, defer to keyword strategy
+  // If no noise was removed, echo keyword strategy instead of abstaining
+  // This prevents the clean text strategy from always voting null (capping consensus at 3/4)
   if (!stripped.noiseRemoved) {
+    const keywordResult = strategyKeyword(expandedText)
     return {
       strategy: 'cleanText',
-      category: null,
-      confidence: 0,
-      reasoning: 'No reference noise detected',
+      category: keywordResult.category,
+      confidence: keywordResult.confidence > 0 ? Math.max(keywordResult.confidence - 5, 0) : 0,
+      reasoning: 'No reference noise — echoing keyword detection',
       noiseRemoved: false,
       cleanedText: stripped.cleanText
     }

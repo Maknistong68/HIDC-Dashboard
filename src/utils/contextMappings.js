@@ -291,7 +291,10 @@ export const HAZARD_OBJECTS = {
     // Improper connections & appliances
     'improper electrical connection', 'improper connection', 'electrical connection',
     'kettle', 'heater', 'electric heater', 'space heater', 'extension cord',
-    'power strip', 'multi plug', 'overloaded socket', 'daisy chain'
+    'power strip', 'multi plug', 'overloaded socket', 'daisy chain',
+    // Additional electrical objects
+    'distribution panel', 'db', 'tower light', 'inspection tag',
+    'exhaust fan', 'smoke detector', 'ac unit', 'pedestal fan'
   ],
 
   'Working at Height': [
@@ -309,7 +312,10 @@ export const HAZARD_OBJECTS = {
     'elevated work area', 'high level', 'above ground',
     'handrail', 'guardrail', 'edge protection', 'toe board',
     'harness', 'lanyard', 'fall arrest', 'lifeline', 'anchor point',
-    'attic', 'loft', 'mezzanine', 'balcony', 'gantry'
+    'attic', 'loft', 'mezzanine', 'balcony', 'gantry',
+    // Additional WAH objects
+    'stakkabox', 'stakka box', 'manlift', 'man lift',
+    'retractable lifeline', 'ginwheel', 'gin wheel'
   ],
 
   'Mobile Plant & Equipment': [
@@ -2550,7 +2556,14 @@ export const HSE_ABBREVIATIONS = {
   // Site Management
   'msra': 'method statement risk assessment',
   'isf': 'interim support facility',
-  'pwp': 'portable water pump'
+  'pwp': 'portable water pump',
+
+  // Additional abbreviations
+  'db': 'distribution board',
+  'ohpl': 'overhead power line',
+  'w@h': 'work at height',
+  'mp&e': 'mobile plant and equipment',
+  'genset': 'generator set'
 }
 
 // ============================================================================

@@ -1983,9 +1983,15 @@ export const getUnclassifiableRecords = (incidents) => {
       )
 
       if (!isGeneric && !isApproved) {
-        // Only flag as unrecognized if confidence is LOW
-        // High confidence (>=65%) means successful reclassification regardless of source
-        if (confidence < 65) {
+        // Check if system successfully reclassified to a valid (non-fallback) category
+        const currentCategory = incident.location || ''
+        const successfullyReclassified = currentCategory &&
+          currentCategory !== 'General Site Issues' &&
+          approvedCategories.some(c => c === currentCategory)
+
+        // Only flag if BOTH confidence is low AND reclassification failed
+        // If the record was manually classified AND system found a valid category, trust it
+        if (confidence < 65 && !successfullyReclassified) {
           unrecognizedCategory.push({
             id: incident.externalId || incident.id,
             date: incident.date,
