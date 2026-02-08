@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import {
@@ -113,9 +114,9 @@ const BatchImportModal = ({ onClose }) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Process all files
-  const processFiles = useCallback(async () => {
-    if (selectedFiles.length === 0) return
+  // Process all files - accepts state directly to avoid ref sync race conditions
+  const processFiles = useCallback(async (filesToProcess, existingIncidents) => {
+    if (filesToProcess.length === 0) return
     if (isProcessingRef.current) return  // Prevent double-processing
 
     // Create new AbortController for this batch
@@ -129,7 +130,10 @@ const BatchImportModal = ({ onClose }) => {
     // Track Event IDs imported in this batch session (across all files)
     const batchImportedIds = new Set()
 
-    for (let i = 0; i < selectedFiles.length; i++) {
+    // Local accumulator so file N sees records from files 1..N-1 for duplicate detection
+    let batchAccumulatedIncidents = [...existingIncidents]
+
+    for (let i = 0; i < filesToProcess.length; i++) {
       // Check if aborted before each file
       if (signal.aborted || !isMountedRef.current) {
         console.log('[BatchImport] Processing aborted')
@@ -146,7 +150,7 @@ const BatchImportModal = ({ onClose }) => {
         idx === i ? { ...f, status: 'processing' } : f
       ))
 
-      const { file } = selectedFiles[i]
+      const { file } = filesToProcess[i]
 
       try {
         // Step 1: Calculate file hash
@@ -205,7 +209,7 @@ const BatchImportModal = ({ onClose }) => {
           data.headers,
           mappings,
           null,
-          incidents,
+          batchAccumulatedIncidents,
           { classificationMode: 'trust-excel' }
         )
 
@@ -227,7 +231,7 @@ const BatchImportModal = ({ onClose }) => {
         // Check against existing data (only items not already in this batch)
         const duplicateResults = checkDuplicates(
           filteredIncidents,
-          incidents,
+          batchAccumulatedIncidents,
           'externalId',
           'skip'
         )
@@ -248,6 +252,9 @@ const BatchImportModal = ({ onClose }) => {
               batchImportedIds.add(record.externalId)
             }
           })
+
+          // Accumulate so file N+1 sees these records for duplicate detection
+          batchAccumulatedIncidents = [...batchAccumulatedIncidents, ...duplicateResults.newRecords]
         }
 
         // Total skipped includes both within-batch and existing data duplicates
@@ -318,7 +325,7 @@ const BatchImportModal = ({ onClose }) => {
     } catch (error) {
       console.error('[BatchImport] Error reloading files after batch:', error)
     }
-  }, [selectedFiles, incidents, addIncidentsWithFile, reloadFiles])
+  }, [addIncidentsWithFile, reloadFiles])
 
   // Trigger file input
   const handleBrowse = () => {
@@ -366,7 +373,7 @@ const BatchImportModal = ({ onClose }) => {
   const totalWithinBatchSkipped = results.reduce((sum, r) => sum + (r.withinBatchSkippedCount || 0), 0)
   const totalExistingDataSkipped = results.reduce((sum, r) => sum + (r.existingDataSkippedCount || 0), 0)
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" data-processing={isProcessing}>
       {/* Backdrop - disable pointer events during processing */}
       <div
@@ -679,7 +686,7 @@ const BatchImportModal = ({ onClose }) => {
                 Cancel
               </button>
               <button
-                onClick={processFiles}
+                onClick={() => processFiles(selectedFiles, incidents)}
                 disabled={isProcessing || selectedFiles.length === 0}
                 className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
               >
@@ -706,7 +713,8 @@ const BatchImportModal = ({ onClose }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

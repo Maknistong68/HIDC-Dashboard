@@ -1,4 +1,5 @@
 import React from 'react'
+import ModalPortal from '../common/ModalPortal'
 import { X } from 'lucide-react'
 
 /**
@@ -20,12 +21,13 @@ const InsightsDrillDownModal = ({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-    >
-      {/* Backdrop with blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <ModalPortal isOpen={true}>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onClick={handleBackdropClick}
+      >
+        {/* Backdrop with blur */}
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       {/* Modal Container */}
       <div className="relative w-full max-w-2xl max-h-[90vh] animate-modal-in">
@@ -70,6 +72,7 @@ const InsightsDrillDownModal = ({
         }
       `}</style>
     </div>
+    </ModalPortal>
   )
 }
 

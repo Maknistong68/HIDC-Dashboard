@@ -1,4 +1,5 @@
 import React from 'react'
+import ModalPortal from './ModalPortal'
 import { X, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { INCIDENT_TYPES, ACTION_STATUSES } from '../../utils/constants'
@@ -30,7 +31,7 @@ const ReportModal = ({ record, onClose }) => {
   }
 
   return (
-    <>
+    <ModalPortal isOpen={true}>
       <div className="fixed inset-0 z-50 overflow-y-auto">
         {/* Backdrop */}
         <div
@@ -204,7 +205,7 @@ const ReportModal = ({ record, onClose }) => {
           </div>
         </div>
       </div>
-    </>
+    </ModalPortal>
   )
 }
 

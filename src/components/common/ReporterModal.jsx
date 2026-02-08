@@ -1,4 +1,5 @@
 import React from 'react'
+import ModalPortal from './ModalPortal'
 import {
   X,
   User,
@@ -92,19 +93,20 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <ModalPortal isOpen={true}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
-      {/* Modal */}
-      <div
-        ref={containerRef}
-        className={`relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isResizing ? 'select-none' : ''}`}
-        style={containerStyle}
-      >
+        {/* Modal */}
+        <div
+          ref={containerRef}
+          className={`relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isResizing ? 'select-none' : ''}`}
+          style={containerStyle}
+        >
         <ResizeHandles />
         {/* Header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-surface-200 px-6 py-4 z-10">
@@ -451,6 +453,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 

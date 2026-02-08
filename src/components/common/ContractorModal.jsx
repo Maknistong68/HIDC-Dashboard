@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import ModalPortal from './ModalPortal'
 import {
   X,
   Building2,
@@ -111,26 +112,28 @@ const ContractorModal = ({
   // Show loading/empty state if no data
   if (!data) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={onClose}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
-          aria-label="Close modal"
-        />
-        <div className="relative bg-white rounded-2xl shadow-2xl p-8 text-center">
-          <Building2 size={48} className="mx-auto text-surface-300 mb-4" />
-          <p className="text-surface-500">No data available for this contractor</p>
-          <button
+      <ModalPortal isOpen={true}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
-            className="mt-4 px-4 py-2 bg-surface-100 rounded-lg text-surface-700 hover:bg-surface-200"
-          >
-            Close
-          </button>
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
+            aria-label="Close modal"
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <Building2 size={48} className="mx-auto text-surface-300 mb-4" />
+            <p className="text-surface-500">No data available for this contractor</p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-4 py-2 bg-surface-100 rounded-lg text-surface-700 hover:bg-surface-200"
+            >
+              Close
+            </button>
+          </div>
         </div>
-      </div>
+      </ModalPortal>
     )
   }
 
@@ -147,23 +150,24 @@ const ContractorModal = ({
   ).length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
-        aria-label="Close modal"
-      />
+    <ModalPortal isOpen={true}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
+          aria-label="Close modal"
+        />
 
-      {/* Modal */}
-      <div
-        ref={containerRef}
-        className={`relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isResizing ? 'select-none' : ''}`}
-        style={containerStyle}
-      >
+        {/* Modal */}
+        <div
+          ref={containerRef}
+          className={`relative bg-white/95 backdrop-blur-xl border border-surface-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isResizing ? 'select-none' : ''}`}
+          style={containerStyle}
+        >
         <ResizeHandles />
         {/* Header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-surface-200 px-6 py-4 z-10">
@@ -622,6 +626,7 @@ const ContractorModal = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 

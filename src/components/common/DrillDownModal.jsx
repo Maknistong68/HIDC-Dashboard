@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { analyzeObservation } from '../../utils/contextClassifier'
@@ -50,7 +51,7 @@ const DrillDownModal = ({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center ${isMobile ? 'p-0' : 'p-4'}`}
       onClick={handleBackdropClick}
@@ -214,7 +215,8 @@ const DrillDownModal = ({
           overscroll-behavior: contain;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -633,7 +635,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
   const statusInfo = getStatusInfo(record.actionStatus)
   const StatusIcon = statusInfo.icon
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 z-[60] flex items-center justify-center ${isMobile ? 'p-0' : 'p-4'}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -795,7 +797,8 @@ const RecordDetailsModal = ({ record, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

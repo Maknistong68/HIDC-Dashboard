@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react'
+import ModalPortal from '../common/ModalPortal'
 import { RefreshCw, FileSpreadsheet, Upload, X, Check, AlertTriangle } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import {
@@ -118,12 +119,13 @@ const FileReplaceModal = ({ file, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <ModalPortal isOpen={true}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
       {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-2xl max-w-lg w-full animate-scale-in">
@@ -317,6 +319,7 @@ const FileReplaceModal = ({ file, onClose }) => {
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 
