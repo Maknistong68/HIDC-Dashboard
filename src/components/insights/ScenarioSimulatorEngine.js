@@ -39,7 +39,7 @@ export const CONTROL_HIERARCHY = {
     effectiveness: 0.50, // 50% average effectiveness
     factors: [
       'Training', 'Competency', 'Documentations', 'Permit', 'Supervision',
-      'Planning', 'Communication', 'Inspections', 'Interfaces', 'Housekeeping', 'BBS'
+      'Planning', 'Communication', 'Inspections', 'Interfaces', 'Housekeeping', 'Behavioural'
     ],
     description: 'Procedures, training, supervision, and work practices',
     interventions: [
@@ -366,7 +366,7 @@ const extractMeaningfulPhrases = (text, factorName) => {
       'emergency', 'evacuation', 'fire', 'first aid', 'muster point',
       'emergency exit', 'fire extinguisher', 'emergency response'
     ],
-    'BBS': [
+    'Behavioural': [
       'bbs', 'behavior', 'behaviour', 'unsafe act', 'at risk behavior',
       'shortcut', 'rushing', 'complacency', 'fatigue'
     ]

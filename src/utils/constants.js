@@ -122,7 +122,7 @@ export const PRIMARY_FACTORS = [
 
 // CONTRIBUTING_FACTORS - Systemic enablers (1.0x weight in risk prediction)
 export const CONTRIBUTING_FACTORS = [
-  'Training', 'Supervision', 'BBS', 'Leadership',
+  'Training', 'Supervision', 'Behavioural', 'Leadership',
   'Planning', 'Permit', 'Documentations', 'Inspections',
   'Communication', 'Procurement', 'Interfaces', 'Testing',
   'Emergency Preparedness'
@@ -3766,7 +3766,7 @@ export const HAZARD_RECOMMENDED_ACTIONS = {
     { factor: 'Training', action: 'Defensive Driving Training', priority: 'high', effect: 22 },
     { factor: 'Supervision', action: 'Journey Management', priority: 'medium', effect: 15 },
     { factor: 'Inspections', action: 'Vehicle Pre-Trip Inspections', priority: 'high', effect: 18 },
-    { factor: 'BBS', action: 'Driver Behavior Monitoring', priority: 'medium', effect: 14 },
+    { factor: 'Behavioural', action: 'Driver Behavior Monitoring', priority: 'medium', effect: 14 },
     { factor: 'Communication', action: 'Route Planning Brief', priority: 'medium', effect: 10 }
   ],
   'Working in Heat': [
@@ -3830,7 +3830,7 @@ export const HAZARD_RECOMMENDED_ACTIONS = {
     { factor: 'Training', action: '5S/6S Training', priority: 'medium', effect: 15 },
     { factor: 'Inspections', action: 'Daily Walkthrough Audits', priority: 'high', effect: 18 },
     { factor: 'Communication', action: 'Clean-As-You-Go Campaign', priority: 'medium', effect: 12 },
-    { factor: 'BBS', action: 'Housekeeping Recognition', priority: 'medium', effect: 10 }
+    { factor: 'Behavioural', action: 'Housekeeping Recognition', priority: 'medium', effect: 10 }
   ],
   'Site Security': [
     { factor: 'Barriers', action: 'Access Control Audit', priority: 'high', effect: 22 },

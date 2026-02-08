@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, startTransition } from 'react'
-import { SlidersHorizontal, AlertTriangle, Info, ChevronRight } from 'lucide-react'
+import { SlidersHorizontal, AlertTriangle, Info } from 'lucide-react'
 import { calculateEntityRiskRanking } from '../../utils/insightsCalculations'
 import EntityRiskList from './EntityRiskList'
 import EntityDetailPanel from './EntityDetailPanel'
@@ -110,24 +110,6 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
       else s.low++
     })
     return s
-  }, [rankings])
-
-  // Top attention entity
-  const topAttention = useMemo(() => {
-    if (!rankings.length) return null
-    const top = rankings[0]
-    if (top.score <= 30) return null
-    let topConcern = null
-    if (top.signals) {
-      const sorted = Object.entries(top.signals)
-        .filter(([, v]) => v && typeof v.score === 'number')
-        .sort((a, b) => b[1].score - a[1].score)
-      if (sorted.length > 0) {
-        const [key, val] = sorted[0]
-        topConcern = { label: SIGNAL_LABELS[key] || key, score: val.score }
-      }
-    }
-    return { name: top.name, score: top.score, topConcern }
   }, [rankings])
 
   // Filter incidents for selected entity
@@ -315,31 +297,6 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
             </p>
           </div>
         </div>
-      )}
-
-      {/* Top attention banner */}
-      {topAttention && (
-        <button
-          onClick={() => {
-            const match = rankings.find(r => r.name === topAttention.name)
-            if (match) handleEntitySelect(match)
-          }}
-          className="w-full flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-left hover:bg-red-100 transition-colors group"
-        >
-          <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-red-800">
-              Needs attention: {topAttention.name}
-              <span className="ml-2 text-red-600 font-bold">Score {topAttention.score}/100</span>
-            </p>
-            {topAttention.topConcern && (
-              <p className="text-xs text-red-600">
-                Top concern: {topAttention.topConcern.label} ({topAttention.topConcern.score}/100)
-              </p>
-            )}
-          </div>
-          <ChevronRight size={16} className="text-red-400 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-        </button>
       )}
 
       {/* Master-detail panels */}
