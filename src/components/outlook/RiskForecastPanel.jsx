@@ -105,11 +105,11 @@ const RiskForecastPanel = ({
   const topType = typeProbability?.types?.[0]
   const typeLabel = topType?.label || 'Near Miss'
 
-  // Build plain language sentence
-  const timeframe = probability >= 70 ? 'within 1-2 weeks'
-    : probability >= 50 ? 'within 2-4 weeks'
-    : probability >= 30 ? 'within the next month'
-    : 'unlikely in near term'
+  // Exceedance probability = per-week likelihood, not time-until-event
+  const timeframe = probability >= 70 ? 'in any given week'
+    : probability >= 50 ? 'in a typical week'
+    : probability >= 30 ? 'occasionally'
+    : 'rarely'
 
   return (
     <div className="bg-white rounded-lg border border-surface-200 p-5">

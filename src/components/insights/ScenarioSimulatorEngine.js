@@ -805,7 +805,7 @@ export const calculateThreeFixedScenarios = ({
 
   const noChange = {
     projected: noChangeProjected,
-    riskChange: Math.max(0, noChangeRiskChange), // Show as positive (increase)
+    riskChange: noChangeRiskChange, // Allow negative values (improvement when trend is declining)
     trend: topRiskHazard?.trend || 'stable',
     expectedType: 'Based on historical distribution',
     expectedSeverity: trendFactor > 1.1 ? 'Elevated' : 'Normal'
@@ -817,25 +817,31 @@ export const calculateThreeFixedScenarios = ({
 
   let minEffect = 0
   // PPE: 30% effectiveness × prevalence × 50% effort
-  const ppePrev = prevalence['PPE']?.percentage || 15
+  const ppePrev = prevalence['PPE']?.percentage ?? 0
   minEffect += ppePrev * 0.30 * 0.5
 
   // Training: 50% effectiveness × prevalence × 30% effort
-  const trainingPrev = prevalence['Training']?.percentage || 20
+  const trainingPrev = prevalence['Training']?.percentage ?? 0
   minEffect += trainingPrev * 0.50 * 0.3
 
   // Supervision: 50% effectiveness × prevalence × 30% effort
-  const supervisionPrev = prevalence['Supervision']?.percentage || 10
+  const supervisionPrev = prevalence['Supervision']?.percentage ?? 0
   minEffect += supervisionPrev * 0.50 * 0.3
 
   const minReduction = Math.round(Math.min(35, minEffect))
+
+  // Track which controls have real prevalence data
+  const minControlsApplied = []
+  if (ppePrev > 0) minControlsApplied.push('PPE compliance')
+  if (trainingPrev > 0) minControlsApplied.push('Training programs')
+  if (supervisionPrev > 0) minControlsApplied.push('Supervision level')
 
   const minControls = {
     projected: Math.round(basePrediction * (1 - minReduction / 100)),
     riskReduction: minReduction,
     sliders: minSliders,
     timeEstimate: '2-3 weeks to see effect',
-    controls: ['PPE compliance', 'Training programs', 'Supervision level']
+    controls: minControlsApplied.length > 0 ? minControlsApplied : ['No prevalence data']
   }
 
   // ── Scenario 3: Best Controls ──
@@ -844,21 +850,28 @@ export const calculateThreeFixedScenarios = ({
 
   let bestEffect = 0
   // Engineering controls: 75% effectiveness × prevalence × 75% effort
-  const barriersPrev = prevalence['Barriers']?.percentage || 10
+  const barriersPrev = prevalence['Barriers']?.percentage ?? 0
   bestEffect += barriersPrev * 0.75 * 0.75
 
-  const guardsPrev = prevalence['Machine Guarding']?.percentage || 5
+  const guardsPrev = prevalence['Machine Guarding']?.percentage ?? 0
   bestEffect += guardsPrev * 0.75 * 0.5
 
   // Additional admin controls
   bestEffect += trainingPrev * 0.50 * 0.5
-  const inspectionsPrev = prevalence['Inspections']?.percentage || 8
+  const inspectionsPrev = prevalence['Inspections']?.percentage ?? 0
   bestEffect += inspectionsPrev * 0.50 * 0.5
 
-  // Action closure effect (closing 10 actions = ~10% reduction)
-  bestEffect += 10
+  // Action closure effect — conservative estimate (empirical basis limited)
+  bestEffect += 3
 
   const bestReduction = Math.round(Math.min(55, bestEffect))
+
+  const bestControlsApplied = []
+  if (barriersPrev > 0) bestControlsApplied.push('Engineering barriers')
+  if (guardsPrev > 0) bestControlsApplied.push('Machine guards')
+  if (trainingPrev > 0) bestControlsApplied.push('Training')
+  if (inspectionsPrev > 0) bestControlsApplied.push('Inspections')
+  bestControlsApplied.push('Close 10 actions')
 
   const bestControls = {
     projected: Math.round(basePrediction * (1 - bestReduction / 100)),
@@ -867,7 +880,7 @@ export const calculateThreeFixedScenarios = ({
     actionsToClose: 10,
     timeEstimate: '4-6 weeks to see effect',
     costBenefit: 'High ROI - addresses root cause',
-    controls: ['Engineering barriers', 'Machine guards', 'Close 10 actions']
+    controls: bestControlsApplied
   }
 
   return { noChange, minControls, bestControls }

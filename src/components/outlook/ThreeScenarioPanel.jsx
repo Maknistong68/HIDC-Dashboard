@@ -19,7 +19,8 @@ const ScenarioCard = ({
   timeEstimate,
   costBenefit,
   trendDirection,
-  isNoChange
+  isNoChange,
+  controls
 }) => {
   const variantConfig = {
     danger: {
@@ -65,12 +66,27 @@ const ScenarioCard = ({
         {riskReduction !== undefined && (
           <div className="mb-3">
             <div className="flex items-baseline gap-1">
-              <span className={`text-2xl font-bold ${isNoChange ? 'text-red-600' : config.iconColor}`}>
-                {isNoChange ? '+' : ''}{riskReduction}%
-              </span>
-              <span className="text-xs text-surface-500">
-                {isNoChange ? 'risk increase' : 'risk reduction'}
-              </span>
+              {isNoChange ? (
+                <>
+                  <span className={`text-2xl font-bold ${
+                    riskReduction > 0 ? 'text-red-600' : riskReduction < 0 ? 'text-green-600' : 'text-surface-500'
+                  }`}>
+                    {riskReduction > 0 ? '+' : ''}{riskReduction}%
+                  </span>
+                  <span className="text-xs text-surface-500">
+                    {riskReduction > 0 ? 'risk increase' : riskReduction < 0 ? 'risk decrease' : 'no change'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={`text-2xl font-bold ${config.iconColor}`}>
+                    {riskReduction}%
+                  </span>
+                  <span className="text-xs text-surface-500">
+                    risk reduction
+                  </span>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -128,7 +144,7 @@ const ScenarioCard = ({
               Controls Applied
             </div>
             <div className="text-xs text-surface-600">
-              {variant === 'warning' ? 'PPE, Training, Supervision' : 'Engineering + 10 actions closed'}
+              {controls?.length > 0 ? controls.join(', ') : (variant === 'warning' ? 'PPE, Training, Supervision' : 'Engineering + 10 actions closed')}
             </div>
           </div>
         )}
@@ -222,8 +238,8 @@ const ThreeScenarioPanel = ({
         <ScenarioCard
           title="If Nothing Changes"
           subtitle="Current trajectory"
-          variant="danger"
-          riskReduction={noChange?.riskChange || 15}
+          variant={(noChange?.riskChange ?? 0) > 0 ? 'danger' : (noChange?.riskChange ?? 0) < 0 ? 'success' : 'warning'}
+          riskReduction={noChange?.riskChange ?? 0}
           isNoChange={true}
           trendDirection={trendDirection}
           expectedType={expectedType}
@@ -235,8 +251,9 @@ const ThreeScenarioPanel = ({
           title="Minimum Controls"
           subtitle="PPE + basic training"
           variant="warning"
-          riskReduction={minControls?.riskReduction || 25}
+          riskReduction={minControls?.riskReduction ?? 0}
           timeEstimate={minControls?.timeEstimate || '2-3 weeks to see effect'}
+          controls={minControls?.controls}
         />
 
         {/* Scenario 3: Best Controls */}
@@ -244,9 +261,10 @@ const ThreeScenarioPanel = ({
           title="Best Controls"
           subtitle="Engineering + actions"
           variant="success"
-          riskReduction={bestControls?.riskReduction || 45}
+          riskReduction={bestControls?.riskReduction ?? 0}
           timeEstimate={bestControls?.timeEstimate || '4-6 weeks to see effect'}
           costBenefit={bestControls?.costBenefit || 'High ROI - addresses root cause'}
+          controls={bestControls?.controls}
         />
       </div>
 

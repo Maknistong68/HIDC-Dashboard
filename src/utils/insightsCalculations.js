@@ -1881,6 +1881,22 @@ export const detectIQRAnomalies = (incidents) => {
   const q3 = interpolateQuartile(values, 0.75)
   const iqr = q3 - q1
 
+  // IQR=0 means tied values; bounds collapse so all non-modal values get flagged
+  if (iqr === 0) {
+    return {
+      anomalies: [],
+      stats: {
+        q1: Math.round(q1 * 10) / 10,
+        median: Math.round(median * 10) / 10,
+        q3: Math.round(q3 * 10) / 10,
+        iqr: 0,
+        lowerBound: Math.round(q1),
+        upperBound: Math.round(q3),
+        sampleSize: values.length
+      }
+    }
+  }
+
   const lowerBound = q1 - 1.5 * iqr
   const upperBound = q3 + 1.5 * iqr
   const extremeLower = q1 - 3 * iqr
@@ -1891,10 +1907,12 @@ export const detectIQRAnomalies = (incidents) => {
   Object.entries(dailyCounts).forEach(([date, count]) => {
     if (count < lowerBound || count > upperBound) {
       const isExtreme = count > extremeUpper || count < extremeLower
+      const deviation = median > 0 ? Math.round(((count - median) / median) * 100) : 0
       anomalies.push({
         date,
         dateLabel: format(parseISO(date), 'MMM dd, yyyy'),
         value: count,
+        deviation,
         type: count > upperBound ? 'spike' : 'drop',
         severity: isExtreme ? 'high' : 'medium',
         bounds: { lower: Math.round(lowerBound), upper: Math.round(upperBound) }

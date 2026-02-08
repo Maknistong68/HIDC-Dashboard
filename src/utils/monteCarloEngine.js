@@ -50,9 +50,11 @@ export function computeHazardStats(negativeIncidents, hazardNames) {
       stats[name] = { mean: 0, stddev: 0, totalDays }
       continue
     }
-    const mean = values.reduce((a, b) => a + b, 0) / values.length
-    const variance = values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length
-    stats[name] = { mean, stddev: Math.sqrt(variance), totalDays }
+    const n = values.length
+    const mean = values.reduce((a, b) => a + b, 0) / n
+    // Bessel's correction: divide by (n-1) for sample variance
+    const variance = n > 1 ? values.reduce((a, v) => a + (v - mean) ** 2, 0) / (n - 1) : 0
+    stats[name] = { mean, stddev: Math.sqrt(variance), totalDays, reliable: totalDays >= 14 }
   }
 
   return stats
@@ -106,8 +108,9 @@ export function runMonteCarloSimulation({
             // Simulate weekly count = sum of 7 daily samples
             let weeklyCount = 0
             for (let d = 0; d < 7; d++) {
-              const sample = mean + stddev * boxMuller()
-              weeklyCount += Math.max(0, Math.round(sample))
+              // Normal distribution can go negative for low-mean hazards; clamp first
+            const sample = Math.max(0, mean + stddev * boxMuller())
+              weeklyCount += Math.round(sample)
             }
             weeklyTotals[name][w].push(weeklyCount)
           }
@@ -125,10 +128,12 @@ export function runMonteCarloSimulation({
         const thresholds = {}
 
         for (const name of hazardNames) {
-          const { mean } = hazardStats[name] || { mean: 0 }
-          // Threshold = historical weekly mean * 1.5 (elevated risk)
+          const { mean, stddev } = hazardStats[name] || { mean: 0, stddev: 0 }
+          // Adaptive threshold: use coefficient of variation to pick multiplier
           const weeklyMean = mean * 7
-          const threshold = Math.max(1, Math.round(weeklyMean * 1.5))
+          const cv = mean > 0 ? stddev / mean : 0
+          const multiplier = cv > 1 ? 2.0 : cv > 0.5 ? 1.5 : 1.3
+          const threshold = Math.max(1, Math.round(weeklyMean * multiplier))
           thresholds[name] = threshold
 
           const row = []
@@ -220,8 +225,8 @@ export function getHazardExceedanceSummary(result, hazardStats, sortedHazards) {
       : 'Relatively stable'
 
     const sentence = weeksExceeded > 0
-      ? `${weeksExceeded} of the last 6 weeks exceeded normal levels. ${trendWord}.`
-      : `Within normal levels for recent weeks. ${trendWord}.`
+      ? `${weeksExceeded} of the next 6 simulated weeks may exceed normal levels. ${trendWord}.`
+      : `Within normal levels for all simulated weeks. ${trendWord}.`
 
     // 6-week probability strip data
     const weeklyProbs = row.map(w => Math.round((w.probability || 0) * 100))
@@ -238,7 +243,10 @@ export function getHazardExceedanceSummary(result, hazardStats, sortedHazards) {
       weeklyProbs,
       weeksExceeded,
       avgProjected: Math.round(week1.avg || 0),
-      p95: week1.p95 || 0
+      p95: week1.p95 || 0,
+      isTrendAdjusted: mult !== 1.0,
+      trendMultiplier: mult,
+      lowConfidence: !(stats.reliable ?? true)
     }
   }).filter(Boolean)
 
