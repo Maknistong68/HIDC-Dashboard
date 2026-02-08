@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react'
 import { Upload, FileSpreadsheet, FolderOpen, Check, AlertTriangle, Play, CheckCircle2, X } from 'lucide-react'
 import { useData } from '../../context/DataContext'
+import Logo from '../ui/Logo'
+import Footer from '../layout/Footer'
 import {
   parseExcelFile,
   validateNEOMFormat,
@@ -14,8 +16,9 @@ import { checkFileHashExists } from '../../utils/storage'
 /**
  * OnboardingScreen - Full-page import UI for first-time users
  *
- * Displayed when no data exists in the app. No header, no navigation - just
- * a clean, centered import interface that guides users to import their first file.
+ * Displayed when no data exists in the app. Uses the same header/footer styling
+ * as the main Layout, but without navigation tabs. Provides a clean, centered
+ * import interface that guides users to import their first file.
  *
  * Once import completes and data exists, this screen is replaced by the normal Layout.
  */
@@ -299,10 +302,19 @@ const OnboardingScreen = () => {
   const totalExistingDataSkipped = results.reduce((sum, r) => sum + (r.existingDataSkippedCount || 0), 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-50 via-white to-primary-50/30 flex items-center justify-center p-4">
-      <div className="max-w-xl w-full">
-        {/* Import card */}
-        <div className="bg-white rounded-xl shadow-lg border border-surface-200 overflow-hidden">
+    <div className="min-h-screen bg-surface-50 flex flex-col">
+      {/* Frosted Glass Header - matches Layout.jsx */}
+      <header className="fixed top-0 left-0 right-0 h-14 glass border-b border-surface-200/50 shadow-soft z-50 safe-area-top">
+        <div className="h-full px-4 flex items-center max-w-[1800px] mx-auto">
+          <Logo size="default" />
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 pt-14 flex items-center justify-center p-4">
+        <div className="max-w-xl w-full">
+          {/* Import card */}
+          <div className="bg-white rounded-xl shadow-lg border border-surface-200 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 p-4 border-b border-surface-200 bg-surface-50/50">
             <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -567,7 +579,12 @@ const OnboardingScreen = () => {
             )}
           </div>
         </div>
-      </div>
+
+        </div>
+      </main>
+
+      {/* Footer - matches Layout.jsx */}
+      <Footer />
     </div>
   )
 }
