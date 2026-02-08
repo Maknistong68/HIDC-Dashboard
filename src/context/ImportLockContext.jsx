@@ -141,7 +141,7 @@ export const ImportLockProvider = ({ children }) => {
 
           {/* Modal container - centered with proper constraints */}
           <div
-            className="relative z-20 w-full max-w-2xl max-h-[90vh] overflow-hidden"
+            className="relative z-20 max-w-2xl max-h-[90vh] overflow-hidden"
             style={{ pointerEvents: 'auto' }}
           >
             {modalComponent}
