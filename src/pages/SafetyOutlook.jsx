@@ -3,11 +3,11 @@ import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, ExecutivePredictiveView } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, RiskHubView } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import { getHazardTrendingByPeriod, getHazardDailyData, getIncidentPredictionSummary } from '../utils/insightsCalculations'
+import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
 import { SUB_REGION_OPTIONS } from '../utils/constants'
 
@@ -270,27 +270,6 @@ const SafetyOutlook = () => {
   const negativeIncidents = useMemo(() => {
     return filteredIncidents.filter(i => !isPositiveType(i.type))
   }, [filteredIncidents])
-
-  // Incident prediction summary (for Tab 2)
-  const incidentPrediction = useMemo(() => {
-    return getIncidentPredictionSummary(negativeIncidents)
-  }, [negativeIncidents])
-
-  // General daily trend data for all hazards (for Tab 2 forecast chart)
-  const allHazardTrendData = useMemo(() => {
-    if (!negativeIncidents.length) return { days: [], avgPerDay: 0, hasData: false }
-    const dateMap = new Map()
-    negativeIncidents.forEach(i => {
-      if (!i.date) return
-      const d = typeof i.date === 'string' ? i.date.split('T')[0] : i.date
-      dateMap.set(d, (dateMap.get(d) || 0) + 1)
-    })
-    const days = Array.from(dateMap.entries())
-      .map(([date, count]) => ({ date, label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-    const avgPerDay = days.length > 0 ? negativeIncidents.length / days.length : 0
-    return { days, avgPerDay, totalCount: negativeIncidents.length, hasData: true }
-  }, [negativeIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
   const detectedIncidentsCount = useMemo(() => {
@@ -629,14 +608,13 @@ const SafetyOutlook = () => {
       {activeMainTab === 'predictive' && (
         <TabErrorBoundary label="Predictive & Simulation">
         <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
-          <ExecutivePredictiveView
+          <RiskHubView
             filteredIncidents={filteredIncidents}
             negativeIncidents={negativeIncidents}
             sortedHazards={sortedHazards}
             factorData={factorData}
-            incidentPrediction={incidentPrediction}
-            hazardTrendData={allHazardTrendData}
             period={period}
+            siteClassifications={siteClassifications}
           />
         </div>
         </TabErrorBoundary>
