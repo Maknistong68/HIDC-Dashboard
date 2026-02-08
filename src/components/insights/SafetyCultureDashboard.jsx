@@ -27,7 +27,7 @@ const SafetyCultureDashboard = ({ cultureData }) => {
   const { score, level, components, recommendations } = cultureData
 
   const getStatusIcon = (status) => {
-    if (status === 'good' || status === 'critical' && false) return CheckCircle
+    if (status === 'good') return CheckCircle
     if (status === 'warning') return AlertCircle
     return AlertTriangle
   }

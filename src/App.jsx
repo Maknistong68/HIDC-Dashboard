@@ -7,6 +7,8 @@ import ServiceWorkerUpdatePrompt from './components/common/ServiceWorkerUpdatePr
 import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 import { ImportLockProvider } from './context/ImportLockContext'
+import { useData } from './context/DataContext'
+import { OnboardingScreen, InitialLoadingScreen } from './components/onboarding'
 
 // Direct imports for main tabs (instant switching)
 import Dashboard from './pages/Dashboard'
@@ -63,8 +65,20 @@ const MainTabs = () => {
 // Inner component that uses the import lock for route blocking
 function AppContent() {
   const { pathname } = useLocation()
+  const { incidents, isLoading } = useData()
   const isMainTab = ['/', '/data-control', '/outlook'].includes(pathname)
 
+  // Show minimal loading screen while data loads from IndexedDB
+  if (isLoading) {
+    return <InitialLoadingScreen />
+  }
+
+  // No data? Show only the onboarding/import screen (no Layout chrome)
+  if (incidents.length === 0) {
+    return <OnboardingScreen />
+  }
+
+  // Normal app with Layout
   return (
     <>
       <Layout>
