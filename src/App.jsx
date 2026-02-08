@@ -65,7 +65,7 @@ const MainTabs = () => {
 // Inner component that uses the import lock for route blocking
 function AppContent() {
   const { pathname } = useLocation()
-  const { incidents, isLoading } = useData()
+  const { incidents, isLoading, isProcessingBatch } = useData()
   const isMainTab = ['/', '/data-control', '/outlook'].includes(pathname)
 
   // Show minimal loading screen while data loads from IndexedDB
@@ -74,7 +74,8 @@ function AppContent() {
   }
 
   // No data? Show only the onboarding/import screen (no Layout chrome)
-  if (incidents.length === 0) {
+  // Keep OnboardingScreen mounted while batch is processing to prevent unmounting mid-import
+  if (incidents.length === 0 || isProcessingBatch) {
     return <OnboardingScreen />
   }
 

@@ -46,6 +46,7 @@ export const DataProvider = ({ children }) => {
   const [categorizationProgress, setCategorizationProgress] = useState(null)
   const [siteClassifications, setSiteClassifications] = useState({})
   const [isImporting, setIsImporting] = useState(false)
+  const [isProcessingBatch, setIsProcessingBatch] = useState(false)
 
   // Global loading overlay
   const { startLoading, updateProgress, updateMessage, finishLoading } = useLoading()
@@ -550,6 +551,8 @@ export const DataProvider = ({ children }) => {
     isLoading,
     isImporting,
     setIsImporting,
+    isProcessingBatch,
+    setIsProcessingBatch,
     importWarnings,
     lastImportStats,
     showOpenClosed,
@@ -602,6 +605,7 @@ export const DataProvider = ({ children }) => {
     files,
     isLoading,
     isImporting,
+    isProcessingBatch,
     importWarnings,
     lastImportStats,
     showOpenClosed,

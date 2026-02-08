@@ -24,7 +24,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * - Data reload happens only after user clicks Done
  */
 const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -95,6 +95,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     isProcessingRef.current = true
     setIsProcessing(true)
     setIsImporting(true)
+    setIsProcessingBatch(true)
 
     // Notify parent that processing has started (for import lock)
     onProcessingStart?.()
@@ -276,7 +277,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
 
     // DON'T reload files here - wait for user to click Done
     // This prevents IndexedDB transaction conflicts
-  }, [addIncidentsWithFile, setIsImporting, onProcessingStart])
+  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, onProcessingStart])
 
   // Handle Done button - reload data THEN unlock
   const handleDone = useCallback(async () => {
@@ -293,10 +294,11 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     } finally {
       setIsReloading(false)
       setIsImporting(false)
+      setIsProcessingBatch(false)
       onProcessingEnd?.()
       onClose()
     }
-  }, [reloadFiles, setIsImporting, onProcessingEnd, onClose])
+  }, [reloadFiles, setIsImporting, setIsProcessingBatch, onProcessingEnd, onClose])
 
   // Handle cancel (only before processing starts)
   const handleCancel = useCallback(() => {

@@ -23,7 +23,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * Once import completes and data exists, this screen is replaced by the normal Layout.
  */
 const OnboardingScreen = () => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -120,6 +120,7 @@ const OnboardingScreen = () => {
     isProcessingRef.current = true
     setIsProcessing(true)
     setIsImporting(true)
+    setIsProcessingBatch(true)
 
     const newResults = []
     const batchImportedIds = new Set()
@@ -275,9 +276,10 @@ const OnboardingScreen = () => {
     setResults(newResults)
     isProcessingRef.current = false
     setIsProcessing(false)
+    // NOTE: Don't clear isProcessingBatch here - wait for handleDone
     setIsComplete(true)
     setCurrentFileIndex(-1)
-  }, [addIncidentsWithFile, setIsImporting])
+  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch])
 
   // Handle Done button - reload data to trigger transition to main app
   const handleDone = useCallback(async () => {
@@ -291,8 +293,9 @@ const OnboardingScreen = () => {
     } finally {
       setIsReloading(false)
       setIsImporting(false)
+      setIsProcessingBatch(false)  // Only clear after Done - allows transition to Dashboard
     }
-  }, [reloadFiles, setIsImporting])
+  }, [reloadFiles, setIsImporting, setIsProcessingBatch])
 
   // Summary stats
   const successCount = results.filter(r => r.success).length
