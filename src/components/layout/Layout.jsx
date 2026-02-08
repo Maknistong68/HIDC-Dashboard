@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Target, ShieldCheck, Eye, EyeOff, Trash2, FolderOpen, Gauge } from 'lucide-react'
 import { useData } from '../../context/DataContext'
+import { useImportLock } from '../../context/ImportLockContext'
 import { Logo } from '../ui'
 import ConfirmDialog from '../common/ConfirmDialog'
 import Footer from './Footer'
@@ -11,11 +12,20 @@ import useIsMobile from '../../hooks/useIsMobile'
 const Layout = ({ children }) => {
   const location = useLocation()
   const { showOpenClosed, setShowOpenClosed, incidents, clearData, isImporting } = useData()
+  const { isLocked: isImportLocked } = useImportLock()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const isMobile = useIsMobile(768) // Use md breakpoint for nav switch
 
-  // Guard navigation while importing
+  // Combined import check - either DataContext importing or global lock
+  const isBlocked = isImporting || isImportLocked
+
+  // Guard navigation while importing - completely blocks when locked
   const guardNavClick = useCallback((e) => {
+    if (isImportLocked) {
+      // Hard block - no confirmation, just prevent
+      e.preventDefault()
+      return
+    }
     if (isImporting) {
       const confirmed = window.confirm(
         'A file import is in progress. Navigating away may interrupt it. Continue?'
@@ -24,7 +34,7 @@ const Layout = ({ children }) => {
         e.preventDefault()
       }
     }
-  }, [isImporting])
+  }, [isImporting, isImportLocked])
 
   // Main navigation tabs (3 tabs together)
   const navItems = [
@@ -70,12 +80,18 @@ const Layout = ({ children }) => {
                       className={`
                         flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                         transition-all duration-200 ease-out
+                        ${isImportLocked
+                          ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                          : ''
+                        }
                         ${isActive
                           ? 'bg-primary-100/80 text-primary-700 shadow-sm'
                           : 'text-surface-600 hover:bg-white/60 hover:text-surface-800 hover:shadow-sm'
                         }
                       `}
                       aria-current={isActive ? 'page' : undefined}
+                      aria-disabled={isImportLocked}
+                      tabIndex={isImportLocked ? -1 : undefined}
                     >
                       <Icon size={18} aria-hidden="true" />
                       <span>{label}</span>
@@ -98,12 +114,18 @@ const Layout = ({ children }) => {
                   className={`
                     flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium
                     transition-all duration-200 ease-out
+                    ${isImportLocked
+                      ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                      : ''
+                    }
                     ${location.pathname === '/files'
                       ? 'bg-primary-100/80 text-primary-700 shadow-sm'
                       : 'bg-white/60 text-surface-600 hover:bg-white/80 hover:text-surface-800 hover:shadow-sm'
                     }
                   `}
                   aria-label="Open File Manager"
+                  aria-disabled={isImportLocked}
+                  tabIndex={isImportLocked ? -1 : undefined}
                 >
                   <FolderOpen size={16} aria-hidden="true" />
                   <span className="hidden lg:inline">Files</span>

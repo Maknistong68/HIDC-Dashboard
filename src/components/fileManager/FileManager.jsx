@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { format, differenceInDays } from 'date-fns'
 import {
   FileSpreadsheet,
@@ -18,6 +18,7 @@ import {
   MapPin
 } from 'lucide-react'
 import { useData } from '../../context/DataContext'
+import { useImportLock } from '../../context/ImportLockContext'
 import { Card } from '../ui'
 import FileDeleteConfirm from './FileDeleteConfirm'
 import FileReplaceModal from './FileReplaceModal'
@@ -37,13 +38,29 @@ import SiteClassificationPanel from './SiteClassificationPanel'
  */
 const FileManager = () => {
   const { files, incidents, deleteFile, isLoading } = useData()
+  const { lockImport, unlockImport } = useImportLock()
 
   const [activeTab, setActiveTab] = useState('files')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'importedAt', direction: 'desc' })
   const [deleteModalFile, setDeleteModalFile] = useState(null)
   const [replaceModalFile, setReplaceModalFile] = useState(null)
-  const [showBatchImport, setShowBatchImport] = useState(false)
+
+  // Open batch import modal via global lock system
+  const handleOpenBatchImport = useCallback(() => {
+    const modal = (
+      <BatchImportModal
+        onClose={unlockImport}
+        onProcessingStart={() => {
+          // Lock is already active, but we could add additional tracking here
+        }}
+        onProcessingEnd={() => {
+          // Unlock will be called by onClose
+        }}
+      />
+    )
+    lockImport(modal)
+  }, [lockImport, unlockImport])
 
   // Calculate file record counts from incidents
   const fileRecordCounts = useMemo(() => {
@@ -170,29 +187,12 @@ const FileManager = () => {
     { id: 'sites', label: 'Sites', icon: MapPin }
   ]
 
-  // Render modal independently so it stays mounted during data operations
-  const batchImportModal = showBatchImport && (
-    <BatchImportModal onClose={() => setShowBatchImport(false)} />
-  )
-
-  // Show loading state but keep modal mounted if it's open
-  if (isLoading && !showBatchImport) {
+  // Show loading state
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
       </div>
-    )
-  }
-
-  // If loading but modal is open, show both the loading spinner and the modal
-  if (isLoading && showBatchImport) {
-    return (
-      <>
-        {batchImportModal}
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
-        </div>
-      </>
     )
   }
 
@@ -205,7 +205,7 @@ const FileManager = () => {
           <p className="text-surface-500 mt-1">Manage imported observation files</p>
         </div>
         <button
-          onClick={() => setShowBatchImport(true)}
+          onClick={handleOpenBatchImport}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg font-medium"
         >
           <Upload size={18} />
@@ -342,7 +342,7 @@ const FileManager = () => {
               </p>
               {files.length === 0 && (
                 <button
-                  onClick={() => setShowBatchImport(true)}
+                  onClick={handleOpenBatchImport}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg font-medium"
                 >
                   <Upload size={18} />
@@ -502,9 +502,6 @@ const FileManager = () => {
           onClose={() => setReplaceModalFile(null)}
         />
       )}
-
-      {/* Batch Import Modal - rendered outside loading guard */}
-      {batchImportModal}
     </div>
   )
 }
