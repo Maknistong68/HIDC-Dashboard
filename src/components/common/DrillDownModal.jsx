@@ -30,7 +30,8 @@ const DrillDownModal = ({
   source = 'Unknown',  // Source page: 'Hazards Identification', 'Safety Outlook', etc.
   // New props for insights tab
   showInsights = false,  // Whether to show the Insights/Records tab bar
-  insightsData = null    // { hazardName, hazardIncidents, allIncidents }
+  insightsData = null,   // { hazardName, hazardIncidents, allIncidents }
+  factorData = null      // Pre-calculated factors from aggregateContributingFactors
 }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [activeTab, setActiveTab] = useState(showInsights ? 'insights' : 'records')
@@ -246,6 +247,7 @@ const DrillDownModal = ({
                 hazardName={insightsData.hazardName}
                 hazardIncidents={insightsData.hazardIncidents || data}
                 allIncidents={insightsData.allIncidents || []}
+                factorData={factorData}
                 onViewRecords={handleViewRecords}
                 onFilterByRootCause={handleFilterByRootCause}
                 isMobile={isMobile}

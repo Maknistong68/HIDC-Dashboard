@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Eye, ChevronRight, Info } from 'lucide-react'
 import { getHazardInsights } from '../../utils/insightsCalculations'
-import { detectContributingFactors, getKeywordsForFactor } from '../../utils/rootCauseEngine'
+import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
 import HazardTemporalPatterns from './HazardTemporalPatterns'
@@ -29,31 +29,47 @@ const HazardInsightsTab = ({
   hazardName,
   hazardIncidents = [],
   allIncidents = [],
+  factorData = null,
   onViewRecords,
   onFilterByRootCause,
   isMobile = false
 }) => {
   const [showDataSource, setShowDataSource] = useState(false)
 
-  // Calculate insights for this hazard
+  // Calculate insights for this hazard, using pre-calculated factorData if available
   const insights = useMemo(() => {
-    return getHazardInsights(allIncidents, hazardName)
-  }, [allIncidents, hazardName])
+    return getHazardInsights(allIncidents, hazardName, factorData)
+  }, [allIncidents, hazardName, factorData])
 
   // Handle root cause bar click - filter observations and callback
   const handleRootCauseClick = (factorName) => {
     if (!factorName || !onFilterByRootCause) return
 
-    // Filter observations that have this factor detected
-    const factorObservations = hazardIncidents.filter(incident => {
-      const factors = detectContributingFactors(incident.description, hazardName)
-      return factors.includes(factorName)
-    })
+    // If we have pre-calculated factorData, use it for consistent filtering
+    if (factorData?.byFactor) {
+      const factor = factorData.byFactor.find(f => f.name === factorName)
+      if (factor?.incidents) {
+        // Filter to only incidents in this hazard
+        const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
+        const factorObservations = factor.incidents.filter(inc =>
+          hazardIncidentIds.has(inc.id)
+        )
+        const keywords = getKeywordsForFactor(factorName)
+        onFilterByRootCause(factorObservations, factorName, keywords)
+        return
+      }
+    }
 
-    // Get keywords for highlighting
+    // Fallback: use rootCauses from insights (already calculated with factorData)
     const keywords = getKeywordsForFactor(factorName)
-
-    onFilterByRootCause(factorObservations, factorName, keywords)
+    // Filter hazardIncidents by matching against the factor in insights.rootCauses
+    const rootCause = insights.rootCauses?.find(rc => rc.name === factorName)
+    if (rootCause && rootCause.incidents) {
+      onFilterByRootCause(rootCause.incidents, factorName, keywords)
+    } else {
+      // Last resort: return all hazard incidents (not ideal but better than nothing)
+      onFilterByRootCause(hazardIncidents, factorName, keywords)
+    }
   }
 
   if (!insights.hasData) {

@@ -4790,7 +4790,7 @@ export const calculateDataSourceBreakdown = (incidents) => {
  * @param {string} hazardName - The hazard category to analyze
  * @returns {Object} Complete hazard insights package
  */
-export const getHazardInsights = (allIncidents, hazardName) => {
+export const getHazardInsights = (allIncidents, hazardName, factorData = null) => {
   if (!allIncidents?.length || !hazardName) {
     return {
       hasData: false,
@@ -4857,19 +4857,7 @@ export const getHazardInsights = (allIncidents, hazardName) => {
     trendPercentChange = hazardTrend.changePercent || 0
   }
 
-  // ── 3. Root Causes (Top 5) - Using text analysis from rootCauseEngine ──
-  // Analyze each incident's description to detect contributing factors
-  const factorCounts = {}
-  hazardIncidents.forEach(incident => {
-    if (!incident.description) return
-    const factors = detectContributingFactors(incident.description, hazardName)
-    factors.forEach(factor => {
-      factorCounts[factor] = (factorCounts[factor] || 0) + 1
-    })
-  })
-
-  // Sort by count and take top 5
-  const totalWithFactors = Object.values(factorCounts).reduce((a, b) => a + b, 0)
+  // ── 3. Root Causes (Top 5) - From pre-calculated factorData or text analysis ──
   const factorColors = {
     'Inspections': '#ef4444',
     'PPE': '#f97316',
@@ -4882,15 +4870,55 @@ export const getHazardInsights = (allIncidents, hazardName) => {
     'Environmental': '#14b8a6',
     'Fatigue': '#f59e0b'
   }
-  const topRootCauses = Object.entries(factorCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, count]) => ({
-      name,
-      count,
-      percentage: totalWithFactors > 0 ? Math.round((count / totalWithFactors) * 100) : 0,
-      color: factorColors[name] || '#6b7280'
-    }))
+
+  let topRootCauses = []
+
+  if (factorData?.byFactor) {
+    // Use pre-calculated factorData - filter to this hazard's incidents
+    const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
+
+    topRootCauses = factorData.byFactor
+      .filter(f => !f.isUnclassified && f.name !== 'Unclassified')
+      .map(factor => {
+        const matchingIncidents = (factor.incidents || []).filter(inc =>
+          hazardIncidentIds.has(inc.id)
+        )
+        return {
+          name: factor.name,
+          count: matchingIncidents.length,
+          incidents: matchingIncidents,
+          percentage: hazardIncidents.length > 0
+            ? Math.round((matchingIncidents.length / hazardIncidents.length) * 100)
+            : 0,
+          color: factorColors[factor.name] || '#6b7280'
+        }
+      })
+      .filter(f => f.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+  } else {
+    // Fallback: calculate locally using detectContributingFactors
+    const factorCounts = {}
+    hazardIncidents.forEach(incident => {
+      if (!incident.description) return
+      const factors = detectContributingFactors(incident.description, hazardName)
+      factors.forEach(factor => {
+        factorCounts[factor] = (factorCounts[factor] || 0) + 1
+      })
+    })
+
+    // Sort by count and take top 5
+    const totalWithFactors = Object.values(factorCounts).reduce((a, b) => a + b, 0)
+    topRootCauses = Object.entries(factorCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: totalWithFactors > 0 ? Math.round((count / totalWithFactors) * 100) : 0,
+        color: factorColors[name] || '#6b7280'
+      }))
+  }
 
   // ── 4. Action Status ──
   const actionCounts = {

@@ -202,14 +202,14 @@ const MatrixCell = ({ hazard, row, col, onClick, rank }) => {
       <SeverityDots incidents={hazard.incidents} />
 
       {/* Hazard Name - larger font */}
-      <span className={`text-xs sm:text-sm font-semibold ${colors.text} leading-snug line-clamp-2`}>
+      <span className={`text-sm sm:text-base font-semibold ${colors.text} leading-snug line-clamp-2`}>
         {hazard.name}
       </span>
 
-      {/* Count and Trend - inline */}
+      {/* Risk Score and Trend - inline */}
       <div className="flex items-center gap-1 mt-0.5">
-        <TrendIndicator trend={hazard.trendLevel} size={11} />
-        <span className={`text-sm sm:text-base font-bold ${colors.text}`}>{hazard.totalCount}</span>
+        <TrendIndicator trend={hazard.trendLevel} size={14} />
+        <span className={`text-lg sm:text-xl font-bold ${colors.text}`}>{hazard.riskScore || 0}</span>
       </div>
     </button>
   )

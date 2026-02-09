@@ -34,6 +34,7 @@ import {
   getIncidentsByMonth,
   getOpenActionsCount,
 } from '../utils/calculations'
+import { aggregateContributingFactors } from '../utils/rootCauseEngine'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
@@ -271,6 +272,11 @@ const Dashboard = () => {
       return true
     })
   }, [incidents, contractor, site, subRegion, siteClassifications])
+
+  // Calculate contributing factors for negative incidents (used for hazard insights drill-down)
+  const factorData = useMemo(() => {
+    return aggregateContributingFactors(heatmapIncidents, 'negative')
+  }, [heatmapIncidents])
 
   // Get filtered data based on drill-down selection
   const getFilteredBySelection = useMemo(() => {
@@ -1585,6 +1591,7 @@ const Dashboard = () => {
           hazardIncidents: getFilteredBySelection,
           allIncidents: filteredIncidents
         } : null}
+        factorData={drillDown.chart === 'hazards' && drillDown.level === 2 ? factorData : null}
       />
 
       {/* Heatmap Drill-Down Modal */}
@@ -1606,6 +1613,7 @@ const Dashboard = () => {
           hazardIncidents: heatmapDrillDownData,
           allIncidents: heatmapIncidents
         } : null}
+        factorData={heatmapDrillDown.hazard ? factorData : null}
       />
     </div>
   )
