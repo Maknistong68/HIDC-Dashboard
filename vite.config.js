@@ -38,6 +38,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      devOptions: { enabled: false },
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'HIDC Dashboard',

@@ -39,5 +39,6 @@ export { default as HazardRiskCards } from './HazardRiskCards'
 export { default as IncidentTypeOutlook } from './IncidentTypeOutlook'
 export { default as DataConfidenceFooter } from './DataConfidenceFooter'
 
-// Director Insights - Risk Hub View (Tab 2)
+// Director Insights - Tab 2 components
 export { default as RiskHubView } from './RiskHubView'
+export { default as HazardRiskMatrix } from './HazardRiskMatrix'

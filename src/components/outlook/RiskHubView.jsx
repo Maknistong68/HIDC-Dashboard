@@ -904,9 +904,15 @@ const RiskHubView = ({
   sortedHazards,
   factorData,
   period,
-  siteClassifications = {}
+  siteClassifications = {},
+  initialIndex = 0
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(initialIndex)
+
+  // Reset to initialIndex when prop changes (modal opens with different hazard)
+  useEffect(() => {
+    setCurrentIndex(initialIndex)
+  }, [initialIndex])
   const [isAnimating, setIsAnimating] = useState(false)
   // Default: expanded on desktop, collapsed on mobile
   const [whereExpanded, setWhereExpanded] = useState(() =>
