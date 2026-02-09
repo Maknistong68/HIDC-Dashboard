@@ -269,7 +269,8 @@ const UnifiedPredictivePanel = ({
   // Generate dynamic sliders based on top factors in the data
   const dynamicSliders = useMemo(() => {
     if (!factorData?.byFactor) return []
-    return generateDynamicSliders(factorData, selectedHazard, incidentStats.totalNegative)
+    const result = generateDynamicSliders(factorData, selectedHazard, incidentStats.totalNegative)
+    return result.sliders || result
   }, [factorData, selectedHazard, incidentStats.totalNegative])
 
   // Group sliders by HSE control category

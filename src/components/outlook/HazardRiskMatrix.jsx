@@ -474,7 +474,8 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
       })
       .filter(f => f.count > 0)
       .sort((a, b) => b.count - a.count)
-    return generateDynamicSliders({ byFactor: hazardFactors }, currentHazard?.name, hazardIncidents.length).slice(0, 5)
+    const result = generateDynamicSliders({ byFactor: hazardFactors }, currentHazard?.name, hazardIncidents.length)
+    return (result.sliders || result).slice(0, 5)
   }, [factorData, currentHazard, hazardIncidents])
 
   const projection = useMemo(() => {

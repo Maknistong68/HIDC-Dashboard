@@ -678,11 +678,12 @@ const SimulationDrawer = ({
       .sort((a, b) => b.count - a.count)
 
     // Generate sliders from these factors
-    return generateDynamicSliders(
+    const result = generateDynamicSliders(
       { byFactor: hazardFactors },
       currentHazard?.name,
       hazardIncidents.length
-    ).slice(0, 5)
+    )
+    return (result.sliders || result).slice(0, 5)
   }, [factorData, currentHazard, hazardIncidents])
 
   // Calculate projection with hazard-specific sensitivity

@@ -87,21 +87,34 @@ export const CONTROL_HIERARCHY = {
 /**
  * Calculate factor prevalence from actual incident data
  * Returns: { factorName: { count, percentage, incidents } }
+ *
+ * Fix 2.2: Added NaN/Infinity guards for edge cases
  */
 export const calculateFactorPrevalence = (factorData, totalNegativeIncidents) => {
-  if (!factorData?.byFactor || totalNegativeIncidents === 0) {
+  // Guard against invalid inputs
+  if (!factorData?.byFactor || !totalNegativeIncidents || totalNegativeIncidents <= 0) {
     return {}
   }
 
   const prevalence = {}
 
   for (const factor of factorData.byFactor) {
+    // Guard: ensure count is a valid number
+    const count = typeof factor.count === 'number' && Number.isFinite(factor.count)
+      ? factor.count
+      : 0
+
     // Calculate prevalence as percentage of negative incidents
-    const percentage = (factor.count / totalNegativeIncidents) * 100
+    const percentage = (count / totalNegativeIncidents) * 100
+
+    // Guard: ensure percentage is a valid finite number
+    if (!Number.isFinite(percentage)) {
+      continue // Skip this factor if calculation results in NaN/Infinity
+    }
 
     prevalence[factor.name] = {
       name: factor.name,
-      count: factor.count,
+      count,
       percentage: Math.round(percentage * 10) / 10,
       // This is the maximum potential reduction if this factor is fully addressed
       maxReduction: percentage
@@ -178,12 +191,13 @@ export const calculateInterventionEffect = (
 
 /**
  * Calculate total projected change from all interventions
+ * Applies diminishing returns when multiple interventions are combined
  */
 export const calculateProjectedChange = (sliders, prevalence) => {
-  let totalEffect = 0
   const effects = {}
+  const individualEffects = []
 
-  // Process each control category
+  // Process each control category and collect individual effects
   for (const [categoryKey, category] of Object.entries(CONTROL_HIERARCHY)) {
     for (const intervention of category.interventions) {
       const sliderValue = sliders[intervention.id]
@@ -204,7 +218,28 @@ export const calculateProjectedChange = (sliders, prevalence) => {
           effect,
           category: category.name
         }
-        totalEffect += effect
+        individualEffects.push(effect)
+      }
+    }
+  }
+
+  // Fix 1.5: Apply diminishing returns for multiple interventions
+  // Sort effects by absolute value (most impactful first)
+  // Each subsequent intervention has reduced effect on remaining risk
+  let totalEffect = 0
+  if (individualEffects.length > 0) {
+    // Sort by absolute value descending
+    const sortedEffects = [...individualEffects].sort((a, b) => Math.abs(b) - Math.abs(a))
+
+    // Apply diminishing returns: each effect applies to remaining risk
+    let remainingRisk = 100
+    for (const effect of sortedEffects) {
+      // Actual effect = effect * (remaining risk / 100)
+      const actualEffect = effect * (remainingRisk / 100)
+      totalEffect += actualEffect
+      // Reduce remaining risk for next intervention (only for risk-reducing effects)
+      if (effect < 0) {
+        remainingRisk = Math.max(0, remainingRisk + effect) // effect is negative
       }
     }
   }
@@ -215,7 +250,8 @@ export const calculateProjectedChange = (sliders, prevalence) => {
   return {
     totalEffect: Math.round(cappedEffect * 10) / 10,
     effects,
-    isCapped: Math.abs(totalEffect) > Math.abs(cappedEffect)
+    isCapped: Math.abs(totalEffect) > Math.abs(cappedEffect),
+    hasDisminishingReturns: individualEffects.length > 1
   }
 }
 
@@ -390,14 +426,51 @@ const extractMeaningfulPhrases = (text, factorName) => {
 /**
  * Generate sliders based on actual top factors in the data
  * Only shows sliders for factors that actually exist in incidents
+ *
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {string} hazardName - Specific hazard name or 'all' for global
+ * @param {number} totalNegativeIncidents - Total negative incidents (used when hazardName='all')
+ * @returns {Object} { sliders: Array, unmappedFactors: Array }
  */
 export const generateDynamicSliders = (factorData, hazardName, totalNegativeIncidents) => {
+  if (!factorData?.byFactor || totalNegativeIncidents === 0) {
+    return { sliders: [], unmappedFactors: [] }
+  }
+
   const topFactors = getTopFactorsForHazard(factorData, hazardName, 8)
-  const prevalence = calculateFactorPrevalence(factorData, totalNegativeIncidents)
+
+  // Calculate hazard-specific total if a specific hazard is selected
+  // This ensures prevalence percentages are hazard-relative, not global
+  let effectiveTotal = totalNegativeIncidents
+  if (hazardName && hazardName !== 'all') {
+    // Sum up the hazard-specific counts from top factors
+    const hazardIncidentIds = new Set()
+    for (const factor of factorData.byFactor) {
+      if (factor.incidents) {
+        factor.incidents.forEach(inc => {
+          if (inc.location === hazardName) {
+            hazardIncidentIds.add(inc.id)
+          }
+        })
+      }
+    }
+    // If we found hazard-specific incidents, use that count
+    if (hazardIncidentIds.size > 0) {
+      effectiveTotal = hazardIncidentIds.size
+    }
+  }
+
+  const prevalence = calculateFactorPrevalence(factorData, effectiveTotal)
 
   const sliders = []
+  const unmappedFactors = []
 
   for (const factor of topFactors) {
+    // Fix 1.3: Skip Unclassified factors - they can't be modeled
+    if (factor.isUnclassified || factor.name === 'Unclassified') {
+      continue
+    }
+
     // Find which control category this factor belongs to
     let category = null
     let intervention = null
@@ -411,7 +484,11 @@ export const generateDynamicSliders = (factorData, hazardName, totalNegativeInci
       }
     }
 
-    if (!category || !intervention) continue
+    // Fix 3.1: Track unmapped factors for transparency
+    if (!category || !intervention) {
+      unmappedFactors.push(factor.name)
+      continue
+    }
 
     const factorPrevalence = prevalence[factor.name]
     if (!factorPrevalence) continue
@@ -431,7 +508,7 @@ export const generateDynamicSliders = (factorData, hazardName, totalNegativeInci
     })
   }
 
-  return sliders
+  return { sliders, unmappedFactors }
 }
 
 // ============================================================================
@@ -441,20 +518,30 @@ export const generateDynamicSliders = (factorData, hazardName, totalNegativeInci
 /**
  * Calculate effect of closing open actions
  * Based on assumption that open actions represent unresolved risks
+ *
+ * Fix 2.3: Strengthened guards against division by zero and invalid inputs
  */
 export const calculateActionClosureEffect = (
   actionsToClose,
   totalOpenActions,
   totalNegativeIncidents
 ) => {
-  if (totalOpenActions === 0 || actionsToClose === 0) return 0
+  // Guard: Ensure both values are valid positive numbers
+  if (!totalOpenActions || totalOpenActions <= 0) return 0
+  if (!actionsToClose || actionsToClose <= 0) return 0
+  if (!Number.isFinite(totalOpenActions) || !Number.isFinite(actionsToClose)) return 0
+
+  // Guard: Clamp actionsToClose to not exceed totalOpenActions
+  const clampedActionsToClose = Math.min(actionsToClose, totalOpenActions)
 
   // Each open action represents ~2-3% of risk (based on typical action effectiveness)
   // Closing all actions would reduce incidents by ~15-20%
   const maxReduction = Math.min(20, totalOpenActions * 2.5)
-  const closureRatio = actionsToClose / totalOpenActions
+  const closureRatio = clampedActionsToClose / totalOpenActions
 
-  return -1 * Math.round(maxReduction * closureRatio * 10) / 10
+  // Guard: Final validation of result
+  const result = -1 * Math.round(maxReduction * closureRatio * 10) / 10
+  return Number.isFinite(result) ? result : 0
 }
 
 // ============================================================================

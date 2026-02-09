@@ -8,7 +8,7 @@ import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
-import { aggregateContributingFactors } from '../utils/rootCauseEngine'
+import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -266,9 +266,9 @@ const SafetyOutlook = () => {
   }, [selectedFactor?.name, factorData?.byFactor])
 
   // Negative incidents (for Tab 2 - Predictive & Simulation)
-  // Use exact match filter (not isPositiveType) to match Dashboard heatmap logic
+  // Use isPositiveType for consistent filtering across codebase
   const negativeIncidents = useMemo(() => {
-    return filteredIncidents.filter(i => i.type !== 'positive')
+    return filteredIncidents.filter(i => !isPositiveType(i.type))
   }, [filteredIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)

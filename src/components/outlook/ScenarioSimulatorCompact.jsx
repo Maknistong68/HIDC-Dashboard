@@ -9,7 +9,9 @@ import {
   Zap,
   BarChart3,
   CheckCircle2,
-  Minus
+  Minus,
+  AlertTriangle,
+  Info
 } from 'lucide-react'
 import TrendingHazardSelector from './TrendingHazardSelector'
 import QuickActionPanel from './QuickActionPanel'
@@ -143,8 +145,8 @@ const ScenarioSimulatorCompact = ({
   }, [externalPrevalence, factorData, incidentStats?.totalNegative])
 
   // Generate dynamic sliders based on selected hazards or all data
-  const dynamicSliders = useMemo(() => {
-    if (!factorData?.byFactor) return []
+  const { sliders: dynamicSliders, unmappedFactors } = useMemo(() => {
+    if (!factorData?.byFactor) return { sliders: [], unmappedFactors: [] }
     const hazardName = effectiveSelectedHazards.length === 1
       ? effectiveSelectedHazards[0]
       : 'all'
@@ -190,6 +192,27 @@ const ScenarioSimulatorCompact = ({
     const hasSliderChanges = Object.values(sliders).some(v => v !== 0)
     return hasSliderChanges || actionsToClose > 0 || effectiveSelectedHazards.length > 0
   }, [sliders, actionsToClose, effectiveSelectedHazards])
+
+  // Fix 2.5: Check for empty data state
+  const hasNoData = (incidentStats?.totalNegative || 0) === 0
+
+  // Fix 2.1: Check for insufficient data (< 10 incidents)
+  const hasInsufficientData = !hasNoData && (incidentStats?.totalNegative || 0) < 10
+
+  // Fix 3.2: Calculate confidence level based on sample size
+  const confidenceLevel = useMemo(() => {
+    const total = incidentStats?.totalNegative || 0
+    if (total >= 100) return { level: 'high', label: 'High confidence', color: 'text-green-600', bg: 'bg-green-100' }
+    if (total >= 30) return { level: 'medium', label: 'Medium confidence', color: 'text-amber-600', bg: 'bg-amber-100' }
+    return { level: 'low', label: 'Low confidence', color: 'text-red-500', bg: 'bg-red-100' }
+  }, [incidentStats?.totalNegative])
+
+  // Fix 2.4: Check for negative sliders (reducing controls = increasing risk)
+  const negativeSliderIds = useMemo(() => {
+    return Object.entries(sliders)
+      .filter(([_, value]) => value < 0)
+      .map(([id]) => id)
+  }, [sliders])
 
   // Handlers
   const handleToggleHazard = useCallback((hazardName) => {
@@ -378,8 +401,48 @@ const ScenarioSimulatorCompact = ({
 
           {/* Tab Content */}
           <div className="p-4 space-y-4">
+            {/* Fix 2.5: Empty Data State */}
+            {hasNoData && (
+              <div className="text-center py-6 px-4 bg-surface-50 rounded-lg border border-surface-200">
+                <Info size={24} className="mx-auto text-surface-400 mb-2" />
+                <p className="text-sm font-medium text-surface-600">No incidents in selected date range</p>
+                <p className="text-xs text-surface-400 mt-1">Adjust filters to run simulations.</p>
+              </div>
+            )}
+
+            {/* Fix 2.1: Insufficient Data Warning */}
+            {hasInsufficientData && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-amber-700">Limited data available</p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    Projections may be unreliable with fewer than 10 incidents ({incidentStats?.totalNegative || 0} available).
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Fix 3.2: Confidence Indicator */}
+            {!hasNoData && (
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${confidenceLevel.bg} ${confidenceLevel.color}`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    {confidenceLevel.label}
+                  </span>
+                  <span className="text-surface-400">({incidentStats?.totalNegative || 0} incidents)</span>
+                </div>
+                {unmappedFactors.length > 0 && (
+                  <span className="text-surface-400" title={`Unmapped: ${unmappedFactors.join(', ')}`}>
+                    {unmappedFactors.length} factor{unmappedFactors.length > 1 ? 's' : ''} not modelable
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Quick Actions Tab */}
-            {mode === 'quick' && (
+            {mode === 'quick' && !hasNoData && (
               <>
                 <QuickActionPanel
                   activeAction={activeQuickAction}
@@ -399,7 +462,7 @@ const ScenarioSimulatorCompact = ({
             )}
 
             {/* Custom Tab - Accordion Sliders */}
-            {mode === 'custom' && (
+            {mode === 'custom' && !hasNoData && (
               <>
                 {/* Open Actions Slider */}
                 {(incidentStats?.openActionsCount || 0) > 0 && (
@@ -449,7 +512,7 @@ const ScenarioSimulatorCompact = ({
             )}
 
             {/* Advanced Tab - All Sliders Expanded */}
-            {mode === 'advanced' && (
+            {mode === 'advanced' && !hasNoData && (
               <div className="space-y-4">
                 {/* Open Actions Slider */}
                 {(incidentStats?.openActionsCount || 0) > 0 && (
@@ -487,27 +550,38 @@ const ScenarioSimulatorCompact = ({
                           {Math.round(category.effectiveness * 100)}% eff.
                         </span>
                       </div>
-                      {categorySliders.map(slider => (
-                        <div key={slider.id} className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-surface-600">{slider.label}</span>
-                            <span className={`font-medium ${
-                              (sliders[slider.id] || 0) > 0 ? 'text-green-600' :
-                              (sliders[slider.id] || 0) < 0 ? 'text-red-500' : 'text-surface-500'
-                            }`}>
-                              {(sliders[slider.id] || 0) > 0 ? '+' : ''}{sliders[slider.id] || 0}%
-                            </span>
+                      {categorySliders.map(slider => {
+                        const sliderValue = sliders[slider.id] || 0
+                        const isNegative = sliderValue < 0
+                        return (
+                          <div key={slider.id} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-surface-600">{slider.label}</span>
+                              <span className={`font-medium ${
+                                sliderValue > 0 ? 'text-green-600' :
+                                sliderValue < 0 ? 'text-red-500' : 'text-surface-500'
+                              }`}>
+                                {sliderValue > 0 ? '+' : ''}{sliderValue}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={-50}
+                              max={100}
+                              value={sliderValue}
+                              onChange={(e) => handleSliderChange(slider.id, parseInt(e.target.value))}
+                              className={`unified-slider ${categoryKey} w-full`}
+                            />
+                            {/* Fix 2.4: Negative slider warning */}
+                            {isNegative && (
+                              <p className="text-[10px] text-red-500 flex items-center gap-1">
+                                <AlertTriangle size={10} />
+                                Reducing this control will increase incidents
+                              </p>
+                            )}
                           </div>
-                          <input
-                            type="range"
-                            min={-50}
-                            max={100}
-                            value={sliders[slider.id] || 0}
-                            onChange={(e) => handleSliderChange(slider.id, parseInt(e.target.value))}
-                            className={`unified-slider ${categoryKey} w-full`}
-                          />
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )
                 })}
