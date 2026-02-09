@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
-import { Shield, BarChart3, Activity, Info, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Shield, BarChart3, Activity, Info, CheckCircle2, TrendingUp, TrendingDown, Minus, AlertTriangle, HelpCircle } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
+import { isOpenAction } from '../../utils/incidentHelpers'
 import {
   ResponsiveContainer,
   BarChart,
@@ -22,21 +23,21 @@ const getTrendArrow = (detail) => {
     return { icon: <Minus size={12} className="text-surface-400" />, color: 'text-surface-500', text: 'Stable — no incidents in either period' }
   }
   if (prev === 0) {
-    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `New activity: ${cur} incident${cur !== 1 ? 's' : ''} this month (none last month)` }
+    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `New activity: ${cur} incident${cur !== 1 ? 's' : ''} in recent 60 days (none prior)` }
   }
   const pctChange = Math.round(((cur - prev) / prev) * 100)
   if (pctChange > 5) {
-    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `Incidents up ${pctChange}% this month (${cur} vs ${prev} last month)` }
+    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `Incidents up ${pctChange}% (${cur} vs ${prev} in prior period)` }
   }
   if (pctChange < -5) {
-    return { icon: <TrendingDown size={12} className="text-green-500" />, color: 'text-green-600', text: `Incidents dropped ${Math.abs(pctChange)}% this month (${cur} vs ${prev} last month)` }
+    return { icon: <TrendingDown size={12} className="text-green-500" />, color: 'text-green-600', text: `Incidents dropped ${Math.abs(pctChange)}% (${cur} vs ${prev} in prior period)` }
   }
-  return { icon: <Minus size={12} className="text-surface-400" />, color: 'text-surface-500', text: `Stable — similar volume both months (${cur} vs ${prev})` }
+  return { icon: <Minus size={12} className="text-surface-400" />, color: 'text-surface-500', text: `Stable — similar volume both periods (${cur} vs ${prev})` }
 }
 
 const SIGNAL_LABELS = {
   severityMix: 'Injury Severity',
-  trend: 'Trend (30d)',
+  trend: 'Trend (60d)',
   openActionRate: 'Open Actions',
   highRiskExposure: 'High-Risk Exposure',
   nearMissRate: 'Near-Miss Rate',
@@ -53,7 +54,7 @@ const SIGNAL_META = {
       : 'High severity — immediate attention needed'
   },
   trend: {
-    tooltip: 'HOW THIS IS CALCULATED: We compare the number of incidents in the most recent 30-day window against the previous 30-day window. If the current period has more incidents, the score goes up. A score of 0 means incidents dropped or stayed flat. A score above 60 means a significant spike — for example, 14 incidents this month vs 8 last month. This helps you spot deteriorating conditions early.',
+    tooltip: 'HOW THIS IS CALCULATED: We compare the number of incidents in the most recent 60-day window against the previous 60-day window. Using 60 days provides smoother trend detection that filters out short-term noise. A score of 0 means incidents dropped or stayed flat. A score above 60 means a significant increase. A "spike" indicator appears if the last 30 days are significantly higher than the 60-day average.',
     inverted: false,
     interpret: (s) => s <= 30 ? 'Declining or stable trend'
       : s <= 60 ? 'Slightly increasing activity'
@@ -75,12 +76,12 @@ const SIGNAL_META = {
       : 'High exposure to major hazards — verify risk controls'
   },
   nearMissRate: {
-    tooltip: 'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We count near-miss reports as a percentage of total incidents. If near-miss reporting is low, it means workers may not be reporting hazards before they cause harm. A high bar here means "barely any near-miss reports" which is a warning sign. Good teams report many near-misses relative to actual incidents — it shows hazard awareness.',
+    tooltip: 'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure what percentage of site-months meet the target of 2 near-misses per site per month. If few site-months meet this target, workers may not be reporting hazards before they cause harm. A high bar here means "most sites below target" which is a warning sign. Good teams consistently report 2+ near-misses per site per month — it shows hazard awareness.',
     inverted: true,
     invertedNote: 'Low reporting = higher risk',
-    interpret: (s) => s <= 30 ? 'Good near-miss reporting culture'
-      : s <= 60 ? 'Moderate reporting — could improve'
-      : 'Very low near-miss reporting — safety engagement concern'
+    interpret: (s) => s <= 30 ? 'Good near-miss reporting (80%+ site-months meet target)'
+      : s <= 60 ? 'Moderate reporting — some sites below 2/month target'
+      : 'Very low near-miss reporting — most sites below 2/month target'
   },
   positiveRate: {
     tooltip: 'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure the rate of positive safety observations (good catches, safe behaviors) relative to total observations. When positive observations are rare, it suggests workers aren\'t engaged in proactive safety. A high bar here means "very few positive observations" — the workforce may only report when things go wrong, not when things go right.',
@@ -95,11 +96,13 @@ const SIGNAL_META = {
 const INVERTED_EXPLANATIONS = {
   nearMissRate: {
     high: 'Almost no near-miss reports are being filed. This is a red flag — it usually means workers are not identifying hazards before they cause harm, or they don\'t feel comfortable reporting. Healthy teams report many near-misses for every actual incident.',
-    moderate: 'Near-miss reporting is below what we\'d expect. It may indicate that some hazards are going unnoticed or unreported. Consider running a near-miss awareness campaign or making reporting easier.'
+    moderate: 'Near-miss reporting is below what we\'d expect. It may indicate that some hazards are going unnoticed or unreported. Consider running a near-miss awareness campaign or making reporting easier.',
+    smallSample: 'Sample size too small for reliable culture assessment. With fewer than 20 incidents, low near-miss rates could reflect limited exposure rather than under-reporting. Collect more data before drawing conclusions.'
   },
   positiveRate: {
     high: 'Very few positive safety observations are being recorded. This suggests the safety culture may be reactive — people only report when something goes wrong, not when things go right. Encouraging positive observations helps reinforce safe behaviors.',
-    moderate: 'Positive observations are lower than ideal. Teams with strong safety cultures typically record more "good catches" and safe behavior observations. Consider recognizing and rewarding proactive safety reporting.'
+    moderate: 'Positive observations are lower than ideal. Teams with strong safety cultures typically record more "good catches" and safe behavior observations. Consider recognizing and rewarding proactive safety reporting.',
+    smallSample: 'Sample size too small for reliable culture assessment. With fewer than 20 incidents, low positive observation rates may not indicate a culture problem. Continue monitoring as more data becomes available.'
   }
 }
 
@@ -150,7 +153,7 @@ const EntitySummaryStats = React.memo(({ entity, incidents }) => {
       const t = (i.severity || i.type || '').toLowerCase()
       return t === 'lti' || t === 'mti'
     }).length
-    const openActions = incidents.filter(i => i.actionStatus === 'open' || i.actionStatus === 'in-progress').length
+    const openActions = incidents.filter(isOpenAction).length
     const nearMiss = incidents.filter(i => (i.severity || i.type || '').toLowerCase() === 'near-miss').length
     const nmPercent = total > 0 ? ((nearMiss / total) * 100).toFixed(1) : '0.0'
 
@@ -265,19 +268,42 @@ const SignalBars = React.memo(({ signals, isTransitioning, entityName }) => {
             </p>
             {key === 'trend' && sig.detail && (() => {
               const arrow = getTrendArrow(sig.detail)
-              if (!arrow) return null
               return (
-                <div className="mt-1 flex items-center gap-1.5">
-                  {arrow.icon}
-                  <span className={`text-2xs font-medium ${arrow.color}`}>{arrow.text}</span>
+                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                  {arrow && (
+                    <>
+                      {arrow.icon}
+                      <span className={`text-2xs font-medium ${arrow.color}`}>{arrow.text}</span>
+                    </>
+                  )}
+                  {sig.spikeDetected && (
+                    <span className="text-2xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <TrendingUp size={10} />
+                      Recent spike
+                    </span>
+                  )}
                 </div>
               )
             })()}
             {meta?.inverted && sig.score > 30 && INVERTED_EXPLANATIONS[key] && (
-              <div className="mt-1.5 flex items-start gap-1.5 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
-                <Info size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-2xs text-blue-800 leading-relaxed">
-                  {sig.score > 60 ? INVERTED_EXPLANATIONS[key].high : INVERTED_EXPLANATIONS[key].moderate}
+              <div className={`mt-1.5 flex items-start gap-1.5 rounded px-2 py-1.5 ${
+                sig.hasCultureContext === false
+                  ? 'bg-surface-50 border border-surface-200'
+                  : 'bg-blue-50 border border-blue-100'
+              }`}>
+                {sig.hasCultureContext === false ? (
+                  <HelpCircle size={12} className="text-surface-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <Info size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                )}
+                <p className={`text-2xs leading-relaxed ${
+                  sig.hasCultureContext === false ? 'text-surface-600' : 'text-blue-800'
+                }`}>
+                  {sig.hasCultureContext === false
+                    ? INVERTED_EXPLANATIONS[key].smallSample
+                    : sig.score > 60
+                      ? INVERTED_EXPLANATIONS[key].high
+                      : INVERTED_EXPLANATIONS[key].moderate}
                 </p>
               </div>
             )}
@@ -457,11 +483,27 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
       {/* Summary stats grid */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-surface-100">
         <EntitySummaryStats entity={entity} incidents={incidents} />
-        {entity.lowConfidence && (
-          <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1 ml-2 flex-shrink-0" title="Low sample size">
-            Low data
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+          {entity.meetsMinReportPolicy === false && (
+            <Tooltip
+              content={`Policy requires min. 2 reports/site/month. Violations: ${
+                entity.monthlyViolations?.slice(0, 5).map(v => `${v.site} (${v.month}: ${v.count})`).join(', ')
+              }${entity.monthlyViolations?.length > 5 ? ` +${entity.monthlyViolations.length - 5} more` : ''}`}
+              position="left"
+              delay={200}
+            >
+              <span className="text-2xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex items-center gap-1 cursor-help">
+                <AlertTriangle size={10} />
+                Low site coverage
+              </span>
+            </Tooltip>
+          )}
+          {entity.lowConfidence && (
+            <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1" title="Low sample size">
+              Low data
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Entity name header */}
@@ -525,7 +567,7 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
       </div>
 
       {/* Content area */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-4 overflow-y-auto min-h-0">
         {activeTab === 'signals' ? (
           <SignalBars signals={entity.signals} isTransitioning={isTransitioning} entityName={entity.name} />
         ) : (

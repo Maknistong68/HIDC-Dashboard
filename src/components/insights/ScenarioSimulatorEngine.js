@@ -424,6 +424,261 @@ const extractMeaningfulPhrases = (text, factorName) => {
 // ============================================================================
 
 /**
+ * Calculate temporal correlations for factors
+ * Cross-references factor incidents with day-of-week patterns to identify
+ * which factors correlate with high-risk days
+ *
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {Object} temporalPatterns - Day-of-week patterns from getDayOfWeekPatterns
+ * @param {string} hazardName - Specific hazard name or 'all'
+ * @returns {Object} Map of factor names to temporal boost multipliers
+ */
+export const calculateFactorTemporalCorrelations = (factorData, temporalPatterns, hazardName = 'all') => {
+  const correlations = {}
+
+  if (!factorData?.byFactor || !temporalPatterns?.patterns || !temporalPatterns.hasData) {
+    return correlations
+  }
+
+  // Find peak days (riskIndex > 115)
+  const peakDays = temporalPatterns.patterns
+    .filter(p => p.riskIndex > 115)
+    .map(p => p.dayIndex)
+
+  if (peakDays.length === 0) {
+    return correlations
+  }
+
+  // For each factor, calculate what % of its incidents occur on peak days
+  for (const factor of factorData.byFactor) {
+    if (!factor.incidents || factor.incidents.length === 0) continue
+    if (factor.isUnclassified || factor.name === 'Unclassified') continue
+
+    // Filter incidents by hazard if specified
+    const incidents = hazardName === 'all'
+      ? factor.incidents
+      : factor.incidents.filter(i => i.location === hazardName)
+
+    if (incidents.length < 3) continue // Need minimum sample size
+
+    // Count incidents on peak days
+    let peakDayCount = 0
+    for (const incident of incidents) {
+      if (!incident.date) continue
+      try {
+        const date = new Date(incident.date.substring(0, 10))
+        const dayIndex = date.getDay()
+        if (peakDays.includes(dayIndex)) {
+          peakDayCount++
+        }
+      } catch (e) { /* skip invalid dates */ }
+    }
+
+    // Calculate correlation ratio
+    // Expected ratio = peakDays.length / 7 (if random distribution)
+    const expectedRatio = peakDays.length / 7
+    const actualRatio = peakDayCount / incidents.length
+
+    // Boost factor if it occurs more often on peak days than expected
+    if (actualRatio > expectedRatio * 1.2) { // 20% above expected
+      correlations[factor.name] = {
+        boost: Math.min(1.5, actualRatio / expectedRatio), // Cap at 1.5x
+        peakDayPercentage: Math.round(actualRatio * 100),
+        peakDays: peakDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
+      }
+    }
+  }
+
+  return correlations
+}
+
+/**
+ * Generate contextually relevant sliders combining 3 sources:
+ * 1. Expert recommendations (50% weight) - from HAZARD_RECOMMENDED_ACTIONS
+ * 2. Data prevalence (30% weight) - factors actually detected in incidents
+ * 3. Temporal correlations (20% weight) - factors that peak on high-risk days
+ *
+ * @param {Object} factorData - Factor data from aggregateContributingFactors
+ * @param {string} hazardName - Specific hazard name or 'all'
+ * @param {number} totalNegativeIncidents - Total negative incidents
+ * @param {Object} temporalPatterns - Day-of-week patterns from getDayOfWeekPatterns
+ * @returns {Object} { sliders: Array, unmappedFactors: Array }
+ */
+export const generateContextualSliders = (factorData, hazardName, totalNegativeIncidents, temporalPatterns = null) => {
+  if (!factorData?.byFactor || totalNegativeIncidents === 0) {
+    return { sliders: [], unmappedFactors: [] }
+  }
+
+  // For 'all' hazards, fall back to data-only approach (no expert recommendations)
+  if (!hazardName || hazardName === 'all') {
+    return generateDynamicSliders(factorData, hazardName, totalNegativeIncidents)
+  }
+
+  // Calculate hazard-specific total
+  let effectiveTotal = totalNegativeIncidents
+  const hazardIncidentIds = new Set()
+  for (const factor of factorData.byFactor) {
+    if (factor.incidents) {
+      factor.incidents.forEach(inc => {
+        if (inc.location === hazardName) {
+          hazardIncidentIds.add(inc.id)
+        }
+      })
+    }
+  }
+  if (hazardIncidentIds.size > 0) {
+    effectiveTotal = hazardIncidentIds.size
+  }
+
+  const prevalence = calculateFactorPrevalence(factorData, effectiveTotal)
+
+  // Get expert recommendations for this hazard
+  const expertRecs = HAZARD_RECOMMENDED_ACTIONS[hazardName] || []
+
+  // Calculate temporal correlations
+  const temporalCorrelations = temporalPatterns
+    ? calculateFactorTemporalCorrelations(factorData, temporalPatterns, hazardName)
+    : {}
+
+  // Score all candidate factors
+  const scoredFactors = {}
+  const unmappedFactors = []
+
+  // Process expert recommendations (50% weight)
+  for (const rec of expertRecs) {
+    const factorName = rec.factor
+
+    // Find control category mapping
+    let category = null
+    let intervention = null
+    for (const [categoryKey, cat] of Object.entries(CONTROL_HIERARCHY)) {
+      const found = cat.interventions.find(i => i.factor === factorName)
+      if (found) {
+        category = { key: categoryKey, ...cat }
+        intervention = found
+        break
+      }
+    }
+
+    if (!category || !intervention) {
+      if (!unmappedFactors.includes(factorName)) {
+        unmappedFactors.push(factorName)
+      }
+      continue
+    }
+
+    const factorPrevalence = prevalence[factorName]?.percentage || 0
+    const temporal = temporalCorrelations[factorName]
+
+    // Calculate composite score
+    // Expert: priority weight × effect (normalized to 0-100)
+    const priorityWeight = rec.priority === 'high' ? 1.5 : 1.0
+    const expertScore = (rec.effect / 28) * 100 * priorityWeight // 28 is max effect in HAZARD_RECOMMENDED_ACTIONS
+
+    // Data: prevalence percentage (0-100)
+    const dataScore = factorPrevalence
+
+    // Temporal: boost if correlated with peak days
+    const temporalScore = temporal ? temporal.boost * 50 : 0 // Scale 0-75
+
+    // Composite score: 50% expert + 30% data + 20% temporal
+    const compositeScore = (expertScore * 0.5) + (dataScore * 0.3) + (temporalScore * 0.2)
+
+    scoredFactors[factorName] = {
+      id: intervention.id,
+      factor: factorName,
+      label: intervention.label,
+      category: category.name,
+      categoryKey: category.key,
+      effectiveness: category.effectiveness,
+      prevalence: factorPrevalence,
+      maxReduction: factorPrevalence * category.effectiveness,
+      count: prevalence[factorName]?.count || 0,
+      sublabel: factorPrevalence > 0
+        ? `${factorPrevalence.toFixed(1)}% of incidents involve ${factorName.toLowerCase()}`
+        : `Recommended for ${hazardName}`,
+      score: compositeScore,
+      // Relevance sources for badges
+      sources: {
+        expert: true,
+        expertPriority: rec.priority,
+        expertAction: rec.action,
+        data: factorPrevalence > 0,
+        temporal: !!temporal,
+        temporalBoost: temporal?.boost || 0,
+        peakDays: temporal?.peakDays || []
+      }
+    }
+  }
+
+  // Process data-detected factors not in expert recommendations (30% weight only)
+  const topFactors = getTopFactorsForHazard(factorData, hazardName, 10)
+  for (const factor of topFactors) {
+    if (factor.isUnclassified || factor.name === 'Unclassified') continue
+    if (scoredFactors[factor.name]) continue // Already processed from expert recs
+
+    // Find control category mapping
+    let category = null
+    let intervention = null
+    for (const [categoryKey, cat] of Object.entries(CONTROL_HIERARCHY)) {
+      const found = cat.interventions.find(i => i.factor === factor.name)
+      if (found) {
+        category = { key: categoryKey, ...cat }
+        intervention = found
+        break
+      }
+    }
+
+    if (!category || !intervention) {
+      if (!unmappedFactors.includes(factor.name)) {
+        unmappedFactors.push(factor.name)
+      }
+      continue
+    }
+
+    const factorPrevalence = prevalence[factor.name]?.percentage || 0
+    if (factorPrevalence === 0) continue
+
+    const temporal = temporalCorrelations[factor.name]
+
+    // Data-only score (no expert contribution)
+    const dataScore = factorPrevalence
+    const temporalScore = temporal ? temporal.boost * 50 : 0
+
+    // 30% data + 20% temporal (expert is 0)
+    const compositeScore = (dataScore * 0.3) + (temporalScore * 0.2)
+
+    scoredFactors[factor.name] = {
+      id: intervention.id,
+      factor: factor.name,
+      label: intervention.label,
+      category: category.name,
+      categoryKey: category.key,
+      effectiveness: category.effectiveness,
+      prevalence: factorPrevalence,
+      maxReduction: factorPrevalence * category.effectiveness,
+      count: factor.count,
+      sublabel: `${factorPrevalence.toFixed(1)}% of incidents involve ${factor.name.toLowerCase()}`,
+      score: compositeScore,
+      sources: {
+        expert: false,
+        data: true,
+        temporal: !!temporal,
+        temporalBoost: temporal?.boost || 0,
+        peakDays: temporal?.peakDays || []
+      }
+    }
+  }
+
+  // Sort by score and return top 8
+  const sliders = Object.values(scoredFactors)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+
+  return { sliders, unmappedFactors }
+}
+
+/**
  * Generate sliders based on actual top factors in the data
  * Only shows sliders for factors that actually exist in incidents
  *
@@ -1098,6 +1353,8 @@ export default {
   calculateInterventionEffect,
   calculateProjectedChange,
   generateDynamicSliders,
+  generateContextualSliders,
+  calculateFactorTemporalCorrelations,
   calculateActionClosureEffect,
   calculateFullProjection,
   calculateMultiHazardProjection,

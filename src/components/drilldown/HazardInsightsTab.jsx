@@ -30,6 +30,7 @@ const HazardInsightsTab = ({
   hazardIncidents = [],
   allIncidents = [],
   factorData = null,
+  filterMonth = null,  // For month-specific insights (e.g., from heatmap)
   onViewRecords,
   onFilterByRootCause,
   isMobile = false
@@ -38,8 +39,8 @@ const HazardInsightsTab = ({
 
   // Calculate insights for this hazard, using pre-calculated factorData if available
   const insights = useMemo(() => {
-    return getHazardInsights(allIncidents, hazardName, factorData)
-  }, [allIncidents, hazardName, factorData])
+    return getHazardInsights(allIncidents, hazardName, factorData, { filterMonth })
+  }, [allIncidents, hazardName, factorData, filterMonth])
 
   // Handle root cause bar click - filter observations and callback
   const handleRootCauseClick = (factorName) => {

@@ -1,3 +1,5 @@
+import { filterByHazard, normalizeText } from './incidentHelpers'
+
 /**
  * Root Cause Engine - Phrase-Based Detection System
  *
@@ -5759,7 +5761,7 @@ export const getObservationTypeStats = (incidents, hazardName) => {
     return { total: 0, positive: { count: 0, percentage: '0' }, negative: { count: 0, percentage: '0' } }
   }
 
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
   const total = hazardIncidents.length
 
   if (total === 0) {
@@ -5795,7 +5797,7 @@ export const aggregateRootCausesForHazard = (incidents, hazardName, observationT
     return { total: 0, breakdown: [] }
   }
 
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
   const typeList = observationType === 'positive' ? POSITIVE_TYPES : NEGATIVE_TYPES
   const filteredIncidents = hazardIncidents.filter(i => typeList.includes(i.type))
 
@@ -6292,7 +6294,7 @@ export const detectFactorsForHazard = (incidents, hazardName, options = {}) => {
   const { useValidation = true } = options
 
   // Filter incidents for this hazard
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
 
   if (hazardIncidents.length === 0) {
     return []
@@ -6339,7 +6341,7 @@ export const getIncidentsForHazardFactor = (incidents, hazardName, factorName, o
   const { useValidation = true } = options
 
   // Filter incidents for this hazard
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
 
   // Filter to incidents with this factor (with validation)
   return hazardIncidents.filter(incident => {
@@ -6363,7 +6365,7 @@ export const analyzeFactorDetection = (incidents, hazardName, factorName) => {
     return { included: [], excluded: [], stats: {} }
   }
 
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
   const included = []
   const excluded = []
 

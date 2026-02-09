@@ -1184,12 +1184,12 @@ const DataQuality = () => {
             />
             <KPIMiniCard
               title="Near Miss"
-              value={nearMiss.rate}
+              value={nearMiss.complianceRate}
               unit="%"
               status={nearMiss.status}
               icon={AlertTriangle}
-              subtitle={`Target: 5%`}
-              info="HOW THIS IS CALCULATED: We first exclude positive observations (since they're not hazards), then count how many of the remaining observations are classified as 'Near Miss'. The percentage shows near misses out of all negative observations. WHY NEAR MISSES MATTER: Near misses are incidents that ALMOST happened. If people are reporting these, it means they're catching hazards BEFORE they cause harm. Industry best practice suggests 5-10% near-miss rate indicates good awareness. A very low rate might mean people only report after something bad happens, missing prevention opportunities."
+              subtitle={`${nearMiss.sitesMetTarget}/${nearMiss.totalSiteMonths} site-months`}
+              info="HOW THIS IS CALCULATED: Each site should report at least 2 near-misses per month. We count how many site-months meet this target. The percentage shows compliance rate — what % of site-months have 2+ near-miss reports. GREEN (80%+): Most sites meeting target. YELLOW (50-79%): Some sites below target. RED (below 50%): Most sites not meeting target — investigate reporting barriers. WHY THIS MATTERS: Near misses are incidents that ALMOST happened. Consistent reporting (2/site/month) shows hazard awareness. Low reporting may indicate people only report after something bad happens."
             />
             <KPIMiniCard
               title="Reporters"

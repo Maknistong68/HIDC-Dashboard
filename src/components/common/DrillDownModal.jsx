@@ -8,7 +8,7 @@ import { parseSentence } from '../../utils/sentenceParser'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
-import { HazardInsightsTab } from '../drilldown'
+import { HazardInsightsTab, CategoryInsightsTab, ObserverInsightsTab } from '../drilldown'
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -30,8 +30,9 @@ const DrillDownModal = ({
   source = 'Unknown',  // Source page: 'Hazards Identification', 'Safety Outlook', etc.
   // New props for insights tab
   showInsights = false,  // Whether to show the Insights/Records tab bar
-  insightsData = null,   // { hazardName, hazardIncidents, allIncidents }
-  factorData = null      // Pre-calculated factors from aggregateContributingFactors
+  insightsMode = 'hazard', // 'hazard' | 'category' | 'observer' - which insights component to use
+  insightsData = null,   // Data shape depends on insightsMode
+  factorData = null      // Pre-calculated factors from aggregateContributingFactors (hazard mode only)
 }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [activeTab, setActiveTab] = useState(showInsights ? 'insights' : 'records')
@@ -61,6 +62,14 @@ const DrillDownModal = ({
   const handleViewRecords = useCallback(() => {
     setFilteredRecords(null)
     setFilterTitle('')
+    setFilterKeywords([])
+    setActiveTab('records')
+  }, [])
+
+  // Handle filter by hazard (for category/observer insights)
+  const handleFilterByHazard = useCallback((records, hazardName) => {
+    setFilteredRecords(records)
+    setFilterTitle(`${hazardName} Observations`)
     setFilterKeywords([])
     setActiveTab('records')
   }, [])
@@ -242,14 +251,38 @@ const DrillDownModal = ({
               />
             )}
 
-            {type === 'records' && showInsights && activeTab === 'insights' && insightsData && (
+            {type === 'records' && showInsights && activeTab === 'insights' && insightsData && insightsMode === 'hazard' && (
               <HazardInsightsTab
                 hazardName={insightsData.hazardName}
                 hazardIncidents={insightsData.hazardIncidents || data}
                 allIncidents={insightsData.allIncidents || []}
                 factorData={factorData}
+                filterMonth={insightsData.filterMonth}
                 onViewRecords={handleViewRecords}
                 onFilterByRootCause={handleFilterByRootCause}
+                isMobile={isMobile}
+              />
+            )}
+
+            {type === 'records' && showInsights && activeTab === 'insights' && insightsData && insightsMode === 'category' && (
+              <CategoryInsightsTab
+                categoryType={insightsData.categoryType}
+                categoryIncidents={insightsData.categoryIncidents || data}
+                allIncidents={insightsData.allIncidents || []}
+                onViewRecords={handleViewRecords}
+                onFilterByHazard={handleFilterByHazard}
+                onFilterByRootCause={handleFilterByRootCause}
+                isMobile={isMobile}
+              />
+            )}
+
+            {type === 'records' && showInsights && activeTab === 'insights' && insightsData && insightsMode === 'observer' && (
+              <ObserverInsightsTab
+                observerName={insightsData.observerName}
+                observerIncidents={insightsData.observerIncidents || data}
+                allIncidents={insightsData.allIncidents || []}
+                onViewRecords={handleViewRecords}
+                onFilterByHazard={handleFilterByHazard}
                 isMobile={isMobile}
               />
             )}

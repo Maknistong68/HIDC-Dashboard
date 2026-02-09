@@ -200,7 +200,7 @@ HazardBarChart.displayName = 'HazardBarChart'
  */
 const FactorDetailPanelInner = ({ factor, totalIncidents = 0, analyzedIncidents = 0, allFactors = [], trendData, timePeriod, onOpenDrillDown }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [activeTab, setActiveTab] = useState('trend') // 'trend' or 'hazards'
+  const [activeTab, setActiveTab] = useState('hazards') // 'trend' or 'hazards'
   const prevFactorRef = useRef(null)
 
   // Calculate detection stats

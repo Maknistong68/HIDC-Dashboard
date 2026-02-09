@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext'
 import { useDate } from '../../context/DateContext'
 import { downloadJSON, exportAllData } from '../../utils/storage'
 import { format } from 'date-fns'
+import { isOpenAction } from '../../utils/incidentHelpers'
 
 const pageTitles = {
   '/': 'Dashboard',
@@ -24,9 +25,7 @@ const Header = () => {
   const title = pageTitles[location.pathname] || 'HSE Dashboard'
 
   // Calculate alerts using centralized date functions
-  const openActions = incidents.filter(
-    (i) => i.actionStatus === 'open' || i.actionStatus === 'in-progress'
-  ).length
+  const openActions = incidents.filter(isOpenAction).length
 
   const expiringCompliance = compliance.filter((c) => isExpiringSoon(c.expiryDate, 30)).length
   const expiredCompliance = compliance.filter((c) => isExpired(c.expiryDate)).length

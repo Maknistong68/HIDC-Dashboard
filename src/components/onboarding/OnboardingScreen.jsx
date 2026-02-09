@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react'
-import { Upload, FileSpreadsheet, FolderOpen, Check, AlertTriangle, Play, CheckCircle2, X } from 'lucide-react'
+import { Upload, FileSpreadsheet, FolderOpen, Check, AlertTriangle, Play, CheckCircle2, X, MapPin } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import Logo from '../ui/Logo'
 import Footer from '../layout/Footer'
@@ -23,7 +23,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * Once import completes and data exists, this screen is replaced by the normal Layout.
  */
 const OnboardingScreen = () => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -35,6 +35,9 @@ const OnboardingScreen = () => {
     step: '',
     progress: 0,
   })
+  const [unassignedSites, setUnassignedSites] = useState([])
+  const [assignedRegion, setAssignedRegion] = useState(null)
+  const [isAssigning, setIsAssigning] = useState(false)
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -250,7 +253,8 @@ const OnboardingScreen = () => {
           skippedCount,
           withinBatchSkippedCount,
           existingDataSkippedCount,
-          warnings
+          warnings,
+          newRecords: duplicateResults.newRecords
         })
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -273,13 +277,27 @@ const OnboardingScreen = () => {
       }
     }
 
+    // Collect unique sites from all successfully imported records
+    const importedSites = new Set()
+    newResults.forEach(r => {
+      if (r.success && r.newRecords) {
+        r.newRecords.forEach(rec => {
+          if (rec.site) importedSites.add(rec.site)
+        })
+      }
+    })
+
+    // Find sites without subregion assignment
+    const unassigned = [...importedSites].filter(site => !siteClassifications[site])
+    setUnassignedSites(unassigned)
+
     setResults(newResults)
     isProcessingRef.current = false
     setIsProcessing(false)
     // NOTE: Don't clear isProcessingBatch here - wait for handleDone
     setIsComplete(true)
     setCurrentFileIndex(-1)
-  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch])
+  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, siteClassifications])
 
   // Handle Done button - reload data to trigger transition to main app
   const handleDone = useCallback(async () => {
@@ -296,6 +314,22 @@ const OnboardingScreen = () => {
       setIsProcessingBatch(false)  // Only clear after Done - allows transition to Dashboard
     }
   }, [reloadFiles, setIsImporting, setIsProcessingBatch])
+
+  // Handle subregion assignment for imported sites
+  const handleAssignSubregion = useCallback(async (subRegion) => {
+    setIsAssigning(true)
+    try {
+      const assignments = unassignedSites.map(name => ({ name, subRegion }))
+      await updateSiteClassificationsBatch(assignments)
+      setAssignedRegion(subRegion)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[Onboarding] Error assigning subregion:', error)
+      }
+    } finally {
+      setIsAssigning(false)
+    }
+  }, [unassignedSites, updateSiteClassificationsBatch])
 
   // Summary stats
   const successCount = results.filter(r => r.success).length
@@ -564,9 +598,55 @@ const OnboardingScreen = () => {
                   )}
                 </div>
 
+                {/* Subregion assignment - only show if unassigned sites exist */}
+                {unassignedSites.length > 0 && (
+                  <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200 text-left">
+                    {assignedRegion ? (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <Check size={18} />
+                        <span>Assigned {unassignedSites.length} site{unassignedSites.length !== 1 ? 's' : ''} to Sub Region {assignedRegion.slice(-1)}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin size={18} className="text-amber-600" />
+                          <span className="font-medium text-amber-800">
+                            Assign {unassignedSites.length} new site{unassignedSites.length !== 1 ? 's' : ''} to subregion:
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <button
+                              key={n}
+                              onClick={() => handleAssignSubregion(`SUB REGION ${n}`)}
+                              disabled={isAssigning}
+                              className="w-10 h-10 rounded-lg bg-white border-2 border-amber-300
+                                         hover:border-amber-500 hover:bg-amber-100 font-bold text-amber-700
+                                         disabled:opacity-50 transition-colors"
+                            >
+                              {n}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setUnassignedSites([])}
+                            disabled={isAssigning}
+                            className="px-3 py-2 text-surface-600 hover:text-surface-800 disabled:opacity-50"
+                          >
+                            Skip
+                          </button>
+                        </div>
+                        <p className="text-xs text-amber-600 mt-2">
+                          {unassignedSites.slice(0, 3).join(', ')}
+                          {unassignedSites.length > 3 && ` +${unassignedSites.length - 3} more`}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={handleDone}
-                  disabled={isReloading}
+                  disabled={isReloading || isAssigning}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
                 >
                   {isReloading ? (

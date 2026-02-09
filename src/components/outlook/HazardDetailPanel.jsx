@@ -204,7 +204,7 @@ FactorBarChart.displayName = 'FactorBarChart'
  */
 const HazardDetailPanelInner = ({ hazard, incidents, timePeriod, trendData, onOpenDrillDown }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [activeTab, setActiveTab] = useState('trend') // 'trend' or 'factors'
+  const [activeTab, setActiveTab] = useState('factors') // 'trend' or 'factors'
   const prevHazardRef = useRef(null)
 
   // Calculate contributing factors for this hazard

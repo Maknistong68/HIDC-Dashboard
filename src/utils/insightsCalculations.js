@@ -5,9 +5,17 @@
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from './constants'
+import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
 import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType, detectContributingFactors } from './rootCauseEngine'
+import {
+  getSortedDates,
+  getIncidentDateRange,
+  filterByHazard,
+  isOpenAction,
+  buildDailyCounts,
+  calculateLinearRegression
+} from './incidentHelpers'
 
 // Re-export the new keyword-based root cause detection as extractDeviationsForHazard
 // for backward compatibility with existing components
@@ -259,9 +267,7 @@ export const getOverdueActionAlerts = (incidents, daysThreshold = 30) => {
   const today = new Date()
 
   // Filter to open observations
-  const openObservations = incidents.filter(i =>
-    i.actionStatus === 'open' || i.actionStatus === 'in-progress'
-  )
+  const openObservations = incidents.filter(isOpenAction)
 
   // Calculate age for each
   const withAge = openObservations.map(obs => {
@@ -373,7 +379,7 @@ export const getRootCauseByHazard = (incidents) => {
 
   // Build matrix
   const matrix = hazards.map(hazard => {
-    const hazardIncidents = incidents.filter(i => i.location === hazard)
+    const hazardIncidents = filterByHazard(incidents, hazard)
     const total = hazardIncidents.length
 
     const row = { hazard, total }
@@ -401,7 +407,7 @@ export const getRootCauseTrends = (incidents, months = 12) => {
   if (incidents.length === 0) return { trends: [], rootCauses: [], hasData: false }
 
   // Get date range from actual data
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return { trends: [], rootCauses: [], hasData: false }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -467,47 +473,80 @@ export const getRootCauseTrends = (incidents, months = 12) => {
 export const getNearMissAnalysis = (incidents) => {
   const metrics = getNearMissMetrics(incidents)
   const rate = parseFloat(metrics.rate)
+  const complianceRate = parseFloat(metrics.complianceRate)
   const benchmarkConfig = PREDICTION_CONFIG.NEAR_MISS_BENCHMARK
   const benchmarkValue = benchmarkConfig.value * 100 // Convert decimal to percentage
+  const complianceGuide = benchmarkConfig.complianceGuide
   const interpretGuide = benchmarkConfig.interpretationGuide
 
+  // PRIMARY: Use count-based compliance for status and message
   let status = 'good'
-  let message = 'Near-miss reporting exceeds industry benchmark'
-  let interpretation = null
+  let message = complianceGuide.fullCompliance.message
+  let interpretation = 'fullCompliance'
+
+  if (complianceRate >= complianceGuide.fullCompliance.threshold) {
+    status = 'good'
+    message = complianceGuide.fullCompliance.message
+    interpretation = 'fullCompliance'
+  } else if (complianceRate >= complianceGuide.highCompliance.threshold) {
+    status = 'good'
+    message = complianceGuide.highCompliance.message
+    interpretation = 'highCompliance'
+  } else if (complianceRate >= complianceGuide.moderateCompliance.threshold) {
+    status = 'warning'
+    message = complianceGuide.moderateCompliance.message
+    interpretation = 'moderateCompliance'
+  } else {
+    status = 'critical'
+    message = complianceGuide.lowCompliance.message
+    interpretation = 'lowCompliance'
+  }
+
+  // LEGACY: Also compute percentage-based interpretation for backward compat
+  let legacyStatus = 'good'
+  let legacyMessage = 'Near-miss reporting exceeds industry benchmark'
+  let legacyInterpretation = null
 
   if (rate < interpretGuide.underreporting.threshold * 100) {
-    status = 'critical'
-    message = interpretGuide.underreporting.message
-    interpretation = 'underreporting'
+    legacyStatus = 'critical'
+    legacyMessage = interpretGuide.underreporting.message
+    legacyInterpretation = 'underreporting'
   } else if (rate < interpretGuide.belowBenchmark.threshold * 100) {
-    status = 'warning'
-    message = interpretGuide.belowBenchmark.message
-    interpretation = 'belowBenchmark'
+    legacyStatus = 'warning'
+    legacyMessage = interpretGuide.belowBenchmark.message
+    legacyInterpretation = 'belowBenchmark'
   } else if (rate <= interpretGuide.healthy.threshold * 100) {
-    status = 'good'
-    message = interpretGuide.healthy.message
-    interpretation = 'healthy'
+    legacyStatus = 'good'
+    legacyMessage = interpretGuide.healthy.message
+    legacyInterpretation = 'healthy'
   } else {
-    // High rate - may need review
-    status = 'warning'
-    message = interpretGuide.reviewNeeded.message
-    interpretation = 'reviewNeeded'
+    legacyStatus = 'warning'
+    legacyMessage = interpretGuide.reviewNeeded.message
+    legacyInterpretation = 'reviewNeeded'
   }
 
   return {
     ...metrics,
+    // LEGACY percentage-based fields
     benchmark: benchmarkValue,
     rateValue: rate,
     gaugePercent: Math.min((rate / benchmarkValue) * 100, 150), // Cap at 150% for gauge display
-    status,
-    message,
-    interpretation,
     gap: Math.max(0, benchmarkValue - rate).toFixed(1),
     isAboveBenchmark: rate >= benchmarkValue,
-    // Include industry ranges for context
     industryRanges: benchmarkConfig.industryRanges,
-    // Source citation for transparency
-    source: benchmarkConfig.source
+    source: benchmarkConfig.source,
+    legacyStatus,
+    legacyMessage,
+    legacyInterpretation,
+
+    // NEW count-based compliance (primary)
+    status, // Uses compliance-based status
+    message, // Uses compliance-based message
+    interpretation,
+    complianceGaugePercent: complianceRate, // 0-100 scale
+    isCompliant: complianceRate >= 80,
+    targetPerSitePerMonth: benchmarkConfig.countBased.targetPerSitePerMonth,
+    complianceSource: benchmarkConfig.countBased.source
   }
 }
 
@@ -559,7 +598,7 @@ export const getTrendDirection = (dataPoints, field = 'value', periods = 3) => {
  */
 export const getCompositeTrends = (incidents) => {
   // Get monthly data for trending
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) {
     return { quality: null, incidents: null, coverage: null }
   }
@@ -615,7 +654,7 @@ export const getCompositeTrends = (incidents) => {
  * Get hazards with trend direction
  */
 export const getHazardTrending = (incidents) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return []
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -980,7 +1019,7 @@ export const PREDICTION_CONFIG = {
    * @configurable true - Should be adjusted per industry
    */
   NEAR_MISS_BENCHMARK: {
-    value: 0.05,
+    value: 0.05, // Legacy percentage (keep for backward compat)
     source: 'Heinrich (1931), Bird & Germain (1985)',
     configurable: true,
     industryRanges: {
@@ -990,11 +1029,28 @@ export const PREDICTION_CONFIG = {
       oilGas: { min: 0.10, max: 0.15 },
       general: { min: 0.05, max: 0.10 }
     },
+
+    // NEW count-based target (primary metric)
+    countBased: {
+      targetPerSitePerMonth: 2,
+      source: 'Organizational Standard (2026)',
+      configurable: true
+    },
+
+    // Legacy percentage-based interpretation
     interpretationGuide: {
       underreporting: { threshold: 0.02, message: 'Possible underreporting - investigate barriers' },
       belowBenchmark: { threshold: 0.05, message: 'Below benchmark - encourage reporting' },
       healthy: { threshold: 0.10, message: 'Healthy reporting culture' },
       reviewNeeded: { threshold: 0.15, message: 'Review data quality - may indicate issues' }
+    },
+
+    // NEW count-based interpretation
+    complianceGuide: {
+      fullCompliance: { threshold: 100, message: 'All sites meeting 2/month target' },
+      highCompliance: { threshold: 80, message: '80%+ sites meeting 2/site/month target' },
+      moderateCompliance: { threshold: 50, message: 'Some sites below target - needs improvement' },
+      lowCompliance: { threshold: 0, message: 'Most sites below target - investigate barriers' }
     }
   },
 
@@ -1162,7 +1218,7 @@ export const getConfigValue = (key) => {
  */
 export const forecastIncidents = (incidents, forecastDays = 30) => {
   // Group incidents by date
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
 
   // Use configured minimum instead of hardcoded 7
   const minForecastDays = getConfigValue('MIN_FORECAST_DAYS')
@@ -1310,7 +1366,7 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
  * Better for data with recent changes being more important
  */
 export const exponentialSmoothingForecast = (incidents, alpha = 0.3) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length < 14) {
     return { smoothedTrend: [], forecast: null, seasonality: null }
   }
@@ -1510,7 +1566,7 @@ export const forecastIncidentsByPeriod = (incidents, period = 'week', periodsAhe
  * Configuration: Uses PREDICTION_CONFIG.DECAY_ALPHA for time weighting
  */
 export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   const minObs = getConfigValue('MIN_OBSERVATIONS')
   if (dates.length < minObs) {
     return {
@@ -1774,7 +1830,7 @@ export const getIncidentPredictionSummary = (incidents) => {
  * Requires minimum 14 data points for reliable detection.
  */
 export const detectZScoreAnomalies = (incidents, threshold = 2.5) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length < 14) return { anomalies: [], stats: null }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -1850,7 +1906,7 @@ const interpolateQuartile = (sorted, p) => {
  * Uses interpolated quartiles for accuracy.
  */
 export const detectIQRAnomalies = (incidents) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length < 14) return { anomalies: [], stats: null }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -1940,7 +1996,7 @@ export const detectIQRAnomalies = (incidents) => {
  * AND absolute magnitude to avoid false alarms on low counts.
  */
 export const detectChangePoints = (incidents, windowDays = 7) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length < 21) return { changePoints: [], windows: [] }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -2400,7 +2456,7 @@ export const runWhatIfSimulation = (incidents, params = {}) => {
  * Calculate observation velocity (rate of change in reporting)
  */
 export const calculateObservationVelocity = (incidents, windowDays = 7) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length < 14) {
     return { velocity: 0, trend: 'stable', percentChange: 0, status: 'unknown' }
   }
@@ -2727,7 +2783,7 @@ export const getContractorTrend = (incidents, periodDays = 30) => {
 
   if (!benchmark.hasData) return benchmark
 
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return benchmark
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -2935,7 +2991,7 @@ const calculateTimeWeight = (incidentDate, endDate) => {
  * stale historical trends from dominating current analysis.
  */
 export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return []
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -3143,7 +3199,7 @@ export const calculateHazardPriorityScore = calculateHazardPriorityScoreInternal
  * Filters incidents by selected hazard, then groups by root cause
  */
 export const getRootCausesForHazard = (incidents, hazardName) => {
-  const hazardIncidents = incidents.filter(i => i.location === hazardName)
+  const hazardIncidents = filterByHazard(incidents, hazardName)
   return getRootCauseBreakdown(hazardIncidents)
 }
 
@@ -3156,7 +3212,7 @@ const NEGATIVE_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'f
 const POSITIVE_TYPES = ['positive']
 
 export const getHazardDailyData = (incidents, hazardName, periodMonths = 6) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return { days: [], hasData: false }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -3261,7 +3317,7 @@ export const getHazardDailyData = (incidents, hazardName, periodMonths = 6) => {
  * Similar to getHazardDailyData but filters by factor detection
  */
 export const getFactorDailyData = (incidents, factorName, periodMonths = 6, detectFn) => {
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   if (dates.length === 0) return { days: [], hasData: false }
 
   const endDate = parseISO(dates[dates.length - 1])
@@ -4276,11 +4332,23 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
     const total = items.length
     // Low confidence if < 10 incidents (too few for reliable signal scoring)
     const lowConfidence = total < 10
+    // Culture context: need >= 20 incidents for reliable near-miss/positive interpretation
+    const hasCultureContext = total >= 20
 
     // Pre-process items in single pass for performance
     let severeCount = 0, openActions = 0, majorCount = 0, nmCount = 0, posCount = 0
-    let current30 = 0, prev30 = 0
+    let current30 = 0, prev30to60 = 0, current60 = 0, prev60to120 = 0
+    // Site coverage tracking: site -> month -> count
+    const siteMonthMap = new Map()
     items.forEach(i => {
+      // Track site + month for minimum report policy
+      if (i.site && i.date) {
+        try {
+          const monthKey = i.date.slice(0, 7) // 'YYYY-MM'
+          const siteKey = `${i.site}|||${monthKey}`
+          siteMonthMap.set(siteKey, (siteMonthMap.get(siteKey) || 0) + 1)
+        } catch { /* skip invalid */ }
+      }
       // Check both severity and type fields for reliable detection
       const sev = (i.severity || '').toLowerCase()
       const typ = (i.type || '').toLowerCase()
@@ -4322,28 +4390,48 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
       const isNearMiss = combined.includes('near-miss') || combined.includes('near miss') || combined.includes('nearmiss')
       if (isNearMiss) nmCount++
       if (isPositiveType(i.type)) posCount++
-      if (i.actionStatus === 'open' || i.actionStatus === 'in-progress') openActions++
+      if (isOpenAction(i)) openActions++
       if (MAJOR_HAZARDS.includes(i.hazardCategory) || MAJOR_HAZARDS.includes(i.location)) majorCount++
       if (i.date) {
         try {
           const d = differenceInDays(today, parseISO(i.date))
+          // 30-day buckets for spike detection
           if (d <= 30) current30++
-          else if (d <= 60) prev30++
+          else if (d <= 60) prev30to60++
+          // 60-day buckets for smoother trend
+          if (d <= 60) current60++
+          else if (d <= 120) prev60to120++
         } catch { /* skip invalid dates */ }
       }
     })
 
+    // Site coverage policy: minimum 2 reports per site per month
+    const monthlyViolations = []
+    const siteMonths = new Map() // site -> Set of months
+    for (const [key, count] of siteMonthMap.entries()) {
+      const [site, month] = key.split('|||')
+      if (!siteMonths.has(site)) siteMonths.set(site, new Set())
+      siteMonths.get(site).add(month)
+      if (count < 2) {
+        monthlyViolations.push({ site, month, count })
+      }
+    }
+    const meetsMinReportPolicy = monthlyViolations.length === 0
+
     // Signal 1 — Severity Mix: % of LTI + MTI
     const severityMixScore = Math.min(100, Math.round((severeCount / total) * 100))
 
-    // Signal 2 — Trend: current 30d vs previous 30d
+    // Signal 2 — Trend: current 60d vs previous 60d (smoother than 30d)
     let trendScore
-    if (prev30 === 0) {
-      trendScore = current30 > 0 ? 70 : 30
+    if (prev60to120 === 0) {
+      trendScore = current60 > 0 ? 70 : 30
     } else {
-      const ratio = current30 / prev30
+      const ratio = current60 / prev60to120
       trendScore = Math.min(100, Math.round(ratio * 50))
     }
+    // Spike detection: if last 30d is significantly higher than 60d average
+    const avg60PerMonth = current60 / 2
+    const spikeDetected = current30 > avg60PerMonth * 1.5 && current30 >= 3
 
     // Signal 3 — Open Action Rate
     const openActionScore = Math.min(100, Math.round((openActions / total) * 100))
@@ -4380,14 +4468,17 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
       score,
       riskLevel,
       lowConfidence,
+      hasCultureContext,
+      meetsMinReportPolicy,
+      monthlyViolations,
       incidentCount: total,
       signals: {
         severityMix: { score: severityMixScore, detail: `${severeCount}/${total} severe` },
-        trend: { score: trendScore, detail: `${current30} cur / ${prev30} prev (30d)` },
+        trend: { score: trendScore, detail: `${current60} cur / ${prev60to120} prev (60d)`, spikeDetected },
         openActionRate: { score: openActionScore, detail: `${openActions}/${total} open` },
         highRiskExposure: { score: highRiskScore, detail: `${majorCount}/${total} major hazard` },
-        nearMissRate: { score: nearMissScore, detail: `${nmCount} near-misses (${nmRate.toFixed(0)}%)` },
-        positiveRate: { score: positiveScore, detail: `${posCount} positive (${posRate.toFixed(0)}%)` }
+        nearMissRate: { score: nearMissScore, detail: `${nmCount} near-misses (${nmRate.toFixed(0)}%)`, hasCultureContext },
+        positiveRate: { score: positiveScore, detail: `${posCount} positive (${posRate.toFixed(0)}%)`, hasCultureContext }
       }
     })
   })
@@ -4423,7 +4514,7 @@ export const calculatePredictiveRiskProfile = (incidents) => {
   }
 
   const today = new Date()
-  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  const dates = getSortedDates(incidents)
   const dataStartDate = parseISO(dates[0])
   const dataEndDate = parseISO(dates[dates.length - 1])
   const totalDays = Math.max(1, differenceInDays(dataEndDate, dataStartDate))
@@ -4436,9 +4527,7 @@ export const calculatePredictiveRiskProfile = (incidents) => {
   const trendingData = getHazardTrendingByPeriod(incidents, 3)
 
   // Get open/overdue actions
-  const openActions = incidents.filter(i =>
-    i.actionStatus === 'open' || i.actionStatus === 'in-progress'
-  )
+  const openActions = incidents.filter(isOpenAction)
   const openActionsByHazard = {}
   openActions.forEach(i => {
     const h = i.location || 'Unspecified'
@@ -4455,7 +4544,7 @@ export const calculatePredictiveRiskProfile = (incidents) => {
     .filter(h => !h.hasNoData)
     .map(h => {
       const hazardName = h.name
-      const hazardIncidents = incidents.filter(i => i.location === hazardName)
+      const hazardIncidents = filterByHazard(incidents, hazardName)
       const count = hazardIncidents.length
       const isSparse = count < 5
 
@@ -4790,7 +4879,9 @@ export const calculateDataSourceBreakdown = (incidents) => {
  * @param {string} hazardName - The hazard category to analyze
  * @returns {Object} Complete hazard insights package
  */
-export const getHazardInsights = (allIncidents, hazardName, factorData = null) => {
+export const getHazardInsights = (allIncidents, hazardName, factorData = null, options = {}) => {
+  const { filterMonth } = options // e.g., '2026-01' to filter to specific month
+
   if (!allIncidents?.length || !hazardName) {
     return {
       hasData: false,
@@ -4807,9 +4898,16 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null) =
 
   // Filter incidents for this specific hazard (case-insensitive to handle title-cased display names)
   const hazardNameLower = hazardName.toLowerCase()
-  const hazardIncidents = allIncidents.filter(i =>
+  let hazardIncidents = allIncidents.filter(i =>
     i.location && i.location.toLowerCase() === hazardNameLower
   )
+
+  // Apply month filter if specified (for heatmap month-specific drill-down)
+  if (filterMonth) {
+    hazardIncidents = hazardIncidents.filter(i =>
+      i.date && i.date.startsWith(filterMonth)
+    )
+  }
 
   if (hazardIncidents.length === 0) {
     return {
@@ -4831,7 +4929,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null) =
   // Calculate risk score based on severity mix, open actions, and trend
   const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
   const negativeIncidents = hazardIncidents.filter(i => negativeTypes.includes(i.type))
-  const severeIncidents = hazardIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type))
+  const severeIncidents = hazardIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type))
   const openIncidents = hazardIncidents.filter(i => i.actionStatus !== 'closed')
 
   // Simple risk score: weighted by severity and open actions
@@ -4847,14 +4945,40 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null) =
   const isMajorHazard = MAJOR_HAZARDS.includes(hazardName)
 
   // ── 2. Trend Direction ──
-  const trendingData = getHazardTrending(allIncidents)
-  const hazardTrend = trendingData.find(h => h.hazard === hazardName) || null
-
   let trendDirection = 'stable'
   let trendPercentChange = 0
-  if (hazardTrend) {
-    trendDirection = hazardTrend.trend
-    trendPercentChange = hazardTrend.changePercent || 0
+  let previousCount = 0
+  let currentCount = hazardIncidents.length
+
+  if (filterMonth) {
+    // Compare this month vs previous month for month-specific drill-down
+    try {
+      const currentMonthStart = parseISO(filterMonth + '-01')
+      const prevMonth = format(subMonths(currentMonthStart, 1), 'yyyy-MM')
+      const prevMonthIncidents = allIncidents.filter(i =>
+        i.location && i.location.toLowerCase() === hazardNameLower &&
+        i.date && i.date.startsWith(prevMonth)
+      )
+      previousCount = prevMonthIncidents.length
+      if (previousCount > 0) {
+        const change = ((currentCount - previousCount) / previousCount) * 100
+        trendPercentChange = Math.abs(change)
+        if (change > 10) trendDirection = 'up'
+        else if (change < -10) trendDirection = 'down'
+      }
+    } catch {
+      // Use default stable trend
+    }
+  } else {
+    // Use global trending data for all-time view
+    const trendingData = getHazardTrending(allIncidents)
+    const hazardTrend = trendingData.find(h => h.hazard === hazardName) || null
+    if (hazardTrend) {
+      trendDirection = hazardTrend.trend
+      trendPercentChange = hazardTrend.changePercent || 0
+      previousCount = hazardTrend.previousCount || 0
+      currentCount = hazardTrend.currentCount || hazardIncidents.length
+    }
   }
 
   // ── 3. Root Causes (Top 5) - From pre-calculated factorData or text analysis ──
@@ -5061,9 +5185,10 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null) =
     trend: {
       direction: trendDirection,
       percentChange: Math.round(trendPercentChange),
-      previousCount: hazardTrend?.previousCount || 0,
-      currentCount: hazardTrend?.currentCount || 0
+      previousCount,
+      currentCount
     },
+    filterMonth: filterMonth || null, // Include filter info in response
     rootCauses: topRootCauses,
     temporal: {
       dayOfWeek: dayOfWeekData,
@@ -5079,5 +5204,320 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null) =
       overdueCount: overdueActions.length
     },
     recommendations: topRecommendations
+  }
+}
+
+/**
+ * Get insights for a specific observation category/type (e.g., Unsafe Condition, Near Miss)
+ * Used for pyramid drill-downs
+ *
+ * @param {Array} incidents - All incidents (pre-filtered to category)
+ * @param {string} categoryType - The observation type (e.g., 'unsafe-condition', 'near-miss')
+ * @param {Array} allIncidents - All incidents for comparison (optional)
+ * @returns {Object} Category insights package
+ */
+export const getCategoryInsights = (incidents, categoryType, allIncidents = null) => {
+  if (!incidents?.length || !categoryType) {
+    return {
+      hasData: false,
+      categoryType,
+      totalCount: 0,
+      topHazards: [],
+      rootCauses: [],
+      contractors: [],
+      actions: null,
+      recommendations: []
+    }
+  }
+
+  const today = new Date()
+
+  // ── 1. Top Hazards for this category ──
+  const hazardCounts = {}
+  incidents.forEach(i => {
+    const hazard = i.location || 'Unknown'
+    hazardCounts[hazard] = (hazardCounts[hazard] || 0) + 1
+  })
+
+  const topHazards = Object.entries(hazardCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / incidents.length) * 100)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  // ── 2. Root Causes / Contributing Factors ──
+  const factorCounts = {}
+  incidents.forEach(incident => {
+    if (!incident.description) return
+    const factors = detectContributingFactors(incident.description, incident.location)
+    factors.forEach(factor => {
+      factorCounts[factor] = (factorCounts[factor] || 0) + 1
+    })
+  })
+
+  const factorColors = {
+    'Inspections': '#ef4444',
+    'PPE': '#f97316',
+    'Training': '#eab308',
+    'Housekeeping': '#22c55e',
+    'Supervision': '#3b82f6',
+    'Communication': '#8b5cf6',
+    'Procedures': '#ec4899',
+    'Equipment': '#06b6d4',
+    'Environmental': '#14b8a6',
+    'Fatigue': '#f59e0b'
+  }
+
+  const totalWithFactors = Object.values(factorCounts).reduce((a, b) => a + b, 0)
+  const topRootCauses = Object.entries(factorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalWithFactors > 0 ? Math.round((count / totalWithFactors) * 100) : 0,
+      color: factorColors[name] || '#6b7280'
+    }))
+
+  // ── 3. Action Status ──
+  const actionCounts = {
+    open: incidents.filter(i => i.actionStatus === 'open').length,
+    inProgress: incidents.filter(i => i.actionStatus === 'in-progress').length,
+    closed: incidents.filter(i => i.actionStatus === 'closed').length
+  }
+  const closureRate = incidents.length > 0
+    ? Math.round((actionCounts.closed / incidents.length) * 100)
+    : 0
+
+  // Overdue actions (> 30 days old and still open)
+  const overdueActions = incidents.filter(i => {
+    if (i.actionStatus === 'closed' || !i.date) return false
+    try {
+      const age = differenceInDays(today, parseISO(i.date.substring(0, 10)))
+      return age > 30
+    } catch {
+      return false
+    }
+  })
+
+  // ── 4. Contractor Breakdown (Top 5) ──
+  const contractorCounts = {}
+  incidents.forEach(i => {
+    const contractor = i.contractor || 'Unknown'
+    contractorCounts[contractor] = (contractorCounts[contractor] || 0) + 1
+  })
+
+  const topContractors = Object.entries(contractorCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / incidents.length) * 100)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  // ── 5. Recommendations ──
+  const recommendations = []
+
+  // Recommendation 1: Top hazard focus
+  if (topHazards.length > 0 && topHazards[0].percentage > 15) {
+    const typeName = categoryType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    recommendations.push({
+      id: 'top-hazard',
+      priority: 'HIGH',
+      title: `Focus on ${topHazards[0].name}`,
+      message: `${topHazards[0].percentage}% of ${typeName} observations occur in "${topHazards[0].name}". Target this hazard for maximum impact.`,
+      icon: 'AlertTriangle',
+      color: 'red'
+    })
+  }
+
+  // Recommendation 2: Overdue actions
+  if (overdueActions.length > 0) {
+    recommendations.push({
+      id: 'overdue',
+      priority: overdueActions.length > 5 ? 'HIGH' : 'MEDIUM',
+      title: 'Close Overdue Actions',
+      message: `${overdueActions.length} action${overdueActions.length > 1 ? 's' : ''} open > 30 days.`,
+      icon: 'Clock',
+      color: 'amber'
+    })
+  }
+
+  // Recommendation 3: Root cause focus
+  if (topRootCauses.length > 0 && topRootCauses[0].percentage > 25) {
+    recommendations.push({
+      id: 'rootcause',
+      priority: 'MEDIUM',
+      title: `Address ${topRootCauses[0].name}`,
+      message: `${topRootCauses[0].percentage}% of observations cite "${topRootCauses[0].name}" as a contributing factor.`,
+      icon: 'Target',
+      color: 'blue'
+    })
+  }
+
+  // Recommendation 4: Contractor focus
+  if (topContractors.length > 0 && topContractors[0].percentage > 35) {
+    recommendations.push({
+      id: 'contractor',
+      priority: 'MEDIUM',
+      title: `Review ${topContractors[0].name}`,
+      message: `${topContractors[0].percentage}% of observations involve ${topContractors[0].name}.`,
+      icon: 'Users',
+      color: 'purple'
+    })
+  }
+
+  // Sort and limit
+  const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+  recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+  const topRecommendations = recommendations.slice(0, 3)
+
+  return {
+    hasData: true,
+    categoryType,
+    totalCount: incidents.length,
+    topHazards,
+    rootCauses: topRootCauses,
+    contractors: topContractors,
+    actions: {
+      ...actionCounts,
+      total: incidents.length,
+      closureRate,
+      overdueCount: overdueActions.length
+    },
+    recommendations: topRecommendations
+  }
+}
+
+/**
+ * Get insights for a specific observer/reporter
+ * Used for observer drill-downs
+ *
+ * @param {Array} incidents - All incidents for this observer
+ * @param {string} observerName - Name of the observer
+ * @param {Array} allIncidents - All incidents for comparison (optional)
+ * @returns {Object} Observer insights package
+ */
+export const getObserverInsights = (incidents, observerName, allIncidents = null) => {
+  if (!incidents?.length || !observerName) {
+    return {
+      hasData: false,
+      observerName,
+      totalCount: 0,
+      typeBreakdown: [],
+      topHazards: [],
+      actions: null,
+      temporal: null
+    }
+  }
+
+  // ── 1. Observation Type Breakdown ──
+  const typeCounts = {}
+  incidents.forEach(i => {
+    const type = i.type || 'Unknown'
+    typeCounts[type] = (typeCounts[type] || 0) + 1
+  })
+
+  const typeColors = {
+    'unsafe-condition': '#65a30d',
+    'unsafe-act': '#eab308',
+    'near-miss': '#f97316',
+    'positive': '#22c55e',
+    'ncr': '#9333ea',
+    'lti': '#ef4444',
+    'mti': '#ef4444',
+    'fac': '#ef4444',
+    'leadership': '#0891b2'
+  }
+
+  const typeLabels = {
+    'unsafe-condition': 'Unsafe Condition',
+    'unsafe-act': 'Unsafe Act',
+    'near-miss': 'Near Miss',
+    'positive': 'Positive',
+    'ncr': 'NCR',
+    'lti': 'LTI',
+    'mti': 'MTI',
+    'fac': 'FAC',
+    'leadership': 'Leadership'
+  }
+
+  const typeBreakdown = Object.entries(typeCounts)
+    .map(([type, count]) => ({
+      type,
+      label: typeLabels[type] || type.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      count,
+      percentage: Math.round((count / incidents.length) * 100),
+      color: typeColors[type] || '#6b7280'
+    }))
+    .sort((a, b) => b.count - a.count)
+
+  // ── 2. Top Hazards Reported ──
+  const hazardCounts = {}
+  incidents.forEach(i => {
+    const hazard = i.location || 'Unknown'
+    hazardCounts[hazard] = (hazardCounts[hazard] || 0) + 1
+  })
+
+  const topHazards = Object.entries(hazardCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / incidents.length) * 100)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
+  // ── 3. Action Status ──
+  const actionCounts = {
+    open: incidents.filter(i => i.actionStatus === 'open').length,
+    inProgress: incidents.filter(i => i.actionStatus === 'in-progress').length,
+    closed: incidents.filter(i => i.actionStatus === 'closed').length
+  }
+  const closureRate = incidents.length > 0
+    ? Math.round((actionCounts.closed / incidents.length) * 100)
+    : 0
+
+  // ── 4. Temporal Patterns ──
+  const dayOfWeekData = getObservationsByDayOfWeek(incidents)
+  const peakDay = dayOfWeekData.reduce((max, d) => d.count > max.count ? d : max, { count: 0 })
+
+  // Hour of day patterns
+  const hourData = getObservationsByHour(incidents)
+  let peakHour = null
+  if (hourData?.hourly) {
+    const maxHour = hourData.hourly.reduce((max, h) => h.count > max.count ? h : max, { count: 0 })
+    if (maxHour.count > 0) {
+      peakHour = {
+        hour: maxHour.hour,
+        label: maxHour.label,
+        count: maxHour.count,
+        percentage: maxHour.percentage
+      }
+    }
+  }
+
+  return {
+    hasData: true,
+    observerName,
+    totalCount: incidents.length,
+    typeBreakdown,
+    topHazards,
+    actions: {
+      ...actionCounts,
+      total: incidents.length,
+      closureRate
+    },
+    temporal: {
+      dayOfWeek: dayOfWeekData,
+      peakDay: peakDay.day,
+      peakDayCount: peakDay.count,
+      peakDayPercentage: parseFloat(peakDay.percentage || '0'),
+      peakHour
+    }
   }
 }

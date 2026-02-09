@@ -1,6 +1,7 @@
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear } from 'date-fns'
 import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES } from './constants'
 import { getCurrentDate } from './dateUtils'
+import { isOpenAction } from './incidentHelpers'
 
 // Get incident counts by type
 export const getIncidentCountsByType = (incidents) => {
@@ -140,7 +141,7 @@ export const calculateProjectSafetyScore = (project, incidents, engagements) => 
 
 // Get open actions count
 export const getOpenActionsCount = (incidents) => {
-  return incidents.filter(i => i.actionStatus === 'open' || i.actionStatus === 'in-progress').length
+  return incidents.filter(isOpenAction).length
 }
 
 // Get weekly tracker data - uses centralized date

@@ -188,6 +188,7 @@ const CompactSlider = ({
   const displayValue = value > 0 ? `+${value}` : value.toString()
   const isPositive = value > 0
   const isNegative = value < 0
+  const sources = slider.sources || {}
 
   // Calculate actual impact
   const actualImpact = slider.prevalence && effectiveness
@@ -198,8 +199,33 @@ const CompactSlider = ({
     <div className="space-y-1.5">
       {/* Label Row */}
       <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-surface-700">{slider.label}</span>
+          {/* Relevance badges */}
+          {sources.expert && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700"
+              title={sources.expertAction ? `Recommended: ${sources.expertAction}` : 'Expert recommended for this hazard'}
+            >
+              Expert
+            </span>
+          )}
+          {sources.temporal && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700"
+              title={`Higher impact on ${sources.peakDays?.join(', ') || 'peak days'}`}
+            >
+              Peak Time
+            </span>
+          )}
+          {sources.data && !sources.expert && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700"
+              title="Detected in your incident data"
+            >
+              Data
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Prevalence badge */}

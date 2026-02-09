@@ -4,7 +4,7 @@
  */
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays } from 'date-fns'
-import { CONTEXT_REDIRECTS, HAZARD_PHRASES, HAZARD_PATTERNS, MAJOR_HAZARDS, FOUL_WORDS_LIST, VAGUE_HAZARD_TERMS } from './constants'
+import { CONTEXT_REDIRECTS, HAZARD_PHRASES, HAZARD_PATTERNS, MAJOR_HAZARDS, FOUL_WORDS_LIST, VAGUE_HAZARD_TERMS, RECORDABLE_INCIDENT_TYPES } from './constants'
 import { analyzeObservation } from './contextClassifier'
 import { categorizeHazard } from './excelParser'
 import { getSettings } from './settingsReader'
@@ -235,13 +235,19 @@ export const getFlaggedRecords = (incidents) => {
 }
 
 /**
- * Calculate near miss rate (leading indicator)
- * Denominator: Only incident types that form the traditional safety pyramid
+ * Calculate near miss metrics with site-month based target
+ *
+ * NEW TARGET: Each site must report at least 2 near-misses per month
+ * Status is based on % of site-months meeting this target
+ *
+ * Denominator for legacy rate: Only incident types in traditional safety pyramid
  * (LTI, MTI, FAC, Near-miss, Unsafe Act, Unsafe Condition)
  * Excludes: Positive observations, NCR, Leadership events
  */
 export const getNearMissMetrics = (incidents) => {
-  // Only include traditional safety pyramid types in denominator
+  const TARGET_PER_SITE_PER_MONTH = 2
+
+  // --- LEGACY percentage calculation (keep for backward compat) ---
   const pyramidTypes = ['lti', 'mti', 'fac', 'near-miss', 'unsafe-act', 'unsafe-condition']
   const pyramidIncidents = incidents.filter(i => pyramidTypes.includes(i.type))
   const nearMisses = incidents.filter(i => i.type === 'near-miss')
@@ -250,15 +256,61 @@ export const getNearMissMetrics = (incidents) => {
   const nmCount = nearMisses.length
   const rate = total > 0 ? (nmCount / total) * 100 : 0
 
+  // --- NEW site-month calculation ---
+  // Build map of site-months with near-miss counts
+  const siteMonthMap = {}
+  nearMisses.forEach(i => {
+    if (!i.site || !i.date) return
+    const month = i.date.substring(0, 7) // YYYY-MM
+    const key = `${i.site}|||${month}`
+    if (!siteMonthMap[key]) {
+      siteMonthMap[key] = { site: i.site, month, count: 0 }
+    }
+    siteMonthMap[key].count++
+  })
+
+  // Also count site-months from ALL pyramid incidents to include months with 0 near-misses
+  const allSiteMonthsSet = new Set()
+  pyramidIncidents.forEach(i => {
+    if (i.site && i.date) {
+      const month = i.date.substring(0, 7)
+      allSiteMonthsSet.add(`${i.site}|||${month}`)
+    }
+  })
+
+  // Ensure all site-months exist in map (with count 0 if no near-misses)
+  allSiteMonthsSet.forEach(key => {
+    if (!siteMonthMap[key]) {
+      const [site, month] = key.split('|||')
+      siteMonthMap[key] = { site, month, count: 0 }
+    }
+  })
+
+  const siteMonths = Object.values(siteMonthMap)
+  const meetingTarget = siteMonths.filter(sm => sm.count >= TARGET_PER_SITE_PER_MONTH)
+  const complianceRate = siteMonths.length > 0
+    ? (meetingTarget.length / siteMonths.length) * 100
+    : 0
+
   return {
+    // LEGACY fields (keep for backward compat)
     count: nmCount,
     total,
     nonPositiveCount: total, // For backward compatibility with drill-down
     rate: rate.toFixed(1),
-    // Scale: 5%+ = good, 2-5% = warning, <2% = poor (underreporting)
-    status: rate >= 5 ? 'good' : rate >= 2 ? 'warning' : 'poor',
-    target: 5, // Industry benchmark: 5%
-    gap: Math.max(0, 5 - rate).toFixed(1)
+    target: 5, // Legacy percentage target
+    gap: Math.max(0, 5 - rate).toFixed(1),
+
+    // NEW primary metric (count-based)
+    siteMonthTarget: TARGET_PER_SITE_PER_MONTH,
+    siteMonthBreakdown: siteMonths,
+    sitesMetTarget: meetingTarget.length,
+    totalSiteMonths: siteMonths.length,
+    complianceRate: complianceRate.toFixed(1),
+
+    // STATUS uses NEW count-based metric
+    // ≥80% = good, 50-79% = warning, <50% = poor
+    status: complianceRate >= 80 ? 'good' : complianceRate >= 50 ? 'warning' : 'poor'
   }
 }
 
@@ -1115,7 +1167,7 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
     unsafeCondition: reporterIncidents.filter(i => i.type === 'unsafe-condition').length,
     unsafeAct: reporterIncidents.filter(i => i.type === 'unsafe-act').length,
     positive: reporterIncidents.filter(i => i.type === 'positive').length,
-    incident: reporterIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type)).length
+    incident: reporterIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length
   }
 
   // Calculate percentages
@@ -1362,7 +1414,7 @@ export const getContractorDeepDive = (incidents, contractorName, allIncidents) =
     unsafeCondition: contractorIncidents.filter(i => i.type === 'unsafe-condition').length,
     unsafeAct: contractorIncidents.filter(i => i.type === 'unsafe-act').length,
     positive: contractorIncidents.filter(i => i.type === 'positive').length,
-    incident: contractorIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type)).length
+    incident: contractorIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length
   }
 
   // Calculate percentages

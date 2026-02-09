@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react'
-import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen } from 'lucide-react'
+import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen, MapPin } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import {
   parseExcelFile,
@@ -24,7 +24,7 @@ import { checkFileHashExists } from '../../utils/storage'
  * - Data reload happens only after user clicks Done
  */
 const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -36,6 +36,9 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     step: '',
     progress: 0,
   })
+  const [unassignedSites, setUnassignedSites] = useState([])
+  const [assignedRegion, setAssignedRegion] = useState(null)
+  const [isAssigning, setIsAssigning] = useState(false)
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -237,7 +240,8 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
           skippedCount,
           withinBatchSkippedCount,
           existingDataSkippedCount,
-          warnings
+          warnings,
+          newRecords: duplicateResults.newRecords
         })
       } catch (error) {
         // Log error but CONTINUE to next file
@@ -269,6 +273,20 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
       console.log(`[BatchImport] Batch complete: ${successCount} files imported, ${totalRecords} total records`)
     }
 
+    // Collect unique sites from all successfully imported records
+    const importedSites = new Set()
+    newResults.forEach(r => {
+      if (r.success && r.newRecords) {
+        r.newRecords.forEach(rec => {
+          if (rec.site) importedSites.add(rec.site)
+        })
+      }
+    })
+
+    // Find sites without subregion assignment
+    const unassigned = [...importedSites].filter(site => !siteClassifications[site])
+    setUnassignedSites(unassigned)
+
     setResults(newResults)
     isProcessingRef.current = false
     setIsProcessing(false)
@@ -277,7 +295,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
 
     // DON'T reload files here - wait for user to click Done
     // This prevents IndexedDB transaction conflicts
-  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, onProcessingStart])
+  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, onProcessingStart, siteClassifications])
 
   // Handle Done button - reload data THEN unlock
   const handleDone = useCallback(async () => {
@@ -299,6 +317,22 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
       onClose()
     }
   }, [reloadFiles, setIsImporting, setIsProcessingBatch, onProcessingEnd, onClose])
+
+  // Handle subregion assignment for imported sites
+  const handleAssignSubregion = useCallback(async (subRegion) => {
+    setIsAssigning(true)
+    try {
+      const assignments = unassignedSites.map(name => ({ name, subRegion }))
+      await updateSiteClassificationsBatch(assignments)
+      setAssignedRegion(subRegion)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[BatchImport] Error assigning subregion:', error)
+      }
+    } finally {
+      setIsAssigning(false)
+    }
+  }, [unassignedSites, updateSiteClassificationsBatch])
 
   // Handle cancel (only before processing starts)
   const handleCancel = useCallback(() => {
@@ -586,6 +620,52 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
                 </div>
               )}
             </div>
+
+            {/* Subregion assignment - only show if unassigned sites exist */}
+            {unassignedSites.length > 0 && (
+              <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                {assignedRegion ? (
+                  <div className="flex items-center gap-2 text-green-700">
+                    <Check size={18} />
+                    <span>Assigned {unassignedSites.length} site{unassignedSites.length !== 1 ? 's' : ''} to Sub Region {assignedRegion.slice(-1)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin size={18} className="text-amber-600" />
+                      <span className="font-medium text-amber-800">
+                        Assign {unassignedSites.length} new site{unassignedSites.length !== 1 ? 's' : ''} to subregion:
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => handleAssignSubregion(`SUB REGION ${n}`)}
+                          disabled={isAssigning}
+                          className="w-10 h-10 rounded-lg bg-white border-2 border-amber-300
+                                     hover:border-amber-500 hover:bg-amber-100 font-bold text-amber-700
+                                     disabled:opacity-50 transition-colors"
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setUnassignedSites([])}
+                        disabled={isAssigning}
+                        className="px-3 py-2 text-surface-600 hover:text-surface-800 disabled:opacity-50"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                    <p className="text-xs text-amber-600 mt-2">
+                      {unassignedSites.slice(0, 3).join(', ')}
+                      {unassignedSites.length > 3 && ` +${unassignedSites.length - 3} more`}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Individual results */}
             <div className="text-left space-y-2 max-h-60 overflow-y-auto">

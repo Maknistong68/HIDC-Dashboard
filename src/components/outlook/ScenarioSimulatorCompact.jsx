@@ -21,8 +21,10 @@ import {
   CONTROL_HIERARCHY,
   calculateFactorPrevalence,
   generateDynamicSliders,
+  generateContextualSliders,
   calculateMultiHazardProjection
 } from '../insights/ScenarioSimulatorEngine'
+import { getDayOfWeekPatterns } from '../../utils/insightsCalculations'
 
 // Slider styles (reused from UnifiedPredictivePanel)
 const sliderStyles = `
@@ -144,14 +146,37 @@ const ScenarioSimulatorCompact = ({
     return calculateFactorPrevalence(factorData, incidentStats.totalNegative)
   }, [externalPrevalence, factorData, incidentStats?.totalNegative])
 
-  // Generate dynamic sliders based on selected hazards or all data
+  // Calculate temporal patterns for selected hazard(s)
+  const temporalPatterns = useMemo(() => {
+    if (effectiveSelectedHazards.length !== 1) return null
+    // Get incidents for the selected hazard
+    const hazardIncidents = filteredIncidents.filter(
+      i => i.location === effectiveSelectedHazards[0]
+    )
+    if (hazardIncidents.length < 10) return null // Need minimum sample
+    return getDayOfWeekPatterns(hazardIncidents)
+  }, [effectiveSelectedHazards, filteredIncidents])
+
+  // Generate contextual sliders based on selected hazards or all data
   const { sliders: dynamicSliders, unmappedFactors } = useMemo(() => {
     if (!factorData?.byFactor) return { sliders: [], unmappedFactors: [] }
     const hazardName = effectiveSelectedHazards.length === 1
       ? effectiveSelectedHazards[0]
       : 'all'
+
+    // Use contextual sliders for single hazard selection
+    if (hazardName !== 'all') {
+      return generateContextualSliders(
+        factorData,
+        hazardName,
+        incidentStats?.totalNegative || 0,
+        temporalPatterns
+      )
+    }
+
+    // Fall back to data-only sliders for 'all' or multi-hazard
     return generateDynamicSliders(factorData, hazardName, incidentStats?.totalNegative || 0)
-  }, [factorData, effectiveSelectedHazards, incidentStats?.totalNegative])
+  }, [factorData, effectiveSelectedHazards, incidentStats?.totalNegative, temporalPatterns])
 
   // Group sliders by HSE control category
   const slidersByCategory = useMemo(() => {
@@ -553,10 +578,38 @@ const ScenarioSimulatorCompact = ({
                       {categorySliders.map(slider => {
                         const sliderValue = sliders[slider.id] || 0
                         const isNegative = sliderValue < 0
+                        const sources = slider.sources || {}
                         return (
                           <div key={slider.id} className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-surface-600">{slider.label}</span>
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-surface-600">{slider.label}</span>
+                                {/* Relevance badges */}
+                                {sources.expert && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700"
+                                    title={sources.expertAction ? `Recommended: ${sources.expertAction}` : 'Expert recommended for this hazard'}
+                                  >
+                                    Expert
+                                  </span>
+                                )}
+                                {sources.temporal && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700"
+                                    title={`Higher impact on ${sources.peakDays?.join(', ') || 'peak days'}`}
+                                  >
+                                    Peak Time
+                                  </span>
+                                )}
+                                {sources.data && !sources.expert && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700"
+                                    title="Detected in your incident data"
+                                  >
+                                    Data
+                                  </span>
+                                )}
+                              </div>
                               <span className={`font-medium ${
                                 sliderValue > 0 ? 'text-green-600' :
                                 sliderValue < 0 ? 'text-red-500' : 'text-surface-500'

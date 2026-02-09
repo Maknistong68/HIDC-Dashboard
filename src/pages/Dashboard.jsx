@@ -28,7 +28,7 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../utils/constants'
+import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -286,7 +286,7 @@ const Dashboard = () => {
     if (drillDown.chart === 'pyramid') {
       // Handle 'incident' type which aggregates lti, mti, fac
       if (drillDown.filter === 'incident') {
-        filtered = filteredIncidents.filter(i => ['lti', 'mti', 'fac'].includes(i.type))
+        filtered = filteredIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type))
       } else {
         filtered = filteredIncidents.filter(i => i.type === drillDown.filter)
       }
@@ -407,8 +407,7 @@ const Dashboard = () => {
 
     filteredIncidents.forEach(incident => {
       // Aggregate LTI, MTI, FAC into 'incident' category
-      const incidentTypes = ['lti', 'mti', 'fac']
-      const typeKey = incidentTypes.includes(incident.type) ? 'incident' : incident.type
+      const typeKey = RECORDABLE_INCIDENT_TYPES.includes(incident.type) ? 'incident' : incident.type
 
       if (result[typeKey]) {
         if (incident.actionStatus === 'closed') {
@@ -1562,12 +1561,12 @@ const Dashboard = () => {
         title={
           drillDown.level === 3 && drillDown.period
             ? `${drillDown.filter} - ${format(parseISO(drillDown.period + '-01'), 'MMMM yyyy')}`
-            : drillDown.chart === 'hazards' && drillDown.level === 2
+            : (drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2
               ? `${drillDown.filter} Insights`
               : `${drillDown.filter} - Monthly Breakdown`
         }
-        data={drillDown.level === 3 ? drillDownData : drillDown.chart === 'hazards' && drillDown.level === 2 ? getFilteredBySelection : monthlyBreakdown}
-        type={drillDown.level === 3 ? 'records' : drillDown.chart === 'hazards' && drillDown.level === 2 ? 'records' : 'monthly'}
+        data={drillDown.level === 3 ? drillDownData : (drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2 ? getFilteredBySelection : monthlyBreakdown}
+        type={drillDown.level === 3 ? 'records' : (drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2 ? 'records' : 'monthly'}
         onDrillDown={handleMonthSelect}
         onBack={handleDrillDownBack}
         canGoBack={drillDown.level === 3}
@@ -1585,12 +1584,19 @@ const Dashboard = () => {
           drillDown.chart === 'company' ? 'Company Analytics' :
           drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' : 'Analytics'
         }
-        showInsights={drillDown.chart === 'hazards' && drillDown.level === 2}
-        insightsData={drillDown.chart === 'hazards' && drillDown.level === 2 ? {
-          hazardName: drillDown.filter,
-          hazardIncidents: getFilteredBySelection,
-          allIncidents: filteredIncidents
-        } : null}
+        showInsights={(drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2}
+        insightsMode={drillDown.chart === 'observers' ? 'observer' : 'hazard'}
+        insightsData={
+          drillDown.chart === 'hazards' && drillDown.level === 2 ? {
+            hazardName: drillDown.filter,
+            hazardIncidents: getFilteredBySelection,
+            allIncidents: filteredIncidents
+          } : drillDown.chart === 'observers' && drillDown.level === 2 ? {
+            observerName: drillDown.filter,
+            observerIncidents: getFilteredBySelection,
+            allIncidents: filteredIncidents
+          } : null
+        }
         factorData={drillDown.chart === 'hazards' && drillDown.level === 2 ? factorData : null}
       />
 
@@ -1608,10 +1614,12 @@ const Dashboard = () => {
         breadcrumb={['Heatmap', heatmapDrillDown.hazard, heatmapDrillDown.month ? format(parseISO(heatmapDrillDown.month + '-01'), 'MMM yyyy') : ''].filter(Boolean)}
         source="Hazards Identification"
         showInsights={heatmapDrillDown.hazard && heatmapDrillDownData.length > 0}
+        insightsMode="hazard"
         insightsData={heatmapDrillDown.hazard ? {
           hazardName: heatmapDrillDown.hazard,
           hazardIncidents: heatmapDrillDownData,
-          allIncidents: heatmapIncidents
+          allIncidents: heatmapIncidents,
+          filterMonth: heatmapDrillDown.month // Pass month for month-specific insights
         } : null}
         factorData={heatmapDrillDown.hazard ? factorData : null}
       />

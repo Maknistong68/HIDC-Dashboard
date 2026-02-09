@@ -1,17 +1,17 @@
 import React, { useState, useMemo, useTransition, useCallback } from 'react'
-import { format, parseISO } from 'date-fns'
 import DrillDownModal from '../common/DrillDownModal'
 import { InfoTooltip } from '../ui/Tooltip'
 import { Card } from '../ui'
+import { RECORDABLE_INCIDENT_TYPES } from '../../utils/constants'
 
 /**
  * IncidentPyramid - Safety pyramid visualization with drill-down
+ * Click any level → Insights tab with all records for that type (like hazards/observers)
  */
 const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) => {
   const [selectedType, setSelectedType] = useState(null)
-  const [selectedMonth, setSelectedMonth] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
   // Safety pyramid levels (severity gradient) - Triangle shape: narrower at top, wider at bottom
   const pyramidLevels = [
@@ -76,7 +76,6 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   const handleTypeClick = useCallback((typeKey) => {
     startTransition(() => {
       setSelectedType(typeKey)
-      setSelectedMonth(null)
       setModalOpen(true)
     })
   }, [])
@@ -85,72 +84,32 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
     startTransition(() => {
       setModalOpen(false)
       setSelectedType(null)
-      setSelectedMonth(null)
     })
   }, [])
 
-  const handleBack = useCallback(() => {
-    startTransition(() => {
-      setSelectedMonth(null)
-    })
-  }, [])
-
-  const handleMonthSelect = useCallback((monthData) => {
-    startTransition(() => {
-      setSelectedMonth(monthData.period)
-    })
-  }, [])
-
+  // Get all incidents for selected type
   const filteredIncidents = useMemo(() => {
     if (!selectedType || !incidents.length) return []
-    const incidentTypes = ['lti', 'mti', 'fac']
     if (selectedType === 'incident') {
-      return incidents.filter(i => incidentTypes.includes(i.type))
+      return incidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type))
     }
     return incidents.filter(i => i.type === selectedType)
   }, [selectedType, incidents])
-
-  const monthlyBreakdown = useMemo(() => {
-    if (!selectedType || filteredIncidents.length === 0) return []
-    const byMonth = {}
-    filteredIncidents.forEach(incident => {
-      const month = incident.date?.substring(0, 7) || 'Unknown'
-      byMonth[month] = (byMonth[month] || 0) + 1
-    })
-    return Object.entries(byMonth)
-      .map(([period, count]) => ({
-        period,
-        label: period !== 'Unknown' ? format(parseISO(period + '-01'), 'MMM yyyy') : 'Unknown',
-        count
-      }))
-      .sort((a, b) => a.period.localeCompare(b.period))
-  }, [selectedType, filteredIncidents])
-
-  const monthIncidents = useMemo(() => {
-    if (!selectedMonth) return []
-    return filteredIncidents.filter(i => i.date?.substring(0, 7) === selectedMonth)
-  }, [selectedMonth, filteredIncidents])
 
   const getTypeLabel = (type) => {
     return pyramidLevels.find(l => l.key === type)?.label || type
   }
 
-  const breadcrumb = useMemo(() => {
-    const crumbs = []
-    if (selectedType) crumbs.push(getTypeLabel(selectedType))
-    if (selectedMonth) {
-      try {
-        crumbs.push(format(parseISO(selectedMonth + '-01'), 'MMMM yyyy'))
-      } catch {
-        crumbs.push(selectedMonth)
-      }
-    }
-    return crumbs
-  }, [selectedType, selectedMonth])
+  // Only show insights for negative observation types (not positive/leadership)
+  const negativeTypes = ['unsafe-condition', 'unsafe-act', 'near-miss', 'ncr', 'incident']
+  const shouldShowInsights = negativeTypes.includes(selectedType) && filteredIncidents.length > 0
 
-  const modalTitle = selectedMonth
-    ? `${getTypeLabel(selectedType)} - ${format(parseISO(selectedMonth + '-01'), 'MMMM yyyy')}`
-    : `${getTypeLabel(selectedType)} - Monthly Breakdown`
+  const modalTitle = selectedType
+    ? shouldShowInsights
+      ? `${getTypeLabel(selectedType)} Insights`
+      : `${getTypeLabel(selectedType)} - ${filteredIncidents.length} Records`
+    : ''
+  const breadcrumb = selectedType ? ['Observation Categories', getTypeLabel(selectedType)] : []
 
   return (
     <Card padding="default" className="h-full">
@@ -242,18 +201,22 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
         Tap any level to drill down
       </p>
 
-      {/* Drill-Down Modal */}
+      {/* Drill-Down Modal - Shows insights for negative types only */}
       <DrillDownModal
         isOpen={modalOpen && selectedType !== null}
         onClose={handleClose}
-        title={selectedType ? modalTitle : ''}
-        data={selectedMonth ? monthIncidents : monthlyBreakdown}
-        type={selectedMonth ? 'records' : 'monthly'}
-        onDrillDown={handleMonthSelect}
-        onBack={handleBack}
-        canGoBack={selectedMonth !== null}
+        title={modalTitle}
+        data={filteredIncidents}
+        type="records"
         breadcrumb={breadcrumb}
-        source="Incident Pyramid"
+        source="Observation Categories"
+        showInsights={shouldShowInsights}
+        insightsMode="category"
+        insightsData={shouldShowInsights ? {
+          categoryType: selectedType,
+          categoryIncidents: filteredIncidents,
+          allIncidents: incidents
+        } : null}
       />
     </Card>
   )

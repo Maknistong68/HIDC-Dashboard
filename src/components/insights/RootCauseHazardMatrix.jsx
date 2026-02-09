@@ -64,8 +64,19 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
         </thead>
         <tbody>
           {matrix.map((row, idx) => (
-            <tr key={row.hazard} className={idx % 2 === 0 ? 'bg-white' : 'bg-surface-50/50'}>
-              <td className="p-2 font-medium text-surface-700 sticky left-0 bg-inherit z-10 border-r border-surface-100">
+            <tr
+              key={row.hazard}
+              className={`
+                group
+                ${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50/50'}
+                hover:bg-primary-50 transition-colors
+              `}
+            >
+              <td className={`
+                p-2 font-medium text-surface-700 sticky left-0 z-10 border-r border-surface-100
+                ${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'}
+                group-hover:bg-primary-50 transition-colors
+              `}>
                 <span className="truncate block max-w-[120px]" title={row.hazard}>
                   {row.hazard}
                 </span>
@@ -80,6 +91,7 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
                       p-2 text-center cursor-pointer transition-all
                       ${getCellColor(count, maxCount)}
                       hover:ring-2 hover:ring-primary-400 hover:ring-inset
+                      group-hover:brightness-95
                     `}
                     onClick={() => count > 0 && onCellClick?.(row.hazard, rc, count)}
                     title={count > 0 ? `${row.hazard} + ${rc}: ${count} incidents (${pct}%)` : 'No data'}
@@ -88,7 +100,7 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
                   </td>
                 )
               })}
-              <td className="p-2 text-center font-semibold text-surface-700 bg-surface-100">
+              <td className="p-2 text-center font-semibold text-surface-700 bg-surface-100 group-hover:bg-primary-100 transition-colors">
                 {row.total}
               </td>
             </tr>
