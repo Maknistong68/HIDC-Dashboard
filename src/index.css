@@ -938,43 +938,6 @@ a,
 }
 
 /* ========================================
-   NATIVE APP FEEL - PAGE TRANSITIONS
-   ======================================== */
-
-/* GPU-accelerated page container */
-.page-container {
-  will-change: opacity, transform;
-  transform: translateZ(0); /* Force GPU layer */
-  backface-visibility: hidden;
-}
-
-/* Page transition states */
-.page-hidden {
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  visibility: hidden;
-  transform: translateY(4px);
-}
-
-.page-visible {
-  opacity: 1;
-  pointer-events: auto;
-  position: relative;
-  visibility: visible;
-  transform: translateY(0);
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-}
-
-/* Faster transition for tab switches */
-.page-tab-switch {
-  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
-}
-
-/* ========================================
    NATIVE APP FEEL - INTERACTIVE ELEMENTS
    ======================================== */
 

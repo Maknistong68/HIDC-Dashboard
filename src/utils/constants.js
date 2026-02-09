@@ -162,7 +162,7 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     // Explosives
     'explosive', 'explosives', 'explosive material', 'explosive storage',
     'detonator', 'detonators', 'detonation', 'detonating cord',
-    'primer', 'booster', 'initiator', 'blasting cap',
+    'explosive primer', 'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap',
     // Personnel
     'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
     // Incidents
@@ -656,6 +656,37 @@ export const HAZARD_EXCLUSIONS = {
     'fall from height', 'fell from', 'fall off', 'fell off', 'fallen from',
     'fall from scaffold', 'fall from ladder', 'fall from roof',
     'fall from platform', 'fall through opening'
+  ],
+  'Explosives & Blasting': [
+    // Exclude non-explosive "primer" usage (construction materials)
+    'bitumen primer', 'bituminous primer', 'primer coat', 'primer coating',
+    'primer paint', 'paint primer', 'primer application', 'applying primer',
+    'primer work', 'primer layer', 'asphalt primer', 'waterproofing primer',
+    'epoxy primer', 'concrete primer', 'surface primer', 'anti-rust primer',
+    'corrosion primer', 'primer spray', 'spray primer',
+    // Exclude welfare observations that happen to be near blasting areas
+    'welfare facilities', 'no welfare', 'lack of welfare', 'without welfare',
+    'missing welfare', 'no access to toilets', 'no rest shelter', 'no drinking water',
+    'toilet facilities', 'rest shelter', 'drinking water'
+  ],
+  'Site Security': [
+    // Exclude lifting operations - "unauthorized entry" in exclusion zone context
+    'lifting activity', 'lifting operation', 'lifting work', 'lifting of',
+    'crane operation', 'crane activity', 'rigging', 'rigger',
+    'exclusion zone was properly established', 'exclusion zone properly established',
+    'exclusion zone was established', 'restricting unauthorized entry',
+    'ensuring safe operations', 'safe operations in the work area',
+    // Exclude hot work - barricading to prevent unauthorized entry during welding
+    'welding activities', 'welding activity', 'welding work', 'welding area',
+    'hot work', 'hot works', 'fire watcher', 'fire blanket', 'cutting activities',
+    'grinding activities', 'brazing', 'soldering',
+    // Exclude excavation/WAH - manhole barricades for fall protection, not security
+    'manhole barricade', 'manhole barrier', 'edge protection', 'fall hazard',
+    'fall protection', 'excavation edge', 'excavation barricade',
+    'trench barricade', 'unprotected edge', 'leading edge',
+    // Exclude scaffolding contexts
+    'scaffold barricade', 'scaffolding barricade', 'scaffolding barrier',
+    'scaffold erection', 'scaffold dismantling', 'working platform'
   ]
 }
 
@@ -3052,7 +3083,7 @@ export const HAZARD_PATTERNS = {
     'shot firer', 'shot firing', 'misfire', 'unexploded', 'flyrock', 'fly rock',
     'blast zone', 'blast radius', 'exclusion zone blasting', 'blast pattern',
     'magazine', 'explosives magazine', 'explosive storage', 'detonating cord',
-    'primer', 'booster', 'initiator', 'blasting cap', 'stemming',
+    'explosive primer', 'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap', 'stemming',
     'ground vibration', 'ppv', 'peak particle velocity', 'air overpressure',
     'blast signal', 'blasting signal', 'blast warning', 'blast siren',
     'post blast', 'pre blast', 'blasting permit', 'blasting schedule'

@@ -16,7 +16,7 @@ const Footer = () => {
   ]
 
   return (
-    <footer className="bg-white border-t border-surface-200 py-5 px-4">
+    <footer className="mt-auto bg-white border-t border-surface-200 py-5 px-4">
       <div className="max-w-[1800px] mx-auto">
         <div className="flex flex-col items-center gap-4 text-xs">
           {/* Privacy notice */}

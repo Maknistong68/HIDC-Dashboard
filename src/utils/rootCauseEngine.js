@@ -156,7 +156,22 @@ export const FACTOR_PHRASE_CONFIG = {
       'ensure that maintained', 'checklist for ensure', 'toilet checklist for',
       'inspecting the crusher area\'s toilet', 'crusher area\'s toilet facilities',
       'all necessary requirements are fully met', 'i updated the checklist',
-      'during morning equipment inspection', 'during site inspection'
+      'during morning equipment inspection', 'during site inspection',
+
+      // === SECURITY INSPECTION / AUDIT ===
+      'security inspection', 'security audit', 'scheduled security inspection',
+      'scheduled security audit', 'security inspection report', 'security audit report',
+      'security deficiencies', 'security deficiency', 'security violations',
+      'security performance', 'security performance rating', 'site security rating',
+      'security compliance', 'security non-compliance', 'security assessment',
+      // CCTV and surveillance systems (inspection/equipment issue)
+      'cctv not installed', 'cctv not operational', 'cctv non-functional',
+      'no cctv', 'cctv system', 'surveillance cameras', 'surveillance system',
+      'surveillance non-operational', 'cameras non-operational', 'cameras not working',
+      'cctv was not', 'cctv found', 'surveillance found', 'monitoring system',
+      // Log sheets and records
+      'no log sheet', 'log sheet not', 'log sheet missing', 'visitor log',
+      'security log', 'entry log', 'log not maintained', 'log sheet maintained'
     ],
     moderatePatterns: [
       'inspected', 'uninspected', 'inspection', 'checklist',
@@ -1923,6 +1938,23 @@ export const FACTOR_PHRASE_CONFIG = {
       'vehicles falling into excavation', 'vehicles falling into the excavation',
       'close to the access road', 'excavation close to road',
 
+      // === BERMS & STOP BLOCKS (Excavation Edge Protection) ===
+      'no berm', 'without berm', 'berm not', 'berm missing', 'berms not',
+      'berms missing', 'no berms', 'berm not installed', 'berm not provided',
+      'sand berm not', 'sand berm missing', 'sand berms not', 'no sand berm',
+      'soil berm not', 'soil berm missing', 'soil berms not', 'no soil berm',
+      'earth berm not', 'earth berm missing', 'earthen berm not',
+      'no stop block', 'stop block not', 'stop block missing', 'stop blocks not',
+      'stop blocks missing', 'without stop block', 'no stop blocks',
+      'wheel stop not', 'wheel stops not', 'wheel stop missing',
+      'vehicle stop not', 'vehicle stops not', 'vehicle stop missing',
+      'no vehicle stop', 'without vehicle stop', 'vehicle barrier not',
+      'bund not', 'bund missing', 'bunds not', 'bunds missing',
+      'earthen barrier not', 'earthen barrier missing',
+      'open excavation unprotected', 'unsecured excavation', 'unprotected excavation',
+      'excavation not secured', 'excavation not protected', 'excavation unbarricaded',
+      'trench not secured', 'trench not protected', 'unsecured trench',
+
       // === SEGREGATION ===
       'no segregation', 'without segregation', 'not segregated',
       'segregation not', 'segregation missing', 'no separation',
@@ -2220,6 +2252,25 @@ export const FACTOR_PHRASE_CONFIG = {
       'hazard signage', 'risk signage', 'exclusion zone signage',
       'speed signage', 'speed limit signage', 'directional signage',
       'parking signage', 'access signage', 'exit signage', 'emergency signage',
+
+      // === TRAFFIC & STOP SIGNS ===
+      'no stop sign', 'stop sign not', 'stop sign missing', 'stop signs not',
+      'stop signs missing', 'without stop sign', 'missing stop sign',
+      'stop sign not installed', 'stop sign not provided', 'stop sign absent',
+      'no yield sign', 'yield sign not', 'yield sign missing',
+      'no give way sign', 'give way sign not', 'give way sign missing',
+      'no speed limit sign', 'speed limit sign not', 'speed limit sign missing',
+      'speed sign not', 'speed sign missing', 'no speed sign',
+      'speed limit not displayed', 'speed limit not posted', 'speed limit sign faded',
+      'no traffic sign', 'traffic sign not', 'traffic signs not',
+      'traffic sign missing', 'traffic signs missing', 'without traffic sign',
+      'road sign not', 'road signs not', 'road sign missing',
+      'pedestrian sign not', 'pedestrian sign missing', 'no pedestrian sign',
+      'crossing sign not', 'crossing sign missing', 'no crossing sign',
+      'one way sign not', 'one way sign missing', 'no one way sign',
+      'entry sign not', 'no entry sign missing', 'entry sign missing',
+      'reversing sign not', 'reversing sign missing', 'no reversing sign',
+      'banksman sign not', 'banksman sign missing', 'spotter sign not',
 
       // === BARRIER/EDGE SIGNAGE ===
       'edge protection signage', 'fall hazard signage', 'fall protection signage',
@@ -2681,15 +2732,17 @@ export const FACTOR_PHRASE_CONFIG = {
       'standby person positioned', 'standby person provided',
       'safety protocols followed', 'safe working practice',
 
-      // === SECURITY PRESENCE (positive safety observations) ===
-      'security guard', 'security guard available', 'security guard was available',
-      'security guard was seen', 'security guard checking', 'security was available',
-      'security available', 'security present', 'security was present',
-      'security personnel', 'security personnel present', 'security personnel available',
-      'site security', 'site security available', 'site security was available',
-      'security at entrance', 'security at the entrance', 'security verifying',
-      'verifying vehicles', 'verifying vehicles before entry', 'verifying the vehicles',
-      'vehicles before entry', 'security checking', 'security guard seen',
+      // === SECURITY GUARD BEHAVIOR (positive safety observations) ===
+      // NOTE: Patterns must be specific to guard BEHAVIOR, not general security topics
+      'security guard was seen', 'security guard checking', 'security guard verifying',
+      'security guard ready', 'security guard on duty', 'security guard monitoring',
+      'security guard was available', 'security guard available at',
+      'security guard present at', 'security guard observed',
+      'security personnel checking', 'security personnel verifying',
+      'security personnel present at', 'security personnel on duty',
+      'security verifying vehicles', 'verifying vehicles before entry',
+      'security checking vehicles', 'checking vehicles at entrance',
+      'security guard strict surveillance', 'strict security surveillance',
 
       // === PROPER ACCESS/PLATFORM (positive observations) ===
       'wooden planks provided', 'planks provided', 'planks have been provided',
@@ -2874,6 +2927,30 @@ export const FACTOR_PHRASE_CONFIG = {
       'coordinated', 'coordination in place', 'scheduled',
       'prepared', 'preparation completed',
 
+      // === EXCAVATION/GEOTECHNICAL PLANNING ===
+      'geotechnical report not', 'geotechnical report missing', 'no geotechnical report',
+      'geotechnical survey not', 'geotechnical assessment not', 'no geotechnical',
+      'soil report not', 'soil report missing', 'no soil report',
+      'soil assessment not', 'soil survey not', 'soil analysis not',
+      'utility layout not', 'utility drawing not', 'utility drawings not',
+      'utility layout missing', 'utility drawing missing', 'no utility layout',
+      'utility mapping not', 'utility survey not', 'utility locator not',
+      'utility clearance not', 'no utility clearance', 'utility clearance missing',
+      'underground utility not', 'underground utilities not', 'underground survey not',
+      'cable route not', 'pipe route not', 'service route not',
+      'as-built drawing not', 'as-built drawings not', 'as built drawing not',
+      'expired document', 'expired documents', 'document expired',
+      'documents expired', 'outdated document', 'outdated documents',
+      'outdated drawing', 'outdated drawings', 'drawing outdated',
+      'expired permit', 'permit expired', 'expired certificate',
+      'certificate expired', 'validity expired', 'expired validity',
+      'document unavailability', 'unavailability of document', 'document unavailable',
+      'drawing unavailable', 'report unavailable', 'unavailable document',
+      'missing document', 'missing documents', 'document missing',
+      'documents missing', 'documentation missing', 'missing documentation',
+      'safe distance not', 'safe distance missing', 'no safe distance',
+      'minimum distance not', 'clearance distance not', 'distance not maintained',
+
       // === ELECTRICIAN / PERSONNEL AVAILABILITY ===
       'no electrician available', 'electrician not available', 'electrician was not',
       'no electrician on site', 'electrician contact not displayed',
@@ -2981,6 +3058,102 @@ export const FACTOR_PHRASE_CONFIG = {
     ],
     exclusionPatterns: [
       'inspection checklist', 'qr code', 'vvs', 'veri-fi', 'loading point'
+    ],
+    minimumScore: 5
+  },
+
+  'Access': {
+    strongPatterns: [
+      // === LADDER ACCESS ===
+      'no ladder', 'ladder not', 'ladder missing', 'without ladder',
+      'ladder not provided', 'ladder not installed', 'improper ladder',
+      'ladder damaged', 'ladder broken', 'ladder unsafe', 'ladder not secured',
+      'ladder not extended', 'ladder not tied', 'ladder unsecured',
+      'ladder too short', 'inadequate ladder', 'insufficient ladder',
+      'no access ladder', 'access ladder not', 'access ladder missing',
+      'excavation ladder not', 'trench ladder not', 'pit ladder not',
+      'ladder inside excavation', 'ladder in excavation', 'ladder in trench',
+      // Positive ladder
+      'ladder provided', 'ladder installed', 'ladder secured', 'ladder in place',
+
+      // === STAIRWAY/STEPS ACCESS ===
+      'no stairs', 'stairs not', 'stairway not', 'steps not',
+      'stairs missing', 'stairway missing', 'steps missing',
+      'improper stairs', 'improper steps', 'improper stairway',
+      'stairs damaged', 'steps damaged', 'stairway damaged',
+      'incomplete stairs', 'incomplete steps', 'incomplete stairway',
+      'temporary stairs not', 'access stairs not', 'access steps not',
+      'without proper steps', 'without proper stairs', 'no proper steps',
+      // Positive stairs
+      'stairs provided', 'stairway installed', 'steps in place',
+
+      // === RAMP ACCESS ===
+      'no ramp', 'ramp not', 'ramp missing', 'without ramp',
+      'ramp not provided', 'access ramp not', 'access ramp missing',
+      'improper ramp', 'ramp too steep', 'ramp unstable', 'ramp damaged',
+      'inadequate ramp', 'insufficient ramp', 'ramp not suitable',
+      'excavation ramp not', 'trench ramp not', 'vehicle ramp not',
+      // Positive ramp
+      'ramp provided', 'ramp installed', 'access ramp in place',
+
+      // === MANHOLE ACCESS ===
+      'manhole cover not', 'manhole cover missing', 'manhole without cover',
+      'manhole uncovered', 'open manhole', 'manhole open', 'no manhole cover',
+      'manhole cover removed', 'manhole cover damaged', 'manhole cover broken',
+      'manhole not secured', 'manhole access not', 'manhole entry not',
+      'manhole ladder not', 'manhole access ladder', 'manhole step irons',
+      'step irons missing', 'step irons not', 'step iron damaged',
+      // Positive manhole
+      'manhole cover in place', 'manhole secured', 'manhole cover installed',
+
+      // === BLOCKED ACCESS/EGRESS ===
+      'access blocked', 'access way blocked', 'accessway blocked',
+      'blocked access', 'blocked accessway', 'blocked passage',
+      'passage blocked', 'egress blocked', 'blocked egress',
+      'emergency exit blocked', 'exit blocked', 'exit obstructed',
+      'access obstructed', 'obstructed access', 'obstruction at access',
+      'obstructed egress', 'egress obstructed', 'passage obstructed',
+      'access partially blocked', 'access not clear', 'access cluttered',
+      'materials blocking access', 'equipment blocking access',
+      'access not maintained', 'access compromised', 'access restricted',
+
+      // === IMPROPER/MAKESHIFT ACCESS ===
+      'improvised access', 'makeshift access', 'makeshift ladder',
+      'improvised ladder', 'makeshift steps', 'improvised bridge',
+      'makeshift bridge', 'improper access', 'unsafe access',
+      'access not safe', 'access unsafe', 'unstable access',
+      'improper access provided', 'access not suitable', 'unsuitable access',
+      'no proper access', 'proper access not', 'without proper access',
+      'no safe access', 'safe access not', 'without safe access',
+      'access/egress not', 'access and egress not', 'no access/egress',
+
+      // === EXCAVATION/TRENCH ACCESS ===
+      'excavation without access', 'excavation access not', 'trench without access',
+      'trench access not', 'pit without access', 'pit access not',
+      'inside excavation without', 'inside trench without', 'inside pit without',
+      'working in excavation without', 'working in trench without',
+      'entry without access', 'enter without access', 'entering without access',
+      'access inside excavation', 'access into excavation', 'excavation entry',
+
+      // === BRIDGE/CROSSING ACCESS ===
+      'access bridge not', 'access bridge missing', 'crossing not provided',
+      'no crossing', 'crossing not', 'crossing missing', 'no safe crossing',
+      'pedestrian bridge not', 'pedestrian crossing not', 'crossing unsafe',
+
+      // === EXPOSED HAZARDS ON ACCESS ===
+      'exposed anchor bolts', 'anchor bolts exposed', 'exposed stud bolts',
+      'stud bolts exposed', 'exposed bolts on', 'protruding bolts',
+      'protruding rebar', 'exposed rebar', 'rebar exposed', 'rebars exposed',
+      'sharp edges on access', 'tripping hazard on access'
+    ],
+    moderatePatterns: [
+      'access', 'egress', 'ladder', 'stairs', 'stairway', 'steps',
+      'ramp', 'manhole', 'passage', 'accessway', 'crossing', 'entry'
+    ],
+    exclusionPatterns: [
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      'access denied status', 'access denied red', 'access granted status',
+      'access road', 'access route', 'access gate', 'main access road'
     ],
     minimumScore: 5
   },
@@ -3237,6 +3410,274 @@ export const FACTOR_PHRASE_CONFIG = {
       'inspection checklist', 'qr code', 'vvs', 'veri-fi', 'loading point'
     ],
     minimumScore: 8  // Higher threshold - these words often appear incidentally
+  },
+
+  'Confined Space': {
+    strongPatterns: [
+      // === MANHOLE/PIT ENTRY ===
+      'manhole entry', 'manhole entry not', 'entering manhole', 'entered manhole',
+      'manhole without', 'open manhole', 'uncovered manhole', 'manhole uncovered',
+      'manhole cover missing', 'manhole cover not', 'no manhole cover',
+      'manhole cover removed', 'manhole not secured', 'manhole unsecured',
+      'pit entry', 'pit entry not', 'entering pit', 'entered pit',
+      'chamber entry', 'chamber entry not', 'entering chamber',
+
+      // === CONFINED SPACE GENERAL ===
+      'confined space entry', 'confined space not', 'entering confined space',
+      'entered confined space', 'working in confined', 'work in confined',
+      'confined space permit', 'cse permit', 'permit for confined',
+      'without confined space', 'no confined space', 'confined space missing',
+
+      // === ATMOSPHERE/GAS TESTING ===
+      'gas test not', 'gas testing not', 'gas test missing', 'no gas test',
+      'gas test not done', 'gas test not conducted', 'without gas test',
+      'atmospheric test not', 'atmospheric testing not', 'atmosphere not tested',
+      'atmosphere not monitored', 'no atmospheric', 'without atmospheric',
+      'gas detector not', 'gas monitor not', 'gas meter not',
+      'four gas detector', '4 gas detector', 'multi gas detector',
+      'oxygen level not', 'oxygen level low', 'oxygen deficiency',
+      'lel not', 'lower explosive limit', 'combustible gas',
+      'toxic gas', 'h2s', 'hydrogen sulfide', 'carbon monoxide', 'co monitor',
+
+      // === VENTILATION ===
+      'ventilation not', 'ventilation missing', 'no ventilation',
+      'ventilation not provided', 'inadequate ventilation', 'poor ventilation',
+      'forced ventilation not', 'mechanical ventilation not', 'blower not',
+      'air supply not', 'fresh air not', 'without ventilation',
+
+      // === ATTENDANT/WATCHMAN ===
+      'attendant not', 'no attendant', 'attendant missing', 'without attendant',
+      'hole watcher not', 'hole watcher missing', 'no hole watcher',
+      'standby person not', 'standby not', 'no standby', 'without standby',
+      'entry attendant not', 'cse attendant not',
+
+      // === RESCUE EQUIPMENT ===
+      'rescue equipment not', 'rescue equipment missing', 'no rescue equipment',
+      'tripod not', 'tripod missing', 'no tripod', 'without tripod',
+      'retrieval system not', 'retrieval not', 'no retrieval',
+      'winch not', 'winch missing', 'no winch', 'harness retrieval not',
+      'rescue plan not', 'emergency rescue not', 'rescue team not',
+      'breathing apparatus not', 'scba not', 'ba set not',
+
+      // === COMMUNICATION ===
+      'communication not', 'communication missing', 'no communication',
+      'radio not', 'radio missing', 'communication device not',
+
+      // === POSITIVE OBSERVATIONS ===
+      'gas test done', 'gas test conducted', 'atmosphere tested',
+      'ventilation provided', 'attendant present', 'rescue equipment in place',
+      'tripod available', 'communication established', 'permit in place'
+    ],
+    moderatePatterns: [
+      'confined space', 'manhole', 'pit', 'chamber', 'tank', 'vessel',
+      'sewer', 'silo', 'hopper', 'gas test', 'atmosphere', 'ventilation',
+      'attendant', 'rescue', 'tripod', 'retrieval'
+    ],
+    exclusionPatterns: [
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      'toilet', 'welfare', 'restroom', 'washroom'
+    ],
+    minimumScore: 5
+  },
+
+  'Electrical Safety': {
+    strongPatterns: [
+      // === ENERGIZED/LIVE WORK ===
+      'energized', 'energised', 'live electrical', 'live wire', 'live wires',
+      'live cable', 'live cables', 'live circuit', 'working on live',
+      'work on energized', 'work on energised', 'near energized',
+      'near live', 'contact with live', 'exposed to live',
+
+      // === CABLE/WIRING ISSUES ===
+      'exposed wire', 'exposed wires', 'exposed cable', 'exposed cables',
+      'exposed electrical', 'cable exposed', 'cables exposed', 'wires exposed',
+      'cable not protected', 'cables not protected', 'unprotected cable',
+      'cable damage', 'cables damaged', 'damaged cable', 'damaged cables',
+      'frayed cable', 'frayed cables', 'frayed wire', 'frayed wires',
+      'cable running', 'cables running on ground', 'cables on ground',
+      'cable on floor', 'cables on floor', 'trailing cable', 'trailing cables',
+      'cable not secured', 'cables not secured', 'loose cable', 'loose cables',
+      'cable not routed', 'cable routing', 'improper cable routing',
+      'extension cable', 'extension cord', 'extension lead',
+      'temporary cable', 'temporary electrical', 'temporary wiring',
+
+      // === ELECTRICAL PANEL/BOX ===
+      'panel not', 'panel open', 'panel door open', 'panel door missing',
+      'db box not', 'db box open', 'distribution board not', 'distribution board open',
+      'junction box not', 'junction box open', 'junction box uncovered',
+      'switch box not', 'switch box open', 'electrical box open',
+      'panel cover missing', 'panel cover not', 'cover missing on panel',
+      'breaker exposed', 'breakers exposed', 'bus bar exposed',
+
+      // === GROUNDING/EARTHING ===
+      'not grounded', 'not earthed', 'grounding not', 'earthing not',
+      'grounding missing', 'earthing missing', 'no grounding', 'no earthing',
+      'ground wire not', 'earth wire not', 'ground connection not',
+      'earthing connection not', 'improper grounding', 'improper earthing',
+
+      // === LOTO (LOCKOUT TAGOUT) ===
+      'loto not', 'lockout not', 'tagout not', 'lock out tag out not',
+      'loto missing', 'lockout missing', 'no loto', 'no lockout',
+      'not locked out', 'not tagged out', 'without loto', 'without lockout',
+      'isolation not', 'not isolated', 'electrical isolation not',
+      'de-energized not', 'de-energised not', 'not de-energized',
+
+      // === ELECTRICAL HAZARDS ===
+      'electric shock', 'electrical shock', 'electrocution', 'electrocution risk',
+      'arc flash', 'arc flash hazard', 'flash hazard', 'electrical burn',
+      'short circuit', 'short circuit risk', 'overload', 'overloaded circuit',
+      'spark hazard', 'sparking', 'electrical sparking',
+
+      // === ELECTRICAL EQUIPMENT ===
+      'generator not', 'generator cable', 'generator grounding',
+      'transformer not', 'transformer exposed', 'substation not',
+      'socket not', 'socket damaged', 'plug damaged', 'plug not',
+      'electrical tool not', 'power tool not', 'power tool damaged',
+
+      // === POSITIVE OBSERVATIONS ===
+      'properly grounded', 'properly earthed', 'loto in place', 'locked out',
+      'isolated', 'de-energized', 'de-energised', 'cable protected',
+      'cables secured', 'panel closed', 'proper electrical'
+    ],
+    moderatePatterns: [
+      'electrical', 'electric', 'cable', 'cables', 'wire', 'wires',
+      'wiring', 'voltage', 'current', 'power', 'circuit', 'panel',
+      'grounding', 'earthing', 'loto', 'isolation', 'energized', 'energised'
+    ],
+    exclusionPatterns: [
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      'toilet', 'welfare', 'power supply to welfare'
+    ],
+    minimumScore: 5
+  },
+
+  'Traffic Management': {
+    strongPatterns: [
+      // === SPEED VIOLATIONS ===
+      'over speeding', 'overspeeding', 'speeding vehicle', 'speeding truck',
+      'speed limit exceeded', 'exceeding speed limit', 'exceeded speed limit',
+      'traveling at high speed', 'high speed', 'excessive speed',
+      'speed violation', 'speed not controlled', 'speed control not',
+      'speed limit not', 'speed limit sign not', 'no speed limit',
+
+      // === BANKSMAN/SPOTTER ===
+      'no banksman', 'banksman not', 'banksman missing', 'without banksman',
+      'banksman not present', 'banksman not available', 'banksman absent',
+      'no spotter', 'spotter not', 'spotter missing', 'without spotter',
+      'spotter not present', 'spotter not available', 'spotter absent',
+      'no marshal', 'marshal not', 'marshal missing', 'without marshal',
+      'traffic marshal not', 'traffic controller not', 'no traffic controller',
+      'flagman not', 'flag man not', 'no flagman', 'without flagman',
+
+      // === REVERSING/BACKING ===
+      'reversing without', 'reversing without spotter', 'reversing without banksman',
+      'backing without', 'backing up without', 'reverse without',
+      'reverse alarm not', 'reversing alarm not', 'backup alarm not',
+      'reversing camera not', 'rear view camera not', 'rear camera not',
+      'blind spot not', 'blind spot mirror not',
+
+      // === PEDESTRIAN/VEHICLE SEGREGATION ===
+      'pedestrian vehicle', 'vehicle pedestrian', 'man machine',
+      'pedestrian not segregated', 'pedestrians not segregated',
+      'no pedestrian segregation', 'pedestrian segregation not',
+      'pedestrian pathway not', 'pedestrian walkway not', 'no pedestrian pathway',
+      'pedestrians walking', 'pedestrians in', 'pedestrian in vehicle',
+      'workers walking', 'workers in vehicle route', 'workers crossing',
+      'people walking in', 'people in vehicle', 'people crossing',
+
+      // === TRAFFIC CONTROL ===
+      'traffic control not', 'traffic management not', 'no traffic control',
+      'traffic plan not', 'traffic management plan not', 'tmp not',
+      'traffic rules not', 'traffic violation', 'traffic regulations not',
+      'one way not', 'one way violation', 'wrong way', 'against traffic',
+      'contra flow', 'contraflow', 'opposite direction',
+
+      // === PARKING ===
+      'improper parking', 'incorrect parking', 'wrong parking',
+      'parked in', 'parked on', 'parked near', 'parked at',
+      'unauthorized parking', 'no parking area', 'parking area not',
+      'double parking', 'blocked parking', 'parking violation',
+
+      // === POSITIVE OBSERVATIONS ===
+      'banksman present', 'spotter present', 'marshal in place',
+      'proper segregation', 'pedestrian pathway in place', 'traffic control in place',
+      'speed limit observed', 'speed controlled', 'traffic plan followed'
+    ],
+    moderatePatterns: [
+      'traffic', 'vehicle', 'pedestrian', 'speed', 'speeding',
+      'banksman', 'spotter', 'marshal', 'reversing', 'backing',
+      'segregation', 'parking', 'one way'
+    ],
+    exclusionPatterns: [
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      'toilet', 'welfare', 'access denied', 'access granted'
+    ],
+    minimumScore: 5
+  },
+
+  'Excavation & Trenching': {
+    strongPatterns: [
+      // === SHORING/SUPPORT ===
+      'shoring not', 'shoring missing', 'no shoring', 'without shoring',
+      'shoring not installed', 'shoring not provided', 'inadequate shoring',
+      'unshored', 'un-shored', 'trench not shored', 'excavation not shored',
+      'support not', 'support missing', 'no support', 'unsupported',
+      'wall support not', 'trench wall not', 'side wall not',
+      'trench box not', 'trench box missing', 'no trench box',
+      'sheet piling not', 'sheet pile not', 'timber shoring not',
+
+      // === SLOPING/BENCHING ===
+      'sloping not', 'sloping missing', 'no sloping', 'improper sloping',
+      'improper slope', 'slope angle not', 'slope not proper',
+      'slope too steep', 'steep slope', 'vertical wall', 'vertical cut',
+      'benching not', 'benching missing', 'no benching', 'improper benching',
+      'step not', 'steps not', 'stepped excavation not',
+      'angle of repose', 'soil type not', 'soil classification not',
+
+      // === CAVE-IN/COLLAPSE ===
+      'cave-in', 'cave in', 'cavein', 'collapse risk', 'risk of collapse',
+      'collapse hazard', 'collapsing', 'wall collapse', 'side collapse',
+      'soil collapse', 'ground collapse', 'excavation collapse',
+      'trench collapse', 'wall caving', 'sides caving',
+
+      // === SPOIL PILE ===
+      'spoil pile', 'spoil piles', 'spoil not', 'spoil too close',
+      'spoil pile too close', 'spoil pile near', 'stockpile too close',
+      'stockpile near edge', 'material stockpiled', 'excavated material',
+      'spoil distance', 'spoil setback', '2 feet from edge', '2ft from edge',
+
+      // === DEWATERING ===
+      'dewatering not', 'dewatering missing', 'no dewatering',
+      'water accumulation', 'water in excavation', 'water in trench',
+      'flooded excavation', 'flooded trench', 'standing water',
+      'water pump not', 'pump not working', 'drainage not',
+
+      // === DEPTH/PROTECTION ===
+      'deep excavation', 'excavation deeper', 'depth exceeds',
+      'more than 1.2m', 'more than 4 feet', 'deeper than',
+      'protective system not', 'protection not', 'no protection',
+      'protective measures not', 'unprotected excavation', 'unprotected trench',
+
+      // === EDGE PROTECTION (Excavation specific) ===
+      'edge of excavation', 'excavation edge', 'trench edge',
+      'edge not protected', 'edges not protected', 'excavation not barricaded',
+      'trench not barricaded', 'excavation not demarcated', 'trench not demarcated',
+
+      // === POSITIVE OBSERVATIONS ===
+      'shoring in place', 'properly shored', 'shoring installed',
+      'sloping proper', 'benching in place', 'spoil pile at safe distance',
+      'dewatering in place', 'protective system in place', 'excavation barricaded'
+    ],
+    moderatePatterns: [
+      'excavation', 'trench', 'trenching', 'shoring', 'sloping',
+      'benching', 'spoil', 'stockpile', 'dewatering', 'cave-in',
+      'collapse', 'depth', 'deep'
+    ],
+    exclusionPatterns: [
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      'toilet', 'welfare'
+    ],
+    minimumScore: 5
   }
 }
 
@@ -4395,6 +4836,69 @@ export const FACTOR_KEYWORDS = {
   safetyplans: 'Planning',
   methodology: 'Planning',
   sequencing: 'Planning',
+  // Geotechnical/Soil reports (excavation planning)
+  geotechnical: 'Planning',
+  geotechnicalreport: 'Planning',
+  geotechnicalreports: 'Planning',
+  geotechreport: 'Planning',
+  geotechreports: 'Planning',
+  soilreport: 'Planning',
+  soilreports: 'Planning',
+  soilsurvey: 'Planning',
+  soilsurveys: 'Planning',
+  soiltest: 'Planning',
+  soiltests: 'Planning',
+  soiltesting: 'Planning',
+  soilanalysis: 'Planning',
+  soilcondition: 'Planning',
+  soilconditions: 'Planning',
+  groundcondition: 'Planning',
+  groundconditions: 'Planning',
+  groundsurvey: 'Planning',
+  groundsurveys: 'Planning',
+  // Utility layouts and drawings (excavation planning)
+  utilitylayout: 'Planning',
+  utilitylayouts: 'Planning',
+  utilitydrawing: 'Planning',
+  utilitydrawings: 'Planning',
+  utilitydiagram: 'Planning',
+  utilitydiagrams: 'Planning',
+  utilitymap: 'Planning',
+  utilitymaps: 'Planning',
+  utilitylocate: 'Planning',
+  utilitylocating: 'Planning',
+  utilitylocation: 'Planning',
+  utilitylocations: 'Planning',
+  asbuiltdrawing: 'Planning',
+  asbuiltdrawings: 'Planning',
+  asbuilt: 'Planning',
+  asbuilts: 'Planning',
+  layoutdrawing: 'Planning',
+  layoutdrawings: 'Planning',
+  // Expired documents
+  expired: 'Planning',
+  expiry: 'Planning',
+  expiring: 'Planning',
+  outofdate: 'Planning',
+  outdated: 'Planning',
+  lapsed: 'Planning',
+  // Availability issues
+  unavailability: 'Planning',
+  unavailable: 'Planning',
+  notavailable: 'Planning',
+  missingdocument: 'Planning',
+  missingdocuments: 'Planning',
+  missingdrawing: 'Planning',
+  missingdrawings: 'Planning',
+  missinglayout: 'Planning',
+  // Distance/spacing planning
+  safedistance: 'Planning',
+  safedistances: 'Planning',
+  minimumdistance: 'Planning',
+  clearance: 'Planning',
+  clearances: 'Planning',
+  setback: 'Planning',
+  setbacks: 'Planning',
 
   // Signage (50+)
   signage: 'Signage',
@@ -4448,6 +4952,32 @@ export const FACTOR_KEYWORDS = {
   safetysigns: 'Signage',
   sticker: 'Signage',
   stickers: 'Signage',
+  // Stop signs (traffic/excavation areas)
+  stopsign: 'Signage',
+  stopsigns: 'Signage',
+  nostopsign: 'Signage',
+  missingstopsign: 'Signage',
+  // Excavation signage
+  excavationsign: 'Signage',
+  excavationsigns: 'Signage',
+  excavationsignage: 'Signage',
+  trenchsign: 'Signage',
+  trenchsigns: 'Signage',
+  digsign: 'Signage',
+  digsigns: 'Signage',
+  // Warning for excavations
+  notclearlysigned: 'Signage',
+  clearlysigned: 'Signage',
+  notproperlysigned: 'Signage',
+  properlysigned: 'Signage',
+  lackofsignage: 'Signage',
+  missingsignage: 'Signage',
+  nosignage: 'Signage',
+  // Hazard information signs
+  hazardsign: 'Signage',
+  hazardsigns: 'Signage',
+  informationsign: 'Signage',
+  informationsigns: 'Signage',
 
   // Barriers (50+)
   // Barriers (100+)
@@ -4616,6 +5146,33 @@ export const FACTOR_KEYWORDS = {
   separation: 'Barriers',
   separated: 'Barriers',
   unseparated: 'Barriers',
+  // Berms (excavation edge protection)
+  berm: 'Barriers',
+  berms: 'Barriers',
+  sandberm: 'Barriers',
+  sandberms: 'Barriers',
+  soilberm: 'Barriers',
+  soilberms: 'Barriers',
+  earthberm: 'Barriers',
+  earthberms: 'Barriers',
+  bermwall: 'Barriers',
+  bermwalls: 'Barriers',
+  // Stop blocks (vehicle edge protection)
+  stopblock: 'Barriers',
+  stopblocks: 'Barriers',
+  stoplog: 'Barriers',
+  stoplogs: 'Barriers',
+  vehiclestop: 'Barriers',
+  vehiclestops: 'Barriers',
+  // Unsecured excavations
+  unsecuredexcavation: 'Barriers',
+  unsecuredtrench: 'Barriers',
+  unsecuredpit: 'Barriers',
+  unprotectedexcavation: 'Barriers',
+  unprotectedtrench: 'Barriers',
+  openexcavation: 'Barriers',
+  opentrench: 'Barriers',
+  openpit: 'Barriers',
 
   // Inspections (50+)
   inspection: 'Inspections',
@@ -5448,7 +6005,337 @@ export const FACTOR_KEYWORDS = {
   precommissioned: 'Testing',
   functiontest: 'Testing',
   functiontests: 'Testing',
-  functiontesting: 'Testing'
+  functiontesting: 'Testing',
+
+  // Excavation & Trenching (100+)
+  // Shoring and support
+  shoring: 'Excavation & Trenching',
+  shorings: 'Excavation & Trenching',
+  shored: 'Excavation & Trenching',
+  unshored: 'Excavation & Trenching',
+  unsupported: 'Excavation & Trenching',
+  supported: 'Excavation & Trenching',
+  trenchbox: 'Excavation & Trenching',
+  trenchboxes: 'Excavation & Trenching',
+  trenchshield: 'Excavation & Trenching',
+  trenchshields: 'Excavation & Trenching',
+  sheeting: 'Excavation & Trenching',
+  sheetpile: 'Excavation & Trenching',
+  sheetpiles: 'Excavation & Trenching',
+  sheetpiling: 'Excavation & Trenching',
+  // Slope and benching
+  slope: 'Excavation & Trenching',
+  slopes: 'Excavation & Trenching',
+  sloped: 'Excavation & Trenching',
+  sloping: 'Excavation & Trenching',
+  slopping: 'Excavation & Trenching',
+  slopeing: 'Excavation & Trenching',
+  slopeangle: 'Excavation & Trenching',
+  slopeangles: 'Excavation & Trenching',
+  gradientangle: 'Excavation & Trenching',
+  benching: 'Excavation & Trenching',
+  benched: 'Excavation & Trenching',
+  bench: 'Excavation & Trenching',
+  benches: 'Excavation & Trenching',
+  stepback: 'Excavation & Trenching',
+  stepbacks: 'Excavation & Trenching',
+  // Cave-in and collapse
+  cavein: 'Excavation & Trenching',
+  caveins: 'Excavation & Trenching',
+  caved: 'Excavation & Trenching',
+  caving: 'Excavation & Trenching',
+  collapse: 'Excavation & Trenching',
+  collapses: 'Excavation & Trenching',
+  collapsed: 'Excavation & Trenching',
+  collapsing: 'Excavation & Trenching',
+  soilcollapse: 'Excavation & Trenching',
+  trenchcollapse: 'Excavation & Trenching',
+  wallcollapse: 'Excavation & Trenching',
+  // Trench walls and sides
+  trenchwall: 'Excavation & Trenching',
+  trenchwalls: 'Excavation & Trenching',
+  trenchside: 'Excavation & Trenching',
+  trenchsides: 'Excavation & Trenching',
+  excavationwall: 'Excavation & Trenching',
+  excavationwalls: 'Excavation & Trenching',
+  unsupportedwall: 'Excavation & Trenching',
+  unsupportedwalls: 'Excavation & Trenching',
+  // Spoil and material piles
+  spoil: 'Excavation & Trenching',
+  spoils: 'Excavation & Trenching',
+  spoilpile: 'Excavation & Trenching',
+  spoilpiles: 'Excavation & Trenching',
+  excavatedmaterial: 'Excavation & Trenching',
+  excavatedmaterials: 'Excavation & Trenching',
+  stockpile: 'Excavation & Trenching',
+  stockpiles: 'Excavation & Trenching',
+  stockpiled: 'Excavation & Trenching',
+  stockpiling: 'Excavation & Trenching',
+  // Dewatering
+  dewatering: 'Excavation & Trenching',
+  dewatered: 'Excavation & Trenching',
+  dewateringpump: 'Excavation & Trenching',
+  groundwater: 'Excavation & Trenching',
+  watertable: 'Excavation & Trenching',
+  // Access to excavation
+  excavationaccess: 'Excavation & Trenching',
+  trenchaccess: 'Excavation & Trenching',
+  trenchladder: 'Excavation & Trenching',
+  accessladder: 'Excavation & Trenching',
+  accessramp: 'Excavation & Trenching',
+  accessstair: 'Excavation & Trenching',
+  accessstairs: 'Excavation & Trenching',
+  inadequateaccess: 'Excavation & Trenching',
+  noaccess: 'Excavation & Trenching',
+  // Soil types and conditions
+  soiltype: 'Excavation & Trenching',
+  soiltypes: 'Excavation & Trenching',
+  claysoil: 'Excavation & Trenching',
+  sandysoil: 'Excavation & Trenching',
+  loosesoil: 'Excavation & Trenching',
+  unstablesoil: 'Excavation & Trenching',
+  stablesoil: 'Excavation & Trenching',
+  saturatedsoil: 'Excavation & Trenching',
+  // Excavation depth
+  deepexcavation: 'Excavation & Trenching',
+  deeptrench: 'Excavation & Trenching',
+  deeptrenches: 'Excavation & Trenching',
+  excavationdepth: 'Excavation & Trenching',
+  trenchdepth: 'Excavation & Trenching',
+  // Edge and perimeter
+  excavationedge: 'Excavation & Trenching',
+  trenchedge: 'Excavation & Trenching',
+  excavationperimeter: 'Excavation & Trenching',
+  // Protective measures
+  protectivemeasure: 'Excavation & Trenching',
+  protectivemeasures: 'Excavation & Trenching',
+  noprotection: 'Excavation & Trenching',
+  withoutprotection: 'Excavation & Trenching',
+  noproperprotection: 'Excavation & Trenching',
+  improperprotection: 'Excavation & Trenching',
+
+  // Traffic Management (additional keywords)
+  twowaytraffic: 'Traffic Management',
+  onewaytraffic: 'Traffic Management',
+  vehicletraffic: 'Traffic Management',
+  sitetraffic: 'Traffic Management',
+  trafficflow: 'Traffic Management',
+  trafficcontrol: 'Traffic Management',
+  trafficmanagement: 'Traffic Management',
+  haulroad: 'Traffic Management',
+  haulroads: 'Traffic Management',
+  haulageroad: 'Traffic Management',
+  haulageroads: 'Traffic Management',
+  accessroad: 'Traffic Management',
+  accessroads: 'Traffic Management',
+  rightofway: 'Traffic Management',
+  vehiclemovement: 'Traffic Management',
+  vehiclemovements: 'Traffic Management',
+  // Pedestrian
+  pedestrian: 'Traffic Management',
+  pedestrians: 'Traffic Management',
+  pedestrianwalkway: 'Traffic Management',
+  pedestrianwalkways: 'Traffic Management',
+  pedestrianaccess: 'Traffic Management',
+  pedestriancrossing: 'Traffic Management',
+  pedestriansegregation: 'Traffic Management',
+  walkway: 'Traffic Management',
+  walkways: 'Traffic Management',
+  footpath: 'Traffic Management',
+  footpaths: 'Traffic Management',
+  // Speed limits
+  speedlimit: 'Traffic Management',
+  speedlimits: 'Traffic Management',
+  speedlimitsign: 'Traffic Management',
+  speedlimitsigns: 'Traffic Management',
+  speeding: 'Traffic Management',
+  overspeeding: 'Traffic Management',
+  // Traffic signals
+  trafficsignal: 'Traffic Management',
+  trafficsignals: 'Traffic Management',
+  trafficlight: 'Traffic Management',
+  trafficlights: 'Traffic Management',
+  flashinglight: 'Traffic Management',
+  flashinglights: 'Traffic Management',
+  warninglight: 'Traffic Management',
+  warninglights: 'Traffic Management',
+  // Bunds and berms for traffic
+  safetybund: 'Traffic Management',
+  safetybunds: 'Traffic Management',
+  crossingbund: 'Traffic Management',
+  sandbund: 'Traffic Management',
+  sandbunds: 'Traffic Management',
+  // Tower lights
+  towerlight: 'Traffic Management',
+  towerlights: 'Traffic Management',
+  lightingtower: 'Traffic Management',
+  lightingtowers: 'Traffic Management',
+  // Safety poles
+  safetypole: 'Traffic Management',
+  safetypoles: 'Traffic Management',
+  trafficpole: 'Traffic Management',
+  trafficpoles: 'Traffic Management',
+  // Parking
+  parkingarea: 'Traffic Management',
+  parkingareas: 'Traffic Management',
+  designatedparking: 'Traffic Management',
+  vehicleparking: 'Traffic Management',
+  noparking: 'Traffic Management',
+  // Road conditions
+  pothole: 'Traffic Management',
+  potholes: 'Traffic Management',
+  stagnantwater: 'Traffic Management',
+  roadcondition: 'Traffic Management',
+  roadconditions: 'Traffic Management',
+  roadsurface: 'Traffic Management',
+  temporaryroad: 'Traffic Management',
+  temporaryaccess: 'Traffic Management',
+
+  // Electrical Safety (additional keywords)
+  // Power tools and disconnection
+  powersource: 'Electrical Safety',
+  powersources: 'Electrical Safety',
+  disconnecting: 'Electrical Safety',
+  disconnected: 'Electrical Safety',
+  notdisconnected: 'Electrical Safety',
+  unplugged: 'Electrical Safety',
+  pluggedin: 'Electrical Safety',
+  electricalconnection: 'Electrical Safety',
+  electricalconnections: 'Electrical Safety',
+  // Wires and cables
+  electricwire: 'Electrical Safety',
+  electricwires: 'Electrical Safety',
+  electricalwire: 'Electrical Safety',
+  electricalwires: 'Electrical Safety',
+  hangingwire: 'Electrical Safety',
+  hangingwires: 'Electrical Safety',
+  hangingcable: 'Electrical Safety',
+  hangingcables: 'Electrical Safety',
+  exposedwire: 'Electrical Safety',
+  exposedwires: 'Electrical Safety',
+  exposedcable: 'Electrical Safety',
+  exposedcables: 'Electrical Safety',
+  wirelaying: 'Electrical Safety',
+  cablelaying: 'Electrical Safety',
+  // Switches
+  electricswitch: 'Electrical Safety',
+  electricswitches: 'Electrical Safety',
+  electricalswitch: 'Electrical Safety',
+  exposedswitch: 'Electrical Safety',
+  switchexposed: 'Electrical Safety',
+  // Electric shock
+  electricshock: 'Electrical Safety',
+  electricalshock: 'Electrical Safety',
+  electrocution: 'Electrical Safety',
+  electrocutionrisk: 'Electrical Safety',
+  // Damaged electrical
+  damagedelectrical: 'Electrical Safety',
+  damagedcomponent: 'Electrical Safety',
+  damagedcomponents: 'Electrical Safety',
+  damagecomponents: 'Electrical Safety',
+  // Compressor hoses and whip
+  compressorhose: 'Electrical Safety',
+  compressorhoses: 'Electrical Safety',
+  airhose: 'Electrical Safety',
+  airhoses: 'Electrical Safety',
+  whiparrestor: 'Electrical Safety',
+  whiparrestors: 'Electrical Safety',
+  whiplash: 'Electrical Safety',
+  whiplasharrestor: 'Electrical Safety',
+  hosewhip: 'Electrical Safety',
+  hosewhipping: 'Electrical Safety',
+  hosefailure: 'Electrical Safety',
+
+  // Confined Space (additional keywords)
+  // Manholes
+  manhole: 'Confined Space',
+  manholes: 'Confined Space',
+  openmanhole: 'Confined Space',
+  openmanholes: 'Confined Space',
+  manholecover: 'Confined Space',
+  manholecovers: 'Confined Space',
+  manholeprotection: 'Confined Space',
+  manholefall: 'Confined Space',
+  manholelifting: 'Confined Space',
+  unprotectedmanhole: 'Confined Space',
+  uncoveredmanhole: 'Confined Space',
+  uncoveredmanholes: 'Confined Space',
+  manholeopening: 'Confined Space',
+  manholeopenings: 'Confined Space',
+  temporarymanhole: 'Confined Space',
+  // Fall prevention
+  fallprevention: 'Confined Space',
+  fallpreventionmeasure: 'Confined Space',
+  fallpreventionmeasures: 'Confined Space',
+  preventfall: 'Confined Space',
+  preventfalls: 'Confined Space',
+  // Entry and exclusion
+  exclusion: 'Confined Space',
+  exclusions: 'Confined Space',
+  exclusionzone: 'Confined Space',
+  exclusionzones: 'Confined Space',
+  noexclusion: 'Confined Space',
+  // Covers
+  impropercover: 'Confined Space',
+  improperlycover: 'Confined Space',
+  improperlycovered: 'Confined Space',
+  propercover: 'Confined Space',
+  temporarycover: 'Confined Space',
+
+  // Access (additional keywords)
+  // Stairs and steps
+  accessstair: 'Access',
+  accessstairs: 'Access',
+  accessstairway: 'Access',
+  impropersteps: 'Access',
+  improperstair: 'Access',
+  improperstairs: 'Access',
+  incompletestairs: 'Access',
+  incompletestair: 'Access',
+  // Bridges and improvised access
+  accessbridge: 'Access',
+  accessbridges: 'Access',
+  improvisedaccess: 'Access',
+  improvisedbridge: 'Access',
+  makeshift: 'Access',
+  makeshiftaccess: 'Access',
+  makeshiftbridge: 'Access',
+  // Blocked access
+  blockedaccess: 'Access',
+  blockingaccess: 'Access',
+  blockedaccessway: 'Access',
+  blockedpassage: 'Access',
+  accessway: 'Access',
+  accessways: 'Access',
+  blockedaisle: 'Access',
+  // Egress
+  egress: 'Access',
+  egressroute: 'Access',
+  egressroutes: 'Access',
+  safeegress: 'Access',
+  properegress: 'Access',
+  // Pits and openings
+  elevatorpit: 'Access',
+  elevatorpits: 'Access',
+  liftpit: 'Access',
+  liftpits: 'Access',
+  unsecuredpit: 'Access',
+  // Anchor bolts and trip hazards
+  anchorbolt: 'Access',
+  anchorbolts: 'Access',
+  exposedanchorbolt: 'Access',
+  exposedanchorbolts: 'Access',
+  studbolt: 'Access',
+  studbolts: 'Access',
+  exposedstud: 'Access',
+  exposedstuds: 'Access',
+  exposedbolts: 'Access',
+  // Material blocking
+  woodscattered: 'Access',
+  materialscattered: 'Access',
+  poorlyarranged: 'Access',
+  blockingaccessway: 'Access',
+  blockingaccessways: 'Access'
 }
 
 // ============================================================================
