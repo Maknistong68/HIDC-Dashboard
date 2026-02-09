@@ -178,7 +178,7 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
   }
 
   return (
-    <div className="flex flex-col gap-3 flex-1 animate-fade-in">
+    <div className="flex flex-col gap-3 animate-fade-in">
       {/* Sub-tab row: dimension tabs + summary + Adjust */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -300,7 +300,7 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
       )}
 
       {/* Master-detail panels */}
-      <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)]">
+      <div className="flex gap-3 h-[calc(100vh-300px)] min-h-[400px]">
         {/* Left: Entity List */}
         <div className="w-72 flex-shrink-0 bg-surface-50 rounded-lg border border-surface-200 p-3 sm:p-4 flex flex-col transition-all duration-200">
           <div className="flex items-center justify-between mb-1 flex-shrink-0">
@@ -317,7 +317,7 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
         </div>
 
         {/* Right: Detail Panel */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 h-full">
           <EntityDetailPanel
             entity={selectedEntity}
             incidents={entityIncidents}

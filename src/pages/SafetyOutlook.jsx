@@ -440,7 +440,7 @@ const SafetyOutlook = () => {
   }
 
   return (
-    <div className="space-y-4 flex flex-col">
+    <div className="space-y-4">
       {/* Filters Row - consistent with Dashboard */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -485,7 +485,7 @@ const SafetyOutlook = () => {
       {/* Tab 1: Correlations */}
       {activeMainTab === 'correlations' && (
         <TabErrorBoundary label="Correlations">
-        <div role="tabpanel" id="tabpanel-correlations" aria-labelledby="tab-correlations" className="flex flex-col gap-3 flex-1 animate-fade-in">
+        <div role="tabpanel" id="tabpanel-correlations" aria-labelledby="tab-correlations" className="flex flex-col gap-3 animate-fade-in">
           {/* Sub-tab Toggle (Hazards / Factors) + Summary */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div role="tablist" aria-label="Correlation sub-tabs" className="flex items-center gap-2">
@@ -540,7 +540,7 @@ const SafetyOutlook = () => {
           </div>
 
           {/* Main content */}
-          <div className="flex gap-3 flex-1 min-h-[320px] max-h-[calc(100vh-310px)]">
+          <div className="flex gap-3 h-[calc(100vh-300px)] min-h-[400px]">
             {activeSubTab === 'hazards' ? (
               <>
                 {/* Left: Hazard List */}
@@ -559,7 +559,7 @@ const SafetyOutlook = () => {
                 </div>
 
                 {/* Right: Hazard Detail Panel */}
-                <div className="flex-1 min-w-0 transition-all duration-200">
+                <div className="flex-1 min-w-0 h-full transition-all duration-200">
                   <HazardDetailPanel
                     hazard={selectedHazard}
                     incidents={filteredIncidents}
@@ -588,7 +588,7 @@ const SafetyOutlook = () => {
                 </div>
 
                 {/* Right: Factor Detail Panel */}
-                <div className="flex-1 min-w-0 transition-all duration-200">
+                <div className="flex-1 min-w-0 h-full transition-all duration-200">
                   <FactorDetailPanel
                     factor={selectedFactor}
                     totalIncidents={factorData.analyzed}
