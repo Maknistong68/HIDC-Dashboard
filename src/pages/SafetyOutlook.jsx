@@ -3,12 +3,12 @@ import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, RiskHubView } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
-import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
+import { aggregateContributingFactors } from '../utils/rootCauseEngine'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -266,8 +266,9 @@ const SafetyOutlook = () => {
   }, [selectedFactor?.name, factorData?.byFactor])
 
   // Negative incidents (for Tab 2 - Predictive & Simulation)
+  // Use exact match filter (not isPositiveType) to match Dashboard heatmap logic
   const negativeIncidents = useMemo(() => {
-    return filteredIncidents.filter(i => !isPositiveType(i.type))
+    return filteredIncidents.filter(i => i.type !== 'positive')
   }, [filteredIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
@@ -380,6 +381,7 @@ const SafetyOutlook = () => {
   const handleSubTabChange = useCallback((tab) => {
     setActiveSubTab(tab)
   }, [])
+
 
   // Check if we have data
   const hasData = filteredIncidents.length > 0 && sortedHazards.length > 0
@@ -607,10 +609,10 @@ const SafetyOutlook = () => {
       {activeMainTab === 'predictive' && (
         <TabErrorBoundary label="Predictive & Simulation">
         <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
-          <RiskHubView
-            filteredIncidents={filteredIncidents}
-            negativeIncidents={negativeIncidents}
+          <HazardRiskMatrix
             sortedHazards={sortedHazards}
+            negativeIncidents={negativeIncidents}
+            filteredIncidents={filteredIncidents}
             factorData={factorData}
             period={period}
             siteClassifications={siteClassifications}
