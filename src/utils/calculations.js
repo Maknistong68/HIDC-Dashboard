@@ -95,11 +95,11 @@ export const getIncidentsByMonth = (incidents, months = 12) => {
  * Current values represent industry-standard severity ratios.
  */
 export const SEVERITY_WEIGHTS = {
-  lti: 25,
-  mti: 15,
-  fac: 10,
-  ncr: 5,
-  'near-miss': 3,  // See warning above about reporting suppression
+  lti: 1000,
+  mti: 500,
+  fac: 100,
+  'near-miss': 50,
+  ncr: 20,
   default: 1
 }
 
