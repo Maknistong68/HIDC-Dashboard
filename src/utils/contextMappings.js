@@ -131,20 +131,8 @@ export const OUTCOME_TO_HAZARD = {
   'engulfed in flames': 'Fire',
   'fire spread': 'Fire',
 
-  // Explosives & Blasting outcomes (NEOM Eltizam Hazard #12)
-  'blasting injury': 'Explosives & Blasting',
-  'blast injury': 'Explosives & Blasting',
-  'flyrock': 'Explosives & Blasting',
-  'fly rock': 'Explosives & Blasting',
-  'flyrock injury': 'Explosives & Blasting',
-  'misfire': 'Explosives & Blasting',
-  'misfired': 'Explosives & Blasting',
-  'unexploded': 'Explosives & Blasting',
-  'premature detonation': 'Explosives & Blasting',
-  'unplanned detonation': 'Explosives & Blasting',
-  'ground vibration damage': 'Explosives & Blasting',
-  'blast damage': 'Explosives & Blasting',
-  'blasting incident': 'Explosives & Blasting',
+  // Explosives & Blasting - REMOVED keyword detection
+  // Only classify from explicit Excel data, same as Working on or Near Water
 
   // Hot Work outcomes
   'explosion': 'Hot Work',
@@ -1015,17 +1003,8 @@ export const HAZARD_ACTIONS = {
     'earthworks', 'earthmoving'
   ],
 
-  // Blasting actions → Explosives & Blasting (NEOM Eltizam #12)
-  'blasting': [
-    'blasting', 'blasted', 'blast',
-    'detonating', 'detonated', 'detonate',
-    'firing', 'fired', 'shot firing',
-    'drilling blast holes', 'charging', 'charged',
-    'priming', 'primed', 'stemming',
-    'connecting detonators', 'wiring up',
-    'clearing blast zone', 'evacuating blast area',
-    'post blast inspection', 'inspecting blast'
-  ],
+  // Blasting actions - REMOVED (no Explosives & Blasting keyword detection)
+  // Only classify from explicit Excel data
 
   // Electrical actions → Energized System
   'electrical': [
