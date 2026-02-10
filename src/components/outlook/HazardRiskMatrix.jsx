@@ -873,6 +873,32 @@ const ConnectedHubDiagram = ({
                   </div>
                 )
               })}
+
+              {/* Divider if both sites and contractors exist */}
+              {whereData.sites.length > 0 && whereData.contractors.length > 0 && (
+                <div className="border-t border-purple-200 my-2" />
+              )}
+
+              {/* Top Contractor */}
+              {whereData.contractors.slice(0, 1).map((contractor, idx) => {
+                const isUnknown = contractor.name === 'Unknown'
+                return (
+                  <div key={`contractor-${idx}`} className="flex items-center justify-between">
+                    <span className="text-xs text-surface-500">Top Contractor</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs truncate max-w-[80px] ${isUnknown ? 'text-surface-400 italic' : 'text-surface-600'}`}
+                        title={contractor.name}
+                      >
+                        {contractor.name}
+                      </span>
+                      <span className={`text-sm font-semibold ${isUnknown ? 'text-surface-400' : 'text-purple-600'}`}>
+                        {contractor.pct}%
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <p className="text-xs text-surface-400 italic text-center py-2">No location data</p>
