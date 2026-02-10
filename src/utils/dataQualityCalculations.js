@@ -837,7 +837,7 @@ export const getOtherHazardAnalysis = (incidents) => {
     'Temporary Works': ['formwork', 'falsework', 'temporary structure', 'propping', 'shoring', 'temporary support'],
     'Working in Heat': ['heat stress', 'hot environment', 'sun exposure', 'dehydration', 'heat exhaustion', 'working in heat', 'high temperature'],
     'Working on or Near Live Roads': ['live road', 'traffic', 'highway', 'road work', 'traffic management', 'road closure'],
-    'Working on or Near Water': ['water body', 'river', 'lake', 'pond', 'drowning', 'water hazard', 'near water'],
+    'Working on or Near Water': [], // Empty - no keyword auto-detection
     'Driving': ['driving', 'vehicle', 'speeding', 'seatbelt', 'driver', 'road safety', 'journey management']
   }
 

@@ -485,37 +485,9 @@ export const HAZARD_OBJECTS = {
     'safe working load', 'working load limit', 'swl', 'wll'
   ],
 
-  'Working on or Near Water': [
-    'river', 'rivers', 'stream', 'creek',
-    'pond', 'ponds', 'lake', 'lakes', 'reservoir',
-    'sea', 'ocean', 'marine', 'offshore',
-    'canal', 'canals', 'waterway',
-    'dock', 'docks', 'wharf', 'quay', 'pier', 'jetty',
-    'barge', 'barges', 'vessel', 'boat', 'ship',
-    'water body', 'body of water', 'open water',
-    'flood water', 'flooded', 'flooding',
-    'swimming pool', 'pool', 'water tank',
-    'drainage', 'drain', 'storm water', 'stormwater',
-    // NEOM Standard additions - Rescue equipment
-    'lifebuoy', 'life buoy', 'lifebuoys', 'ring buoy',
-    'lifeline', 'life line', '30m lifeline', 'rescue line',
-    'lifejacket', 'life jacket', 'lifejackets', 'pfd',
-    'personal flotation device', 'buoyancy aid',
-    // Rescue boat requirements
-    'rescue boat', 'rescue craft', 'standby boat',
-    // Spacing requirements (NEOM: 60m max spacing)
-    '60m spacing', 'lifebuoy spacing', 'rescue equipment spacing',
-    // Night work
-    'chemical light stick', 'search light', 'night marine work',
-    'emergency light', 'whistle',
-    // Buddy system
-    'buddy system', 'no lone working', 'lone working near water',
-    // Boat operations
-    'coxswain', 'boat operator', 'man overboard',
-    'embarking', 'disembarking', 'gangway',
-    // Weather (sea work)
-    'sea state', 'sea forecast', 'tide', 'tidal'
-  ],
+  // Working on or Near Water - removed keyword auto-detection
+  // Classification only from explicit Excel hazard column data
+  'Working on or Near Water': [],
 
   'Hot Work': [
     // Direct hot work terms
@@ -539,36 +511,8 @@ export const HAZARD_OBJECTS = {
   ],
 
   // Explosives & Blasting (NEOM Eltizam Hazard #12)
-  'Explosives & Blasting': [
-    // Explosives and detonators
-    'explosive', 'explosives', 'explosive material', 'explosive charge',
-    'detonator', 'detonators', 'detonating cord', 'det cord', 'detcord',
-    'primer', 'primers', 'booster', 'boosters', 'initiator',
-    'blasting cap', 'blasting caps', 'electric detonator',
-    'non-electric detonator', 'nonel', 'shock tube',
-    // Blasting operations
-    'blast', 'blasting', 'blasting operation', 'blasting activity',
-    'drill and blast', 'controlled blasting', 'presplit blasting',
-    'smooth blasting', 'cushion blasting', 'blast hole', 'blast holes',
-    'shot hole', 'shot holes', 'blast pattern', 'blast design',
-    // Personnel
-    'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
-    'blasting supervisor', 'sentry', 'sentries', 'explosives handler',
-    // Storage
-    'magazine', 'explosives magazine', 'explosive store', 'explosive storage',
-    'detonator storage', 'magazine key', 'magazine register',
-    // Safety equipment and procedures
-    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
-    'blast zone', 'exclusion zone', 'blast radius', 'danger zone',
-    'misfire', 'unexploded', 'blind hole', 'bootleg',
-    'flyrock', 'fly rock', 'fragmentation',
-    // Vibration monitoring
-    'seismograph', 'vibration monitor', 'ppv', 'peak particle velocity',
-    'ground vibration', 'air overpressure', 'blast vibration',
-    // Permits and documentation
-    'blasting permit', 'blasting schedule', 'blasting plan',
-    'blast log', 'shot record', 'post blast inspection'
-  ],
+  // Only actual explosion events - blasting operations moved to Mechanical Hazard
+  'Explosives & Blasting': [],
 
   'Breaking Ground & Excavation': [
     'excavation', 'excavations', 'dig', 'digging',
@@ -725,7 +669,7 @@ export const HAZARD_OBJECTS = {
     'phsas 37.9', 'neom phsas 37.9', '37.9 sharp objects'
   ],
 
-  // Mechanical Hazard - Caught-in/between, crushing, pinch points, machinery
+  // Mechanical Hazard - Caught-in/between, crushing, pinch points, machinery, blasting ops
   'Mechanical Hazard': [
     // Caught-in/between hazards
     'caught in', 'caught-in', 'caught between', 'caught-between',
@@ -749,7 +693,28 @@ export const HAZARD_OBJECTS = {
     // Severe outcomes
     'amputation', 'amputated', 'severed', 'degloving',
     // General terms
-    'mechanical hazard', 'machinery hazard', 'machine hazard'
+    'mechanical hazard', 'machinery hazard', 'machine hazard',
+    // Blasting operations (moved from Explosives & Blasting)
+    'detonator', 'detonators', 'detonating cord', 'det cord', 'detcord',
+    'primer', 'primers', 'booster', 'boosters', 'initiator',
+    'blasting cap', 'blasting caps', 'electric detonator',
+    'non-electric detonator', 'nonel', 'shock tube',
+    'blast', 'blasting', 'blasting operation', 'blasting activity',
+    'drill and blast', 'controlled blasting', 'presplit blasting',
+    'smooth blasting', 'cushion blasting', 'blast hole', 'blast holes',
+    'shot hole', 'shot holes', 'blast pattern', 'blast design',
+    'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
+    'blasting supervisor', 'sentry', 'sentries', 'explosives handler',
+    'magazine', 'explosives magazine', 'explosive store', 'explosive storage',
+    'detonator storage', 'magazine key', 'magazine register',
+    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
+    'blast zone', 'exclusion zone', 'blast radius', 'danger zone',
+    'misfire', 'unexploded', 'blind hole', 'bootleg',
+    'flyrock', 'fly rock', 'fragmentation',
+    'seismograph', 'vibration monitor', 'ppv', 'peak particle velocity',
+    'ground vibration', 'air overpressure', 'blast vibration',
+    'blasting permit', 'blasting schedule', 'blasting plan',
+    'blast log', 'shot record', 'post blast inspection'
   ],
 
   // Environmental - Contamination, pollution, waste affecting environment

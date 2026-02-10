@@ -8,8 +8,6 @@ import {
   UserCheck,
   ClipboardList,
   Search,
-  ChevronDown,
-  ChevronUp,
   Database,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -22,13 +20,12 @@ import ObservationsByDayOfWeek from '../components/dashboard/ObservationsByDayOf
 import ObservationsByHourOfDay from '../components/dashboard/ObservationsByHourOfDay'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import DataTable from '../components/common/DataTable'
 import EmptyState from '../components/dashboard/EmptyState'
 import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, ACTION_STATUSES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from '../utils/constants'
+import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -86,9 +83,6 @@ const Dashboard = () => {
 
   // Report modal state
   const [viewingRecord, setViewingRecord] = useState(null)
-
-  // All Records section state
-  const [showAllRecords, setShowAllRecords] = useState(false)
 
   // Collapsible section state
   const [collapsedSections, setCollapsedSections] = useState({
@@ -364,36 +358,6 @@ const Dashboard = () => {
       return normalizedLocation.toLowerCase() === targetHazardLower && incidentMonth === heatmapDrillDown.month
     })
   }, [heatmapDrillDown, heatmapIncidents])
-
-  // Table columns
-  const incidentColumns = [
-    { key: 'date', header: 'Date', accessor: (row) => row.date },
-    {
-      key: 'type',
-      header: 'Type',
-      accessor: (row) => row.type,
-      render: (row) => {
-        const typeInfo = INCIDENT_TYPES.find(t => t.value === row.type)
-        return (
-          <span
-            className="px-1.5 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: typeInfo?.color + '20',
-              color: typeInfo?.color
-            }}
-          >
-            {typeInfo?.label || row.type}
-          </span>
-        )
-      }
-    },
-    { key: 'description', header: 'Description', accessor: (row) => row.description?.substring(0, 50) + '...' },
-    { key: 'location', header: 'Hazard', accessor: (row) => row.location },
-    { key: 'contractor', header: 'Contractor', accessor: (row) => row.contractor || '-' },
-    { key: 'site', header: 'Site', accessor: (row) => row.site || '-' },
-    { key: 'reportedBy', header: 'Reporter', accessor: (row) => row.reportedBy },
-    { key: 'actionStatus', header: 'Status', accessor: (row) => row.actionStatus }
-  ]
 
   const incidentCounts = useMemo(
     () => getIncidentCountsByType(filteredIncidents),
@@ -1433,129 +1397,6 @@ const Dashboard = () => {
       )}
       </div>
       {/* End of dashboardContentRef wrapper */}
-
-      {/* All Records Section - Collapsible */}
-      <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">
-        <button
-          onClick={() => setShowAllRecords(!showAllRecords)}
-          className="w-full flex items-center justify-between p-3 hover:bg-surface-50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Database size={18} className="text-surface-600" />
-            <h3 className="text-sm font-semibold text-surface-700 uppercase tracking-wide flex items-center">
-              All Records
-              <InfoTooltip text="HOW THIS DATA IS DISPLAYED: This is a complete list of every observation that matches your current filters (time period, contractor, site). Each row is one observation from your imported data. You can search by typing keywords, sort by clicking column headers, and click any row to see the full details including the complete description, all photos, and action history. Use this to find specific observations or review data in detail." />
-            </h3>
-            <span className="text-xs text-surface-500 bg-surface-100 px-2 py-0.5 rounded-full">
-              {filteredIncidents.length} records
-            </span>
-          </div>
-          {showAllRecords ? (
-            <ChevronUp size={18} className="text-surface-500" />
-          ) : (
-            <ChevronDown size={18} className="text-surface-500" />
-          )}
-        </button>
-
-        {showAllRecords && (
-          <div className="border-t border-surface-200 p-3">
-            <DataTable
-              data={filteredIncidents}
-              columns={[
-                {
-                  key: 'date',
-                  header: 'Date',
-                  accessor: (row) => row.date,
-                  render: (row) => {
-                    try {
-                      return format(parseISO(row.date), 'MMM d, yyyy')
-                    } catch {
-                      return row.date
-                    }
-                  },
-                  width: '100px',
-                },
-                {
-                  key: 'type',
-                  header: 'Type',
-                  accessor: (row) => row.type,
-                  render: (row) => {
-                    const type = INCIDENT_TYPES.find((t) => t.value === row.type)
-                    return (
-                      <span
-                        className="px-1.5 py-0.5 text-xs font-medium rounded-sm"
-                        style={{
-                          backgroundColor: `${type?.color}20`,
-                          color: type?.color,
-                        }}
-                      >
-                        {type?.label || row.type}
-                      </span>
-                    )
-                  },
-                  width: '120px',
-                },
-                {
-                  key: 'contractor',
-                  header: 'Contractor',
-                  accessor: (row) => row.contractor || '-',
-                  width: '120px',
-                },
-                {
-                  key: 'site',
-                  header: 'Site',
-                  accessor: (row) => row.site || '-',
-                  width: '120px',
-                },
-                {
-                  key: 'description',
-                  header: 'Description',
-                  accessor: (row) => row.description,
-                  render: (row) => (
-                    <span className="line-clamp-2 text-xs">{row.description}</span>
-                  ),
-                },
-                {
-                  key: 'location',
-                  header: 'Hazard',
-                  accessor: (row) => row.location || '-',
-                  width: '120px',
-                },
-                {
-                  key: 'reportedBy',
-                  header: 'Reporter',
-                  accessor: (row) => row.reportedBy || '-',
-                  width: '120px',
-                },
-                {
-                  key: 'actionStatus',
-                  header: 'Status',
-                  accessor: (row) => row.actionStatus,
-                  render: (row) => {
-                    const status = ACTION_STATUSES.find((s) => s.value === row.actionStatus)
-                    return (
-                      <span
-                        className="px-1.5 py-0.5 text-xs font-medium rounded-sm"
-                        style={{
-                          backgroundColor: `${status?.color}20`,
-                          color: status?.color,
-                        }}
-                      >
-                        {status?.label || row.actionStatus}
-                      </span>
-                    )
-                  },
-                  width: '90px',
-                },
-              ]}
-              searchPlaceholder="Search records..."
-              emptyMessage="No records match the current filters."
-              pageSize={15}
-              onViewClick={setViewingRecord}
-            />
-          </div>
-        )}
-      </div>
 
       {/* Report Modal */}
       <ReportModal

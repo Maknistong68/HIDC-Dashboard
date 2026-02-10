@@ -168,22 +168,25 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'confined space without', 'confined space permit',
   ],
   'Explosives & Blasting': [
-    // Blasting operations
+    // Only actual explosion events - blasting operations moved to Mechanical Hazard
+    'explosion', 'exploded', 'exploding',
+  ],
+  'Mechanical Hazard': [
+    // Blasting operations (moved from Explosives & Blasting)
     'blasting', 'blast', 'blasting operation', 'blasting activity',
     'drill and blast', 'controlled blasting', 'blasting area',
     'blast zone', 'blast radius', 'blasting schedule',
-    // Explosives
-    'explosive', 'explosives', 'explosive material', 'explosive storage',
     'detonator', 'detonators', 'detonation', 'detonating cord',
-    'explosive primer', 'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap',
-    // Personnel
+    'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap',
     'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
-    // Incidents
     'misfire', 'unexploded', 'flyrock', 'fly rock', 'blast damage',
     'ground vibration', 'ppv', 'peak particle velocity',
-    // Storage and handling
     'magazine', 'explosives magazine', 'explosive store',
     'blasting permit', 'blasting signal', 'blast warning',
+    // Caught-in/between hazards
+    'caught in', 'caught-in', 'caught between', 'caught-between',
+    'pinch point', 'nip point', 'crushing hazard', 'moving parts', 'rotating parts',
+    'entanglement', 'unguarded machinery', 'amputation',
   ],
   'Working at Height': [
     'fall from', 'fell from', 'falling from', 'fallen from',
@@ -276,12 +279,7 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'roadside working', 'working near traffic',
   ],
   'Working on or Near Water': [
-    'drowning', 'drowning hazard', 'drowning risk',
-    'working near water', 'working over water', 'working on water',
-    'lifebuoy', 'life buoy', 'lifejacket', 'life jacket',
-    'rescue boat', 'marine operation', 'offshore',
-    'buddy system near water', 'man overboard',
-    'water rescue', 'sea work', 'dock work', 'jetty work',
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
   'Working in Heat': [
     'heat stress', 'heat stroke', 'heat exhaustion',
@@ -591,51 +589,7 @@ export const HAZARD_EXCLUSIONS = {
     'pits without', 'pit observed', 'pits observed'
   ],
   'Working on or Near Water': [
-    // Welfare-related water (drinking, amenities)
-    'water cooler', 'drinking water', 'water bottle', 'water down',
-    'water resistant', 'waterproof', 'water supply', 'water tank',
-    'water pipe', 'water main', 'potable water', 'water storage',
-    'water treatment', 'waste water', 'wastewater', 'water test',
-    // Water filter/maintenance (welfare, not water hazard)
-    'water filter', 'filter not replaced', 'filter had not been replaced',
-    'water filtration', 'replace the filter', 'replacing filter',
-    // Sewage/overflow (environmental, not water hazard)
-    'sewage', 'sewage water', 'sewage wastewater', 'toilet overflow',
-    'overflowed toilet', 'toilet overflowed', 'spilled from the toilet',
-    'stand-alone toilet', 'toilet unit', 'sewage spill',
-    // Additional welfare exclusions
-    'water dispenser', 'water station', 'water jug', 'water container',
-    'filtered water', 'clean water', 'safe water', 'hot water', 'cold water',
-    'washing water', 'hand washing', 'sanitary water', 'hygiene water',
-    'water shortage', 'water issue', 'water problem', 'water complaint',
-    'water not available', 'water not provided', 'no drinking water',
-    'water for drinking', 'supply of water', 'lack of water',
-    // Water availability issues (welfare)
-    'no water', 'no water available', 'water was not available', 'water was available',
-    'availability of water', 'without water', 'water in toilet', 'water in washroom',
-    // Water analysis/testing (welfare, not water hazard)
-    'water analysis', 'water analysis test', 'water quality', 'water sample',
-    'water delivery', 'water delivery date', 'delivery of water',
-    // Water containers/equipment (welfare or housekeeping, not water hazard)
-    'water drum', 'water drums', 'drum of water', 'inside a water',
-    'water igloo', 'igloo', 'water bucket', 'stored inside water',
-    // Complaint/admin (not water hazard)
-    'complaint box', 'complaint', 'sealed', 'properly sealed',
-    // Swimming pool (cleaning/maintenance, not drowning hazard)
-    'swimming pool', 'pool area', 'pool cleaning', 'inside swimming pool',
-    // PPE-related exclusions (clearly not water hazard)
-    'safety shoes', 'safety boots', 'not wearing', 'ppe', 'personal protective equipment',
-    'hard hat', 'helmet', 'safety vest', 'hi-vis', 'high visibility', 'gloves',
-    'safety glasses', 'goggles', 'ear protection', 'hearing protection',
-    'shoes were found', 'shoes found', 'shoes stored', 'shoes inside',
-    // Welfare/sanitation exclusions (clearly not water hazard)
-    'toilet', 'toilets', 'contamination', 'odor', 'odour', 'pest', 'pest attraction',
-    'sanitation', 'hygiene', 'proper sealing', 'storage area',
-    // Personnel/vehicle exclusions (clearly not water hazard)
-    'nurse', 'ambulance', 'driver', 'truck driver', 'equipment inspection',
-    'morning inspection', 'daily inspection', 'performing task',
-    // Grouting/construction (not water hazard)
-    'grouting', 'grouting activity', 'used for grouting'
+    // Empty - no keyword auto-detection needed since keywords are also empty
   ],
   'Working in Heat': [
     'heat treatment', 'heat exchanger', 'heat insulation', 'heat shield',
@@ -671,16 +625,7 @@ export const HAZARD_EXCLUSIONS = {
     'fall from platform', 'fall through opening'
   ],
   'Explosives & Blasting': [
-    // Exclude non-explosive "primer" usage (construction materials)
-    'bitumen primer', 'bituminous primer', 'primer coat', 'primer coating',
-    'primer paint', 'paint primer', 'primer application', 'applying primer',
-    'primer work', 'primer layer', 'asphalt primer', 'waterproofing primer',
-    'epoxy primer', 'concrete primer', 'surface primer', 'anti-rust primer',
-    'corrosion primer', 'primer spray', 'spray primer',
-    // Exclude welfare observations that happen to be near blasting areas
-    'welfare facilities', 'no welfare', 'lack of welfare', 'without welfare',
-    'missing welfare', 'no access to toilets', 'no rest shelter', 'no drinking water',
-    'toilet facilities', 'rest shelter', 'drinking water'
+    // Minimal exclusions since keywords are now only explosion/exploded/exploding
   ],
   'Site Security': [
     // Exclude lifting operations - "unauthorized entry" in exclusion zone context
@@ -1691,15 +1636,8 @@ export const CONTEXT_REDIRECTS = {
   'coring activities': 'Respiratory Hazard',
   'coring process': 'Respiratory Hazard',
 
-  // Working on or Near Water (location patterns)
-  'sea side': 'Working on or Near Water',
-  'seaside': 'Working on or Near Water',
-  'at the sea': 'Working on or Near Water',
-  'near the sea': 'Working on or Near Water',
-  'by the sea': 'Working on or Near Water',
-  'coastal area': 'Working on or Near Water',
-  'beach area': 'Working on or Near Water',
-  'waterfront': 'Working on or Near Water',
+  // Working on or Near Water - removed keyword auto-detection
+  // Classification only from explicit Excel hazard column data
 
   // Confined Spaces (override inspection context)
   'gas test': 'Confined Spaces',
@@ -3090,16 +3028,8 @@ export const HAZARD_PATTERNS = {
     'octopus socket', 'multi socket', 'earth pin', 'earthing rod'
   ],
   'Explosives & Blasting': [
-    // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
-    'blasting', 'blast', 'explosive', 'explosives', 'detonator', 'detonation',
-    'drill and blast', 'controlled blasting', 'blasting operation', 'blasting activity',
-    'shot firer', 'shot firing', 'misfire', 'unexploded', 'flyrock', 'fly rock',
-    'blast zone', 'blast radius', 'exclusion zone blasting', 'blast pattern',
-    'magazine', 'explosives magazine', 'explosive storage', 'detonating cord',
-    'explosive primer', 'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap', 'stemming',
-    'ground vibration', 'ppv', 'peak particle velocity', 'air overpressure',
-    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
-    'post blast', 'pre blast', 'blasting permit', 'blasting schedule'
+    // Only actual explosion events - blasting operations moved to Mechanical Hazard
+    'explosion', 'exploded', 'exploding'
   ],
   'Mobile Plant & Equipment': [
     'mobile plant', 'heavy equipment', 'excavator', 'bulldozer', 'loader', 'grader',
@@ -3206,7 +3136,19 @@ export const HAZARD_PATTERNS = {
     // Severe outcomes
     'amputation', 'amputated', 'severed',
     // General mechanical terms
-    'mechanical hazard', 'machinery hazard'
+    'mechanical hazard', 'machinery hazard',
+    // Blasting operations (moved from Explosives & Blasting)
+    'blasting', 'blast', 'blasting operation', 'blasting activity',
+    'drill and blast', 'controlled blasting', 'blast zone', 'blast radius',
+    'detonator', 'detonators', 'detonation', 'detonating cord',
+    'blasting primer', 'primer charge', 'booster', 'initiator', 'blasting cap', 'stemming',
+    'shot firer', 'shot firing', 'blasting engineer', 'explosives engineer',
+    'misfire', 'unexploded', 'flyrock', 'fly rock', 'blast damage',
+    'ground vibration', 'ppv', 'peak particle velocity', 'air overpressure',
+    'magazine', 'explosives magazine', 'explosive storage',
+    'blast signal', 'blasting signal', 'blast warning', 'blast siren',
+    'post blast', 'pre blast', 'blasting permit', 'blasting schedule', 'blast pattern',
+    'exclusion zone blasting', 'sentry', 'sentries'
   ],
   'Environmental': [
     'environmental', 'contamination', 'pollution', 'ground contamination',
@@ -3330,13 +3272,7 @@ export const HAZARD_PATTERNS = {
     'heat index', 'personal hydration', 'water jug', 'restricted hours', 'direct sunlight'
   ],
   'Working on or Near Water': [
-    'working on water', 'working near water', 'over water', 'near water', 'water work',
-    'marine', 'river', 'lake', 'pond', 'canal', 'dock', 'jetty', 'pier', 'quay',
-    'waterway', 'waterfront', 'shoreline', 'embankment', 'flood', 'flooding',
-    'drowning', 'life jacket', 'life vest', 'buoyancy', 'rescue boat', 'water rescue',
-    'man overboard', 'fall into water', 'open water', 'deep water', 'swimming',
-    'diving', 'underwater', 'maritime', 'coastal', 'offshore', 'barge', 'boat',
-    'vessel', 'pontoon', 'floating', 'water edge', 'bank', 'stream', 'creek'
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
 }
 
@@ -3355,10 +3291,9 @@ export const HAZARD_PHRASES = {
     'unsafe electrical', 'electrical cable', 'exposed cable', 'live cable', 'damaged cable'
   ],
   'Explosives & Blasting': [
-    'blasting operation', 'blasting activity', 'drill and blast', 'controlled blasting',
-    'blast zone', 'blasting permit', 'shot firer', 'explosives handling',
-    'explosive storage', 'detonator storage', 'blast signal', 'post blast inspection',
-    'misfire procedure', 'unexploded charge', 'ground vibration monitoring'
+    // Only actual explosion events - blasting operations moved to Mechanical Hazard
+    'gas explosion', 'tank exploded', 'cylinder exploded', 'explosion occurred',
+    'caused explosion', 'resulted in explosion'
   ],
   'Working at Height': [
     'working at height', 'work at height', 'fall protection', 'edge protection', 'roof work',
@@ -3438,13 +3373,7 @@ export const HAZARD_PHRASES = {
     'hot pipe', 'hot equipment', 'heat stress', 'working in heat', 'hot conditions'
   ],
   'Working on or Near Water': [
-    'working on water', 'working near water', 'over water', 'near water', 'water hazard',
-    'drowning risk', 'life jacket', 'water rescue', 'man overboard', 'fall into water',
-    'near river', 'near sea', 'near lake', 'near pond', 'near canal', 'offshore work',
-    'marine work', 'barge work', 'dock work', 'waterfront work', 'pier work', 'jetty work',
-    'flood risk', 'water body', 'open water', 'deep water', 'submerged', 'submersion',
-    'life vest', 'life buoy', 'flotation device', 'buoyancy aid', 'rescue boat',
-    'fell into water', 'in water', 'into water', 'beside water', 'water edge'
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
   'Physical Hazard': [
     'struck by', 'hit by', 'falling object', 'dropped object',
@@ -3454,7 +3383,12 @@ export const HAZARD_PHRASES = {
   'Mechanical Hazard': [
     'caught in', 'caught between', 'pinch point', 'nip point',
     'crushing hazard', 'moving parts', 'rotating parts', 'entanglement',
-    'unguarded machinery', 'machine guard', 'amputation hazard'
+    'unguarded machinery', 'machine guard', 'amputation hazard',
+    // Blasting operations (moved from Explosives & Blasting)
+    'blasting operation', 'blasting activity', 'drill and blast', 'controlled blasting',
+    'blast zone', 'blasting permit', 'shot firer', 'explosives handling',
+    'explosive storage', 'detonator storage', 'blast signal', 'post blast inspection',
+    'misfire procedure', 'unexploded charge', 'ground vibration monitoring'
   ],
   'Slip and Trip': [
     'slip hazard', 'trip hazard', 'slippery floor', 'slippery surface',

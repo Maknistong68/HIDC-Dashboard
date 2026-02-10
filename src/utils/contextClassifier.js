@@ -328,7 +328,7 @@ const patternBasedInference = (text) => {
 
     // Other patterns
     { pattern: /\b(electrocuted|shocked|zapped|electric\s*shock)\b/i, category: 'Energized System', confidence: 65 },
-    { pattern: /\b(drowned|drowning|submerged)\b/i, category: 'Working on or Near Water', confidence: 65 },
+    // Working on or Near Water pattern REMOVED - only classify from explicit Excel data
     { pattern: /\b(asphyxiated|suffocated|engulfed)\b/i, category: 'Confined Spaces', confidence: 65 },
     { pattern: /\b(welding|grinding|cutting)\s*(operation|work|activity)?\b/i, category: 'Hot Work', confidence: 55 },
     { pattern: /\b(lifting|hoisting|rigging)\s*(operation|work|activity)?\b/i, category: 'Lifting', confidence: 55 },
@@ -568,8 +568,8 @@ const determineOutcome = (text, objects, action) => {
       'excavation': 'Breaking Ground & Excavation',
       'electrical': 'Energized System',
       'falling': 'Working at Height',
-      'crossing': 'Working on or Near Live Roads',
-      'water_work': 'Working on or Near Water'
+      'crossing': 'Working on or Near Live Roads'
+      // water_work removed - only classify from explicit Excel data
     }
 
     if (actionCategoryMap[action.type]) {
