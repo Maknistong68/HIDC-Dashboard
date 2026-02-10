@@ -44,14 +44,14 @@ export const INCIDENT_SUB_TYPES = [
 export const NEGATIVE_OBSERVATION_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr']
 
 // 27 Approved Hazard Categories (HAZARDS ONLY - controls removed)
-// 14 Significant Hazards (NEOM Eltizam) + 13 Additional Hazards
+// 14 Significant Hazards + 13 Additional Hazards
 // Observations without clear hazard keywords → "General Site Issues" for manual review
 export const HAZARD_CATEGORIES = [
-  // === 14 SIGNIFICANT HAZARDS (NEOM Eltizam Program) ===
+  // === 14 SIGNIFICANT HAZARDS ===
   'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
-  'Explosives & Blasting',        // NEW - NEOM Eltizam Hazard #12
+  'Explosives & Blasting',
   'Fire',
   'Hot Work',
   'Lifting',
@@ -78,13 +78,13 @@ export const HAZARD_CATEGORIES = [
   'General Site Issues',       // Fallback for observations requiring manual review
 ]
 
-// 14 SIGNIFICANT HAZARDS - NEOM Eltizam Program
-// These are the 14 significant hazards defined in NEOM-NPR-STD-001 Rev 01.00 (May 2023)
+// 14 SIGNIFICANT HAZARDS - Significant Hazards Program
+// These are the 14 significant hazards for HSE classification
 export const SIGNIFICANT_HAZARDS = [
   'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
-  'Explosives & Blasting',        // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
+  'Explosives & Blasting',
   'Fire',
   'Hot Work',
   'Lifting',
@@ -102,7 +102,7 @@ export const MAJOR_HAZARDS = SIGNIFICANT_HAZARDS
 
 // 13 ADDITIONAL HAZARDS - Sub-significant categories for detailed classification
 // NOTE: Physical Hazard and Mechanical Hazard moved here from MAJOR_HAZARDS
-// These are important hazards but not in the NEOM Eltizam 14 Significant Hazards
+// These are important hazards but not in the 14 Significant Hazards
 export const SUB_SIGNIFICANT_HAZARDS = [
   'Physical Hazard',           // Struck-by, falling objects, sharp objects, impalement
   'Mechanical Hazard',         // Caught-in/between, crushing, pinch points, machinery
@@ -200,7 +200,7 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'digging', 'ground breaking', 'underground', 'buried cable',
     'buried pipe', 'utility strike', 'open pit', 'deep excavation',
     'shoring', 'benching', 'sloping', 'cave-in', 'collapse of excavation',
-    // NEOM Standard additions - Service detection
+    // Service detection
     'cat and genny', 'cat/genny', 'cable avoidance tool', 'genny',
     'gpr', 'ground penetrating radar', 'service detection',
     'permit to dig', 'dig permit', 'breaking ground permit',
@@ -246,7 +246,6 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'haul road', 'speed limit', 'overspeeding', 'traffic control',
     'pedestrian crossing', 'traffic marshal', 'traffic management plan',
     'vehicle access', 'traffic awareness',
-    // NEOM Standard additions
     'temporary traffic management', 'ttm', 'ttm plan',
     'work zone', 'work zone access', 'work zone egress',
     'vehicle intrusion', 'vehicle pedestrian segregation',
@@ -258,7 +257,6 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'speeding', 'reckless driving', 'distracted driving',
     'driver fatigue', 'driver competency', 'driving license',
     'vehicle inspection', 'pre-trip inspection',
-    // NEOM Standard additions
     'reverse parking', 'not reverse parked', 'forward parked',
     'tailgating', 'following too close', 'safe distance',
     'defensive driving', 'defensive driver training',
@@ -268,7 +266,7 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'overtaking', 'unsafe overtaking', 'vehicle rollover',
   ],
 
-  // PRIORITY 4: Other Significant Hazards (NEOM Eltizam)
+  // PRIORITY 4: Other Significant Hazards
   'Working on or Near Live Roads': [
     'live road', 'live traffic', 'live carriageway',
     'roadworks', 'road works', 'highway works',
@@ -1777,7 +1775,7 @@ export const CONTEXT_REDIRECTS = {
   'panel lacks label': 'Energized System',
 
   // Sharp objects / Impalement → Physical Hazard (primary hazard is impalement injury)
-  // NEOM PHSAS 37.9 Sharp Objects standard
+  // PHSAS 37.9 Sharp Objects standard
   'phsas 37.9': 'Physical Hazard',
   'sharp objects': 'Physical Hazard',
   '37.9 sharp objects': 'Physical Hazard',
@@ -2616,7 +2614,7 @@ export const CONTEXT_REDIRECTS = {
 
   // Security breach / unauthorized access → Site Security
   'serious concerns about the security procedures': 'Site Security',
-  'breach of neom security protocols': 'Site Security',
+  'breach of security protocols': 'Site Security',
   'security personnel did not properly check': 'Site Security',
   'security personnel did not.*check the status': 'Site Security',
   'allowing unauthorized trucks to enter': 'Site Security',
@@ -3112,8 +3110,8 @@ export const HAZARD_PATTERNS = {
     'overhead hazard', 'object fell', 'objects falling', 'flying debris', 'projectile',
     // Sharp edges
     'sharp edge', 'sharp edges', 'cutting hazard', 'laceration', 'puncture',
-    // NEOM Standard
-    'phsas 37.9', 'neom phsas 37.9'
+    // Standards
+    'phsas 37.9'
   ],
   'Mechanical Hazard': [
     // Caught-in/between hazards (OSHA Fatal Four)
@@ -3398,10 +3396,10 @@ export const HAZARD_PHRASES = {
 // These are controls, not hazards - classify by the UNDERLYING hazard instead
 export const CATEGORY_PRIORITY = [
   // === 16 MAJOR (SIGNIFICANT) HAZARDS - Checked First ===
-  // Includes 14 NEOM Eltizam Hazards + Physical Hazard + Mechanical Hazard
+  // Includes 14 Significant Hazards + Physical Hazard + Mechanical Hazard
   'Confined Spaces',              // 1 - IDLH environment
   'Energized System',             // 2 - Electrocution risk
-  'Explosives & Blasting',        // 3 - Blast/explosion risk (NEOM Eltizam #12)
+  'Explosives & Blasting',        // 3 - Blast/explosion risk
   'Working at Height',            // 4 - Fatal fall risk
   'Hot Work',                     // 5 - Fire/explosion risk
   'Lifting',                      // 6 - Suspended load risk

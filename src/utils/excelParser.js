@@ -182,11 +182,11 @@ export const getExistingSites = (incidents) => {
 }
 
 // ============================================
-// NEOM EXCEL FORMAT - STRICT VALIDATION
+// EXCEL FORMAT - STRICT VALIDATION
 // ============================================
 
-// Required NEOM columns (can be in any order)
-export const NEOM_REQUIRED_COLUMNS = [
+// Required columns (can be in any order)
+export const REQUIRED_COLUMNS = [
   'Event ID',
   'Type',
   'Classification',
@@ -199,27 +199,27 @@ export const NEOM_REQUIRED_COLUMNS = [
 ]
 
 /**
- * Validate Excel has NEOM format (columns can be in any order)
+ * Validate Excel has required format (columns can be in any order)
  * Returns { valid: boolean, missing: string[] }
  */
-export const validateNEOMFormat = (headers) => {
+export const validateExcelFormat = (headers) => {
   const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
-  const missing = NEOM_REQUIRED_COLUMNS.filter(col =>
+  const missing = REQUIRED_COLUMNS.filter(col =>
     !normalizedHeaders.includes(col.toLowerCase())
   )
   return { valid: missing.length === 0, missing }
 }
 
 /**
- * Auto-map NEOM columns by header name (not position)
+ * Auto-map columns by header name (not position)
  * Returns column index mappings for transformRows
  */
-export const mapNEOMColumns = (headers) => {
+export const mapExcelColumns = (headers) => {
   const mappings = {}
   const normalizedHeaders = headers.map(h => h?.toString().toLowerCase().trim())
 
 
-  // Map NEOM header names to internal field names
+  // Map header names to internal field names
   const columnMap = {
     'event id': 'eventId',
     'type': 'type',
@@ -1106,7 +1106,7 @@ export { descriptionSupportsCategory }
 
 /**
  * Strip reference text from observation - only keep the MAIN observation
- * Removes text after "Ref:", "Reference:", "NEOM-", "REF:", etc.
+ * Removes text after "Ref:", "Reference:", standard codes, etc.
  * This prevents keywords in policy quotes from affecting classification
  */
 const stripReferenceText = (text) => {
@@ -1116,7 +1116,7 @@ const stripReferenceText = (text) => {
   const refMarkers = [
     /\bref:\s*/gi,
     /\breference:\s*/gi,
-    /\bneom[\s-]+(phsas|hsas|nev)/gi,
+    /\bphsas[\s-]+\d/gi,
     /\bsuggested ideas?\s*:/gi,
     /\bsuggestion:\s*/gi,
     /\bnote:\s*/gi,
@@ -1388,7 +1388,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // Get categorization settings - use hardcoded defaults for simplified flow
   const confidenceThreshold = 70 // Hardcoded 70% confidence threshold
 
-  // Strip reference text (after "Ref:", "Reference:", "NEOM-", etc.) - only classify MAIN observation
+  // Strip reference text (after "Ref:", "Reference:", etc.) - only classify MAIN observation
   const mainText = stripReferenceText(text)
 
   // ============================================

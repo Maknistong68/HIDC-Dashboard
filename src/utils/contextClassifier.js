@@ -9,7 +9,7 @@
  * STRATEGIES:
  * 1. KEYWORD STRATEGY: Object/action/outcome keyword matching from HAZARD_OBJECTS, HAZARD_ACTIONS
  * 2. SENTENCE STRATEGY: WHO/WHAT/WHERE/HOW grammatical analysis from sentenceParser
- * 3. CLEAN TEXT STRATEGY: Strip NEOM/PHSAS references, re-classify core observation
+ * 3. CLEAN TEXT STRATEGY: Strip PHSAS references, re-classify core observation
  * 4. CONTROL-LINK STRATEGY: Link control issues (signage, PPE, permit) to underlying hazards
  *
  * VOTING RULES:
@@ -72,7 +72,7 @@ const prepareInput = (text) => {
 
 /**
  * Strip reference text from observation - extract ONLY the core observation
- * Removes text after common reference markers like Ref:, NEOM, PHSAS, Note:, etc.
+ * Removes text after common reference markers like Ref:, PHSAS, Note:, etc.
  * This prevents keywords in policy/procedure quotes from affecting classification.
  *
  * @param {string} text - The raw observation text
@@ -97,8 +97,7 @@ export const stripReferenceText = (text) => {
     // Reference citations
     /\bref(?:erence)?:\s*/gi,
     /\brefer(?:ring)?\s+to\s+/gi,
-    // NEOM/PHSAS specific patterns
-    /\bneom[\s-]+(?:phsas|hsas|nev|req|std|proc)/gi,
+    // PHSAS specific patterns
     /\bphsas[\s-]+\d/gi,
     // Policy/procedure references
     /\bpolicy\s*#?\d/gi,
@@ -966,7 +965,7 @@ const strategySentence = (text) => {
 
 /**
  * Strategy 3: Clean Text Analysis
- * Strips NEOM/PHSAS/Ref text, then runs keyword detection on clean text
+ * Strips PHSAS/Ref text, then runs keyword detection on clean text
  * Compares clean vs full-text results
  *
  * @param {string} rawText - Original raw text with references

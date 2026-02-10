@@ -3,8 +3,8 @@ import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, F
 import { useData } from '../../context/DataContext'
 import {
   parseExcelFile,
-  validateNEOMFormat,
-  mapNEOMColumns,
+  validateExcelFormat,
+  mapExcelColumns,
   transformRows,
   checkDuplicates,
 } from '../../utils/excelParser'
@@ -177,15 +177,15 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
         const data = await parseExcelFile(file)
 
         // Step 4: Validate format
-        setProcessingDetails({ step: 'Validating NEOM format...', progress: 30 })
-        const validation = validateNEOMFormat(data.headers)
+        setProcessingDetails({ step: 'Validating Excel format...', progress: 30 })
+        const validation = validateExcelFormat(data.headers)
         if (!validation.valid) {
           throw new Error(`Invalid format: missing ${validation.missing.join(', ')}`)
         }
 
         // Step 5: Map columns
         setProcessingDetails({ step: 'Mapping columns...', progress: 35 })
-        const mappings = mapNEOMColumns(data.headers)
+        const mappings = mapExcelColumns(data.headers)
 
         // Step 6: Transform rows
         setProcessingDetails({ step: 'Cleaning and categorizing data...', progress: 50 })

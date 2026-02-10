@@ -425,7 +425,6 @@ export const HAZARD_OBJECTS = {
     'suv', '4x4', 'four wheel drive',
     'company vehicle', 'fleet vehicle', 'pool car',
     'road', 'highway', 'motorway', 'freeway',
-    // NEOM Standard additions
     'seatbelt', 'seat belt', 'safety belt',
     'driver license', 'driving license', 'driving permit',
     'speed limit', 'speed sign', 'speed camera',
@@ -498,7 +497,7 @@ export const HAZARD_OBJECTS = {
     'spark', 'sparks', 'fire watch', 'fire watcher'
   ],
 
-  // Explosives & Blasting (NEOM Eltizam Hazard #12)
+  // Explosives & Blasting
   // Only actual explosion events - blasting operations moved to Mechanical Hazard
   'Explosives & Blasting': [],
 
@@ -512,7 +511,7 @@ export const HAZARD_OBJECTS = {
     'underground service', 'underground cable', 'underground pipe',
     'gas main', 'water main', 'sewer', 'storm drain',
     'soil', 'earth', 'ground', 'spoil',
-    // NEOM Standard additions - Service detection
+    // Service detection
     'cat and genny', 'cat/genny', 'cable avoidance tool', 'genny',
     'gpr', 'ground penetrating radar', 'service detection',
     'service locator', 'utility locator', 'cable locator',
@@ -524,7 +523,7 @@ export const HAZARD_OBJECTS = {
     'water table', 'groundwater level', 'stability assessment',
     'dewatering', 'wellpoint', 'sump pump',
     'surface water', 'water diversion',
-    // Edge protection (NEOM specific)
+    // Edge protection
     'excavation edge', 'setback from edge', '1m setback',
     'stop block', 'stop blocks', 'vehicle stop',
     'bund wall', 'material bund'
@@ -544,7 +543,7 @@ export const HAZARD_OBJECTS = {
     'makeshift wooden planks', 'supported using makeshift',
     'unstable support', 'unstable supports',
     'pipes elevated', 'pipe elevated', 'hdpe pipe', 'hdpe pipes',
-    // NEOM Standard additions - Personnel
+    // Personnel
     'twc', 'temporary works coordinator', 'tw coordinator',
     'tws', 'temporary works supervisor', 'tw supervisor',
     'designated individual', 'di',
@@ -566,7 +565,7 @@ export const HAZARD_OBJECTS = {
     'sun', 'sunlight', 'direct sun', 'solar radiation',
     'heat', 'extreme heat', 'hot conditions',
     'furnace', 'oven', 'kiln', 'boiler',
-    // NEOM Standard additions - TWL categories
+    // TWL categories
     'thermal work limit', 'twl', 'twl category',
     'work rest cycle', 'rest cycle', 'cooling period',
     // Heat illness
@@ -592,11 +591,10 @@ export const HAZARD_OBJECTS = {
     'work zone', 'construction zone', 'road works',
     'traffic management', 'traffic control',
     'road closure', 'lane closure',
-    // NEOM Standard additions
     'live carriageway', 'live lane', 'open lane',
     'temporary traffic management', 'ttm', 'ttm plan',
     'traffic management plan', 'traffic logistics plan',
-    // Barriers (NEOM specific - jersey barriers required within 10m)
+    // Barriers
     'jersey barrier', 'jersey barriers', 'water filled barrier',
     'concrete barrier', 'new jersey barrier',
     // Access/egress
@@ -653,8 +651,8 @@ export const HAZARD_OBJECTS = {
     'spikes', 'spikes protruding', 'metal spikes', 'steel spikes',
     // Wooden hazards with nails
     'wooden cover with nails', 'plywood sheets with nails', 'sheets had exposed',
-    // NEOM Standard reference
-    'phsas 37.9', 'neom phsas 37.9', '37.9 sharp objects'
+    // Standard reference
+    'phsas 37.9', '37.9 sharp objects'
   ],
 
   // Mechanical Hazard - Caught-in/between, crushing, pinch points, machinery, blasting ops
@@ -1673,10 +1671,9 @@ export const DISAMBIGUATION_RULES = [
   // ============================================================================
   { pattern: 'qr code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification status' },
   { pattern: 'qr-code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification status' },
-  { pattern: 'veri-fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
-  { pattern: 'verifi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
-  { pattern: 'veri fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
-  { pattern: 'neom qr code', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM equipment verification' },
+  { pattern: 'veri-fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification' },
+  { pattern: 'verifi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification' },
+  { pattern: 'veri fi', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment verification' },
   { pattern: 'vvs system', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'vehicle verification system' },
   { pattern: 'vvs status', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'vehicle verification system' },
   { pattern: 'red status', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'equipment red status - non-compliant' },
@@ -1998,9 +1995,8 @@ export const DISAMBIGUATION_RULES = [
   { pattern: 'eye protection and hand protection', wrongCategory: null, correctCategory: 'General Site Issues', reason: 'PPE requirement' },
 
   // ============================================================================
-  // NEOM ID / INDUCTION PATTERNS → Site Security
+  // SITE ID / INDUCTION PATTERNS → Site Security
   // ============================================================================
-  { pattern: 'neom id', wrongCategory: null, correctCategory: 'Site Security', reason: 'site ID requirement' },
   { pattern: 'site induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction requirement' },
   { pattern: 'site safety induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction requirement' },
   { pattern: 'without site induction', wrongCategory: null, correctCategory: 'Site Security', reason: 'induction violation' },
@@ -2215,11 +2211,9 @@ export const DISAMBIGUATION_RULES = [
   // ============================================================================
   // HAZARD STANDARD REFERENCE PATTERNS → Mobile Plant & Equipment
   // ============================================================================
-  { pattern: 'neom phsas 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard for Mobile Plant' },
-  { pattern: 'phsas 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard for Mobile Plant' },
-  { pattern: 'section-17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard section 17' },
-  { pattern: 'section 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM standard section 17' },
-  { pattern: 'neom-npr-std-001', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'NEOM HSE standard' }
+  { pattern: 'phsas 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'standard for Mobile Plant' },
+  { pattern: 'section-17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'standard section 17' },
+  { pattern: 'section 17', wrongCategory: null, correctCategory: 'Mobile Plant & Equipment', reason: 'standard section 17' }
 ]
 
 // ============================================================================
@@ -2231,7 +2225,7 @@ export const HAZARD_SEVERITY = {
   // Level 1 - Fatal/Catastrophic (highest priority)
   'Confined Spaces': 1,
   'Energized System': 1,
-  'Explosives & Blasting': 1,  // NEOM Eltizam #12 - Fatal/Catastrophic
+  'Explosives & Blasting': 1,  // Fatal/Catastrophic
   'Working at Height': 1,
   'Lifting': 1,
   'Mobile Plant & Equipment': 1,
@@ -2345,13 +2339,13 @@ export const OBJECT_ACTION_OUTCOMES = {
 // SECTION G: SIGNIFICANT HAZARD LIST (for reference)
 // ============================================================================
 
-// 14 SIGNIFICANT HAZARDS - NEOM Eltizam Program
-// These match the order and list from constants.js (NEOM-NPR-STD-001 Rev 01.00)
+// 14 SIGNIFICANT HAZARDS - Significant Hazards Program
+// These match the order and list from constants.js
 export const SIGNIFICANT_HAZARDS = [
   'Breaking Ground & Excavation',
   'Confined Spaces',
   'Energized System',
-  'Explosives & Blasting',        // NEOM Eltizam Hazard #12 - Safe Use of Explosives and Blasting
+  'Explosives & Blasting',
   'Fire',
   'Hot Work',
   'Lifting',
@@ -2484,7 +2478,7 @@ export const HSE_ABBREVIATIONS = {
   'lagging': 'lagging indicator',
   'leading': 'leading indicator',
 
-  // NEOM Equipment Verification
+  // Equipment Verification
   'vvs': 'vehicle verification system',
   'tpc': 'third party certification',
   'mvp': 'motor vehicle pass',

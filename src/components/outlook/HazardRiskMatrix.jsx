@@ -44,7 +44,7 @@ const calculateSeverityWeightedCount = (incidents) => {
  * NEW FORMULA (Severity-Weighted):
  * - 40% Severity-weighted volume (LTI counts more than near-miss)
  * - 30% Trend direction (rising/stable/declining)
- * - 30% Hazard significance (NEOM Eltizam 14 significant hazards)
+ * - 30% Hazard significance (14 significant hazards)
  *
  * This replaces the old 33/33/33 raw-count formula to ensure
  * hazards with actual injuries rank higher than high-volume low-severity hazards.

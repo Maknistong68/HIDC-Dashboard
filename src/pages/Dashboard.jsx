@@ -507,23 +507,23 @@ const Dashboard = () => {
     ]
   }, [filteredIncidents])
 
-  // Hazard Classification: Eltizam vs Other (excludes positive observations)
+  // Hazard Classification: Primary vs Other (excludes positive observations)
   const hazardClassificationData = useMemo(() => {
     const nonPositive = filteredIncidents.filter(i => i.type !== 'positive')
-    let eltizam = 0
+    let primary = 0
     let other = 0
     nonPositive.forEach(i => {
       const normalized = normalizeHazard(i.location)
       if (normalized && normalized !== 'Not Specified') {
         if (SIGNIFICANT_HAZARDS_MAP.has(normalized.toLowerCase())) {
-          eltizam++
+          primary++
         } else {
           other++
         }
       }
     })
     return [
-      { name: 'Eltizam Hazards', value: eltizam, color: '#eab308' },
+      { name: 'Primary Hazards', value: primary, color: '#eab308' },
       { name: 'Other Hazards', value: other, color: '#8b5cf6' },
     ]
   }, [filteredIncidents])
@@ -581,7 +581,7 @@ const Dashboard = () => {
         total: data.open + data.closed
       }))
       .sort((a, b) => {
-        // Priority 1: Significant Hazards first (14 NEOM Eltizam categories)
+        // Priority 1: Significant Hazards first (14 categories)
         // Use case-insensitive comparison because normalizeHazard may change case of words like "on", "or"
         const lowerA = a.name.toLowerCase()
         const lowerB = b.name.toLowerCase()
@@ -599,9 +599,9 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Hazards Heatmap data (uses heatmapIncidents - not affected by "This Month")
-  // Always shows all 14 NEOM Eltizam Significant Hazards + any additional hazards with data
+  // Always shows all 14 Significant Hazards + any additional hazards with data
   const hazardsHeatmap = useMemo(() => {
-    // Start with all 14 Significant Hazards (NEOM Eltizam) - use canonical names
+    // Start with all 14 Significant Hazards - use canonical names
     const hazardSet = new Set(SIGNIFICANT_HAZARDS)
 
     // Track lowercase versions to prevent duplicates
@@ -623,7 +623,7 @@ const Dashboard = () => {
       }
     })
 
-    // Sort hazards by priority: Significant (14 NEOM Eltizam) first, then Sub-significant, then alphabetical
+    // Sort hazards by priority: Significant (14) first, then Sub-significant, then alphabetical
     const hazards = Array.from(hazardSet).sort((a, b) => {
       const lowerA = a.toLowerCase()
       const lowerB = b.toLowerCase()
@@ -1130,7 +1130,7 @@ const Dashboard = () => {
         <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
             Hazard Classification
-            <InfoTooltip text="Breakdown of observations by hazard classification. Eltizam Hazards are the 14 NEOM significant hazard categories. Other Hazards are all remaining hazard types. Source: observations, inspections, incidents (excludes positive observations)." />
+            <InfoTooltip text="Breakdown of observations by hazard classification. Primary Hazards are the 14 significant hazard categories. Other Hazards are all remaining hazard types. Source: observations, inspections, incidents (excludes positive observations)." />
           </h3>
           {hazardClassificationData.some(d => d.value > 0) ? (
             <div className="h-64">

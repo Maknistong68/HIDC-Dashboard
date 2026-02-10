@@ -1,8 +1,11 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
-import { Shield, BarChart3, Activity, Info, CheckCircle2, TrendingUp, TrendingDown, Minus, AlertTriangle, HelpCircle } from 'lucide-react'
+import { Shield, BarChart3, Activity, CheckCircle2, AlertTriangle } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 import EntityScoreGauge from './EntityScoreGauge'
 import EntityMetricCards from './EntityMetricCards'
+import SafetySignalRadar from './SafetySignalRadar'
+import SignalPriorityList from './SignalPriorityList'
+import SignalDetailCard from './SignalDetailCard'
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,114 +16,11 @@ import {
   Tooltip as RechartsTooltip,
   Cell
 } from 'recharts'
-
-const getTrendArrow = (detail) => {
-  if (!detail) return null
-  const match = detail.match(/(\d+)\s*cur\s*\/\s*(\d+)\s*prev/i)
-  if (!match) return null
-  const cur = parseInt(match[1], 10)
-  const prev = parseInt(match[2], 10)
-  if (prev === 0 && cur === 0) {
-    return { icon: <Minus size={12} className="text-surface-400" />, color: 'text-surface-500', text: 'Stable — no incidents in either period' }
-  }
-  if (prev === 0) {
-    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `New activity: ${cur} incident${cur !== 1 ? 's' : ''} in recent 60 days (none prior)` }
-  }
-  const pctChange = Math.round(((cur - prev) / prev) * 100)
-  if (pctChange > 5) {
-    return { icon: <TrendingUp size={12} className="text-red-500" />, color: 'text-red-600', text: `Incidents up ${pctChange}% (${cur} vs ${prev} in prior period)` }
-  }
-  if (pctChange < -5) {
-    return { icon: <TrendingDown size={12} className="text-green-500" />, color: 'text-green-600', text: `Incidents dropped ${Math.abs(pctChange)}% (${cur} vs ${prev} in prior period)` }
-  }
-  return { icon: <Minus size={12} className="text-surface-400" />, color: 'text-surface-500', text: `Stable — similar volume both periods (${cur} vs ${prev})` }
-}
-
-const SIGNAL_LABELS = {
-  severityMix: 'Injury Severity',
-  trend: 'Trend (60d)',
-  openActionRate: 'Open Actions',
-  highRiskExposure: 'High-Risk Exposure',
-  nearMissRate: 'Near-Miss Rate',
-  positiveRate: 'Positive Rate'
-}
-
-const SIGNAL_META = {
-  severityMix: {
-    tooltip: 'HOW THIS IS CALCULATED: We look at the proportion of incidents classified as serious injuries (LTI — Lost Time Injury, or MTI — Medical Treatment Injury) relative to all incidents. A higher score means a larger share of incidents resulted in serious harm. For example, a score of 60 means roughly 60% of incidents were LTI or MTI. A low score means most incidents are minor — that is what you want to see.',
-    inverted: false,
-    interpret: (s) => s === 0 ? 'No severe injuries — good'
-      : s <= 30 ? 'Low severity ratio'
-      : s <= 60 ? 'Moderate severity — review needed'
-      : 'High severity — immediate attention needed'
-  },
-  trend: {
-    tooltip: 'HOW THIS IS CALCULATED: We compare the number of incidents in the most recent 60-day window against the previous 60-day window. Using 60 days provides smoother trend detection that filters out short-term noise. A score of 0 means incidents dropped or stayed flat. A score above 60 means a significant increase. A "spike" indicator appears if the last 30 days are significantly higher than the 60-day average.',
-    inverted: false,
-    interpret: (s) => s <= 30 ? 'Declining or stable trend'
-      : s <= 60 ? 'Slightly increasing activity'
-      : 'Significant increase in recent incidents'
-  },
-  openActionRate: {
-    tooltip: 'HOW THIS IS CALCULATED: We count how many incidents still have unresolved corrective actions (status "open" or "in-progress") as a percentage of total incidents. A score of 80 means 80% of incidents have outstanding actions that haven\'t been closed. High scores indicate follow-through problems — incidents are being reported but fixes aren\'t being completed.',
-    inverted: false,
-    interpret: (s) => s <= 10 ? 'Almost all actions closed — good'
-      : s <= 30 ? 'Some actions still open'
-      : s <= 60 ? 'Many unresolved actions — follow up needed'
-      : 'Most actions unresolved — escalation needed'
-  },
-  highRiskExposure: {
-    tooltip: 'HOW THIS IS CALCULATED: We measure the percentage of incidents that involve major hazard categories — Working at Height, Lifting Operations, Confined Space, Electrical, Excavation, and Hot Work. These are activities with higher potential for fatality or serious injury. A high score means a large share of this entity\'s work involves inherently dangerous tasks, which demands stronger risk controls.',
-    inverted: false,
-    interpret: (s) => s <= 30 ? 'Low exposure to major hazards'
-      : s <= 60 ? 'Moderate exposure — ensure controls are in place'
-      : 'High exposure to major hazards — verify risk controls'
-  },
-  nearMissRate: {
-    tooltip: 'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure what percentage of site-months meet the target of 2 near-misses per site per month. If few site-months meet this target, workers may not be reporting hazards before they cause harm. A high bar here means "most sites below target" which is a warning sign. Good teams consistently report 2+ near-misses per site per month — it shows hazard awareness.',
-    inverted: true,
-    invertedNote: 'Low reporting = higher risk',
-    interpret: (s) => s <= 30 ? 'Good near-miss reporting (80%+ site-months meet target)'
-      : s <= 60 ? 'Moderate reporting — some sites below 2/month target'
-      : 'Very low near-miss reporting — most sites below 2/month target'
-  },
-  positiveRate: {
-    tooltip: 'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure the rate of positive safety observations (good catches, safe behaviors) relative to total observations. When positive observations are rare, it suggests workers aren\'t engaged in proactive safety. A high bar here means "very few positive observations" — the workforce may only report when things go wrong, not when things go right.',
-    inverted: true,
-    invertedNote: 'Fewer positives = higher risk',
-    interpret: (s) => s <= 30 ? 'Strong positive observation rate'
-      : s <= 60 ? 'Moderate — encourage more positive reporting'
-      : 'Low positive observations — safety culture concern'
-  }
-}
-
-const INVERTED_EXPLANATIONS = {
-  nearMissRate: {
-    high: 'Almost no near-miss reports are being filed. This is a red flag — it usually means workers are not identifying hazards before they cause harm, or they don\'t feel comfortable reporting. Healthy teams report many near-misses for every actual incident.',
-    moderate: 'Near-miss reporting is below what we\'d expect. It may indicate that some hazards are going unnoticed or unreported. Consider running a near-miss awareness campaign or making reporting easier.',
-    smallSample: 'Sample size too small for reliable culture assessment. With fewer than 20 incidents, low near-miss rates could reflect limited exposure rather than under-reporting. Collect more data before drawing conclusions.'
-  },
-  positiveRate: {
-    high: 'Very few positive safety observations are being recorded. This suggests the safety culture may be reactive — people only report when something goes wrong, not when things go right. Encouraging positive observations helps reinforce safe behaviors.',
-    moderate: 'Positive observations are lower than ideal. Teams with strong safety cultures typically record more "good catches" and safe behavior observations. Consider recognizing and rewarding proactive safety reporting.',
-    smallSample: 'Sample size too small for reliable culture assessment. With fewer than 20 incidents, low positive observation rates may not indicate a culture problem. Continue monitoring as more data becomes available.'
-  }
-}
-
-const SIGNAL_ACTIONS = {
-  severityMix: 'reviewing incident severity patterns',
-  trend: 'investigating the recent increase in incidents',
-  openActionRate: 'closing outstanding corrective actions',
-  highRiskExposure: 'verifying risk controls for major hazards',
-  nearMissRate: 'encouraging near-miss reporting',
-  positiveRate: 'promoting positive safety observations'
-}
-
-const getSignalBarColor = (score) => {
-  if (score > 60) return 'bg-red-500'
-  if (score > 30) return 'bg-amber-500'
-  return 'bg-emerald-500'
-}
+import {
+  SIGNAL_LABELS,
+  SIGNAL_META,
+  SIGNAL_ACTIONS
+} from '../../utils/signalConstants'
 
 const getBarColor = (count, maxCount) => {
   const ratio = maxCount > 0 ? count / maxCount : 0
@@ -293,6 +193,8 @@ EntityTrendChart.displayName = 'EntityTrendChart'
 const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, rankings }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeTab, setActiveTab] = useState('signals')
+  const [threshold, setThreshold] = useState(60)
+  const [selectedSignal, setSelectedSignal] = useState(null)
   const prevEntityRef = useRef(null)
 
   const benchmark = useMemo(() => {
@@ -484,9 +386,74 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
       </div>
 
       {/* Content area */}
-      <div className="flex-1 p-4 overflow-y-auto min-h-0">
+      <div className="flex-1 p-4 overflow-y-auto min-h-0 relative">
         {activeTab === 'signals' ? (
-          <SignalBars signals={entity.signals} isTransitioning={isTransitioning} entityName={entity.name} />
+          <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+            {/* Radar + Priority Panel - Flex layout */}
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
+              {/* Radar Chart */}
+              <div className="flex-shrink-0">
+                <SafetySignalRadar
+                  signals={entity.signals}
+                  threshold={threshold}
+                  onThresholdChange={setThreshold}
+                  onSignalSelect={setSelectedSignal}
+                  selectedSignal={selectedSignal}
+                  size={260}
+                />
+              </div>
+
+              {/* Priority Signals List */}
+              <div className="w-full md:flex-1 md:min-w-0">
+                <SignalPriorityList
+                  signals={entity.signals}
+                  threshold={threshold}
+                  onSignalClick={setSelectedSignal}
+                  maxItems={3}
+                />
+              </div>
+            </div>
+
+            {/* Threshold slider below chart */}
+            <div className="flex items-center justify-center gap-3 mt-4 max-w-xs mx-auto">
+              <span className="text-xs text-surface-500 whitespace-nowrap">Threshold:</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+                className="flex-1 h-2 bg-surface-200 rounded-full appearance-none cursor-pointer"
+                aria-label="Threshold slider"
+              />
+              <span className="text-sm font-semibold text-red-600 w-8 text-right">{threshold}</span>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-4 mt-3 text-2xs text-surface-500">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <span>Signal score</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-0.5 border-t-2 border-dashed border-red-500" />
+                <span>Threshold (drag to adjust)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500 radar-point-pulse" style={{ animation: 'radarPulse 1.2s ease-in-out infinite' }} />
+                <span>Exceeds threshold</span>
+              </div>
+            </div>
+
+            {/* Detail Card Overlay */}
+            {selectedSignal && entity.signals?.[selectedSignal] && (
+              <SignalDetailCard
+                signalKey={selectedSignal}
+                signal={entity.signals[selectedSignal]}
+                onClose={() => setSelectedSignal(null)}
+              />
+            )}
+          </div>
         ) : (
           <EntityTrendChart incidents={incidents} isTransitioning={isTransitioning} />
         )}

@@ -4,8 +4,8 @@ import { RefreshCw, FileSpreadsheet, Upload, X, Check, AlertTriangle } from 'luc
 import { useData } from '../../context/DataContext'
 import {
   parseExcelFile,
-  validateNEOMFormat,
-  mapNEOMColumns,
+  validateExcelFormat,
+  mapExcelColumns,
   transformRows,
 } from '../../utils/excelParser'
 
@@ -44,7 +44,7 @@ const FileReplaceModal = ({ file, onClose }) => {
       const data = await parseExcelFile(selectedFile)
 
       // Validate format
-      const validation = validateNEOMFormat(data.headers)
+      const validation = validateExcelFormat(data.headers)
       if (!validation.valid) {
         setError(`Invalid format. Missing columns: ${validation.missing.join(', ')}`)
         setIsProcessing(false)
@@ -71,7 +71,7 @@ const FileReplaceModal = ({ file, onClose }) => {
 
     try {
       // Map columns
-      const mappings = mapNEOMColumns(parsedData.headers)
+      const mappings = mapExcelColumns(parsedData.headers)
 
       // Transform rows
       const { incidents: transformedIncidents, warnings } = transformRows(

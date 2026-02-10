@@ -44,24 +44,22 @@ export const FACTOR_PHRASE_CONFIG = {
       'pre-start inspection', 'prestart inspection', 'daily inspection',
       'weekly inspection', 'monthly inspection', 'annual inspection',
       'equipment inspection', 'vehicle inspection', 'plant inspection',
-      // VVS/NEOM Veri-Fi inspection status - comprehensive patterns
-      'vvs inspection', 'veri-fi inspection', 'verifi inspection', 'neom inspection',
-      'veri-fi access denied', 'verifi access denied', 'neom veri-fi access denied',
-      'neom veri-fi red', 'veri-fi red status', 'veri-fi red category',
-      'neom verifi', 'neom vvs', 'vvs app', 'vvs application',
+      // VVS/Veri-Fi inspection status - comprehensive patterns
+      'vvs inspection', 'veri-fi inspection', 'verifi inspection',
+      'veri-fi access denied', 'verifi access denied',
+      'veri-fi red status', 'veri-fi red category',
+      'vvs app', 'vvs application',
       'access denied status', 'access denied red status', 'under access denied',
       'with access denied status', 'found with access denied',
       'is in access denied', 'is on access denied',
       'access denied (red)', 'access denied red', '(red) vehicles',
-      'neom veri fi access', 'veri fi access', 'neom veri fi',
+      'veri fi access',
       'without qr code', 'no qr code', 'expired qr code', 'red qr code',
       'qr code in red', 'qr code not', 'qr code expired',
       // QR Veri fi patterns (with space variations)
-      'neom qr veri fi', 'does not have neom qr', 'not have neom qr veri fi',
-      'does not have neom qr veri fi', 'without neom qr',
-      'without neom verification', 'expired neom verification',
-      'without neom veri-fi', 'without neom verifi',
-      'without proper neom', 'without verifiable',
+      'without verification', 'expired verification',
+      'without veri-fi', 'without verifi',
+      'without verifiable',
       'red status operated', 'red status being operated', 'red status observed',
       'red status operating', 'with red status operating', 'with red status',
       'in red status', 'with the red status', 'found with red status',
@@ -69,23 +67,23 @@ export const FACTOR_PHRASE_CONFIG = {
       'vehicle with red status', 'dump truck with red status', 'red category dump truck',
       'red category equipment', 'red category vehicle', 'red status equipment',
       'red status vehicles', 'red status still operating', 'still operating in site',
-      // Bar code / NEOM bar code patterns (including misspellings)
+      // Bar code patterns (including misspellings)
       'bar code expired', 'barcode expired', 'baar code expired', 'baar code',
-      'without neom bar code', 'without neom barcode', 'without neom baar code',
-      'no bar code', 'no barcode', 'no baar code', 'neom bar code expired',
-      'neom barcode expired', 'neom baar code expired', 'find excavator baar code',
-      'come on side without neom', 'without baar code', 'expired baar code',
+      'without bar code', 'without barcode', 'without baar code',
+      'no bar code', 'no barcode', 'no baar code',
+      'find excavator baar code',
+      'without baar code', 'expired baar code',
       'inter in work location', 'without permission and baar',
       // Number plate / Registration
       'without nambr plate', 'without number plate', 'no number plate',
       'number plate missing', 'without registration', 'no registration',
       'without registration', 'steer skid loader without registration',
-      'denied access for', 'expired neom verifi',
-      'not subjected to neom', 'overdue for inspection',
-      // Positive NEOM inspection status
+      'denied access for', 'expired verifi',
+      'overdue for inspection',
+      // Positive inspection status
       'access granted status', 'access verified status', 'verified status',
       'green status under', 'with green status', 'found with green status',
-      'neom verification access', 'valid neom', 'approved on the vvs',
+      'verification access', 'approved on the vvs',
       // Certification/documentation inspection
       'third party inspection', '3rd party inspection', 'tuv inspection',
       'colour code', 'color code', 'inspection tag', 'inspection sticker',
@@ -96,10 +94,10 @@ export const FACTOR_PHRASE_CONFIG = {
       'not inspecting the plants daily', 'operators not inspecting', 'not inspecting plants daily',
       'records not being updated on daily', 'records not being updated', 'on daily basis',
       'plant operators not inspecting', 'construction plant operators not inspecting',
-      // Equipment found without NEOM inspection
-      'excavating at site without neom inspection', 'without neom inspection and qr',
+      // Equipment found without inspection
+      'excavating at site without inspection', 'without inspection and qr',
       'found excavating at site without', 'excavator found excavating at site',
-      'violating neom requirements', '3rd party inspection', 'third party inspection',
+      'violating requirements', '3rd party inspection', 'third party inspection',
       '3rd party inspection for', 'inspection for the excavator', 'expiring on',
 
       // === SCAFFOLD TAGS (inspection/authorization system) ===
@@ -267,7 +265,7 @@ export const FACTOR_PHRASE_CONFIG = {
     exclusionPatterns: [
       // VVS/Inspection status (not material handling)
       'green status under', 'red status under', 'vvs', 'veri-fi', 'verifi',
-      'neom verification', 'verification system', 'access granted', 'access denied',
+      'verification system', 'access granted', 'access denied',
       'qr code', 'qrcode', 'inspection checklist', 'checklist not updated',
       // Location mentions (loading point as place, not activity)
       'at zone 3 loading', 'at zone 4 loading', 'at zone 5 loading',
@@ -371,7 +369,7 @@ export const FACTOR_PHRASE_CONFIG = {
       // Positive PPE observations
       'wearing the required ppe', 'required personal protective',
       'wearing complete ppe', 'complete ppe for the task', 'complying with all required ppe',
-      'all required ppe', 'chipping while complying', 'following neom safety standard',
+      'all required ppe', 'chipping while complying', 'following safety standard',
 
       // === SEATBELT VIOLATIONS (Extended) ===
       'driver was driving without', 'dump truck driver without', 'driver without a seatbelt',
@@ -610,11 +608,11 @@ export const FACTOR_PHRASE_CONFIG = {
       // Misspellings
       'pretsk', 'pre-taks', 'lrma', 'toollbox', 'toobox', 'tolbox',
 
-      // === NEOM STANDARDS / COMPLIANCE ===
-      'neom safety standard', 'neom requirements', 'neom safety standards',
-      'following neom safety', 'following neom standard', 'neom requirements standerds',
-      'from same company as per neom', 'as per neom requirements',
-      'excavator operator was following', 'operator was following neom',
+      // === STANDARDS / COMPLIANCE ===
+      'safety standard', 'safety requirements', 'safety standards',
+      'following safety', 'following standard', 'requirements standards',
+      'as per requirements',
+      'excavator operator was following', 'operator was following',
       // Trained personnel
       'trained', 'well trained', 'properly trained', 'fully trained',
       'trained and authorized', 'trained and certified', 'trained operator',
@@ -1917,7 +1915,7 @@ export const FACTOR_PHRASE_CONFIG = {
       'tape removed', 'tape broken', 'tape torn', 'barrier tape not',
       'barrier tape missing', 'red and white tape not', 'red white tape not',
       'yellow tape not', 'safety tape not', 'safety tape missing',
-      'tape is being used on site', 'not compliant with neom', 'tape not compliant',
+      'tape is being used on site', 'tape not compliant',
       'warning tap not allowed', 'warning tape not allowed', 'tap not allowed',
 
       // === EXCLUSION ZONE ===
@@ -2548,7 +2546,7 @@ export const FACTOR_PHRASE_CONFIG = {
 
       // === POOR DRIVER BEHAVIOR ===
       'poor conditions', 'poor condition bus', 'not meeting standards',
-      'not meeting neom', 'workers transport buses',
+      'not meeting standards', 'workers transport buses',
       'driver out side', 'driver outside without', 'driver without healmet',
       'drivers don\'t', 'driver don\'t', 'some drivers don\'t',
       'some driver no wear', 'driver no wear', 'drivers no wear',
@@ -2878,10 +2876,10 @@ export const FACTOR_PHRASE_CONFIG = {
     ],
     exclusionPatterns: [
       // Veri-Fi/VVS inspection status - these are INSPECTION issues, not authorization
-      'veri-fi', 'verifi', 'vvs', 'neom verification', 'neom veri-fi',
+      'veri-fi', 'verifi', 'vvs', 'verification',
       'access denied status', 'access denied red', 'access denied in',
       'access granted status', 'access verified', 'green status',
-      'red status', 'expired neom', 'qr code', 'inspection qr',
+      'red status', 'expired', 'qr code', 'inspection qr',
       'denied for', 'found with access denied', 'under access denied',
       'with access denied', 'is in access denied', 'is on access denied',
       // Physical access - roads, routes, areas (NOT authorization)
@@ -3262,14 +3260,13 @@ export const FACTOR_PHRASE_CONFIG = {
 
       // === WALKTHROUGHS / SITE VISITS ===
       'walkthrough', 'walk through', 'site walkthrough', 'safety walkthrough',
-      'neom walkthrough', 'neom walk through', 'neom safety walkthrough',
       'lpsf walkthrough', 'weekly walkthrough', 'weekly lpsf walkthrough',
       'walkthrough was done', 'walkthrough was conducted', 'walkthrough conducted',
-      'neom safety engineer', 'neom corporate safety', 'corporate safety team',
-      'visit from neom', 'neom visit', 'site visit', 'site visit at',
+      'safety engineer', 'corporate safety', 'corporate safety team',
+      'site visit', 'site visit at',
       'inspecting the site', 'inspecting site activity', 'site inspection',
       'safety manager inspecting', 'safety engineer inspecting',
-      'presence of neom', 'with the presence of', 'tdp key personnel',
+      'with the presence of', 'tdp key personnel',
       'key personnel', 'management team', 'presence of key personnel',
 
       // === CAMPAIGNS / INITIATIVES ===
@@ -3278,8 +3275,7 @@ export const FACTOR_PHRASE_CONFIG = {
       'welfare hotline', 'hotline posted', 'grievances and concerns',
       'safe driving commitments', 'commitments to safe driving',
       'key chains', 'slogan key chains', 'visual reminder',
-      'safe driving neom campaign', 'neom campaign has been conducted',
-      'safe driving neom campaign has been', 'campaign has been conducted',
+      'safe driving campaign', 'campaign has been conducted',
 
       // === GIFT/RECOGNITION ===
       'gift card', 'best performer', 'recognition', 'award given',
@@ -3385,7 +3381,7 @@ export const HAZARD_FACTOR_RULES = {
     'Inspections': {
       requiredContext: [
         'checklist', 'checklists', 'tuv', 'tpc', 'qr', 'qrcode', 'barcode', 'bar code',
-        'verifi', 'veri-fi', 'vvs', 'neom', 'status', 'green', 'red', 'expired', 'valid',
+        'verifi', 'veri-fi', 'vvs', 'status', 'green', 'red', 'expired', 'valid',
         'sticker', 'stickers', 'tag', 'tags', 'colour code', 'color code',
         'preuse', 'pre-use', 'prestart', 'pre-start', 'daily', 'weekly', 'monthly',
         'third party', 'thirdparty', '3rd party', 'certification', 'certificate',
@@ -3615,7 +3611,7 @@ export const HAZARD_FACTOR_RULES = {
         // VVS/Inspection status observations - NOT material handling
         'green status under', 'red status under', 'overdue status under',
         'vvs at zone', 'vvs at location', 'verification system at zone',
-        'neom verification', 'neom vvs', 'veri-fi', 'verifi',
+        'verification', 'vvs', 'veri-fi', 'verifi',
         'access granted', 'access denied', 'qr code',
         // Equipment inspection issues - NOT material handling
         'checklist not', 'checklist was not', 'inspection checklist',

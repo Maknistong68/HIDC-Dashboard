@@ -1951,7 +1951,7 @@ export const getUnclassifiableRecords = (incidents) => {
 
   // Approved categories that normalize correctly (27 hazard categories)
   const approvedCategories = [
-    // 14 NEOM Eltizam Significant Hazards + Physical/Mechanical
+    // 14 Significant Hazards + Physical/Mechanical
     'Confined Spaces', 'Energized System', 'Explosives & Blasting',
     'Mobile Plant & Equipment', 'Breaking Ground & Excavation', 'Fire',
     'Hot Work', 'Lifting', 'Temporary Works', 'Working on or Near Live Roads',
