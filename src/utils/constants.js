@@ -168,8 +168,7 @@ export const CRITICAL_HAZARD_KEYWORDS = {
     'confined space without', 'confined space permit',
   ],
   'Explosives & Blasting': [
-    // Only actual explosion events - blasting operations moved to Mechanical Hazard
-    'explosion', 'exploded', 'exploding',
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
   'Mechanical Hazard': [
     // Blasting operations (moved from Explosives & Blasting)
@@ -625,13 +624,7 @@ export const HAZARD_EXCLUSIONS = {
     'fall from platform', 'fall through opening'
   ],
   'Explosives & Blasting': [
-    // Exclude "explosion risk" phrases - these describe potential hazards, not actual explosions
-    // Context: gas cylinder storage, fire hazards, etc. should be Fire or COSHH
-    'explosion risk', 'fire and explosion', 'fire/explosion', 'fire or explosion',
-    'potential explosion', 'risk of explosion', 'explosion hazard',
-    // Gas cylinder storage context - should be Fire or COSHH
-    'gas cylinder', 'compressed gas', 'oxygen', 'lpg', 'acetylene', 'propane',
-    'cylinder storage', 'gas storage', 'cylinder area',
+    // Empty - no keyword auto-detection needed since keywords are also empty
   ],
   'Site Security': [
     // Exclude lifting operations - "unauthorized entry" in exclusion zone context
@@ -3034,8 +3027,7 @@ export const HAZARD_PATTERNS = {
     'octopus socket', 'multi socket', 'earth pin', 'earthing rod'
   ],
   'Explosives & Blasting': [
-    // Only actual explosion events - blasting operations moved to Mechanical Hazard
-    'explosion', 'exploded', 'exploding'
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
   'Mobile Plant & Equipment': [
     'mobile plant', 'heavy equipment', 'excavator', 'bulldozer', 'loader', 'grader',
@@ -3297,9 +3289,7 @@ export const HAZARD_PHRASES = {
     'unsafe electrical', 'electrical cable', 'exposed cable', 'live cable', 'damaged cable'
   ],
   'Explosives & Blasting': [
-    // Only actual explosion events - blasting operations moved to Mechanical Hazard
-    'gas explosion', 'tank exploded', 'cylinder exploded', 'explosion occurred',
-    'caused explosion', 'resulted in explosion'
+    // Empty - no keyword auto-detection. Only classify from explicit Excel data.
   ],
   'Working at Height': [
     'working at height', 'work at height', 'fall protection', 'edge protection', 'roof work',
