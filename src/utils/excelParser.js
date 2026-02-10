@@ -369,6 +369,284 @@ export const CLASSIFICATION_MAPPING = {
   'Others': { type: 'unknown', needsMapping: true },
 }
 
+// ============================================
+// INCIDENT TYPE RECLASSIFICATION PATTERNS
+// Auto-reclassify generic incident types (FAC, MTI, LTI) based on description
+// ============================================
+
+export const INCIDENT_RECLASSIFY_PATTERNS = {
+  'property-damage': {
+    keywords: [
+      'property damage', 'vehicle collision', 'collided', 'collision',
+      'overturned', 'overturn', 'tipped over', 'crashed', 'crash',
+      'struck barrier', 'hit barrier', 'damaged', 'damage to',
+      'equipment damage', 'structural damage', 'broke', 'broken',
+      'scratches', 'dent', 'bodywork', 'chassis damage', 'windshield',
+      'bumper', 'fender', 'smashed', 'wrecked', 'totaled', 'write-off',
+      'scraped', 'punctured tire', 'flat tire', 'vehicle damage',
+      'machinery damage', 'tool damage', 'asset damage'
+    ],
+    priority: 1
+  },
+  'environmental': {
+    keywords: [
+      'spill', 'spillage', 'chemical spill', 'sewage', 'contamination',
+      'contaminated', 'pollution', 'polluted', 'waste', 'leak', 'leakage',
+      'oil spill', 'fuel spill', 'hazmat', 'environmental incident',
+      'discharge', 'effluent', 'runoff', 'toxic release', 'emission',
+      'groundwater', 'soil contamination', 'air quality', 'hazardous waste',
+      'illegal dumping', 'environmental damage', 'ecological'
+    ],
+    priority: 2
+  },
+  'security': {
+    keywords: [
+      'theft', 'stolen', 'robbery', 'robbed', 'vandalism', 'vandalized',
+      'break-in', 'trespassing', 'unauthorized access', 'intruder',
+      'assault', 'attacked', 'threatened', 'security breach',
+      'missing property', 'confiscated', 'apprehended', 'burglary',
+      'pilferage', 'sabotage', 'forced entry', 'unauthorized entry',
+      'security violation', 'access violation', 'tailgating'
+    ],
+    priority: 3
+  }
+}
+
+// Keywords that indicate an actual injury occurred (should NOT be reclassified)
+const INJURY_KEYWORDS = [
+  'injury', 'injured', 'hurt', 'wound', 'wounded', 'laceration', 'cut',
+  'bruise', 'bruised', 'fracture', 'broken bone', 'sprain', 'strain',
+  'burn', 'burned', 'abrasion', 'contusion', 'hospital', 'medical treatment',
+  'first aid', 'ambulance', 'doctor', 'clinic', 'stitches', 'bandage',
+  'bleeding', 'swelling', 'pain', 'sore', 'dislocated', 'concussion',
+  'unconscious', 'fainted', 'collapsed', 'heat stroke', 'dehydration'
+]
+
+// Negation patterns that indicate NO injury occurred
+// These patterns, when followed by injury keywords, mean the incident was property-only
+const INJURY_NEGATION_PATTERNS = [
+  // ============================================
+  // DIRECT NEGATIONS - "no injury", "without injury"
+  // ============================================
+  /\bno\s+(personal\s+)?injur/gi,
+  /\bno\s+(physical\s+)?injur/gi,
+  /\bno\s+(bodily\s+)?injur/gi,
+  /\bwithout\s+(any\s+)?(personal\s+)?injur/gi,
+  /\bwithout\s+(any\s+)?(physical\s+)?injur/gi,
+  /\bwithout\s+(causing\s+)?(any\s+)?injur/gi,
+  /\bzero\s+injur/gi,
+  /\bnil\s+injur/gi,
+  /\bno\s+harm/gi,
+  /\bwithout\s+harm/gi,
+  /\bno\s+casualt/gi,
+  /\bzero\s+casualt/gi,
+
+  // ============================================
+  // PERSON-FOCUSED - "no one was hurt"
+  // ============================================
+  /\bno\s+one\s+(was\s+)?(hurt|injured|harmed|wounded)/gi,
+  /\bnobody\s+(was\s+)?(hurt|injured|harmed|wounded)/gi,
+  /\bno\s+(people|persons?|workers?|employees?|personnel|staff|individuals?)\s+(were\s+|was\s+)?(hurt|injured|harmed)/gi,
+  /\ball\s+(personnel|workers?|staff|employees?)\s+(are\s+|were\s+)?(safe|unharmed|okay|ok|uninjured)/gi,
+  /\beveryone\s+(is\s+|was\s+)?(safe|okay|ok|unharmed|uninjured)/gi,
+  /\b(driver|operator|worker|employee)\s+(was\s+)?(not\s+)?(hurt|injured|unharmed|safe)/gi,
+  /\boccupants?\s+(were\s+|was\s+)?(unharmed|safe|not\s+injured|okay)/gi,
+  /\bno\s+(persons?\s+)?(was\s+|were\s+)?(hurt|injured|harmed)/gi,
+
+  // ============================================
+  // OUTCOME STATEMENTS - "resulting in damage only"
+  // ============================================
+  /\bno\s+(reported\s+)?injuries/gi,
+  /\binjuries?\s+(were\s+|was\s+)?not\s+reported/gi,
+  /\bno\s+injuries\s+(were\s+)?reported/gi,
+  /\bno\s+injuries\s+(were\s+)?sustained/gi,
+  /\bno\s+injuries\s+(were\s+)?recorded/gi,
+  /\bno\s+injuries\s+(were\s+)?occurred/gi,
+  /\bno\s+injuries\s+resulted/gi,
+  /\bdamage\s+only/gi,
+  /\bproperty\s+damage\s+only/gi,
+  /\bproperty\s+damage\s+but\s+no/gi,
+  /\bmaterial\s+damage\s+only/gi,
+  /\bequipment\s+damage\s+only/gi,
+  /\bvehicle\s+damage\s+only/gi,
+  /\bresulting\s+in\s+(only\s+)?property\s+damage/gi,
+  /\bresulting\s+in\s+(only\s+)?material\s+damage/gi,
+  /\bresulting\s+in\s+damage\s+(only|to\s+property)/gi,
+  /\bresulted\s+in\s+no\s+(personal\s+)?injur/gi,
+  /\bonly\s+(property|material|equipment|vehicle)\s+damage/gi,
+  /\bno\s+personal\s+harm/gi,
+  /\bno\s+physical\s+harm/gi,
+  /\bno\s+bodily\s+harm/gi,
+
+  // ============================================
+  // VERB + NEGATION - "sustained no injuries"
+  // ============================================
+  /\bsustained\s+no\s+injur/gi,
+  /\bsuffered\s+no\s+injur/gi,
+  /\breported\s+no\s+injur/gi,
+  /\breceived\s+no\s+injur/gi,
+  /\bincurred\s+no\s+injur/gi,
+  /\bexperienced\s+no\s+injur/gi,
+  /\bescaped\s+(without\s+|with\s+no\s+)?injur/gi,
+  /\bescaped\s+unharm/gi,
+  /\bescaped\s+uninjur/gi,
+  /\bwere\s+no\s+injur/gi,
+  /\bwas\s+no\s+injur/gi,
+  /\bthere\s+(were\s+|was\s+)?no\s+injur/gi,
+  /\bdid\s+not\s+(sustain|suffer|receive|incur)\s+(any\s+)?injur/gi,
+  /\bwas\s+not\s+(hurt|injured|harmed)/gi,
+  /\bwere\s+not\s+(hurt|injured|harmed)/gi,
+
+  // ============================================
+  // MEDICAL NEGATIONS - "no medical treatment required"
+  // ============================================
+  /\bno\s+medical\s+(treatment|attention|care)\s+(was\s+)?(required|needed|necessary)/gi,
+  /\bdid\s+not\s+require\s+(medical\s+)?(treatment|attention|care)/gi,
+  /\bno\s+(first\s+aid|treatment)\s+(was\s+)?(required|needed|necessary|given)/gi,
+  /\bmedical\s+(treatment|attention)\s+(was\s+)?not\s+(required|needed)/gi,
+  /\bno\s+hospitalization/gi,
+  /\bno\s+hospital\s+(visit|admission|treatment)\s+(was\s+)?(required|needed)/gi,
+
+  // ============================================
+  // FORTUNATE OUTCOME - "luckily no injuries"
+  // ============================================
+  /\b(fortunately|luckily|thankfully)\s*(,\s*)?(no\s+one\s+was\s+)?(there\s+were\s+)?no\s+injur/gi,
+  /\b(fortunately|luckily|thankfully)\s*(,\s*)?(no\s+one\s+was\s+)?(hurt|injured|harmed)/gi,
+  /\b(fortunate|lucky)\s+that\s+no\s+(one\s+was\s+)?(injur|hurt|harm)/gi,
+  /\bwith\s+no\s+(resulting\s+)?injur/gi,
+  /\bwithout\s+(resulting\s+in\s+)?(any\s+)?injur/gi,
+  /\bno\s+adverse\s+(health\s+)?(effects?|impacts?|consequences?)/gi,
+
+  // ============================================
+  // EXPLICIT PROPERTY/DAMAGE FOCUS
+  // ============================================
+  /\bincident\s+(was\s+)?restricted\s+to\s+damage/gi,
+  /\bincident\s+(was\s+)?limited\s+to\s+(property\s+)?damage/gi,
+  /\bconfined\s+to\s+(property\s+)?damage/gi,
+  /\b(only|just)\s+(property|material|equipment|asset)\s+(damage|loss)/gi,
+  /\bproperty\s+(damage|loss)\s+(only|alone)/gi,
+  /\bno\s+(injury|injuries),?\s+(only|just)\s+(property\s+)?damage/gi,
+  /\bdamage\s+to\s+(property|equipment|vehicle|asset)\s+only/gi,
+]
+
+/**
+ * Check if text contains negated injury references
+ * Returns true if injuries are mentioned but negated (e.g., "no injuries")
+ */
+const hasNegatedInjuryReference = (text) => {
+  return INJURY_NEGATION_PATTERNS.some(pattern => pattern.test(text))
+}
+
+/**
+ * Check if text contains actual (non-negated) injury references
+ * Returns true only if there's a genuine injury mentioned, not a negation
+ */
+const hasActualInjury = (text) => {
+  // First, check if there are any injury keywords at all
+  const hasInjuryKeyword = INJURY_KEYWORDS.some(keyword =>
+    text.includes(keyword.toLowerCase())
+  )
+
+  if (!hasInjuryKeyword) {
+    return false // No injury keywords at all
+  }
+
+  // Check if ALL injury references are negated
+  // We need to find injury keywords and verify they're not part of negation patterns
+
+  // If we have negated injury patterns, we need to check if there are ALSO non-negated ones
+  const hasNegation = hasNegatedInjuryReference(text)
+
+  if (!hasNegation) {
+    return true // Has injury keywords but no negation = actual injury
+  }
+
+  // Has both injury keywords and negation patterns
+  // We need to determine if there's an actual injury BEYOND the negated ones
+
+  // Strategy: Remove negated sections and check if injury keywords remain
+  let cleanedText = text
+
+  // Remove negated phrases temporarily
+  for (const pattern of INJURY_NEGATION_PATTERNS) {
+    cleanedText = cleanedText.replace(pattern, ' [NEGATED] ')
+  }
+
+  // Check if injury keywords still exist in the cleaned text
+  const hasRemainingInjury = INJURY_KEYWORDS.some(keyword => {
+    const keywordLower = keyword.toLowerCase()
+    // Make sure the keyword is not part of [NEGATED] placeholder
+    const idx = cleanedText.indexOf(keywordLower)
+    if (idx === -1) return false
+
+    // Check surrounding context - is this part of an actual injury description?
+    // Look for action verbs that indicate injury happened
+    const injuryActionPatterns = [
+      /sustain(ed|ing)?\s+\w*\s*(injury|injuries|laceration|cut|bruise|fracture)/gi,
+      /suffer(ed|ing)?\s+\w*\s*(injury|injuries|laceration|cut|bruise|fracture)/gi,
+      /result(ed|ing)?\s+in\s+\w*\s*(injury|injuries|laceration|cut|bruise)/gi,
+      /caus(ed|ing)?\s+\w*\s*(injury|injuries|laceration|cut|bruise)/gi,
+      /(injury|injuries|laceration|cut|bruise|fracture)\s+to\s+(his|her|the|their)/gi,
+      /minor\s+(injury|laceration|cut|bruise)/gi,
+      /received\s+\w*\s*(injury|injuries|treatment)/gi,
+      /was\s+(hurt|injured|wounded)/gi,
+      /got\s+(hurt|injured|wounded)/gi,
+    ]
+
+    return injuryActionPatterns.some(pattern => pattern.test(text))
+  })
+
+  return hasRemainingInjury
+}
+
+/**
+ * Reclassify incident type based on description content
+ * Only triggers when currentType is a generic injury type (fac, mti, lti, incident)
+ * but the description indicates it's actually property damage, environmental, or security
+ *
+ * Handles negation patterns like "no injuries", "without injury", "damage only"
+ * to correctly identify property-damage incidents that mention lack of injury.
+ *
+ * @param {string} description - The incident description
+ * @param {string} currentType - Current incident type
+ * @returns {string} - New incident type or original if no reclassification needed
+ */
+export const reclassifyIncidentType = (description, currentType) => {
+  // Only reclassify generic injury types
+  const genericTypes = ['fac', 'mti', 'lti', 'incident']
+  const normalizedType = (currentType || '').toLowerCase().trim()
+
+  if (!genericTypes.includes(normalizedType)) {
+    return currentType // Keep specific types as-is
+  }
+
+  if (!description || description.trim().length < 10) {
+    return currentType // Not enough description to analyze
+  }
+
+  const text = description.toLowerCase()
+
+  // Check if description contains ACTUAL injury (not negated)
+  // This handles cases like "no injuries reported" vs "sustained an injury"
+  if (hasActualInjury(text)) {
+    return currentType // Keep as injury type - there was a real injury
+  }
+
+  // Check for reclassification patterns (sorted by priority)
+  const sortedPatterns = Object.entries(INCIDENT_RECLASSIFY_PATTERNS)
+    .sort((a, b) => a[1].priority - b[1].priority)
+
+  for (const [newType, config] of sortedPatterns) {
+    for (const keyword of config.keywords) {
+      if (text.includes(keyword.toLowerCase())) {
+        return newType // Reclassify to this type
+      }
+    }
+  }
+
+  return currentType // No reclassification needed
+}
+
 // Keyword patterns for auto-classification of "Others"
 export const KEYWORD_PATTERNS = {
   'positive': {
@@ -1467,7 +1745,8 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
   const warnings = {
     dateIssues: [],
     hazardIssues: [],
-    contractorNormalizations: [], // NEW: Track contractor name normalizations
+    contractorNormalizations: [], // Track contractor name normalizations
+    incidentTypeReclassifications: [], // Track incident type reclassifications (FAC→property-damage, etc.)
     rowLimitApplied: false,
   }
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -1857,6 +2136,26 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       mapping = { type: 'incident', incidentType: autoClassifiedType, autoClassified: true }
     }
 
+    // ============================================
+    // AUTO-RECLASSIFY INCIDENT TYPE
+    // If the incident is classified as a generic injury type (FAC, MTI, LTI)
+    // but the description indicates property damage, environmental, or security,
+    // reclassify it to the appropriate type
+    // ============================================
+    const originalIncidentType = mapping.incidentType
+    const reclassifiedType = reclassifyIncidentType(description, mapping.incidentType)
+    const wasReclassified = reclassifiedType !== originalIncidentType
+
+    if (wasReclassified) {
+      mapping = { ...mapping, incidentType: reclassifiedType, autoClassified: true }
+      warnings.incidentTypeReclassifications.push({
+        row: index + 2,
+        eventId,
+        original: originalIncidentType.toUpperCase(),
+        reclassified: reclassifiedType,
+        reason: `Description indicates ${reclassifiedType.replace('-', ' ')} incident`
+      })
+    }
 
     incidents.push({
       externalId: eventId,
