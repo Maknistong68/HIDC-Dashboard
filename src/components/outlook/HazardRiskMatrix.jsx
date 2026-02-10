@@ -643,7 +643,7 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
               <div className="flex items-center gap-1.5 bg-red-100 px-3 py-1 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
                 <span className="text-xs font-bold text-red-700">{severityBreakdown.lti} LTI</span>
-                <span className="text-[10px] text-red-500">×25</span>
+                <span className="text-[10px] text-red-500">×1000</span>
               </div>
             </div>
           )}
@@ -654,7 +654,7 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
               <div className="flex items-center gap-1.5 bg-orange-100 px-3 py-1 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
                 <span className="text-xs font-bold text-orange-700">{severityBreakdown.mti} MTI</span>
-                <span className="text-[10px] text-orange-500">×15</span>
+                <span className="text-[10px] text-orange-500">×500</span>
               </div>
             </div>
           )}
@@ -665,7 +665,7 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-yellow-500" />
                 <span className="text-xs font-bold text-yellow-700">{severityBreakdown.fac} FAC</span>
-                <span className="text-[10px] text-yellow-600">×10</span>
+                <span className="text-[10px] text-yellow-600">×100</span>
               </div>
             </div>
           )}
@@ -676,7 +676,7 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
               <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
                 <span className="text-xs font-medium text-blue-700">{severityBreakdown.nearMiss} Near Miss</span>
-                <span className="text-[10px] text-blue-500">×3</span>
+                <span className="text-[10px] text-blue-500">×50</span>
               </div>
             </div>
           )}
