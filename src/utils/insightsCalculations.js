@@ -4446,10 +4446,10 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
     const nearMissScore = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp((nmRate - 15) / 5)))))
 
     // Signal 6 — Positive Rate (inverted: low positive = high risk, high positive = good culture)
-    // Target ~30% positive observation rate
+    // Target ~10% positive observation rate
     const posRate = total > 0 ? (posCount / total) * 100 : 0
-    // Sigmoid mapping: 0% → 100 (worst), ~30% → 50 (neutral), 60%+ → ~10 (best)
-    const positiveScore = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp((posRate - 25) / 8)))))
+    // Sigmoid mapping: 0% → ~88 (worst), ~10% → ~38 (good), 15%+ → ~15 (excellent)
+    const positiveScore = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp((posRate - 8) / 4)))))
 
     // Composite
     const composite = Math.round(

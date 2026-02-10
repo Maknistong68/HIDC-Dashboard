@@ -65,14 +65,14 @@ export const SIGNAL_META = {
   },
   positiveRate: {
     tooltip:
-      'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure the rate of positive safety observations (good catches, safe behaviors) relative to total observations. When positive observations are rare, it suggests workers aren\'t engaged in proactive safety. A high bar here means "very few positive observations" — the workforce may only report when things go wrong, not when things go right.',
+      'HOW THIS IS CALCULATED: This is an INVERTED signal — a higher score means HIGHER risk. We measure the rate of positive safety observations (good catches, safe behaviors) relative to total observations. Target is 10% or higher. A high bar here means "very few positive observations" — the workforce may only report when things go wrong, not when things go right.',
     inverted: true,
     invertedNote: 'Fewer positives = higher risk',
     interpret: (s) =>
       s <= 30
-        ? 'Strong positive observation rate'
+        ? 'Strong positive observation rate (10%+ target met)'
         : s <= 60
-          ? 'Moderate — encourage more positive reporting'
+          ? 'Moderate — below 10% positive target'
           : 'Low positive observations — safety culture concern'
   }
 }
@@ -220,6 +220,6 @@ export const DEFAULT_THRESHOLDS = {
   severityMix: 60,
   openActionRate: 60,
   highRiskExposure: 60,
-  nearMissRate: 60,
+  nearMissRate: 50,
   positiveRate: 60
 }
