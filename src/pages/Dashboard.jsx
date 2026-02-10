@@ -314,6 +314,10 @@ const Dashboard = () => {
           ['leadership', 'positive'].includes(i.type)
         )
       }
+    } else if (drillDown.chart === 'subRegion') {
+      filtered = filteredIncidents.filter(i =>
+        (siteClassifications[i.site] || 'Unassigned') === drillDown.filter
+      )
     }
     return filtered
   }, [drillDown.chart, drillDown.filter, filteredIncidents])
@@ -1239,14 +1243,19 @@ const Dashboard = () => {
                         paddingAngle={2}
                         dataKey="value"
                         onClick={(data) => {
-                          if (data.name !== 'Others' && data.name !== 'Unassigned') {
-                            handleFilterChange('subRegion', data.name)
+                          if (data.name !== 'Others') {
+                            handleDrillDown('subRegion', data.name)
                           }
                         }}
                         style={{ cursor: 'pointer' }}
                       >
                         {subregionContributionData.map((entry, index) => (
-                          <Cell key={`subreg-${index}`} fill={entry.color} />
+                          <Cell
+                            key={`subreg-${index}`}
+                            fill={entry.color}
+                            stroke={drillDown.chart === 'subRegion' && drillDown.filter === entry.name ? '#1f2937' : 'none'}
+                            strokeWidth={drillDown.chart === 'subRegion' && drillDown.filter === entry.name ? 3 : 0}
+                          />
                         ))}
                       </Pie>
                       <Tooltip
@@ -1278,7 +1287,7 @@ const Dashboard = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <p className="text-xs text-surface-400 text-center opacity-60">Click a segment to filter</p>
+                  <p className="text-xs text-surface-400 text-center opacity-60">Click a segment to explore</p>
                 </div>
               ) : (
                 <div className="h-64 flex items-center justify-center">
@@ -1556,7 +1565,7 @@ const Dashboard = () => {
 
       {/* Drill-Down Modal for Hazards, Observers, Companies, and Positive/Negative */}
       <DrillDownModal
-        isOpen={drillDown.modalOpen && ['hazards', 'observers', 'company', 'positiveNegative'].includes(drillDown.chart)}
+        isOpen={drillDown.modalOpen && ['hazards', 'observers', 'company', 'positiveNegative', 'subRegion'].includes(drillDown.chart)}
         onClose={closeDrillDownModal}
         title={
           drillDown.level === 3 && drillDown.period
@@ -1574,7 +1583,8 @@ const Dashboard = () => {
           drillDown.chart === 'hazards' ? 'Top Hazards' :
           drillDown.chart === 'observers' ? 'Top Observers' :
           drillDown.chart === 'company' ? 'Companies' :
-          drillDown.chart === 'positiveNegative' ? 'Positive vs Negative' : '',
+          drillDown.chart === 'positiveNegative' ? 'Positive vs Negative' :
+          drillDown.chart === 'subRegion' ? 'Sub-Regions' : '',
           drillDown.filter,
           ...(drillDown.level === 3 && drillDown.period ? [format(parseISO(drillDown.period + '-01'), 'MMM yyyy')] : [])
         ].filter(Boolean)}
@@ -1582,7 +1592,8 @@ const Dashboard = () => {
           drillDown.chart === 'hazards' ? 'Hazards Identification' :
           drillDown.chart === 'observers' ? 'Observer Analytics' :
           drillDown.chart === 'company' ? 'Company Analytics' :
-          drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' : 'Analytics'
+          drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' :
+          drillDown.chart === 'subRegion' ? 'Sub-Region Analytics' : 'Analytics'
         }
         showInsights={(drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2}
         insightsMode={drillDown.chart === 'observers' ? 'observer' : 'hazard'}
