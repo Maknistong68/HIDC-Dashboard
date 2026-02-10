@@ -13,13 +13,14 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'hse_dashboard'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 // Database schema definition
 const STORES = {
   FILES: 'files',
   RECORDS: 'records',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  AUDIT_LOG: 'audit_log'
 }
 
 // Initialize and upgrade database
@@ -67,6 +68,16 @@ const initDB = async () => {
       // Settings store - app configuration
       if (!db.objectStoreNames.contains(STORES.SETTINGS)) {
         db.createObjectStore(STORES.SETTINGS, { keyPath: 'key' })
+      }
+
+      // Version 3: Add audit log store
+      if (!db.objectStoreNames.contains(STORES.AUDIT_LOG)) {
+        const auditStore = db.createObjectStore(STORES.AUDIT_LOG, {
+          keyPath: 'id',
+          autoIncrement: true
+        })
+        auditStore.createIndex('action', 'action', { unique: false })
+        auditStore.createIndex('timestamp', 'timestamp', { unique: false })
       }
     }
   })
@@ -753,5 +764,5 @@ const generateRecordId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2)
 }
 
-// Export constants for external use
-export { DB_NAME, DB_VERSION, STORES }
+// Export constants and utilities for external use
+export { DB_NAME, DB_VERSION, STORES, getDB }

@@ -1,9 +1,13 @@
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { captureElement, getImageDimensions } from './captureCharts'
+import { logAuditEvent, AUDIT_ACTIONS } from '../auditLogger'
 
-// Disclaimer text constant for main dashboard report
-const DISCLAIMER_TEXT = 'Please review all data in this report before sharing.'
+// Security disclaimer for all exported reports
+const DISCLAIMER_TEXT = 'CONFIDENTIAL: This report contains safety data. Please review all data before sharing. Data exported from HIDC Dashboard.'
+
+// Security watermark text
+const SECURITY_WATERMARK = 'HIDC Export - Handle as Confidential'
 
 /**
  * Generates a PDF document by capturing the entire dashboard as one image
@@ -83,6 +87,17 @@ export const exportToPDF = async (dashboardRef, filterInfo, incidents = [], onPr
   onProgress?.('Saving PDF...')
   const filename = `HIDC-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`
   pdf.save(filename)
+
+  // Log audit event for security compliance
+  await logAuditEvent(AUDIT_ACTIONS.EXPORT_PDF, {
+    description: `PDF report exported: ${filename}`,
+    recordCount: incidents?.length || 0,
+    fileName: filename,
+    metadata: {
+      filterInfo,
+      exportTime: new Date().toISOString()
+    }
+  })
 
   onProgress?.(null)
   return filename

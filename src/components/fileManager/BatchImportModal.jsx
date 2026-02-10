@@ -10,6 +10,7 @@ import {
 } from '../../utils/excelParser'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
+import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
 
 /**
  * BatchImportModal - Import multiple files at once with GUARANTEED completion
@@ -49,22 +50,42 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     return 'webkitdirectory' in document.createElement('input')
   }, [])
 
-  // Handle file selection
-  const handleFileSelect = useCallback((event) => {
+  // Handle file selection with security validation
+  const handleFileSelect = useCallback(async (event) => {
     const files = Array.from(event.target.files || [])
-    const validFiles = files.filter(f =>
+
+    // Filter by extension first (quick check)
+    const extensionFiltered = files.filter(f =>
       f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
     )
 
+    // Validate each file (size + magic bytes)
+    const validatedFiles = []
+    for (const file of extensionFiltered) {
+      const validation = await validateFile(file)
+      if (validation.valid) {
+        validatedFiles.push({
+          file,
+          status: 'pending',
+          recordCount: null,
+          error: null,
+          warnings: validation.warnings
+        })
+      } else {
+        // Add invalid files with error status
+        validatedFiles.push({
+          file,
+          status: 'error',
+          recordCount: null,
+          error: validation.errors.join('; ')
+        })
+      }
+    }
+
     setSelectedFiles(prev => {
-      const existingNames = new Set(prev.map(f => f.name))
-      const newFiles = validFiles.filter(f => !existingNames.has(f.name))
-      return [...prev, ...newFiles.map(f => ({
-        file: f,
-        status: 'pending',
-        recordCount: null,
-        error: null
-      }))]
+      const existingNames = new Set(prev.map(f => f.file.name))
+      const newFiles = validatedFiles.filter(f => !existingNames.has(f.file.name))
+      return [...prev, ...newFiles]
     })
 
     event.target.value = ''
@@ -340,28 +361,45 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     onClose()
   }, [isProcessing, onClose])
 
-  // Handle folder selection
-  const handleFolderSelect = useCallback((event) => {
+  // Handle folder selection with security validation
+  const handleFolderSelect = useCallback(async (event) => {
     const files = Array.from(event.target.files || [])
-    const validFiles = files.filter(f =>
+    const extensionFiltered = files.filter(f =>
       f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
     )
 
-    if (validFiles.length === 0) {
+    if (extensionFiltered.length === 0) {
       alert('No Excel files found in the selected folder')
       event.target.value = ''
       return
     }
 
+    // Validate each file (size + magic bytes)
+    const validatedFiles = []
+    for (const file of extensionFiltered) {
+      const validation = await validateFile(file)
+      if (validation.valid) {
+        validatedFiles.push({
+          file,
+          status: 'pending',
+          recordCount: null,
+          error: null,
+          warnings: validation.warnings
+        })
+      } else {
+        validatedFiles.push({
+          file,
+          status: 'error',
+          recordCount: null,
+          error: validation.errors.join('; ')
+        })
+      }
+    }
+
     setSelectedFiles(prev => {
-      const existingNames = new Set(prev.map(f => f.name))
-      const newFiles = validFiles.filter(f => !existingNames.has(f.name))
-      return [...prev, ...newFiles.map(f => ({
-        file: f,
-        status: 'pending',
-        recordCount: null,
-        error: null
-      }))]
+      const existingNames = new Set(prev.map(f => f.file.name))
+      const newFiles = validatedFiles.filter(f => !existingNames.has(f.file.name))
+      return [...prev, ...newFiles]
     })
 
     event.target.value = ''

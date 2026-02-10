@@ -24,6 +24,8 @@ import {
   setSetting,
   getAllSettings
 } from './indexedDBStorage'
+import { safeJsonParse, safeJsonStringify } from './safeJson'
+import { logAuditEvent, AUDIT_ACTIONS } from './auditLogger'
 
 // LocalStorage keys (for backward compatibility and fallback)
 const STORAGE_KEYS = {
@@ -72,7 +74,7 @@ const markMigrated = () => {
 export const getData = (key) => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS[key])
-    return data ? JSON.parse(data) : null
+    return safeJsonParse(data, null)
   } catch (error) {
     if (import.meta.env.DEV) console.error(`Error reading ${key} from localStorage:`, error)
     return null
@@ -84,7 +86,7 @@ export const getData = (key) => {
  */
 export const saveData = (key, data) => {
   try {
-    localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data))
+    localStorage.setItem(STORAGE_KEYS[key], safeJsonStringify(data, '{}'))
     return true
   } catch (error) {
     if (import.meta.env.DEV) console.error(`Error saving ${key} to localStorage:`, error)
@@ -366,11 +368,19 @@ export const getImportedFiles = async () => {
  */
 export const deleteImportedFile = async (fileId) => {
   try {
+    let result = { deletedRecords: 0 }
     if (await shouldUseIndexedDB()) {
-      return await idbDeleteFile(fileId)
+      result = await idbDeleteFile(fileId)
     }
-    // Not supported in localStorage
-    return { deletedRecords: 0 }
+
+    // Log audit event for deletion
+    await logAuditEvent(AUDIT_ACTIONS.DELETE_FILE, {
+      description: `Deleted file ID ${fileId} and associated records`,
+      recordCount: result.deletedRecords,
+      metadata: { fileId }
+    })
+
+    return result
   } catch (error) {
     if (import.meta.env.DEV) console.error('Error deleting file:', error)
     throw error
@@ -418,19 +428,33 @@ export const getStorageStatistics = async () => {
  */
 export const exportAllData = async () => {
   try {
+    let data
     if (await shouldUseIndexedDB()) {
-      return await idbExportAllData()
+      data = await idbExportAllData()
+    } else {
+      data = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        projects: getData('PROJECTS') || [],
+        incidents: getData('INCIDENTS') || [],
+        engagements: getData('ENGAGEMENTS') || [],
+        compliance: getData('COMPLIANCE') || [],
+        settings: getData('SETTINGS') || {},
+      }
     }
 
-    return {
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      projects: getData('PROJECTS') || [],
-      incidents: getData('INCIDENTS') || [],
-      engagements: getData('ENGAGEMENTS') || [],
-      compliance: getData('COMPLIANCE') || [],
-      settings: getData('SETTINGS') || {},
-    }
+    // Log audit event
+    const recordCount = data.records?.length || data.incidents?.length || 0
+    await logAuditEvent(AUDIT_ACTIONS.EXPORT_JSON, {
+      description: 'Full data export to JSON',
+      recordCount,
+      metadata: {
+        exportDate: data.exportDate || data.exportedAt,
+        fileCount: data.files?.length || 0
+      }
+    })
+
+    return data
   } catch (error) {
     if (import.meta.env.DEV) console.error('Error exporting data:', error)
     throw error
@@ -503,11 +527,11 @@ export const readJSONFile = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result)
-        resolve(data)
-      } catch (error) {
+      const data = safeJsonParse(e.target.result, null)
+      if (data === null) {
         reject(new Error('Invalid JSON file'))
+      } else {
+        resolve(data)
       }
     }
     reader.onerror = () => reject(new Error('Error reading file'))

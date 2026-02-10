@@ -11,6 +11,65 @@ import {
   FALLBACK_CATEGORY,
   checkCriticalKeywords
 } from './constants'
+
+// ============================================
+// SECURITY: Field validation constants
+// ============================================
+
+// Maximum field lengths to prevent memory exhaustion
+export const MAX_FIELD_LENGTHS = {
+  description: 5000,    // Event descriptions
+  eventId: 100,         // Event IDs
+  contractor: 200,      // Contractor names
+  site: 200,            // Site names
+  reportedBy: 150,      // Reporter names
+  hazardCategory: 100,  // Hazard category names
+  status: 50,           // Status values
+  default: 2000         // Default for unmapped fields
+}
+
+// Valid date format patterns
+const DATE_PATTERNS = [
+  /^\d{4}-\d{2}-\d{2}$/,           // ISO: 2024-01-15
+  /^\d{2}\/\d{2}\/\d{4}$/,         // European: 15/01/2024
+  /^\d{1,2}\/\d{1,2}\/\d{4}/,      // Flexible: 1/5/2024
+]
+
+/**
+ * Sanitize a string field by removing potentially dangerous characters
+ * and limiting length
+ * @param {string} value - The value to sanitize
+ * @param {string} fieldName - The field name for length lookup
+ * @returns {string} - Sanitized value
+ */
+const sanitizeField = (value, fieldName = 'default') => {
+  if (value === null || value === undefined) return ''
+
+  let str = String(value).trim()
+
+  // Get max length for this field
+  const maxLength = MAX_FIELD_LENGTHS[fieldName] || MAX_FIELD_LENGTHS.default
+
+  // Truncate if too long
+  if (str.length > maxLength) {
+    str = str.substring(0, maxLength) + '...'
+  }
+
+  // Remove null bytes and other control characters (except newlines, tabs)
+  str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+
+  return str
+}
+
+/**
+ * Validate date format
+ * @param {string} dateStr - Date string to validate
+ * @returns {boolean} - True if valid format
+ */
+const isValidDateFormat = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return false
+  return DATE_PATTERNS.some(pattern => pattern.test(dateStr.trim()))
+}
 import { analyzeObservation } from './contextClassifier'
 import {
   parseSentence,
@@ -1397,9 +1456,13 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
   const settings = getSettings()
 
   dataRows.forEach((row, index) => {
+    // getValue with built-in sanitization for security
     const getValue = (field) => {
       const colIndex = columnMappings[field]
-      return colIndex !== undefined ? row[colIndex] : null
+      if (colIndex === undefined) return null
+      const rawValue = row[colIndex]
+      // Apply sanitization to prevent injection and memory exhaustion
+      return sanitizeField(rawValue, field)
     }
 
     const eventId = getValue('eventId') || `imported-${Date.now()}-${index}`
