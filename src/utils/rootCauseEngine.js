@@ -2204,7 +2204,11 @@ export const FACTOR_PHRASE_CONFIG = {
     ],
     exclusionPatterns: [
       'inspection checklist', 'qr code', 'vvs', 'veri-fi',
-      'barrier cream', 'language barrier', 'communication barrier'
+      'barrier cream', 'language barrier', 'communication barrier',
+      // Stopper false positives (not wheel stoppers/vehicle barriers)
+      'water stopper', 'stopper blade', 'blade stopper', 'door stopper',
+      'rubber stopper', 'pipe stopper', 'drain stopper', 'plug stopper',
+      'stopper plug', 'concrete stopper', 'waterstop', 'water stop'
     ],
     minimumScore: 5
   },
