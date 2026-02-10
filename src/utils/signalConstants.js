@@ -7,7 +7,6 @@ import React from 'react'
 
 export const SIGNAL_LABELS = {
   severityMix: 'Injury Severity',
-  trend: 'Trend (60d)',
   openActionRate: 'Open Actions',
   highRiskExposure: 'High-Risk Exposure',
   nearMissRate: 'Near-Miss Rate',
@@ -27,17 +26,6 @@ export const SIGNAL_META = {
           : s <= 60
             ? 'Moderate severity — review needed'
             : 'High severity — immediate attention needed'
-  },
-  trend: {
-    tooltip:
-      'HOW THIS IS CALCULATED: We compare the number of incidents in the most recent 60-day window against the previous 60-day window. Using 60 days provides smoother trend detection that filters out short-term noise. A score of 0 means incidents dropped or stayed flat. A score above 60 means a significant increase. A "spike" indicator appears if the last 30 days are significantly higher than the 60-day average.',
-    inverted: false,
-    interpret: (s) =>
-      s <= 30
-        ? 'Declining or stable trend'
-        : s <= 60
-          ? 'Slightly increasing activity'
-          : 'Significant increase in recent incidents'
   },
   openActionRate: {
     tooltip:
@@ -108,7 +96,6 @@ export const INVERTED_EXPLANATIONS = {
 
 export const SIGNAL_ACTIONS = {
   severityMix: 'reviewing incident severity patterns',
-  trend: 'investigating the recent increase in incidents',
   openActionRate: 'closing outstanding corrective actions',
   highRiskExposure: 'verifying risk controls for major hazards',
   nearMissRate: 'encouraging near-miss reporting',
@@ -213,4 +200,26 @@ export const getSignalBgColor = (score) => {
   if (score > 60) return 'bg-red-50'
   if (score > 30) return 'bg-amber-50'
   return 'bg-emerald-50'
+}
+
+/**
+ * Signal keys array (5 signals, trend removed)
+ */
+export const SIGNAL_KEYS = [
+  'severityMix',
+  'openActionRate',
+  'highRiskExposure',
+  'nearMissRate',
+  'positiveRate'
+]
+
+/**
+ * Default thresholds for each signal (all start at 60)
+ */
+export const DEFAULT_THRESHOLDS = {
+  severityMix: 60,
+  openActionRate: 60,
+  highRiskExposure: 60,
+  nearMissRate: 60,
+  positiveRate: 60
 }
