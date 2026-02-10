@@ -116,7 +116,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
       <Card.Header>
         <Card.Title>
           Observation Categories
-          <InfoTooltip text="HOW THIS PYRAMID IS BUILT: We look at the 'Type' field of each observation and count how many fall into each category. The pyramid shape represents severity - most serious at the top, least serious at the bottom. INCIDENT (top, red): Actual injuries or property damage (LTI, MTI, FAC). NEAR MISS: Something almost happened but didn't cause harm. NCR: Non-conformance to safety rules. UNSAFE ACT: A person doing something dangerous. UNSAFE CONDITION: A dangerous situation in the environment. POSITIVE: Someone spotted doing something SAFELY. LEADERSHIP: Management safety activities. Click any level to see the actual observations. The numbers show open/closed status if enabled." />
+          <InfoTooltip text="HOW THIS PYRAMID IS BUILT: We look at the 'Type' field of each observation and count how many fall into each category. The pyramid shape represents severity - most serious at the top, least serious at the bottom. INCIDENT (top, red): Actual injuries or property damage (LTI, MTI, FAC, Property Damage, Environmental, Security). Click to see breakdown. NEAR MISS: Something almost happened but didn't cause harm. NCR: Non-conformance to safety rules. UNSAFE ACT: A person doing something dangerous. UNSAFE CONDITION: A dangerous situation in the environment. POSITIVE: Someone spotted doing something SAFELY. LEADERSHIP: Management safety activities. Click any level to see the actual observations. The numbers show open/closed status if enabled." />
         </Card.Title>
       </Card.Header>
 
@@ -144,7 +144,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
                 `}
                 style={{
                   width: `${widthPercent}%`,
-                  minHeight: '52px', // Slightly larger for touch
+                  minHeight: '52px',
                   backgroundColor: showOpenClosed ? '#f1f5f9' : level.bgColor,
                   borderLeft: `4px solid ${level.color}`,
                 }}

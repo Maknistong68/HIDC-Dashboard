@@ -26,6 +26,9 @@ export { default as ActionAgingPanel } from './ActionAgingPanel'
 export { default as EntityRiskRanking } from './EntityRiskRanking'
 export { default as EntityRiskList } from './EntityRiskList'
 export { default as EntityDetailPanel } from './EntityDetailPanel'
+export { default as EntityScoreGauge } from './EntityScoreGauge'
+export { default as EntityMetricCards } from './EntityMetricCards'
+export { default as AdjustWeightsPanel } from './AdjustWeightsPanel'
 
 // Predictive & Simulation feature additions
 export { default as ScenarioComparisonPanel } from './ScenarioComparisonPanel'

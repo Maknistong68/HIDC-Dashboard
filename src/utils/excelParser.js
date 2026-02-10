@@ -319,6 +319,36 @@ export const CLASSIFICATION_MAPPING = {
   'First Aid': { type: 'incident', incidentType: 'fac' },
   'First Aid Case': { type: 'incident', incidentType: 'fac' },
 
+  // Property Damage
+  'Property Damage': { type: 'incident', incidentType: 'property-damage' },
+  'property damage': { type: 'incident', incidentType: 'property-damage' },
+  'PROPERTY DAMAGE': { type: 'incident', incidentType: 'property-damage' },
+  'Property': { type: 'incident', incidentType: 'property-damage' },
+  'Damage': { type: 'incident', incidentType: 'property-damage' },
+  'Equipment Damage': { type: 'incident', incidentType: 'property-damage' },
+  'Asset Damage': { type: 'incident', incidentType: 'property-damage' },
+
+  // Environmental
+  'Environmental': { type: 'incident', incidentType: 'environmental' },
+  'environmental': { type: 'incident', incidentType: 'environmental' },
+  'ENVIRONMENTAL': { type: 'incident', incidentType: 'environmental' },
+  'Environmental Incident': { type: 'incident', incidentType: 'environmental' },
+  'Spill': { type: 'incident', incidentType: 'environmental' },
+  'Pollution': { type: 'incident', incidentType: 'environmental' },
+  'Contamination': { type: 'incident', incidentType: 'environmental' },
+  'Waste': { type: 'incident', incidentType: 'environmental' },
+
+  // Security
+  'Security': { type: 'incident', incidentType: 'security' },
+  'security': { type: 'incident', incidentType: 'security' },
+  'SECURITY': { type: 'incident', incidentType: 'security' },
+  'Security Incident': { type: 'incident', incidentType: 'security' },
+  'Security Breach': { type: 'incident', incidentType: 'security' },
+  'Theft': { type: 'incident', incidentType: 'security' },
+  'Vandalism': { type: 'incident', incidentType: 'security' },
+  'Trespassing': { type: 'incident', incidentType: 'security' },
+  'Unauthorized Access': { type: 'incident', incidentType: 'security' },
+
   // Non-Conformance (NCR) - separate category
   'Non-Conformance': { type: 'incident', incidentType: 'ncr' },
   'NCR': { type: 'incident', incidentType: 'ncr' },

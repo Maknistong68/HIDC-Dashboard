@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { Eye, ChevronRight, Info } from 'lucide-react'
 import { getCategoryInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
+import { RECORDABLE_INCIDENT_TYPES } from '../../utils/constants'
 import CategoryTopHazards from './CategoryTopHazards'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
 import HazardContractorBreakdown from './HazardContractorBreakdown'
 import HazardRecommendations from './HazardRecommendations'
+import IncidentTypeBreakdown from './IncidentTypeBreakdown'
 
 /**
  * CategoryInsightsTab - Insights for observation category drill-downs (Unsafe Condition, Near Miss, etc.)
@@ -32,6 +34,16 @@ const CategoryInsightsTab = ({
   isMobile = false
 }) => {
   const [showDataSource, setShowDataSource] = useState(false)
+
+  // Check if this is the "incident" aggregate type
+  const isIncidentAggregate = categoryType === 'incident'
+
+  // Handle incident sub-type click - filter to that specific type
+  const handleIncidentTypeClick = useCallback((typeKey, typeLabel) => {
+    if (!onFilterByRootCause) return
+    const typeIncidents = categoryIncidents.filter(i => i.type === typeKey)
+    onFilterByRootCause(typeIncidents, typeLabel, [])
+  }, [categoryIncidents, onFilterByRootCause])
 
   // Calculate insights for this category
   const insights = useMemo(() => {
@@ -108,6 +120,15 @@ const CategoryInsightsTab = ({
 
   return (
     <div className={`space-y-3 ${isMobile ? '' : ''}`}>
+      {/* Incident Type Breakdown - Only for "incident" aggregate type */}
+      {isIncidentAggregate && (
+        <IncidentTypeBreakdown
+          incidents={categoryIncidents}
+          onTypeClick={handleIncidentTypeClick}
+          isMobile={isMobile}
+        />
+      )}
+
       {/* Row 1: Action Status (Full Width) */}
       <HazardActionStatus
         actions={insights.actions}

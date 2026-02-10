@@ -15,6 +15,9 @@ export const INCIDENT_TYPES = [
   { value: 'lti', label: 'Lost Time Injury (LTI)', severity: 'critical', color: '#dc2626' },
   { value: 'mti', label: 'Medical Treatment Injury (MTI)', severity: 'high', color: '#f97316' },
   { value: 'fac', label: 'First Aid Case (FAC)', severity: 'medium', color: '#eab308' },
+  { value: 'property-damage', label: 'Property Damage', severity: 'medium', color: '#a855f7' },
+  { value: 'environmental', label: 'Environmental', severity: 'medium', color: '#10b981' },
+  { value: 'security', label: 'Security', severity: 'medium', color: '#6366f1' },
   { value: 'near-miss', label: 'Near Miss', severity: 'low', color: '#3b82f6' },
   { value: 'ncr', label: 'Non-Conformance', severity: 'low', color: '#9333ea' },
   { value: 'unsafe-act', label: 'Unsafe Act', severity: 'observation', color: '#8b5cf6' },
@@ -25,7 +28,17 @@ export const INCIDENT_TYPES = [
 
 // Type groupings for aggregation
 // Recordable incidents (aggregate into single "incident" count)
-export const RECORDABLE_INCIDENT_TYPES = ['lti', 'mti', 'fac']
+export const RECORDABLE_INCIDENT_TYPES = ['lti', 'mti', 'fac', 'property-damage', 'environmental', 'security']
+
+// Sub-types for incident breakdown display
+export const INCIDENT_SUB_TYPES = [
+  { key: 'lti', label: 'LTI', color: '#dc2626' },
+  { key: 'mti', label: 'MTI', color: '#f97316' },
+  { key: 'fac', label: 'FAC', color: '#eab308' },
+  { key: 'property-damage', label: 'Property', color: '#a855f7' },
+  { key: 'environmental', label: 'Env', color: '#10b981' },
+  { key: 'security', label: 'Security', color: '#6366f1' },
+]
 
 // Negative observation types (for ratio calculations)
 export const NEGATIVE_OBSERVATION_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr']

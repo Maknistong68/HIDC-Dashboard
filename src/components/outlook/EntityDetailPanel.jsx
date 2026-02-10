@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
 import { Shield, BarChart3, Activity, Info, CheckCircle2, TrendingUp, TrendingDown, Minus, AlertTriangle, HelpCircle } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
-import { isOpenAction } from '../../utils/incidentHelpers'
+import EntityScoreGauge from './EntityScoreGauge'
+import EntityMetricCards from './EntityMetricCards'
 import {
   ResponsiveContainer,
   BarChart,
@@ -121,18 +122,6 @@ const getSignalBarColor = (score) => {
   return 'bg-emerald-500'
 }
 
-const getRiskBadge = (level) => {
-  if (level === 'High') return { bg: 'bg-red-100', text: 'text-red-700' }
-  if (level === 'Moderate') return { bg: 'bg-amber-100', text: 'text-amber-700' }
-  return { bg: 'bg-green-100', text: 'text-green-700' }
-}
-
-const getScoreTextColor = (score) => {
-  if (score > 60) return 'text-red-600'
-  if (score > 30) return 'text-amber-600'
-  return 'text-emerald-600'
-}
-
 const getBarColor = (count, maxCount) => {
   const ratio = maxCount > 0 ? count / maxCount : 0
   if (ratio > 0.7) return '#ef4444'
@@ -140,91 +129,6 @@ const getBarColor = (count, maxCount) => {
   if (ratio > 0.2) return '#3b82f6'
   return '#10b981'
 }
-
-/**
- * EntitySummaryStats - Grid of stats at top of detail panel
- */
-const EntitySummaryStats = React.memo(({ entity, incidents }) => {
-  const stats = useMemo(() => {
-    if (!incidents?.length) return null
-
-    const total = incidents.length
-    const severe = incidents.filter(i => {
-      const t = (i.severity || i.type || '').toLowerCase()
-      return t === 'lti' || t === 'mti'
-    }).length
-    const openActions = incidents.filter(isOpenAction).length
-    const nearMiss = incidents.filter(i => (i.severity || i.type || '').toLowerCase() === 'near-miss').length
-    const nmPercent = total > 0 ? ((nearMiss / total) * 100).toFixed(1) : '0.0'
-
-    const positive = incidents.filter(i => {
-      const t = (i.type || '').toLowerCase()
-      return t === 'positive' || t === 'positive observation'
-    }).length
-    const posPercent = total > 0 ? ((positive / total) * 100).toFixed(1) : '0.0'
-
-    const majorHazards = ['Working at Height', 'Lifting Operations', 'Confined Space', 'Electrical', 'Excavation', 'Hot Work']
-    const highRisk = incidents.filter(i =>
-      majorHazards.includes(i.hazardCategory) || majorHazards.includes(i.location)
-    ).length
-
-    const complianceConcern = (openActions >= 3 && severe >= 1) || openActions >= 5
-    const complianceLevel = (openActions >= 5 && severe >= 2) ? 'high' : 'moderate'
-
-    return { total, severe, openActions, highRisk, nmPercent, posPercent, complianceConcern, complianceLevel }
-  }, [incidents])
-
-  if (!stats) return null
-
-  return (
-    <div className="w-full space-y-2">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">Total Incidents</span>
-          <span className="font-semibold text-primary-600 ml-1">{stats.total}</span>
-        </div>
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">Severe (LTI+MTI)</span>
-          <span className={`font-semibold ml-1 ${stats.severe > 0 ? 'text-red-500' : 'text-green-600'}`}>{stats.severe}</span>
-        </div>
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">Open Actions</span>
-          <span className={`font-semibold ml-1 ${stats.openActions > 3 ? 'text-amber-600' : 'text-surface-700'}`}>{stats.openActions}</span>
-        </div>
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">High-Risk Exp.</span>
-          <span className="font-semibold text-surface-700 ml-1">{stats.highRisk}</span>
-        </div>
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">Near-Miss %</span>
-          <span className="font-semibold text-surface-700 ml-1">{stats.nmPercent}%</span>
-        </div>
-        <div className="bg-surface-50 rounded px-2 py-1.5">
-          <span className="text-surface-500">Positive %</span>
-          <span className="font-semibold text-surface-700 ml-1">{stats.posPercent}%</span>
-        </div>
-      </div>
-      {stats.complianceConcern && (
-        <div className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs ${
-          stats.complianceLevel === 'high'
-            ? 'bg-red-50 border border-red-200'
-            : 'bg-amber-50 border border-amber-200'
-        }`}>
-          <Shield size={14} className={`flex-shrink-0 ${
-            stats.complianceLevel === 'high' ? 'text-red-500' : 'text-amber-500'
-          }`} />
-          <span className={stats.complianceLevel === 'high' ? 'text-red-800' : 'text-amber-800'}>
-            {stats.complianceLevel === 'high'
-              ? 'Compliance Risk: High open actions + severe injuries — potential audit/stop-work concern'
-              : 'Compliance Watch: Multiple open actions may affect audit readiness'}
-          </span>
-        </div>
-      )}
-    </div>
-  )
-})
-
-EntitySummaryStats.displayName = 'EntitySummaryStats'
 
 /**
  * SignalBars - Horizontal bars showing each signal score
@@ -384,7 +288,7 @@ EntityTrendChart.displayName = 'EntityTrendChart'
 
 /**
  * EntityDetailPanel - Right panel showing detail for selected entity
- * Mirrors HazardDetailPanel structure and styling
+ * Redesigned with score gauge, metric cards, and tighter layout
  */
 const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, rankings }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -398,6 +302,21 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
     const rank = rankings.findIndex(r => r.name === entity.name) + 1
     return { avg, rank, total }
   }, [rankings, entity])
+
+  // Calculate trend for gauge
+  const trendInfo = useMemo(() => {
+    if (!entity?.signals?.trend?.detail) return { direction: null, percent: 0 }
+    const match = entity.signals.trend.detail.match(/(\d+)\s*cur\s*\/\s*(\d+)\s*prev/i)
+    if (!match) return { direction: null, percent: 0 }
+    const cur = parseInt(match[1], 10)
+    const prev = parseInt(match[2], 10)
+    if (prev === 0 && cur === 0) return { direction: 'stable', percent: 0 }
+    if (prev === 0) return { direction: 'up', percent: 100 }
+    const pct = Math.round(((cur - prev) / prev) * 100)
+    if (pct > 5) return { direction: 'up', percent: pct }
+    if (pct < -5) return { direction: 'down', percent: pct }
+    return { direction: 'stable', percent: pct }
+  }, [entity])
 
   const insightData = useMemo(() => {
     if (!entity?.signals) return null
@@ -470,7 +389,6 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
     )
   }
 
-  const badge = getRiskBadge(entity.riskLevel)
   const sharePercent = totalIncidents > 0
     ? ((entity.incidentCount / totalIncidents) * 100).toFixed(1)
     : 0
@@ -480,68 +398,67 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
       className={`h-full flex flex-col bg-white rounded-lg border border-surface-200 overflow-hidden transition-opacity duration-300 ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
       style={{ willChange: 'opacity, transform' }}
     >
-      {/* Summary stats grid */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-100">
-        <EntitySummaryStats entity={entity} incidents={incidents} />
-        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
-          {entity.meetsMinReportPolicy === false && (
-            <Tooltip
-              content={`Policy requires min. 2 reports/site/month. Violations: ${
-                entity.monthlyViolations?.slice(0, 5).map(v => `${v.site} (${v.month}: ${v.count})`).join(', ')
-              }${entity.monthlyViolations?.length > 5 ? ` +${entity.monthlyViolations.length - 5} more` : ''}`}
-              position="left"
-              delay={200}
-            >
-              <span className="text-2xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex items-center gap-1 cursor-help">
-                <AlertTriangle size={10} />
-                Low site coverage
-              </span>
-            </Tooltip>
-          )}
-          {entity.lowConfidence && (
-            <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1" title="Low sample size">
-              Low data
-            </span>
-          )}
+      {/* Header row: Gauge + Entity info */}
+      <div className="px-4 py-3 bg-surface-50 border-b border-surface-100">
+        <div className="flex items-start gap-4">
+          {/* Score Gauge */}
+          <EntityScoreGauge
+            score={entity.score}
+            riskLevel={entity.riskLevel}
+            trend={trendInfo.direction}
+            trendPercent={trendInfo.percent}
+            benchmark={benchmark}
+          />
+
+          {/* Entity info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-semibold text-surface-800 truncate">{entity.name}</h3>
+              {entity.lowConfidence && (
+                <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex items-center gap-1">
+                  Low data
+                </span>
+              )}
+              {entity.meetsMinReportPolicy === false && (
+                <Tooltip
+                  content={`Policy requires min. 2 reports/site/month. Violations: ${
+                    entity.monthlyViolations?.slice(0, 5).map(v => `${v.site} (${v.month}: ${v.count})`).join(', ')
+                  }${entity.monthlyViolations?.length > 5 ? ` +${entity.monthlyViolations.length - 5} more` : ''}`}
+                  position="top"
+                  delay={200}
+                >
+                  <span className="text-2xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex items-center gap-1 cursor-help">
+                    <AlertTriangle size={10} />
+                    Low coverage
+                  </span>
+                </Tooltip>
+              )}
+            </div>
+            <p className="text-xs text-surface-500 mt-0.5">
+              {entity.incidentCount} incident{entity.incidentCount !== 1 ? 's' : ''} &middot; {dimension}
+            </p>
+            {benchmark && (
+              <p className="text-2xs text-surface-400 mt-1">
+                Score is {entity.score >= benchmark.avg ? 'above' : 'below'} the {benchmark.total}-entity average of {benchmark.avg}
+              </p>
+            )}
+            {insightData && insightData.isLow && !insightData.hasContradiction && (
+              <div className="mt-2 flex items-start gap-2 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-1.5">
+                <CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                <p className="text-2xs text-emerald-800">Low risk profile. Continue monitoring.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Entity name header */}
-      <div className="px-4 py-3 bg-surface-50">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-surface-800">{entity.name}</h3>
-          <Tooltip content="Composite risk score (0-100). Higher = riskier. Based on 6 weighted signals." position="top" delay={200}>
-            <span className="flex items-center cursor-help">
-              <span className="text-xs text-surface-400 mr-0.5">Risk</span>
-              <span className={`text-sm font-bold ${getScoreTextColor(entity.score)}`}>{entity.score}</span>
-              <span className="text-2xs text-surface-400">/100</span>
-            </span>
-          </Tooltip>
-          <span className={`px-1.5 py-0.5 rounded text-2xs font-semibold ${badge.bg} ${badge.text}`}>
-            {entity.riskLevel}
-          </span>
-          {benchmark && (
-            <span className="text-2xs text-surface-400">(avg: {benchmark.avg} · rank {benchmark.rank}/{benchmark.total})</span>
-          )}
-        </div>
-        <p className="text-xs text-surface-500">
-          {entity.incidentCount} incident{entity.incidentCount !== 1 ? 's' : ''} &middot; {dimension}
-        </p>
-        {benchmark && (
-          <p className="text-2xs text-surface-400 mt-0.5">
-            Score is {entity.score >= benchmark.avg ? 'above' : 'below'} the {benchmark.total}-entity average of {benchmark.avg}. Higher score = higher risk.
-          </p>
-        )}
-        {insightData && insightData.isLow && !insightData.hasContradiction && (
-          <div className="mt-2 flex items-start gap-2 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">
-            <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-emerald-800">Low risk profile. Continue monitoring.</p>
-          </div>
-        )}
+      {/* Metric Cards */}
+      <div className="px-4 py-3 border-b border-surface-100">
+        <EntityMetricCards entity={entity} incidents={incidents} />
       </div>
 
       {/* Tab selector */}
-      <div className="flex items-center gap-1 px-4 py-3 border-b border-surface-100 bg-surface-50">
+      <div className="flex items-center gap-1 px-4 py-2 border-b border-surface-100">
         <button
           onClick={() => setActiveTab('signals')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
@@ -575,21 +492,18 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
         )}
       </div>
 
-      {/* Bottom bar - entity share */}
-      <div className="px-4 py-3 bg-surface-50 border-t border-surface-100">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-surface-600">Entity Share of Total Observations</span>
-          <span className="text-xs font-bold text-surface-700">{sharePercent}%</span>
+      {/* Bottom bar - entity share (tighter) */}
+      <div className="px-4 py-2 bg-surface-50 border-t border-surface-100">
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="text-2xs text-surface-500">Entity Share</span>
+          <span className="text-2xs font-semibold text-surface-700">{sharePercent}%</span>
         </div>
-        <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full transition-all duration-500"
             style={{ width: `${sharePercent}%` }}
           />
         </div>
-        <p className="text-2xs text-surface-400 mt-1">
-          {entity.name}: {entity.incidentCount} of {totalIncidents} observations ({sharePercent}%)
-        </p>
       </div>
     </div>
   )
