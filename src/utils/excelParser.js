@@ -927,9 +927,14 @@ export const normalizeHazardCategory = (category) => {
     'working on heat': 'Working in Heat',
     'working in heat': 'Working in Heat',
     'working in the heat': 'Working in Heat',
-    'water': 'Working on or Near Water',
+    // Water hazard - only specific phrases, not just "water" (too broad, matches welfare)
+    'near water': 'Working on or Near Water',
+    'over water': 'Working on or Near Water',
+    'on water': 'Working on or Near Water',
+    'water hazard': 'Working on or Near Water',
     'marine': 'Working on or Near Water',
     'drowning': 'Working on or Near Water',
+    'offshore': 'Working on or Near Water',
 
     // Excel variations - map to standard names
     'work at height': 'Working at Height',
