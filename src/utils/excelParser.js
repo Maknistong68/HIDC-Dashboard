@@ -375,6 +375,42 @@ export const CLASSIFICATION_MAPPING = {
 // ============================================
 
 export const INCIDENT_RECLASSIFY_PATTERNS = {
+  'environmental': {
+    keywords: [
+      // Core environmental keywords
+      'spill', 'spillage', 'chemical spill', 'sewage', 'contamination',
+      'contaminated', 'pollution', 'polluted', 'waste', 'leak', 'leakage',
+      'oil spill', 'fuel spill', 'hazmat', 'environmental incident',
+      'discharge', 'effluent', 'runoff', 'toxic release', 'emission',
+      'groundwater', 'soil contamination', 'air quality', 'hazardous waste',
+      'illegal dumping', 'environmental damage', 'ecological',
+      // Specific spill patterns
+      'diesel spill', 'diesel leaked', 'diesel spilled',
+      'fuel leaked', 'fuel spilled', 'oil leaked', 'oil spilled',
+      'chemical leaked', 'sewage overflow', 'wastewater spill',
+      'wastewater', 'overflowed', 'ground contamination',
+      'soil contaminated', 'environmental impact'
+    ],
+    priority: 1  // HIGHEST - most specific category
+  },
+  'security': {
+    keywords: [
+      // Core security keywords
+      'theft', 'stolen', 'robbery', 'robbed', 'vandalism', 'vandalized',
+      'break-in', 'trespassing', 'unauthorized access', 'intruder',
+      'assault', 'attacked', 'threatened', 'security breach',
+      'missing property', 'confiscated', 'apprehended', 'burglary',
+      'pilferage', 'sabotage', 'forced entry', 'unauthorized entry',
+      'security violation', 'access violation', 'tailgating',
+      // Vandalism-related cut patterns
+      'cable had been cut', 'cables had been cut',
+      'wire had been cut', 'wires had been cut',
+      'found to be cut', 'deliberately cut',
+      'cable was cut', 'cables were cut',
+      'wire was cut', 'wires were cut'
+    ],
+    priority: 2  // MEDIUM - specific category
+  },
   'property-damage': {
     keywords: [
       'property damage', 'vehicle collision', 'collided', 'collision',
@@ -386,29 +422,7 @@ export const INCIDENT_RECLASSIFY_PATTERNS = {
       'scraped', 'punctured tire', 'flat tire', 'vehicle damage',
       'machinery damage', 'tool damage', 'asset damage'
     ],
-    priority: 1
-  },
-  'environmental': {
-    keywords: [
-      'spill', 'spillage', 'chemical spill', 'sewage', 'contamination',
-      'contaminated', 'pollution', 'polluted', 'waste', 'leak', 'leakage',
-      'oil spill', 'fuel spill', 'hazmat', 'environmental incident',
-      'discharge', 'effluent', 'runoff', 'toxic release', 'emission',
-      'groundwater', 'soil contamination', 'air quality', 'hazardous waste',
-      'illegal dumping', 'environmental damage', 'ecological'
-    ],
-    priority: 2
-  },
-  'security': {
-    keywords: [
-      'theft', 'stolen', 'robbery', 'robbed', 'vandalism', 'vandalized',
-      'break-in', 'trespassing', 'unauthorized access', 'intruder',
-      'assault', 'attacked', 'threatened', 'security breach',
-      'missing property', 'confiscated', 'apprehended', 'burglary',
-      'pilferage', 'sabotage', 'forced entry', 'unauthorized entry',
-      'security violation', 'access violation', 'tailgating'
-    ],
-    priority: 3
+    priority: 3  // LOWEST - generic fallback
   }
 }
 
@@ -420,6 +434,65 @@ const INJURY_KEYWORDS = [
   'first aid', 'ambulance', 'doctor', 'clinic', 'stitches', 'bandage',
   'bleeding', 'swelling', 'pain', 'sore', 'dislocated', 'concussion',
   'unconscious', 'fainted', 'collapsed', 'heat stroke', 'dehydration'
+]
+
+// ============================================
+// CUT AMBIGUITY PATTERNS
+// Distinguishes between "cut cable" (vandalism) vs "cut finger" (injury)
+// ============================================
+
+// Patterns that detect when "cut" refers to OBJECTS (cables, wires) - indicates vandalism/security
+const CUT_OBJECT_PATTERNS = [
+  // Object + was/had been + cut
+  /\b(cable|cables|wire|wires|pipe|pipes|line|lines|fence|fences|cord|cords|rope|ropes|chain|chains|strap|straps|hose|hoses|tube|tubes|conduit|tape|tapes)\s+(was|were|had\s+been|has\s+been|have\s+been|is|are)?\s*cut\b/gi,
+
+  // cut + the + object
+  /\bcut\s+(the\s+)?(cable|cables|wire|wires|pipe|pipes|line|lines|fence|fences|cord|cords|rope|ropes|chain|chains)\b/gi,
+
+  // cutting + object
+  /\bcutting\s+(the\s+)?(cable|cables|wire|wires|pipe|pipes|line|lines|fence|fences)\b/gi,
+
+  // attempting/tried to cut
+  /\b(attempting|tried|trying)\s+to\s+cut\b/gi,
+
+  // found to be cut (investigation context)
+  /\bfound\s+to\s+be\s+cut\b/gi,
+  /\balso\s+found\s+to\s+be\s+cut\b/gi,
+
+  // Tool names (not injuries)
+  /\bbolt\s+cutter\b/gi,
+  /\bbox\s+cutter\b/gi,
+  /\bcutter\s+suction\s+dredger\b/gi,
+]
+
+// Patterns that detect when "cut" refers to BODY PARTS (actual injuries)
+const CUT_INJURY_PATTERNS = [
+  // cut to body part
+  /\bcut\s+(to\s+)?(his|her|their|the\s+)?(finger|hand|arm|leg|foot|head|face|thumb|palm|wrist|toe|knee|elbow|shoulder|back|neck|eye|lip|nose|ear|skin|flesh)/gi,
+
+  // body part was cut
+  /\b(finger|hand|arm|leg|foot|head|face|thumb|palm|wrist|toe|knee|elbow)\s+(was|got|is)\s+cut\b/gi,
+
+  // sustained/received a cut
+  /\b(sustained?|received?|suffered?|got)\s+(a\s+)?(small\s+|minor\s+|deep\s+)?cut\b/gi,
+
+  // resulting in a cut / causing a cut
+  /\b(resulting|causing)\s+in\s+(a\s+)?(small\s+|minor\s+)?cut\b/gi,
+
+  // cut on his/her body part
+  /\bcut\s+on\s+(his|her|their|the)\s+(finger|hand|arm|leg|foot|thumb|palm|wrist)/gi,
+]
+
+// Patterns that detect negated property damage (e.g., "no property damage")
+const PROPERTY_DAMAGE_NEGATION_PATTERNS = [
+  /\bno\s+(property\s+)?damage\b/gi,
+  /\bno\s+damage\s+to\s+property\b/gi,
+  /\bwithout\s+(any\s+)?(property\s+)?damage\b/gi,
+  /\bno\s+injuries\s+(or|and|nor)\s+(property\s+)?damage\b/gi,
+  /\b(property\s+)?damage\s+(was|were)\s+not\s+reported\b/gi,
+  /\bno\s+significant\s+damage\b/gi,
+  /\bzero\s+damage\b/gi,
+  /\bno\s+damage\s+(was\s+)?reported\b/gi,
 ]
 
 // Negation patterns that indicate NO injury occurred
@@ -534,16 +607,67 @@ const INJURY_NEGATION_PATTERNS = [
  * Returns true if injuries are mentioned but negated (e.g., "no injuries")
  */
 const hasNegatedInjuryReference = (text) => {
-  return INJURY_NEGATION_PATTERNS.some(pattern => pattern.test(text))
+  return INJURY_NEGATION_PATTERNS.some(pattern => {
+    pattern.lastIndex = 0  // Reset for safety with global flag
+    return pattern.test(text)
+  })
+}
+
+/**
+ * Check if "cut" references are about objects (cables, wires), not injuries
+ * Used to detect vandalism/security incidents
+ */
+const hasCutObjectReference = (text) => {
+  return CUT_OBJECT_PATTERNS.some(pattern => {
+    pattern.lastIndex = 0  // Reset for safety with global flag
+    return pattern.test(text)
+  })
+}
+
+/**
+ * Check if "cut" is actually about a body part injury
+ */
+const hasCutInjuryReference = (text) => {
+  return CUT_INJURY_PATTERNS.some(pattern => {
+    pattern.lastIndex = 0  // Reset for safety with global flag
+    return pattern.test(text)
+  })
+}
+
+/**
+ * Check if property damage is explicitly negated
+ */
+const hasPropertyDamageNegation = (text) => {
+  return PROPERTY_DAMAGE_NEGATION_PATTERNS.some(pattern => {
+    pattern.lastIndex = 0  // Reset for safety with global flag
+    return pattern.test(text)
+  })
 }
 
 /**
  * Check if text contains actual (non-negated) injury references
  * Returns true only if there's a genuine injury mentioned, not a negation
+ *
+ * UPDATED: Handles "cut" ambiguity between objects and injuries
  */
 const hasActualInjury = (text) => {
-  // First, check if there are any injury keywords at all
-  const hasInjuryKeyword = INJURY_KEYWORDS.some(keyword =>
+  // Check if "cut" appears in object context (cables, wires)
+  const hasCutObject = hasCutObjectReference(text)
+
+  // Check if "cut" ALSO appears in injury context (body parts)
+  const hasCutInjury = hasCutInjuryReference(text)
+
+  // Determine which injury keywords to check
+  let keywordsToCheck = [...INJURY_KEYWORDS]
+
+  // If "cut" is about objects AND there's no body-part cut injury,
+  // exclude "cut" from injury detection
+  if (hasCutObject && !hasCutInjury) {
+    keywordsToCheck = keywordsToCheck.filter(k => k !== 'cut')
+  }
+
+  // Check if there are any injury keywords at all
+  const hasInjuryKeyword = keywordsToCheck.some(keyword =>
     text.includes(keyword.toLowerCase())
   )
 
@@ -552,9 +676,6 @@ const hasActualInjury = (text) => {
   }
 
   // Check if ALL injury references are negated
-  // We need to find injury keywords and verify they're not part of negation patterns
-
-  // If we have negated injury patterns, we need to check if there are ALSO non-negated ones
   const hasNegation = hasNegatedInjuryReference(text)
 
   if (!hasNegation) {
@@ -569,11 +690,12 @@ const hasActualInjury = (text) => {
 
   // Remove negated phrases temporarily
   for (const pattern of INJURY_NEGATION_PATTERNS) {
+    pattern.lastIndex = 0
     cleanedText = cleanedText.replace(pattern, ' [NEGATED] ')
   }
 
   // Check if injury keywords still exist in the cleaned text
-  const hasRemainingInjury = INJURY_KEYWORDS.some(keyword => {
+  const hasRemainingInjury = keywordsToCheck.some(keyword => {
     const keywordLower = keyword.toLowerCase()
     // Make sure the keyword is not part of [NEGATED] placeholder
     const idx = cleanedText.indexOf(keywordLower)
@@ -593,7 +715,10 @@ const hasActualInjury = (text) => {
       /got\s+(hurt|injured|wounded)/gi,
     ]
 
-    return injuryActionPatterns.some(pattern => pattern.test(text))
+    return injuryActionPatterns.some(pattern => {
+      pattern.lastIndex = 0
+      return pattern.test(text)
+    })
   })
 
   return hasRemainingInjury
@@ -606,6 +731,11 @@ const hasActualInjury = (text) => {
  *
  * Handles negation patterns like "no injuries", "without injury", "damage only"
  * to correctly identify property-damage incidents that mention lack of injury.
+ *
+ * Priority order (most specific first):
+ * 1. Environmental (spills, contamination) - priority 1
+ * 2. Security (theft, vandalism, assault) - priority 2
+ * 3. Property-damage (collisions, damage) - priority 3 (generic fallback)
  *
  * @param {string} description - The incident description
  * @param {string} currentType - Current incident type
@@ -627,16 +757,24 @@ export const reclassifyIncidentType = (description, currentType) => {
   const text = description.toLowerCase()
 
   // Check if description contains ACTUAL injury (not negated)
-  // This handles cases like "no injuries reported" vs "sustained an injury"
+  // This now correctly handles "cut" ambiguity (cables vs body parts)
   if (hasActualInjury(text)) {
     return currentType // Keep as injury type - there was a real injury
   }
 
   // Check for reclassification patterns (sorted by priority)
+  // Priority: 1=environmental, 2=security, 3=property-damage
   const sortedPatterns = Object.entries(INCIDENT_RECLASSIFY_PATTERNS)
     .sort((a, b) => a[1].priority - b[1].priority)
 
   for (const [newType, config] of sortedPatterns) {
+    // For property-damage, check if damage is explicitly negated
+    if (newType === 'property-damage') {
+      if (hasPropertyDamageNegation(text)) {
+        continue // Skip property-damage if negated (e.g., "no property damage")
+      }
+    }
+
     for (const keyword of config.keywords) {
       if (text.includes(keyword.toLowerCase())) {
         return newType // Reclassify to this type
