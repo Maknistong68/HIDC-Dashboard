@@ -625,7 +625,13 @@ export const HAZARD_EXCLUSIONS = {
     'fall from platform', 'fall through opening'
   ],
   'Explosives & Blasting': [
-    // Minimal exclusions since keywords are now only explosion/exploded/exploding
+    // Exclude "explosion risk" phrases - these describe potential hazards, not actual explosions
+    // Context: gas cylinder storage, fire hazards, etc. should be Fire or COSHH
+    'explosion risk', 'fire and explosion', 'fire/explosion', 'fire or explosion',
+    'potential explosion', 'risk of explosion', 'explosion hazard',
+    // Gas cylinder storage context - should be Fire or COSHH
+    'gas cylinder', 'compressed gas', 'oxygen', 'lpg', 'acetylene', 'propane',
+    'cylinder storage', 'gas storage', 'cylinder area',
   ],
   'Site Security': [
     // Exclude lifting operations - "unauthorized entry" in exclusion zone context
