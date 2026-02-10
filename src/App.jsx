@@ -4,16 +4,12 @@ import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import InstallPrompt from './components/common/InstallPrompt'
 import ServiceWorkerUpdatePrompt from './components/common/ServiceWorkerUpdatePrompt'
+import PreloadedTabs from './components/common/PreloadedTabs'
 import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 import { ImportLockProvider } from './context/ImportLockContext'
 import { useData } from './context/DataContext'
 import { OnboardingScreen, InitialLoadingScreen } from './components/onboarding'
-
-// Direct imports for main pages
-import Dashboard from './pages/Dashboard'
-import DataQuality from './pages/DataQuality'
-import SafetyOutlook from './pages/SafetyOutlook'
 
 // Lazy-loaded for less frequent pages
 const FileManagement = lazy(() => import('./pages/FileManagement'))
@@ -41,16 +37,23 @@ function AppContent() {
     return <OnboardingScreen />
   }
 
-  // Normal app with Layout - standard routing (only active page mounted)
+  // Normal app with Layout - preloaded tabs for instant switching
   return (
     <>
       <Layout>
         <InstallPrompt />
         <ServiceWorkerUpdatePrompt />
+
+        {/* All 3 main tabs preloaded - instant switching via CSS display */}
+        <PreloadedTabs />
+
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/data-control" element={<DataQuality />} />
-          <Route path="/outlook" element={<SafetyOutlook />} />
+          {/* Main tabs - null element, handled by PreloadedTabs */}
+          <Route path="/" element={null} />
+          <Route path="/data-control" element={null} />
+          <Route path="/outlook" element={null} />
+
+          {/* Lazy-loaded secondary pages */}
           <Route path="/files" element={
             <Suspense fallback={<PageLoadingFallback />}>
               <FileManagement />
