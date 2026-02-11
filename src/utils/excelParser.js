@@ -71,6 +71,7 @@ const isValidDateFormat = (dateStr) => {
   return DATE_PATTERNS.some(pattern => pattern.test(dateStr.trim()))
 }
 import { analyzeObservation } from './contextClassifier'
+import { HAZARD_SEVERITY } from './contextMappings'
 import {
   parseSentence,
   extractWeightedKeywords,
@@ -1456,22 +1457,23 @@ export const getObservationAnalysis = (description) => {
 }
 
 /**
- * 8-Step Context-Aware Hazard Classification System
+ * Context-Aware Hazard Classification System
  *
- * Classification Modes (controlled by import options):
- * - trust-excel: Use Excel category if valid, classify blanks/invalid
- * - reclassify-all: Ignore Excel categories, always use description
- * - fill-blanks: Keep any Excel category, only classify truly empty ones
+ * 3 Rules:
+ * - RULE 1: Valid Excel category → normalize text only, never override
+ * - RULE 2: Blank/empty → full parsing, search ALL hazards (significant + sub-significant)
+ * - RULE 3: "Other"/"General"/generic → parse but restrict to SUB-SIGNIFICANT only
  *
- * STEP 0: Context-Aware Analysis (object → action → outcome)
- * STEP 0.5: Sentence-Aware Parsing (grammatical role weighting)
- * STEP 1: Check CONTEXT_REDIRECTS first (highest priority)
- * STEP 2: Trust Excel category if valid (respecting exclusions) - mode dependent
- * STEP 3: Check PHRASES for MAJOR hazards (13 significant hazards)
- * STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (17 lower priority)
- * STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
- * STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards (with exclusion checking)
- * STEP 7: Default fallback → "General Site Issues" (never "Others")
+ * Parsing steps (for Rules 2 & 3):
+ * STEP 0: Critical hazard keywords (absolute priority)
+ * STEP 1: Context redirects (misleading terms correction)
+ * STEP 2: Ensemble voting system (4 independent strategies)
+ * STEP 3: Sentence-aware parsing (grammatical role weighting)
+ * STEP 4: Phrase matching for MAJOR hazards
+ * STEP 5: Phrase matching for SUB-SIGNIFICANT hazards
+ * STEP 6: Keyword matching for MAJOR hazards
+ * STEP 7: Keyword matching for SUB-SIGNIFICANT hazards
+ * STEP 8: Default fallback → "General Site Issues"
  *
  * FULLY AUTOMATED - No manual review required
  */
@@ -1484,243 +1486,157 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // Strip reference text (after "Ref:", "Reference:", etc.) - only classify MAIN observation
   const mainText = stripReferenceText(text)
 
-  // ============================================
-  // MODE: fill-blanks - Only classify if blank, "Other", or "Not Specified"
-  // Keep manual categories that are meaningful
-  // ============================================
+  // Normalize the existing category from Excel
   const trimmedCategory = (existingCategory || '').trim().toLowerCase()
-  const isBlank = !trimmedCategory
-  const isOther = trimmedCategory === 'other' || trimmedCategory === 'others'
-  const isGeneric = isBlank || isOther ||
+  const isOther = trimmedCategory === 'other' || trimmedCategory === 'others' ||
     trimmedCategory === 'general' ||
     trimmedCategory === 'not specified' ||
     trimmedCategory === 'n/a'
 
-  // Helper: Check if category is allowed when source was "Other"
-  // "Other" means the category was generic/unclassified - ALLOW reclassification to Major Hazards
-  // This ensures safety-critical observations get properly identified based on description
-  const isAllowedForOtherSource = (category) => {
-    // Always allow reclassification - "Other" source should enable better classification
-    return true
-  }
-
-  if (mode === 'fill-blanks') {
-    if (!isGeneric) {
-      // Preserve manual selection - normalize but don't reclassify
-      const normalized = normalizeHazardCategory(existingCategory)
-      return normalized || existingCategory.trim()
+  // ============================================
+  // RULE 1: Valid Excel category → normalize and return, no parsing
+  // If the Excel file has a real hazard category, trust it completely.
+  // Only normalize the text (e.g. "Excavations" → "Excavation").
+  // ============================================
+  if (existingCategory && existingCategory.trim() !== '' && !isOther) {
+    const normalized = normalizeHazardCategory(existingCategory)
+    if (normalized && normalized !== FALLBACK_CATEGORY) {
+      return normalized
     }
-    // Fall through to description-based classification
   }
 
-  // ============================================
-  // MODE: reclassify-all - Always use description
-  // Skip ALL Excel category trust logic
-  // ============================================
-  // (When mode is reclassify-all, we skip the "trust Excel" step below)
+  // If we get here: Excel was blank, generic ("Other"/"N/A"), or unrecognized → parse description
 
+  // Helper: Check if category is allowed based on source
+  // RULE 3: "Other"/generic → restrict to SUB-SIGNIFICANT hazards only
+  // RULE 2: Blank → all categories allowed
+  const isAllowedForOtherSource = (category) => {
+    if (!isOther) return true // Blank → all categories allowed
+    return !MAJOR_HAZARDS.includes(category) // "Other"/generic → sub-significant only
+  }
+
+  // No description to parse → fallback
+  if (!text) return FALLBACK_CATEGORY
 
   // ============================================
   // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
   // These ALWAYS win over location/context words
   // Checks for life-threatening hazards, chemicals, supervision issues, permits
-  // NOTE: If source was "Other", skip Significant Hazards
   // ============================================
   const criticalCategory = checkCriticalKeywords(mainText)
   if (criticalCategory && isAllowedForOtherSource(criticalCategory)) {
-
     return criticalCategory
   }
 
   // ============================================
   // STEP 1: Check CONTEXT_REDIRECTS (HIGH PRIORITY)
   // Handles misleading terms like "line of fire", "fire extinguisher", etc.
-  // Smart corrections are always enabled (hardcoded default)
-  // NOTE: If source was "Other", skip Significant Hazards
   // ============================================
   const redirectCategory = checkContextRedirects(mainText)
   if (redirectCategory && isAllowedForOtherSource(redirectCategory)) {
-
-    return redirectCategory // Immediate return - no further checking
+    return redirectCategory
   }
 
   // ============================================
-  // STEP 2: ENSEMBLE VOTING SYSTEM (PRIMARY CLASSIFICATION)
-  // Uses 4 independent strategies that vote on the category:
-  // 1. KEYWORD: Object/action/outcome matching
-  // 2. SENTENCE: WHO/WHAT/WHERE/HOW analysis
-  // 3. CLEAN TEXT: Strip noise, re-classify
-  // 4. CONTROL-LINK: Link control issues to hazards
+  // SCORING SYSTEM: Accumulate points per category, pick highest
+  // ============================================
+  const scores = {}
+  const addScore = (category, points) => {
+    if (!category || category === FALLBACK_CATEGORY) return
+    if (!isAllowedForOtherSource(category)) return
+    if (isExcludedTerm(text, category)) return
+    scores[category] = (scores[category] || 0) + points
+  }
+
+  // ============================================
+  // STEP 2: ENSEMBLE VOTING SYSTEM
+  // 3/4+ consensus (shouldOverride) at high confidence → early return
+  // Otherwise, feed individual votes into scoring
   // ============================================
   const contextResult = analyzeObservation(description, existingCategory)
 
-  // Use voting result if:
-  // 1. High confidence (shouldOverride) - 85%+ or disambiguation match
-  // 2. OR has valid votes and category is not fallback
-  // 3. OR controlLink strategy found a hazard context (control + hazard)
-  const hasValidVotingResult = contextResult.category &&
-    contextResult.category !== FALLBACK_CATEGORY &&
-    contextResult.validVoteCount > 0
-
-  const controlLinkFound = contextResult.votes?.controlLink?.category &&
-    contextResult.votes?.controlLink?.category !== FALLBACK_CATEGORY &&
-    contextResult.votes?.controlLink?.isControlIssue
-
-  // NOTE: All STEP 2 returns check isAllowedForOtherSource AND isExcludedTerm
-  // This ensures exclusion rules (e.g., 'wastewater' not being "Working on or Near Water") are respected
-  if (contextResult.shouldOverride && contextResult.confidence >= confidenceThreshold && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
-
+  if (contextResult.shouldOverride && contextResult.confidence >= 85 &&
+      isAllowedForOtherSource(contextResult.category) &&
+      !isExcludedTerm(text, contextResult.category)) {
     return contextResult.category
   }
 
-  // If controlLink strategy found a specific hazard, use it (control issues linked to hazards)
-  if (controlLinkFound && contextResult.votes.controlLink.confidence >= 70 && isAllowedForOtherSource(contextResult.votes.controlLink.category) && !isExcludedTerm(text, contextResult.votes.controlLink.category)) {
-
-    return contextResult.votes.controlLink.category
+  // Feed individual strategy votes into scoring
+  const strategyNames = ['keyword', 'sentence', 'cleanText']
+  for (const name of strategyNames) {
+    const vote = contextResult.votes?.[name]
+    if (vote?.category && vote.category !== FALLBACK_CATEGORY && vote.confidence > 0) {
+      addScore(vote.category, vote.confidence * 0.4)
+    }
   }
 
-  // If voting found a valid category with any consensus, prefer it over keyword matching
-  if (hasValidVotingResult && contextResult.confidence >= 50 && isAllowedForOtherSource(contextResult.category) && !isExcludedTerm(text, contextResult.category)) {
-
-    return contextResult.category
+  // Control-link vote gets extra weight (maps control failure to real hazard)
+  const controlVote = contextResult.votes?.controlLink
+  if (controlVote?.category && controlVote.category !== FALLBACK_CATEGORY &&
+      controlVote.isControlIssue && controlVote.confidence > 0) {
+    addScore(controlVote.category, controlVote.confidence * 0.5)
   }
 
   // ============================================
-  // STEP 3: SENTENCE-AWARE PARSING (FALLBACK)
-  // Analyzes grammatical structure to identify:
-  // - WHO (actor), WHAT (object), WHERE (location), WHY (cause)
-  // - Assigns weights based on grammatical role (subject > object > location)
+  // STEP 3: SENTENCE-AWARE PARSING → add to scores
   // ============================================
   const sentenceResult = classifyWithSentenceAwareness(text)
 
-  // If sentence parsing found a high-confidence match with clear subject, use it
-  // NOTE: Check isAllowedForOtherSource - if source was "Other", skip Significant Hazards
-  if (sentenceResult.category && sentenceResult.confidence >= 0.7 && sentenceResult.isMainSubject) {
-    // Verify the category is valid and not excluded
-    if (HAZARD_CATEGORIES.includes(sentenceResult.category) && !isExcludedTerm(text, sentenceResult.category) && isAllowedForOtherSource(sentenceResult.category)) {
-
-      return sentenceResult.category
-    }
+  if (sentenceResult.category && HAZARD_CATEGORIES.includes(sentenceResult.category) &&
+      sentenceResult.isMainSubject) {
+    addScore(sentenceResult.category, sentenceResult.confidence * 30)
   }
 
   // ============================================
-  // STEP 2: Validate Excel category against description
-  // Trust the Excel source category unless:
-  // - It's explicitly excluded by the description (contradiction)
-  // - The description clearly indicates a DIFFERENT major hazard
-  // NOTE: This step is SKIPPED when mode is 'reclassify-all'
-  // ============================================
-  if (mode === 'trust-excel' && existingCategory && existingCategory.trim() !== '') {
-    const normalized = normalizeHazardCategory(existingCategory)
-    if (normalized && normalized !== FALLBACK_CATEGORY) {
-      // Check if this category is explicitly excluded by the description
-      if (isExcludedTerm(text, normalized)) {
-        // Description contradicts the Excel category - fall through to description-based
-      } else if (MAJOR_HAZARDS.includes(normalized)) {
-        // For MAJOR hazards from Excel:
-        // Trust the source unless description EXPLICITLY supports a DIFFERENT major hazard
-        // This prevents "Energised Systems" being changed to "General Site Issues" when description is empty
-
-        // Check if description clearly indicates a different major hazard
-        let descriptionSupportsDifferentMajor = false
-        if (text && text.length > 10) { // Only check if there's meaningful description
-          for (const otherCategory of MAJOR_HAZARDS) {
-            if (otherCategory === normalized) continue // Skip the current category
-            if (descriptionSupportsCategory(text, otherCategory) && !isExcludedTerm(text, otherCategory)) {
-              descriptionSupportsDifferentMajor = true
-              break
-            }
-          }
-        }
-
-        // Trust Excel category unless description clearly contradicts it
-        if (!descriptionSupportsDifferentMajor) {
-          return normalized
-        }
-        // Description supports a different major hazard - fall through to description-based
-      } else {
-        // For Sub-Significant hazards, trust source if not excluded
-        return normalized
-      }
-    }
-  }
-
-  // No valid category from Excel - classify by description
-  if (!text) return FALLBACK_CATEGORY
-
-  // ============================================
-  // STEP 3: Check PHRASES for MAJOR hazards first (13 significant)
-  // NOTE: Skip entirely if source was "Other" - respect that classification
-  // ============================================
-  if (!isOther) {
-    for (const category of MAJOR_HAZARDS) {
-      if (isExcludedTerm(text, category)) continue // Skip if excluded
-
-      const phrases = HAZARD_PHRASES[category] || []
-      for (const phrase of phrases) {
-        if (text.includes(phrase.toLowerCase())) {
-          return category // Phrase match wins immediately
-        }
-      }
-    }
-  }
-
-  // ============================================
-  // STEP 4: Check PHRASES for SUB-SIGNIFICANT hazards (17 lower priority)
+  // STEPS 4-5: PHRASE MATCHES across all allowed categories → +25 each
   // ============================================
   for (const category of CATEGORY_PRIORITY) {
-    if (MAJOR_HAZARDS.includes(category)) continue // Already checked
-    if (isExcludedTerm(text, category)) continue // Skip if excluded
+    // Skip major hazards if source was "Other"
+    if (isOther && MAJOR_HAZARDS.includes(category)) continue
 
     const phrases = HAZARD_PHRASES[category] || []
     for (const phrase of phrases) {
       if (text.includes(phrase.toLowerCase())) {
-        return category // Phrase match wins immediately
+        addScore(category, 25)
       }
     }
   }
 
   // ============================================
-  // STEP 5: Check KEYWORDS for MAJOR hazards (with exclusion checking)
-  // NOTE: Skip entirely if source was "Other" - respect that classification
-  // ============================================
-  if (!isOther) {
-    for (const category of MAJOR_HAZARDS) {
-      if (isExcludedTerm(text, category)) continue // Skip if excluded
-
-      const keywords = HAZARD_PATTERNS[category] || []
-      for (const keyword of keywords) {
-        if (text.includes(keyword.toLowerCase())) {
-          return category // First keyword match wins
-        }
-      }
-    }
-  }
-
-  // ============================================
-  // STEP 6: Check KEYWORDS for SUB-SIGNIFICANT hazards
+  // STEPS 6-7: KEYWORD MATCHES across all allowed categories → +10 each
   // ============================================
   for (const category of CATEGORY_PRIORITY) {
-    if (MAJOR_HAZARDS.includes(category)) continue // Already checked
-    if (isExcludedTerm(text, category)) continue // Skip if excluded
+    // Skip major hazards if source was "Other"
+    if (isOther && MAJOR_HAZARDS.includes(category)) continue
 
     const keywords = HAZARD_PATTERNS[category] || []
     for (const keyword of keywords) {
       // Skip very short generic words for generic categories
       const categoryIndex = CATEGORY_PRIORITY.indexOf(category)
       if (keyword.length <= 4 && categoryIndex >= 20) {
-        continue // Skip short words for generic categories
+        continue
       }
 
       if (text.includes(keyword.toLowerCase())) {
-        return category // First keyword match wins
+        addScore(category, 10)
       }
     }
   }
 
   // ============================================
-  // STEP 7: DEFAULT fallback → General Site Issues (never "Others")
+  // WINNER SELECTION: Highest score, tiebreak by HAZARD_SEVERITY
   // ============================================
+  const entries = Object.entries(scores)
+  if (entries.length > 0) {
+    entries.sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1] // Higher score wins
+      const sevA = HAZARD_SEVERITY[a[0]] || 99
+      const sevB = HAZARD_SEVERITY[b[0]] || 99
+      return sevA - sevB // Lower severity number = higher priority
+    })
+    return entries[0][0]
+  }
+
   return FALLBACK_CATEGORY
 }
 
