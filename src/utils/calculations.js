@@ -1,4 +1,4 @@
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear } from 'date-fns'
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear, getDaysInMonth, getDate } from 'date-fns'
 import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, PYRAMID_SECTIONS } from './constants'
 import { getCurrentDate } from './dateUtils'
 import { isOpenAction } from './incidentHelpers'
@@ -32,11 +32,22 @@ export const getIncidentCountsByType = (incidents) => {
 
 // Get incidents grouped by month - Positive vs Negative Observations
 // Uses centralized date for consistent "now" reference
+// Excludes the current month if less than 80% of it has elapsed to avoid
+// misleading drops from incomplete data.
 export const getIncidentsByMonth = (incidents, months = 12) => {
   const now = getCurrentDate()
   const result = []
 
+  // Check if the current month is mature enough to include (>=80% elapsed)
+  const dayOfMonth = getDate(now)
+  const totalDaysInMonth = getDaysInMonth(now)
+  const monthProgress = dayOfMonth / totalDaysInMonth
+  const includeCurrentMonth = monthProgress >= 0.8
+
   for (let i = months - 1; i >= 0; i--) {
+    // Skip the current month (i === 0) if it's too immature
+    if (i === 0 && !includeCurrentMonth) continue
+
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const monthStart = startOfMonth(date)
     const monthEnd = endOfMonth(date)

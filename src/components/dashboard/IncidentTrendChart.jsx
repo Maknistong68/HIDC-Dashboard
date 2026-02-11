@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -15,6 +15,39 @@ import { Card } from '../ui'
  * IncidentTrendChart - Positive vs Negative observation trend
  */
 const IncidentTrendChart = ({ data }) => {
+  // Trim leading and trailing months where both positive AND negative are 0.
+  // Interior zeros are preserved — they represent meaningful dips in the data.
+  const trimmedData = useMemo(() => {
+    if (!data || data.length === 0) return []
+
+    let startIdx = 0
+    while (startIdx < data.length && data[startIdx].positive === 0 && data[startIdx].negative === 0) {
+      startIdx++
+    }
+
+    let endIdx = data.length - 1
+    while (endIdx >= 0 && data[endIdx].positive === 0 && data[endIdx].negative === 0) {
+      endIdx--
+    }
+
+    // All data is zero — return full array so chart isn't empty
+    if (startIdx > endIdx) return data
+
+    return data.slice(startIdx, endIdx + 1)
+  }, [data])
+
+  // Dynamic Y-axis max: highest value across both series + 20% padding
+  const yAxisMax = useMemo(() => {
+    if (trimmedData.length === 0) return 1
+
+    const maxValue = Math.max(
+      ...trimmedData.map(d => d.positive || 0),
+      ...trimmedData.map(d => d.negative || 0),
+      1
+    )
+    return Math.ceil(maxValue * 1.2)
+  }, [trimmedData])
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
@@ -48,7 +81,7 @@ const IncidentTrendChart = ({ data }) => {
       <div className="flex-1 min-h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data}
+            data={trimmedData}
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
           >
             <defs>
@@ -74,6 +107,7 @@ const IncidentTrendChart = ({ data }) => {
               dy={5}
             />
             <YAxis
+              domain={[0, yAxisMax]}
               tick={{ fontSize: 11, fill: '#64748b' }}
               tickLine={false}
               axisLine={false}
