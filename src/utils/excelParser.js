@@ -1477,7 +1477,16 @@ export const getObservationAnalysis = (description) => {
  *
  * FULLY AUTOMATED - No manual review required
  */
-export const categorizeHazard = (description, existingCategory = '', mode = 'trust-excel') => {
+/**
+ * Internal scoring engine — does the real classification work.
+ * Returns full detail object instead of just a string.
+ *
+ * @param {string} description
+ * @param {string} existingCategory
+ * @param {string} mode
+ * @returns {{ category: string, scores: Object|null, winMethod: string }}
+ */
+const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-excel') => {
   const text = (description || '').toLowerCase()
 
   // Get categorization settings - use hardcoded defaults for simplified flow
@@ -1501,7 +1510,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   if (existingCategory && existingCategory.trim() !== '' && !isOther) {
     const normalized = normalizeHazardCategory(existingCategory)
     if (normalized && normalized !== FALLBACK_CATEGORY) {
-      return normalized
+      return { category: normalized, scores: null, winMethod: 'rule-1-excel' }
     }
   }
 
@@ -1516,7 +1525,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   }
 
   // No description to parse → fallback
-  if (!text) return FALLBACK_CATEGORY
+  if (!text) return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback' }
 
   // ============================================
   // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
@@ -1525,7 +1534,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // ============================================
   const criticalCategory = checkCriticalKeywords(mainText)
   if (criticalCategory && isAllowedForOtherSource(criticalCategory)) {
-    return criticalCategory
+    return { category: criticalCategory, scores: null, winMethod: 'step-0-critical' }
   }
 
   // ============================================
@@ -1534,7 +1543,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   // ============================================
   const redirectCategory = checkContextRedirects(mainText)
   if (redirectCategory && isAllowedForOtherSource(redirectCategory)) {
-    return redirectCategory
+    return { category: redirectCategory, scores: null, winMethod: 'step-1-redirect' }
   }
 
   // ============================================
@@ -1558,7 +1567,7 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
   if (contextResult.shouldOverride && contextResult.confidence >= 85 &&
       isAllowedForOtherSource(contextResult.category) &&
       !isExcludedTerm(text, contextResult.category)) {
-    return contextResult.category
+    return { category: contextResult.category, scores: null, winMethod: 'step-2-consensus' }
   }
 
   // Feed individual strategy votes into scoring
@@ -1634,10 +1643,37 @@ export const categorizeHazard = (description, existingCategory = '', mode = 'tru
       const sevB = HAZARD_SEVERITY[b[0]] || 99
       return sevA - sevB // Lower severity number = higher priority
     })
-    return entries[0][0]
+    // Round scores for readability
+    const roundedScores = {}
+    for (const [cat, score] of entries) {
+      roundedScores[cat] = Math.round(score)
+    }
+    return { category: entries[0][0], scores: roundedScores, winMethod: 'scoring' }
   }
 
-  return FALLBACK_CATEGORY
+  return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback' }
+}
+
+/**
+ * Categorize a hazard observation — backward-compatible string return.
+ * @param {string} description
+ * @param {string} existingCategory
+ * @param {string} mode
+ * @returns {string} The hazard category name
+ */
+export const categorizeHazard = (description, existingCategory = '', mode = 'trust-excel') => {
+  return _classifyWithScoring(description, existingCategory, mode).category
+}
+
+/**
+ * Categorize a hazard observation with full scoring details for audit/copy.
+ * @param {string} description
+ * @param {string} existingCategory
+ * @param {string} mode
+ * @returns {{ category: string, scores: Object|null, winMethod: string }}
+ */
+export const categorizeHazardWithScores = (description, existingCategory = '', mode = 'trust-excel') => {
+  return _classifyWithScoring(description, existingCategory, mode)
 }
 
 // Status mapping
@@ -2008,7 +2044,8 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
     // Always categorize using the new 29-category system (eliminates "Others")
     // Pass existing category for normalization, falls back to description-based classification
-    const hazardCategory = categorizeHazard(description, rawHazardCategory, classificationMode)
+    const classificationResult = categorizeHazardWithScores(description, rawHazardCategory, classificationMode)
+    const hazardCategory = classificationResult.category
 
     // Track hazard auto-classification (when original was blank or generic like "Other")
     const genericHazards = ['other', 'others', 'general', 'general safety', 'not specified', '']
@@ -2208,6 +2245,9 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
         hazardCategorySource,
         hazardCategoryValidated,
         dataQualityIssue,
+        // Classification scoring details (for audit/copy)
+        classificationScores: classificationResult.scores || null,
+        classificationMethod: classificationResult.winMethod || null,
         // Context-Aware Classification Analysis (Ensemble Voting System)
         contextAnalysis: {
           hazardObject: contextAnalysis.hazardObject,
@@ -2357,6 +2397,9 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       hazardCategorySource,
       hazardCategoryValidated,
       dataQualityIssue,
+      // Classification scoring details (for audit/copy)
+      classificationScores: classificationResult.scores || null,
+      classificationMethod: classificationResult.winMethod || null,
       // Context-Aware Classification Analysis (Ensemble Voting System)
       contextAnalysis: {
         hazardObject: contextAnalysis.hazardObject,

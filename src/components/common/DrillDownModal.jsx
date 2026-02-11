@@ -1,10 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, Database, ShieldCheck, ShieldAlert, Brain, Target, Zap, HelpCircle, ClipboardCopy, FileText, Users, MapPinned, MessageSquare, Tag, Flag, BarChart3, List } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import { analyzeObservation } from '../../utils/contextClassifier'
 import { useData } from '../../context/DataContext'
-import { parseSentence } from '../../utils/sentenceParser'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
@@ -606,12 +604,55 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
     contextLines.push('=== OBSERVATIONS ===')
     contextLines.push('')
 
-    // Add numbered observations
+    // Add numbered observations with classification context
     const observations = data.map((record, idx) => {
-      return `${idx + 1}. "${record.description || 'No description'}"`
+      const lines = [`${idx + 1}. "${record.description || 'No description'}"`]
+
+      // Classification source tag
+      const source = record.hazardCategorySource
+      const method = record.classificationMethod
+
+      if (source === 'excel') {
+        lines.push('   [Source: Excel]')
+      } else if (source === 'auto-classified') {
+        lines.push(`   [Source: Auto-classified | Method: ${method || 'unknown'}]`)
+
+        // Score breakdown (top 3, only for scoring method)
+        const scores = record.classificationScores
+        if (scores && method === 'scoring') {
+          const sorted = Object.entries(scores)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+          if (sorted.length > 0) {
+            const scoreStr = sorted.map(([cat, pts]) => `${cat}: ${pts}`).join(' > ')
+            lines.push(`   [Scores: ${scoreStr}]`)
+          }
+        }
+
+        // Ensemble voting summary from contextAnalysis
+        const ctx = record.contextAnalysis
+        if (ctx?.votes) {
+          const consensus = ctx.consensusLevel || '?'
+          const conf = ctx.confidence != null ? `${Math.round(ctx.confidence)}%` : '?'
+          const strategyNames = ['keyword', 'sentence', 'cleanText', 'controlLink']
+          const voteDetails = strategyNames.map(name => {
+            const vote = ctx.votes[name]
+            if (!vote?.category) return `${name}→N/A`
+            const voteConf = vote.confidence != null ? `(${Math.round(vote.confidence)}%)` : ''
+            // Abbreviate long category names for readability
+            const cat = vote.category.length > 20
+              ? vote.category.split(/\s+/).map(w => w[0]).join('').toUpperCase()
+              : vote.category
+            return `${name}→${cat}${voteConf}`
+          }).join(', ')
+          lines.push(`   [Votes: ${consensus} @ ${conf} — ${voteDetails}]`)
+        }
+      }
+
+      return lines.join('\n')
     })
 
-    const fullText = contextLines.join('\n') + observations.join('\n')
+    const fullText = contextLines.join('\n') + observations.join('\n\n')
 
     try {
       await navigator.clipboard.writeText(fullText)
@@ -766,19 +807,6 @@ const RecordDetailsModal = ({ record, onClose }) => {
     }
   }
 
-  const getStatusInfo = (status) => {
-    switch (status) {
-      case 'closed':
-        return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', label: 'Closed' }
-      case 'in-progress':
-        return { icon: Clock, color: 'text-orange-500', bg: 'bg-orange-100', label: 'In Progress' }
-      default:
-        return { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-100', label: 'Open' }
-    }
-  }
-
-  const statusInfo = getStatusInfo(record.actionStatus)
-  const StatusIcon = statusInfo.icon
 
   return createPortal(
     <div
@@ -834,11 +862,17 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
           {/* Content - Responsive padding */}
           <div className={`space-y-4 sm:space-y-6 flex-1 overflow-y-auto touch-scroll ${isMobile ? 'p-4' : 'p-6'}`}>
-            {/* Key Details Grid - 1 column on mobile, 2 on desktop */}
+            {/* All Fields */}
             <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <DetailField icon={Calendar} label="Date" value={formatDate(record.date)} />
+              {record.eventTime && (
+                <DetailField icon={Clock} label="Time" value={record.eventTime} />
+              )}
               <DetailField icon={Building2} label="Contractor" value={record.contractor} />
               <DetailField icon={MapPin} label="Site" value={record.site} />
+              {record.company && (
+                <DetailField icon={Briefcase} label="Company" value={record.company} />
+              )}
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-surface-500 uppercase tracking-wide">
                   <AlertCircle size={12} />
@@ -846,6 +880,11 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-surface-900">{record.location || '-'}</span>
+                  {record.hazardCategorySource && (
+                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${record.hazardCategorySource === 'excel' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {record.hazardCategorySource === 'excel' ? 'Excel' : 'Auto'}
+                    </span>
+                  )}
                   <button
                     onClick={handleToggleFlag}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -860,19 +899,20 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 </div>
               </div>
               <DetailField icon={User} label="Reported By" value={record.reportedBy} />
-
-              {/* Status with icon */}
-              <div className="space-y-1">
-                <div className="text-xs font-medium text-surface-500 uppercase tracking-wide">
-                  Status
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusIcon size={16} className={statusInfo.color} />
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusInfo.bg} ${statusInfo.color}`}>
-                    {statusInfo.label}
-                  </span>
-                </div>
-              </div>
+              <DetailField icon={CheckCircle} label="Approval" value={record.approvalStatus || '-'} />
+              {record.consequence && (
+                <DetailField icon={AlertTriangle} label="Consequence" value={record.consequence} />
+              )}
+              {record.workRelated != null && (
+                <DetailField icon={Briefcase} label="Work-Related" value={record.workRelated ? 'Yes' : 'No'} />
+              )}
+              {record.bodyPart && (
+                <DetailField icon={User} label="Body Part" value={record.bodyPart} />
+              )}
+              <DetailField icon={FileSpreadsheet} label="Original Type" value={record.originalType || record.type || '-'} />
+              {record.originalClassification && (
+                <DetailField icon={FileText} label="Original Classification" value={record.originalClassification} />
+              )}
             </div>
 
             {/* Description */}
@@ -884,38 +924,6 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 {record.description || 'No description provided.'}
               </div>
             </div>
-
-            {/* Additional Info - excluding root cause */}
-            {(record.bodyPart || record.correctiveAction) && (
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-surface-500 uppercase tracking-wide">
-                  Additional Information
-                </div>
-                <div className="space-y-2">
-                  {record.bodyPart && (
-                    <div className="flex gap-2 text-sm">
-                      <span className="font-medium text-surface-500">Body Part:</span>
-                      <span className="text-surface-900">{record.bodyPart}</span>
-                    </div>
-                  )}
-                  {record.correctiveAction && (
-                    <div className="flex gap-2 text-sm">
-                      <span className="font-medium text-surface-500">Corrective Action:</span>
-                      <span className="text-surface-900">{record.correctiveAction}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Data Quality Section */}
-            <DataQualitySection record={record} />
-
-            {/* Context Analysis Section - Classification Reasoning */}
-            <ContextAnalysisSection record={record} />
-
-            {/* Parsing Analysis Section - WHO/WHAT/WHERE breakdown */}
-            <ParsingAnalysisSection record={record} />
 
             {/* Reference ID with Copy Button */}
             {record.externalId && (
@@ -959,420 +967,5 @@ const DetailField = ({ icon: Icon, label, value }) => (
     <div className="text-sm text-surface-900">{value || '-'}</div>
   </div>
 )
-
-/**
- * Data Quality Section Component - Compact & Collapsible
- * Shows whether hazard category was from Excel or auto-classified
- */
-const DataQualitySection = ({ record }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-
-  // Check if data quality fields exist (only for newly imported records)
-  const hasDataQualityInfo = record.hazardCategorySource !== undefined
-  if (!hasDataQualityInfo) return null
-
-  const isFromExcel = record.hazardCategorySource === 'excel'
-  const isValidated = record.hazardCategoryValidated
-  const hasIssue = record.dataQualityIssue && !isValidated
-
-  // Check if there's a meaningful description to validate against
-  const description = record.description || ''
-  const hasDescription = description.trim().length > 10 &&
-    !description.toLowerCase().includes('no description provided')
-
-  // Compact status indicator - adjusted logic for missing descriptions
-  const getStatusBadge = () => {
-    if (hasIssue) {
-      return { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Review Needed' }
-    }
-    if (isValidated) {
-      return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
-    }
-    // No validation but also no issue - could be missing description
-    if (isFromExcel && !hasDescription) {
-      // Excel category trusted, no description to validate - show neutral status
-      return { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-50', label: 'From Source' }
-    }
-    // Has description but no keywords match
-    return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
-  }
-
-  const badge = getStatusBadge()
-  const BadgeIcon = badge.icon
-
-  // Generate appropriate explanation text
-  const getExplanationText = () => {
-    if (isValidated) {
-      return `Description contains "${record.location}" keywords`
-    }
-    if (isFromExcel && !hasDescription) {
-      return 'Category from source data (no description to verify against)'
-    }
-    return `No "${record.location}" keywords found in description`
-  }
-
-  return (
-    <div className="pt-3 border-t border-surface-200/50">
-      {/* Compact Header - Click to expand */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${badge.bg} hover:opacity-80`}
-      >
-        <div className="flex items-center gap-2">
-          <BadgeIcon size={12} className={badge.color} />
-          <span className={`font-medium ${badge.color}`}>{badge.label}</span>
-          <span className="text-surface-400">•</span>
-          <span className="text-surface-500">
-            {isFromExcel ? 'From Excel' : 'Auto-classified'}
-            {record.originalHazardCategory && record.originalHazardCategory !== record.location &&
-              ` (was "${record.originalHazardCategory}")`
-            }
-          </span>
-        </div>
-        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
-
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="mt-2 p-2 bg-surface-50/80 rounded-lg text-xs space-y-1">
-          {record.dataQualityIssue && (
-            <p className="text-surface-600">{record.dataQualityIssue}</p>
-          )}
-          <p className="text-surface-500">{getExplanationText()}</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Context Analysis Section - Shows AI classification reasoning
- * Displays hazard object, action, outcome, and confidence
- * Calculates analysis on-the-fly for records that don't have it
- */
-const ContextAnalysisSection = ({ record }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-
-  // Use existing analysis or calculate on-the-fly
-  const analysis = React.useMemo(() => {
-    // If record already has contextAnalysis, use it
-    if (record?.contextAnalysis?.confidence) {
-      return record.contextAnalysis
-    }
-    // Otherwise, calculate it from the description
-    if (record?.description) {
-      return analyzeObservation(record.description, record.originalHazardCategory || record.location)
-    }
-    return null
-  }, [record?.description, record?.contextAnalysis, record?.originalHazardCategory, record?.location])
-
-  if (!analysis || !analysis.confidence) return null
-
-  // Confidence level styling
-  const getConfidenceStyle = (confidence) => {
-    if (confidence >= 85) return { color: 'text-green-600', bg: 'bg-green-50', label: 'High' }
-    if (confidence >= 65) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Medium' }
-    return { color: 'text-red-500', bg: 'bg-red-50', label: 'Low' }
-  }
-
-  const confidenceStyle = getConfidenceStyle(analysis.confidence)
-
-  return (
-    <div className="pt-3 border-t border-surface-200/50">
-      {/* Compact Header - Click to expand */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors bg-blue-50 hover:bg-blue-100/80`}
-      >
-        <div className="flex items-center gap-2">
-          <Brain size={12} className="text-blue-600" />
-          <span className="font-medium text-blue-700">Classification Reasoning</span>
-          <span className="text-surface-400">•</span>
-          <span className={`font-medium ${confidenceStyle.color}`}>
-            {analysis.confidence}% {confidenceStyle.label}
-          </span>
-        </div>
-        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
-
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="mt-2 p-3 bg-surface-50/80 rounded-lg text-xs space-y-3">
-          {/* Reasoning text */}
-          <div className="flex items-start gap-2">
-            <HelpCircle size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-            <p className="text-surface-700 leading-relaxed">{analysis.reasoning}</p>
-          </div>
-
-          {/* Analysis Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {analysis.hazardObject && (
-              <div className="flex items-center gap-1.5">
-                <Target size={11} className="text-purple-500" />
-                <span className="text-surface-500">Object:</span>
-                <span className="text-surface-800 font-medium">{analysis.hazardObject}</span>
-              </div>
-            )}
-            {analysis.action && (
-              <div className="flex items-center gap-1.5">
-                <Zap size={11} className="text-orange-500" />
-                <span className="text-surface-500">Action:</span>
-                <span className="text-surface-800 font-medium">{analysis.action}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Potential Outcome */}
-          {analysis.potentialOutcome && (
-            <div className="flex items-center gap-1.5 pt-1 border-t border-surface-200/50">
-              <AlertTriangle size={11} className="text-red-500" />
-              <span className="text-surface-500">Potential Outcome:</span>
-              <span className="text-surface-800 font-medium">{analysis.potentialOutcome}</span>
-            </div>
-          )}
-
-          {/* Disambiguation note */}
-          {analysis.disambiguation && (
-            <div className="p-2 bg-amber-50 rounded border border-amber-200/50">
-              <div className="flex items-start gap-1.5">
-                <AlertCircle size={11} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                <p className="text-amber-800">
-                  <span className="font-medium">Note:</span> "{analysis.disambiguation.pattern}" indicates{' '}
-                  <span className="font-medium">{record.location}</span>
-                  {analysis.disambiguation.wrongCategory && (
-                    <>, not {analysis.disambiguation.wrongCategory}</>
-                  )}.
-                  {analysis.disambiguation.reason && (
-                    <span className="text-amber-600"> ({analysis.disambiguation.reason})</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Confidence bar */}
-          <div className="pt-2 border-t border-surface-200/50">
-            <div className="flex items-center justify-between text-[10px] text-surface-500 mb-1">
-              <span>Confidence Level</span>
-              <span className={confidenceStyle.color}>{analysis.confidence}%</span>
-            </div>
-            <div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  analysis.confidence >= 85 ? 'bg-green-500' :
-                  analysis.confidence >= 65 ? 'bg-amber-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${analysis.confidence}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Parsing Analysis Section - Shows sentence parsing breakdown
- * WHO/WHAT/WHERE/ISSUE + main keyword extraction with copy functionality
- */
-const ParsingAnalysisSection = ({ record }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-  const [copiedField, setCopiedField] = React.useState(null)
-  const copyFieldTimerRef = useRef(null)
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
-    }
-  }, [])
-
-  // Parse the description on-the-fly
-  const parsing = React.useMemo(() => {
-    if (!record?.description) return null
-    try {
-      return parseSentence(record.description)
-    } catch {
-      return null
-    }
-  }, [record?.description])
-
-  if (!parsing) return null
-
-  const handleCopy = async (text, field) => {
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedField(field)
-      if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
-      copyFieldTimerRef.current = setTimeout(() => setCopiedField(null), 2000)
-    } catch {
-      // Copy failed silently
-    }
-  }
-
-  const handleCopyAll = async () => {
-    const summary = parsing.summary || {}
-    const lines = [
-      `Description: ${record.description}`,
-      ``,
-      `--- Parsing Results ---`,
-      `WHO: ${summary.who || '-'}`,
-      `WHAT: ${summary.what || '-'}`,
-      `WHERE: ${summary.where || '-'}`,
-      `ISSUE: ${summary.issue || '-'}`,
-      `Main Keyword: ${parsing.mainKeyword || '-'} ${parsing.mainKeywordIsSignal ? '(signal word)' : ''}`,
-      ``,
-      `Filtered Keywords: ${(parsing.filteredKeywords || []).join(', ') || '-'}`,
-      `Suggested Category: ${record.location || '-'}`,
-    ]
-    await navigator.clipboard.writeText(lines.join('\n'))
-    setCopiedField('all')
-    if (copyFieldTimerRef.current) clearTimeout(copyFieldTimerRef.current)
-    copyFieldTimerRef.current = setTimeout(() => setCopiedField(null), 2000)
-  }
-
-  const summary = parsing.summary || {}
-
-  const SummaryField = ({ icon: Icon, label, value, fieldKey, color = 'text-surface-600' }) => (
-    <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-100/50 transition-colors group">
-      <div className="flex items-center gap-2 min-w-0">
-        <Icon size={12} className={color} />
-        <span className="text-xs font-medium text-surface-500 w-12">{label}:</span>
-        <span className="text-xs text-surface-800 truncate">{value || '-'}</span>
-      </div>
-      {value && (
-        <button
-          onClick={() => handleCopy(value, fieldKey)}
-          className={`p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
-            copiedField === fieldKey
-              ? 'text-green-600 bg-green-50'
-              : 'text-surface-400 hover:text-blue-600 hover:bg-blue-50'
-          }`}
-          title="Copy"
-        >
-          {copiedField === fieldKey ? <Check size={10} /> : <Copy size={10} />}
-        </button>
-      )}
-    </div>
-  )
-
-  return (
-    <div className="pt-3 border-t border-surface-200/50">
-      {/* Compact Header - Click to expand */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors bg-purple-50 hover:bg-purple-100/80"
-      >
-        <div className="flex items-center gap-2">
-          <FileText size={12} className="text-purple-600" />
-          <span className="font-medium text-purple-700">Sentence Parsing</span>
-          {parsing.mainKeyword && (
-            <>
-              <span className="text-surface-400">•</span>
-              <span className="font-medium text-purple-600">
-                "{parsing.mainKeyword}"
-                {parsing.mainKeywordIsSignal && (
-                  <span className="text-purple-400 ml-1">(signal)</span>
-                )}
-              </span>
-            </>
-          )}
-        </div>
-        <ChevronRight size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
-
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="mt-2 p-3 bg-surface-50/80 rounded-lg text-xs space-y-3">
-          {/* Copy All Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleCopyAll}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                copiedField === 'all'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-              }`}
-            >
-              {copiedField === 'all' ? <Check size={12} /> : <ClipboardCopy size={12} />}
-              {copiedField === 'all' ? 'Copied!' : 'Copy All'}
-            </button>
-          </div>
-
-          {/* Summary Fields */}
-          <div className="space-y-0.5 bg-white/60 rounded-lg py-1">
-            <SummaryField icon={Users} label="WHO" value={summary.who} fieldKey="who" color="text-blue-500" />
-            <SummaryField icon={Target} label="WHAT" value={summary.what} fieldKey="what" color="text-orange-500" />
-            <SummaryField icon={MapPinned} label="WHERE" value={summary.where} fieldKey="where" color="text-green-500" />
-            <SummaryField icon={AlertTriangle} label="ISSUE" value={summary.issue} fieldKey="issue" color="text-red-500" />
-          </div>
-
-          {/* Main Keyword */}
-          {parsing.mainKeyword && (
-            <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg border border-purple-200/50">
-              <Tag size={12} className="text-purple-600" />
-              <span className="text-surface-500">Main Keyword:</span>
-              <span className="font-bold text-purple-700">{parsing.mainKeyword}</span>
-              {parsing.mainKeywordIsSignal && (
-                <span className="px-1.5 py-0.5 bg-purple-200 text-purple-800 rounded text-[10px] font-medium">
-                  SIGNAL
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Filtered Keywords */}
-          {parsing.filteredKeywords && parsing.filteredKeywords.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-surface-500">
-                <MessageSquare size={11} />
-                <span>Filtered Keywords (noise removed):</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {parsing.filteredKeywords.slice(0, 15).map((word, idx) => (
-                  <span
-                    key={idx}
-                    className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      word === parsing.mainKeyword
-                        ? 'bg-purple-200 text-purple-800 font-bold'
-                        : 'bg-surface-100 text-surface-600'
-                    }`}
-                  >
-                    {word}
-                  </span>
-                ))}
-                {parsing.filteredKeywords.length > 15 && (
-                  <span className="text-surface-400 text-[10px]">
-                    +{parsing.filteredKeywords.length - 15} more
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Ambiguity Resolutions */}
-          {parsing.ambiguityResolutions && parsing.ambiguityResolutions.length > 0 && (
-            <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/50">
-              <div className="flex items-center gap-1.5 text-amber-700 mb-1">
-                <HelpCircle size={11} />
-                <span className="font-medium">Ambiguity Resolved:</span>
-              </div>
-              <div className="space-y-1">
-                {parsing.ambiguityResolutions.map((res, idx) => (
-                  <p key={idx} className="text-amber-800 text-[10px]">
-                    "{res.word}" → <span className="font-medium">{res.context}</span>
-                    {res.reason && <span className="text-amber-600"> ({res.reason})</span>}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default DrillDownModal
