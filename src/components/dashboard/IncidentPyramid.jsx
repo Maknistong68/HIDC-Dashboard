@@ -19,7 +19,7 @@ const TOTAL_LEVELS = ALL_TYPES.length
 const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) => {
   const [selectedType, setSelectedType] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [workRelatedOnly, setWorkRelatedOnly] = useState(false)
+  const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
   const [, startTransition] = useTransition()
 
   const handleTypeClick = useCallback((typeKey) => {
@@ -97,7 +97,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
         </Card.Title>
         {/* Work-Related Only slide toggle */}
         <label className="flex items-center gap-2 cursor-pointer select-none ml-auto">
-          <span className={`text-[11px] font-medium transition-colors ${workRelatedOnly ? 'text-amber-700' : 'text-surface-400'}`}>
+          <span className={`text-[11px] font-medium transition-colors ${workRelatedOnly ? 'text-amber-600' : 'text-surface-400'}`}>
             Work-Related Only
           </span>
           <button
@@ -108,7 +108,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
               relative inline-flex h-5 w-9 items-center rounded-full
               transition-colors duration-200 ease-in-out
               focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-              ${workRelatedOnly ? 'bg-amber-500' : 'bg-surface-300'}
+              ${workRelatedOnly ? 'bg-amber-600/80' : 'bg-surface-300'}
             `}
           >
             <span
