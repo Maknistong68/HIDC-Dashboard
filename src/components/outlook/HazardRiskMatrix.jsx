@@ -577,9 +577,9 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
 const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDetails }) => {
   // Calculate severity breakdown
   const severityBreakdown = useMemo(() => {
-    if (!hazardIncidents?.length) return { lti: 0, mti: 0, fac: 0, nearMiss: 0, observations: 0, total: 0, weightedScore: 0 }
+    if (!hazardIncidents?.length) return { fatality: 0, lti: 0, mti: 0, fac: 0, env: 0, fire: 0, security: 0, dmg: 0, nearMiss: 0, observations: 0, total: 0, weightedScore: 0 }
 
-    const counts = { lti: 0, mti: 0, fac: 0, nearMiss: 0, observations: 0 }
+    const counts = { fatality: 0, lti: 0, mti: 0, fac: 0, env: 0, fire: 0, security: 0, dmg: 0, nearMiss: 0, observations: 0 }
     let weightedScore = 0
 
     hazardIncidents.forEach(i => {
@@ -587,9 +587,14 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
       const weight = SEVERITY_WEIGHTS[type] || SEVERITY_WEIGHTS.default || 1
       weightedScore += weight
 
-      if (type === 'lti') counts.lti++
+      if (type === 'fatality') counts.fatality++
+      else if (type === 'lti') counts.lti++
       else if (type === 'mti') counts.mti++
       else if (type === 'fac') counts.fac++
+      else if (type === 'environmental') counts.env++
+      else if (type === 'fire') counts.fire++
+      else if (type === 'security') counts.security++
+      else if (type === 'damage-to-property') counts.dmg++
       else if (type === 'near-miss') counts.nearMiss++
       else counts.observations++
     })
@@ -597,7 +602,7 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
     return { ...counts, total: hazardIncidents.length, weightedScore }
   }, [hazardIncidents])
 
-  const hasRecordable = severityBreakdown.lti > 0 || severityBreakdown.mti > 0 || severityBreakdown.fac > 0
+  const hasRecordable = severityBreakdown.fatality > 0 || severityBreakdown.lti > 0 || severityBreakdown.mti > 0 || severityBreakdown.fac > 0
 
   return (
     <div className={`${cellColor?.bg || 'bg-primary-50'} ${cellColor?.border || 'border-primary-300'} border-2 rounded-2xl p-5 shadow-md`}>
@@ -637,7 +642,18 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
 
         {/* Pyramid rows */}
         <div className="space-y-1.5">
-          {/* LTI - Top of pyramid (most severe) */}
+          {/* Fatality - Top of pyramid */}
+          {severityBreakdown.fatality > 0 && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 bg-red-200 px-3 py-1 rounded-full">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-900" />
+                <span className="text-xs font-bold text-red-900">{severityBreakdown.fatality} Fatality</span>
+                <span className="text-[10px] text-red-700">×10000</span>
+              </div>
+            </div>
+          )}
+
+          {/* LTI */}
           {severityBreakdown.lti > 0 && (
             <div className="flex items-center justify-center gap-2">
               <div className="flex items-center gap-1.5 bg-red-100 px-3 py-1 rounded-full">
@@ -670,13 +686,57 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
             </div>
           )}
 
+          {/* ENV */}
+          {severityBreakdown.env > 0 && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 bg-amber-100 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-amber-600" />
+                <span className="text-xs font-bold text-amber-700">{severityBreakdown.env} ENV</span>
+                <span className="text-[10px] text-amber-500">×200</span>
+              </div>
+            </div>
+          )}
+
+          {/* Fire */}
+          {severityBreakdown.fire > 0 && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-xs font-bold text-red-600">{severityBreakdown.fire} Fire</span>
+                <span className="text-[10px] text-red-400">×500</span>
+              </div>
+            </div>
+          )}
+
+          {/* Security */}
+          {severityBreakdown.security > 0 && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 bg-stone-100 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-stone-500" />
+                <span className="text-xs font-bold text-stone-600">{severityBreakdown.security} Security</span>
+                <span className="text-[10px] text-stone-400">×100</span>
+              </div>
+            </div>
+          )}
+
+          {/* DMG */}
+          {severityBreakdown.dmg > 0 && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 bg-lime-100 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-lime-600" />
+                <span className="text-xs font-bold text-lime-700">{severityBreakdown.dmg} DMG</span>
+                <span className="text-[10px] text-lime-500">×200</span>
+              </div>
+            </div>
+          )}
+
           {/* Near Miss */}
           {severityBreakdown.nearMiss > 0 && (
             <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-xs font-medium text-blue-700">{severityBreakdown.nearMiss} Near Miss</span>
-                <span className="text-[10px] text-blue-500">×50</span>
+              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-xs font-medium text-amber-700">{severityBreakdown.nearMiss} Near Miss</span>
+                <span className="text-[10px] text-amber-500">×50</span>
               </div>
             </div>
           )}

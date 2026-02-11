@@ -5423,15 +5423,21 @@ export const getObserverInsights = (incidents, observerName, allIncidents = null
   })
 
   const typeColors = {
-    'unsafe-condition': '#65a30d',
-    'unsafe-act': '#eab308',
-    'near-miss': '#f97316',
-    'positive': '#22c55e',
-    'ncr': '#9333ea',
-    'lti': '#ef4444',
-    'mti': '#ef4444',
-    'fac': '#ef4444',
-    'leadership': '#0891b2'
+    'fatality': '#991b1b',
+    'lti': '#dc2626',
+    'mti': '#ea580c',
+    'fac': '#f59e0b',
+    'environmental': '#d97706',
+    'fire': '#ef4444',
+    'security': '#78716c',
+    'damage-to-property': '#65a30d',
+    'near-miss': '#059669',
+    'ncr': '#0d9488',
+    'unsafe-act': '#0891b2',
+    'unsafe-condition': '#0284c7',
+    'positive': '#2563eb',
+    'leadership': '#7c3aed',
+    'emergency-drill': '#9333ea'
   }
 
   const typeLabels = {
@@ -5440,10 +5446,16 @@ export const getObserverInsights = (incidents, observerName, allIncidents = null
     'near-miss': 'Near Miss',
     'positive': 'Positive',
     'ncr': 'NCR',
+    'fatality': 'Fatality',
     'lti': 'LTI',
     'mti': 'MTI',
     'fac': 'FAC',
-    'leadership': 'Leadership'
+    'environmental': 'Environmental',
+    'fire': 'Fire',
+    'security': 'Security',
+    'damage-to-property': 'Damage to Property',
+    'leadership': 'Leadership',
+    'emergency-drill': 'Emergency Drill'
   }
 
   const typeBreakdown = Object.entries(typeCounts)

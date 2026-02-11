@@ -11,33 +11,102 @@ export const SUB_REGION_OPTIONS = [
 ]
 
 // Incident Types with severity levels
+// Colors follow full-spectrum gradient matching PYRAMID_SECTIONS
 export const INCIDENT_TYPES = [
+  // Human Injury/Illness (HUM) - Red spectrum
+  { value: 'fatality', label: 'Fatality', severity: 'critical', color: '#991b1b' },
   { value: 'lti', label: 'Lost Time Injury (LTI)', severity: 'critical', color: '#dc2626' },
-  { value: 'mti', label: 'Medical Treatment Injury (MTI)', severity: 'high', color: '#f97316' },
-  { value: 'fac', label: 'First Aid Case (FAC)', severity: 'medium', color: '#eab308' },
-  { value: 'property-damage', label: 'Property Damage', severity: 'medium', color: '#a855f7' },
-  { value: 'environmental', label: 'Environmental', severity: 'medium', color: '#10b981' },
-  { value: 'security', label: 'Security', severity: 'medium', color: '#6366f1' },
-  { value: 'near-miss', label: 'Near Miss', severity: 'low', color: '#3b82f6' },
-  { value: 'ncr', label: 'Non-Conformance', severity: 'low', color: '#9333ea' },
-  { value: 'unsafe-act', label: 'Unsafe Act', severity: 'observation', color: '#8b5cf6' },
-  { value: 'unsafe-condition', label: 'Unsafe Condition', severity: 'observation', color: '#6366f1' },
-  { value: 'positive', label: 'Positive Observation', severity: 'positive', color: '#22c55e' },
-  { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#0891b2' },
+  { value: 'mti', label: 'Medical Treatment Injury (MTI)', severity: 'high', color: '#ea580c' },
+  { value: 'fac', label: 'First Aid Case (FAC)', severity: 'medium', color: '#f59e0b' },
+  // Env / Property / Other
+  { value: 'environmental', label: 'Environmental', severity: 'medium', color: '#d97706' },
+  { value: 'fire', label: 'Fire', severity: 'high', color: '#ef4444' },
+  { value: 'security', label: 'Security', severity: 'medium', color: '#78716c' },
+  { value: 'damage-to-property', label: 'Damage to Property', severity: 'medium', color: '#65a30d' },
+  // Legacy sub-types (mapped to consolidated types during parsing)
+  { value: 'env-major', label: 'ENV Major/Severe (P1)', severity: 'high', color: '#d97706' },
+  { value: 'env-moderate', label: 'ENV Moderate (P2)', severity: 'medium', color: '#d97706' },
+  { value: 'env-minor', label: 'ENV Minor (P3)', severity: 'low', color: '#d97706' },
+  { value: 'dmg-light-vehicle', label: 'Light Vehicle / MV', severity: 'medium', color: '#65a30d' },
+  { value: 'dmg-heavy-plant', label: 'Heavy Plant', severity: 'medium', color: '#65a30d' },
+  { value: 'dmg-truck-trailer', label: 'Truck & Trailer', severity: 'medium', color: '#65a30d' },
+  { value: 'dmg-static-equipment', label: 'Static Equipment', severity: 'medium', color: '#65a30d' },
+  { value: 'property-damage', label: 'Property Damage', severity: 'medium', color: '#65a30d' },
+  // Observations - Teal/Cyan/Blue spectrum
+  { value: 'near-miss', label: 'Near Miss', severity: 'low', color: '#059669' },
+  { value: 'ncr', label: 'Non-Conformance', severity: 'low', color: '#0d9488' },
+  { value: 'unsafe-act', label: 'Unsafe Act', severity: 'observation', color: '#0891b2' },
+  { value: 'unsafe-condition', label: 'Unsafe Condition', severity: 'observation', color: '#0284c7' },
+  // Proactive - Blue/Violet/Purple spectrum
+  { value: 'positive', label: 'Positive Observation', severity: 'positive', color: '#2563eb' },
+  { value: 'leadership', label: 'Leadership Event', severity: 'leadership', color: '#7c3aed' },
+  { value: 'emergency-drill', label: 'Emergency Drill', severity: 'proactive', color: '#9333ea' },
 ]
 
 // Type groupings for aggregation
-// Recordable incidents (aggregate into single "incident" count)
-export const RECORDABLE_INCIDENT_TYPES = ['lti', 'mti', 'fac', 'property-damage', 'environmental', 'security']
+// Recordable incidents (all consequence-based sub-types + legacy types)
+export const RECORDABLE_INCIDENT_TYPES = [
+  'fatality', 'lti', 'mti', 'fac',
+  'environmental', 'fire', 'security', 'damage-to-property',
+  'env-major', 'env-moderate', 'env-minor',
+  'dmg-light-vehicle', 'dmg-heavy-plant', 'dmg-truck-trailer', 'dmg-static-equipment',
+  'property-damage'
+]
 
-// Sub-types for incident breakdown display
+// Sub-types for incident breakdown display (full-spectrum gradient)
 export const INCIDENT_SUB_TYPES = [
+  { key: 'fatality', label: 'Fatality', color: '#991b1b' },
   { key: 'lti', label: 'LTI', color: '#dc2626' },
-  { key: 'mti', label: 'MTI', color: '#f97316' },
-  { key: 'fac', label: 'FAC', color: '#eab308' },
-  { key: 'property-damage', label: 'Property', color: '#a855f7' },
-  { key: 'environmental', label: 'Env', color: '#10b981' },
-  { key: 'security', label: 'Security', color: '#6366f1' },
+  { key: 'mti', label: 'MTI', color: '#ea580c' },
+  { key: 'fac', label: 'FAC', color: '#f59e0b' },
+  { key: 'environmental', label: 'Environmental', color: '#d97706' },
+  { key: 'fire', label: 'Fire', color: '#ef4444' },
+  { key: 'security', label: 'Security', color: '#78716c' },
+  { key: 'damage-to-property', label: 'Damage to Property', color: '#65a30d' },
+]
+
+// Pyramid sections - defines the grouped, severity-ordered structure
+// Colors follow full-spectrum gradient: RED → ORANGE → YELLOW → GREEN → TEAL → BLUE → PURPLE
+export const PYRAMID_SECTIONS = [
+  {
+    id: 'incidents-hum',
+    label: 'Injury / Illness',
+    types: [
+      { key: 'fatality', label: 'Fatality', color: '#991b1b', bgColor: '#fef2f2' },
+      { key: 'lti', label: 'Lost Time Injury', color: '#dc2626', bgColor: '#fef2f2' },
+      { key: 'mti', label: 'Medical Treatment', color: '#ea580c', bgColor: '#fff7ed' },
+      { key: 'fac', label: 'First Aid', color: '#f59e0b', bgColor: '#fffbeb' },
+    ]
+  },
+  {
+    id: 'incidents-env-dmg',
+    label: 'Env / Property / Other',
+    types: [
+      { key: 'environmental', label: 'Environmental', color: '#d97706', bgColor: '#fffbeb' },
+      { key: 'fire', label: 'Fire', color: '#ef4444', bgColor: '#fef2f2' },
+      { key: 'security', label: 'Security', color: '#78716c', bgColor: '#f5f5f4' },
+      { key: 'damage-to-property', label: 'Damage to Property', color: '#65a30d', bgColor: '#f7fee7' },
+    ]
+  },
+  {
+    id: 'observations',
+    label: 'Observations',
+    types: [
+      { key: 'near-miss', label: 'Near Miss', color: '#059669', bgColor: '#ecfdf5' },
+      { key: 'ncr', label: 'Non-Conformance', color: '#0d9488', bgColor: '#f0fdfa' },
+      { key: 'unsafe-act', label: 'Unsafe Act', color: '#0891b2', bgColor: '#ecfeff' },
+      { key: 'unsafe-condition', label: 'Unsafe Condition', color: '#0284c7', bgColor: '#f0f9ff' },
+    ]
+  },
+  {
+    id: 'proactive',
+    label: 'Proactive',
+    types: [
+      { key: 'positive', label: 'Positive Observation', color: '#2563eb', bgColor: '#eff6ff' },
+      { key: 'leadership', label: 'Leadership Event', color: '#7c3aed', bgColor: '#f5f3ff' },
+      { key: 'emergency-drill', label: 'Emergency Drill', color: '#9333ea', bgColor: '#faf5ff' },
+    ]
+  },
 ]
 
 // Negative observation types (for ratio calculations)
