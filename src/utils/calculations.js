@@ -1,4 +1,4 @@
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear, getDaysInMonth, getDate } from 'date-fns'
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear, getDaysInMonth, getDate, differenceInMonths, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, getQuarter, format } from 'date-fns'
 import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, PYRAMID_SECTIONS } from './constants'
 import { getCurrentDate } from './dateUtils'
 import { isOpenAction } from './incidentHelpers'
@@ -30,13 +30,49 @@ export const getIncidentCountsByType = (incidents) => {
   return counts
 }
 
+/**
+ * Get the date range spanned by incident data
+ * @param {Array} incidents - Array of incident objects with .date (yyyy-MM-dd)
+ * @returns {{ minDate: Date|null, maxDate: Date|null, spanMonths: number }}
+ */
+export const getIncidentDataRange = (incidents) => {
+  if (!incidents || incidents.length === 0) {
+    return { minDate: null, maxDate: null, spanMonths: 0 }
+  }
+
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) {
+    return { minDate: null, maxDate: null, spanMonths: 0 }
+  }
+
+  const minDate = parseISO(dates[0])
+  const maxDate = parseISO(dates[dates.length - 1])
+  const spanMonths = differenceInMonths(maxDate, minDate)
+
+  return { minDate, maxDate, spanMonths }
+}
+
 // Get incidents grouped by month - Positive vs Negative Observations
 // Uses centralized date for consistent "now" reference
 // Excludes the current month if less than 80% of it has elapsed to avoid
 // misleading drops from incomplete data.
-export const getIncidentsByMonth = (incidents, months = 12) => {
+// When months is not specified, auto-detects range from incident data.
+export const getIncidentsByMonth = (incidents, months) => {
   const now = getCurrentDate()
   const result = []
+
+  // Auto-detect range from data if months not specified
+  if (!months && incidents && incidents.length > 0) {
+    const { minDate } = getIncidentDataRange(incidents)
+    if (minDate) {
+      months = differenceInMonths(now, minDate) + 1
+      months = Math.max(months, 1)
+    } else {
+      months = 12
+    }
+  } else if (!months) {
+    months = 12
+  }
 
   // Check if the current month is mature enough to include (>=80% elapsed)
   const dayOfMonth = getDate(now)
@@ -58,12 +94,125 @@ export const getIncidentsByMonth = (incidents, months = 12) => {
     })
 
     result.push({
-      month: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
       negative: monthIncidents.filter(i => NEGATIVE_OBSERVATION_TYPES.includes(i.type)).length,
       incidents: monthIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length,
       positive: monthIncidents.filter(i => i.type === 'positive').length,
       total: monthIncidents.length,
     })
+  }
+
+  return result
+}
+
+/**
+ * Get incidents grouped by week - Positive vs Negative Observations
+ * Range is data-driven: from oldest incident's week to current week.
+ * Excludes the current week if less than 80% of it has elapsed.
+ */
+export const getIncidentsByWeek = (incidents) => {
+  if (!incidents || incidents.length === 0) return []
+
+  const now = getCurrentDate()
+  const result = []
+
+  const { minDate } = getIncidentDataRange(incidents)
+  if (!minDate) return []
+
+  // Check if current week is mature enough (>=80% elapsed)
+  const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 })
+  const currentWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
+  const totalWeekMs = currentWeekEnd.getTime() - currentWeekStart.getTime()
+  const elapsedMs = now.getTime() - currentWeekStart.getTime()
+  const weekProgress = elapsedMs / totalWeekMs
+  const includeCurrentWeek = weekProgress >= 0.8
+
+  // Generate weekly buckets from minDate's week to now
+  const dataWeekStart = startOfWeek(minDate, { weekStartsOn: 1 })
+  let cursor = new Date(dataWeekStart)
+
+  while (cursor <= now) {
+    const weekStart = startOfWeek(cursor, { weekStartsOn: 1 })
+    const weekEnd = endOfWeek(cursor, { weekStartsOn: 1 })
+
+    // Skip current week if immature
+    const isCurrentWeek = weekStart.getTime() === currentWeekStart.getTime()
+    if (isCurrentWeek && !includeCurrentWeek) {
+      cursor = new Date(cursor.getTime() + 7 * 24 * 60 * 60 * 1000)
+      continue
+    }
+
+    const weekIncidents = incidents.filter(incident => {
+      const incidentDate = parseISO(incident.date)
+      return isWithinInterval(incidentDate, { start: weekStart, end: weekEnd })
+    })
+
+    result.push({
+      label: format(weekStart, 'MMM d'),
+      negative: weekIncidents.filter(i => NEGATIVE_OBSERVATION_TYPES.includes(i.type)).length,
+      incidents: weekIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length,
+      positive: weekIncidents.filter(i => i.type === 'positive').length,
+      total: weekIncidents.length,
+    })
+
+    cursor = new Date(cursor.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }
+
+  return result
+}
+
+/**
+ * Get incidents grouped by quarter - Positive vs Negative Observations
+ * Range is data-driven: from oldest incident's quarter to current quarter.
+ * Excludes the current quarter if less than 80% of it has elapsed.
+ */
+export const getIncidentsByQuarter = (incidents) => {
+  if (!incidents || incidents.length === 0) return []
+
+  const now = getCurrentDate()
+  const result = []
+
+  const { minDate } = getIncidentDataRange(incidents)
+  if (!minDate) return []
+
+  // Check if current quarter is mature enough (>=80% elapsed)
+  const currentQStart = startOfQuarter(now)
+  const currentQEnd = endOfQuarter(now)
+  const totalQMs = currentQEnd.getTime() - currentQStart.getTime()
+  const elapsedQMs = now.getTime() - currentQStart.getTime()
+  const quarterProgress = elapsedQMs / totalQMs
+  const includeCurrentQuarter = quarterProgress >= 0.8
+
+  // Generate quarterly buckets from minDate's quarter to now
+  let cursor = new Date(startOfQuarter(minDate))
+
+  while (cursor <= now) {
+    const qStart = startOfQuarter(cursor)
+    const qEnd = endOfQuarter(cursor)
+
+    // Skip current quarter if immature
+    const isCurrentQuarter = qStart.getTime() === currentQStart.getTime()
+    if (isCurrentQuarter && !includeCurrentQuarter) {
+      cursor = new Date(qStart.getFullYear(), qStart.getMonth() + 3, 1)
+      continue
+    }
+
+    const qIncidents = incidents.filter(incident => {
+      const incidentDate = parseISO(incident.date)
+      return isWithinInterval(incidentDate, { start: qStart, end: qEnd })
+    })
+
+    const quarter = getQuarter(qStart)
+
+    result.push({
+      label: `Q${quarter} '${format(qStart, 'yy')}`,
+      negative: qIncidents.filter(i => NEGATIVE_OBSERVATION_TYPES.includes(i.type)).length,
+      incidents: qIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length,
+      positive: qIncidents.filter(i => i.type === 'positive').length,
+      total: qIncidents.length,
+    })
+
+    cursor = new Date(qStart.getFullYear(), qStart.getMonth() + 3, 1)
   }
 
   return result

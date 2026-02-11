@@ -28,7 +28,6 @@ import Skeleton from '../components/ui/Skeleton'
 import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS } from '../utils/constants'
 import {
   getIncidentCountsByType,
-  getIncidentsByMonth,
   getOpenActionsCount,
 } from '../utils/calculations'
 import { aggregateContributingFactors } from '../utils/rootCauseEngine'
@@ -388,11 +387,6 @@ const Dashboard = () => {
 
     return result
   }, [filteredIncidents])
-
-  const incidentTrend = useMemo(
-    () => getIncidentsByMonth(filteredIncidents, 12),
-    [filteredIncidents]
-  )
 
   // Close out percentage
   const closeOutPercentage = useMemo(() => {
@@ -864,7 +858,7 @@ const Dashboard = () => {
             />
           </div>
           <div ref={trendChartRef}>
-            <IncidentTrendChart data={incidentTrend} />
+            <IncidentTrendChart incidents={filteredIncidents} />
           </div>
         </div>
       </div>
