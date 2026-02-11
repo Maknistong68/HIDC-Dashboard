@@ -233,7 +233,8 @@ export const mapExcelColumns = (headers) => {
     'significant hazard': 'hazardCategory',
     'contractor': 'contractor',
     'site': 'site',
-    'level': 'level'
+    'level': 'level',
+    'work-related': 'workRelated'
   }
 
   // First pass: exact matching
@@ -285,6 +286,7 @@ export const EXPECTED_COLUMNS = {
   site: ['site'],  // Only 'site' column
   company: ['company', 'companies', 'project', 'projectname', 'location', 'client', 'clientname', 'organization', 'org', 'entity', 'businessunit', 'bu', 'division', 'department', 'dept', 'region', 'area', 'areaname', 'facility', 'plant', 'branch', 'worksite', 'vendor', 'vendorname', 'subcontractor'],
   consequence: ['consequence', 'consequencetype', 'consequencecategory', 'injurytype', 'incidentconsequence', 'severity', 'consequencelevel'],
+  workRelated: ['workrelated', 'work-related', 'workrel', 'isworkrelated'],
 }
 
 // Classification mappings to dashboard types
@@ -2023,6 +2025,8 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     const rawSite = getValue('site') || ''  // Only from 'site' column
     const company = getValue('company') || ''  // For backwards compatibility
     const rawConsequence = (getValue('consequence') || '').toString().trim()
+    const rawWorkRelated = (getValue('workRelated') || '').toString().trim().toLowerCase()
+    const workRelated = rawWorkRelated === 'yes' ? true : rawWorkRelated === 'no' ? false : null
 
     // ============================================
     // APPLY SETTINGS-BASED CLEANUP
@@ -2428,6 +2432,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       approvalStatus: status?.trim() || 'Open', // Preserve original approval status
       reportedBy,
       consequence: rawConsequence || null,
+      workRelated,
       originalClassification: classification,
       originalType: type,
       autoClassified: mapping.autoClassified || false,
