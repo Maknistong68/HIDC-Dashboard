@@ -25,7 +25,7 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from '../utils/constants'
+import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getIncidentsByMonth,
@@ -364,19 +364,19 @@ const Dashboard = () => {
     [filteredIncidents]
   )
 
-  // Pyramid data with open/closed breakdown
+  // Pyramid data with open/closed breakdown - counts each specific sub-type
   const pyramidData = useMemo(() => {
     const result = {}
-    const types = ['incident', 'near-miss', 'ncr', 'unsafe-act', 'unsafe-condition', 'positive', 'leadership']
 
-    types.forEach(type => {
-      result[type] = { open: 0, closed: 0 }
+    // Initialize all pyramid types
+    PYRAMID_SECTIONS.forEach(section => {
+      section.types.forEach(t => {
+        result[t.key] = { open: 0, closed: 0 }
+      })
     })
 
     filteredIncidents.forEach(incident => {
-      // Aggregate LTI, MTI, FAC into 'incident' category
-      const typeKey = RECORDABLE_INCIDENT_TYPES.includes(incident.type) ? 'incident' : incident.type
-
+      const typeKey = incident.type
       if (result[typeKey]) {
         if (incident.actionStatus === 'closed') {
           result[typeKey].closed++

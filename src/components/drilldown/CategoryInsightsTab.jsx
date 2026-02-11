@@ -81,17 +81,23 @@ const CategoryInsightsTab = ({
       'near-miss': 'Near Miss',
       'positive': 'Positive Observation',
       'ncr': 'Non-Conformance',
+      'fatality': 'Fatality',
       'lti': 'Lost Time Injury',
       'mti': 'Medical Treatment Injury',
       'fac': 'First Aid Case',
+      'environmental': 'Environmental',
+      'fire': 'Fire',
+      'security': 'Security',
+      'damage-to-property': 'Damage to Property',
       'leadership': 'Leadership Event',
+      'emergency-drill': 'Emergency Drill',
       'incident': 'Incident'
     }
     return labels[type] || type?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown'
   }
 
-  // Positive types don't need root cause analysis or recommendations
-  const positiveTypes = ['positive', 'leadership']
+  // Positive/proactive types don't need root cause analysis or recommendations
+  const positiveTypes = ['positive', 'leadership', 'emergency-drill']
   const isPositiveCategory = positiveTypes.includes(categoryType)
 
   if (!insights.hasData) {

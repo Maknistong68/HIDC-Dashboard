@@ -224,6 +224,7 @@ export const mapExcelColumns = (headers) => {
     'event id': 'eventId',
     'type': 'type',
     'classification': 'classification',
+    'consequence': 'consequence',
     'event date': 'date',
     'event description': 'description',
     'approval': 'status',
@@ -283,6 +284,7 @@ export const EXPECTED_COLUMNS = {
   contractor: ['contractor'],  // Only 'contractor' column
   site: ['site'],  // Only 'site' column
   company: ['company', 'companies', 'project', 'projectname', 'location', 'client', 'clientname', 'organization', 'org', 'entity', 'businessunit', 'bu', 'division', 'department', 'dept', 'region', 'area', 'areaname', 'facility', 'plant', 'branch', 'worksite', 'vendor', 'vendorname', 'subcontractor'],
+  consequence: ['consequence', 'consequencetype', 'consequencecategory', 'injurytype', 'incidentconsequence', 'severity', 'consequencelevel'],
 }
 
 // Classification mappings to dashboard types
@@ -319,14 +321,14 @@ export const CLASSIFICATION_MAPPING = {
   'First Aid': { type: 'incident', incidentType: 'fac' },
   'First Aid Case': { type: 'incident', incidentType: 'fac' },
 
-  // Property Damage
-  'Property Damage': { type: 'incident', incidentType: 'property-damage' },
-  'property damage': { type: 'incident', incidentType: 'property-damage' },
-  'PROPERTY DAMAGE': { type: 'incident', incidentType: 'property-damage' },
-  'Property': { type: 'incident', incidentType: 'property-damage' },
-  'Damage': { type: 'incident', incidentType: 'property-damage' },
-  'Equipment Damage': { type: 'incident', incidentType: 'property-damage' },
-  'Asset Damage': { type: 'incident', incidentType: 'property-damage' },
+  // Property Damage → consolidated 'damage-to-property'
+  'Property Damage': { type: 'incident', incidentType: 'damage-to-property' },
+  'property damage': { type: 'incident', incidentType: 'damage-to-property' },
+  'PROPERTY DAMAGE': { type: 'incident', incidentType: 'damage-to-property' },
+  'Property': { type: 'incident', incidentType: 'damage-to-property' },
+  'Damage': { type: 'incident', incidentType: 'damage-to-property' },
+  'Equipment Damage': { type: 'incident', incidentType: 'damage-to-property' },
+  'Asset Damage': { type: 'incident', incidentType: 'damage-to-property' },
 
   // Environmental
   'Environmental': { type: 'incident', incidentType: 'environmental' },
@@ -337,6 +339,12 @@ export const CLASSIFICATION_MAPPING = {
   'Pollution': { type: 'incident', incidentType: 'environmental' },
   'Contamination': { type: 'incident', incidentType: 'environmental' },
   'Waste': { type: 'incident', incidentType: 'environmental' },
+
+  // Fire
+  'Fire': { type: 'incident', incidentType: 'fire' },
+  'fire': { type: 'incident', incidentType: 'fire' },
+  'FIRE': { type: 'incident', incidentType: 'fire' },
+  'Fire Incident': { type: 'incident', incidentType: 'fire' },
 
   // Security
   'Security': { type: 'incident', incidentType: 'security' },
@@ -362,11 +370,94 @@ export const CLASSIFICATION_MAPPING = {
   'Safety Walk': { type: 'incident', incidentType: 'leadership' },
   'Safety Tour': { type: 'incident', incidentType: 'leadership' },
 
+  // Environment classification - maps to consolidated environmental type
+  'Environment': { type: 'incident', incidentType: 'environmental' },
+  'environment': { type: 'incident', incidentType: 'environmental' },
+  'ENVIRONMENT': { type: 'incident', incidentType: 'environmental' },
+
+  // Emergency Drill - proactive safety engagement
+  'Emergency Drill': { type: 'incident', incidentType: 'emergency-drill' },
+  'emergency drill': { type: 'incident', incidentType: 'emergency-drill' },
+  'Drill': { type: 'incident', incidentType: 'emergency-drill' },
+
   // "Others" - will be auto-classified by keywords
   'To Be Determined': { type: 'unknown', needsMapping: true },
   'Safety': { type: 'unknown', needsMapping: true },
   'Other': { type: 'unknown', needsMapping: true },
   'Others': { type: 'unknown', needsMapping: true },
+}
+
+// ============================================
+// CONSEQUENCE TYPE MAPPING
+// Maps Consequence column values to specific incident sub-types
+// ============================================
+export const CONSEQUENCE_TYPE_MAPPING = {
+  // HUM: Human Injury/Illness consequences
+  'Fatality': 'fatality',
+  'fatality': 'fatality',
+  'Lost Time': 'lti',
+  'lost time': 'lti',
+  'Lost Time Injury': 'lti',
+  'Medical Treatment': 'mti',
+  'medical treatment': 'mti',
+  'Medical Treatment Injury': 'mti',
+  'First Aid': 'fac',
+  'first aid': 'fac',
+  'First Aid Case': 'fac',
+
+  // ENV: Environmental consequences → consolidated 'environmental'
+  'Major/Severe - P1': 'environmental',
+  'Major - P1': 'environmental',
+  'Severe - P1': 'environmental',
+  'Major/Severe': 'environmental',
+  'Moderate - P2': 'environmental',
+  'Moderate': 'environmental',
+  'Minor - P3': 'environmental',
+  'Minor': 'environmental',
+
+  // DMG: Property Damage consequences → consolidated 'damage-to-property'
+  'Light Vehicle / Motor Vehicle Incidents': 'damage-to-property',
+  'Light Vehicle': 'damage-to-property',
+  'Motor Vehicle': 'damage-to-property',
+  'Motor Vehicle Incidents': 'damage-to-property',
+  'Heavy Plant (excl Truck and Trailer)': 'damage-to-property',
+  'Heavy Plant': 'damage-to-property',
+  'Truck and Trailer': 'damage-to-property',
+  'Truck & Trailer': 'damage-to-property',
+  'Static Equipment': 'damage-to-property',
+}
+
+/**
+ * Find consequence type mapping (case-insensitive with substring fallback)
+ */
+const findConsequenceMapping = (value) => {
+  if (!value) return null
+  const trimmed = value.trim()
+  // Exact match
+  if (CONSEQUENCE_TYPE_MAPPING[trimmed]) return CONSEQUENCE_TYPE_MAPPING[trimmed]
+  // Case-insensitive match
+  const lowerValue = trimmed.toLowerCase()
+  const key = Object.keys(CONSEQUENCE_TYPE_MAPPING).find(
+    k => k.toLowerCase() === lowerValue
+  )
+  if (key) return CONSEQUENCE_TYPE_MAPPING[key]
+  // Substring match for partial values
+  const substringKey = Object.keys(CONSEQUENCE_TYPE_MAPPING).find(
+    k => lowerValue.includes(k.toLowerCase()) || k.toLowerCase().includes(lowerValue)
+  )
+  return substringKey ? CONSEQUENCE_TYPE_MAPPING[substringKey] : null
+}
+
+// Legacy type mapping - maps old generic types to new consequence-based types
+const LEGACY_TYPE_MAP = {
+  'property-damage': 'damage-to-property',
+  'env-major': 'environmental',
+  'env-moderate': 'environmental',
+  'env-minor': 'environmental',
+  'dmg-light-vehicle': 'damage-to-property',
+  'dmg-heavy-plant': 'damage-to-property',
+  'dmg-truck-trailer': 'damage-to-property',
+  'dmg-static-equipment': 'damage-to-property',
 }
 
 // ============================================
@@ -1931,6 +2022,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     const rawContractor = getValue('contractor') || ''  // Only from 'contractor' column
     const rawSite = getValue('site') || ''  // Only from 'site' column
     const company = getValue('company') || ''  // For backwards compatibility
+    const rawConsequence = (getValue('consequence') || '').toString().trim()
 
     // ============================================
     // APPLY SETTINGS-BASED CLEANUP
@@ -2300,6 +2392,23 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       })
     }
 
+    // ============================================
+    // CONSEQUENCE-BASED REFINEMENT
+    // If Consequence column is populated, use it to determine specific sub-type
+    // This overrides generic injury/damage types with granular consequence types
+    // ============================================
+    if (rawConsequence) {
+      const consequenceType = findConsequenceMapping(rawConsequence)
+      if (consequenceType) {
+        mapping = { ...mapping, incidentType: consequenceType, consequenceMapped: true }
+      }
+    }
+
+    // Legacy type mapping: convert old generic types to new consequence-based types
+    if (LEGACY_TYPE_MAP[mapping.incidentType]) {
+      mapping = { ...mapping, incidentType: LEGACY_TYPE_MAP[mapping.incidentType] }
+    }
+
     incidents.push({
       externalId: eventId,
       projectId,
@@ -2318,6 +2427,7 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       actionStatus,
       approvalStatus: status?.trim() || 'Open', // Preserve original approval status
       reportedBy,
+      consequence: rawConsequence || null,
       originalClassification: classification,
       originalType: type,
       autoClassified: mapping.autoClassified || false,

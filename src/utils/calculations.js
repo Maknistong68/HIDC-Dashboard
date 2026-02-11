@@ -1,26 +1,29 @@
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear } from 'date-fns'
-import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES } from './constants'
+import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, PYRAMID_SECTIONS } from './constants'
 import { getCurrentDate } from './dateUtils'
 import { isOpenAction } from './incidentHelpers'
 
-// Get incident counts by type
+// Get incident counts by type - counts each specific sub-type individually
 export const getIncidentCountsByType = (incidents) => {
-  const counts = {
-    'incident': 0, // Aggregates LTI, MTI, FAC
-    'near-miss': 0,
-    'ncr': 0, // Non-Conformance
-    'unsafe-act': 0,
-    'unsafe-condition': 0,
-    'positive': 0,
-    'leadership': 0, // Leadership Event
-  }
+  // Initialize counts for all pyramid types
+  const counts = {}
+  PYRAMID_SECTIONS.forEach(section => {
+    section.types.forEach(t => {
+      counts[t.key] = 0
+    })
+  })
+  // Keep legacy aggregate 'incident' count for backward compatibility
+  counts['incident'] = 0
 
   incidents.forEach(incident => {
-    // Aggregate LTI, MTI, FAC into 'incident' count
-    if (RECORDABLE_INCIDENT_TYPES.includes(incident.type)) {
+    const type = incident.type
+    // Count in specific sub-type bucket
+    if (counts.hasOwnProperty(type)) {
+      counts[type]++
+    }
+    // Also maintain aggregate 'incident' count for backward compat
+    if (RECORDABLE_INCIDENT_TYPES.includes(type)) {
       counts['incident']++
-    } else if (counts.hasOwnProperty(incident.type)) {
-      counts[incident.type]++
     }
   })
 
@@ -95,9 +98,14 @@ export const getIncidentsByMonth = (incidents, months = 12) => {
  * Current values represent industry-standard severity ratios.
  */
 export const SEVERITY_WEIGHTS = {
+  fatality: 10000,
   lti: 1000,
   mti: 500,
   fac: 100,
+  'environmental': 200,
+  'fire': 500,
+  'security': 100,
+  'damage-to-property': 200,
   'near-miss': 50,
   ncr: 20,
   default: 1
