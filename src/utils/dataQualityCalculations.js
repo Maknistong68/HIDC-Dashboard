@@ -1929,7 +1929,8 @@ export const getUnclassifiableRecords = (incidents) => {
         noDescription: { count: 0, records: [], percentage: '0.0' },
         tooShort: { count: 0, records: [], percentage: '0.0' },
         unrecognizedCategory: { count: 0, records: [], percentage: '0.0' },
-        lowConfidence: { count: 0, records: [], percentage: '0.0' }
+        lowConfidence: { count: 0, records: [], percentage: '0.0' },
+        restrictedClassification: { count: 0, records: [], percentage: '0.0' }
       },
       summary: {
         actionable: 0,
@@ -1945,6 +1946,7 @@ export const getUnclassifiableRecords = (incidents) => {
   const unrecognizedCategory = []
   const lowConfidence = []
   const historicalPlaceholder = [] // Enablon legacy/placeholder events
+  const restrictedClassification = [] // High-confidence blocked by "Other" source
 
   // Track unique records (for total count - avoid double counting)
   const allUnclassifiable = new Set()
@@ -2103,6 +2105,66 @@ export const getUnclassifiableRecords = (incidents) => {
       hasIssue = true
     }
 
+    // Check 6: High-confidence classification blocked by "Other" source restriction
+    // Supports both new records (classificationBlocked field) and legacy records (runtime detection)
+    const blocked = incident.classificationBlocked
+    let suggestedCategory = blocked?.suggestedCategory || null
+    let blockedConfidence = blocked?.confidence || null
+
+    // Runtime detection for records imported before classificationBlocked was added:
+    // If Excel had generic category AND ensemble votes suggest a major hazard with good confidence
+    // AND the record did NOT end up classified as that major hazard → it was blocked
+    if (!suggestedCategory && originalCategory) {
+      const origLower = (originalCategory || '').toLowerCase().trim()
+      const isGenericSource = genericValues.includes(origLower)
+      if (isGenericSource) {
+        const currentCat = incident.location || ''
+        const isCurrentMajor = MAJOR_HAZARDS.includes(currentCat)
+        // If already classified as a major hazard, no blocking occurred
+        if (!isCurrentMajor) {
+          const votes = incident.contextAnalysis?.votes || {}
+          const voteConfidence = incident.contextAnalysis?.confidence || 0
+          // Find the most-voted major hazard from ensemble strategies
+          const majorVoteCounts = {}
+          for (const strategyName of Object.keys(votes)) {
+            const vote = votes[strategyName]
+            if (vote?.category && MAJOR_HAZARDS.includes(vote.category) && vote.confidence > 0) {
+              majorVoteCounts[vote.category] = (majorVoteCounts[vote.category] || 0) + 1
+            }
+          }
+          const majorEntries = Object.entries(majorVoteCounts)
+          if (majorEntries.length > 0) {
+            majorEntries.sort((a, b) => b[1] - a[1])
+            const topMajor = majorEntries[0][0]
+            const topVotes = majorEntries[0][1]
+            // At least 2 strategies agree on a major hazard, or confidence >= 70
+            if (topVotes >= 2 || voteConfidence >= 70) {
+              suggestedCategory = topMajor
+              blockedConfidence = voteConfidence || Math.round(topVotes / Object.keys(votes).length * 100)
+            }
+          }
+        }
+      }
+    }
+
+    if (suggestedCategory) {
+      restrictedClassification.push({
+        id: incident.externalId || incident.id,
+        date: incident.date,
+        reporter: incident.reportedBy || 'Unknown',
+        contractor: incident.contractor || '',
+        site: incident.site || '',
+        description: description.substring(0, 200) + (description.length > 200 ? '...' : ''),
+        originalCategory: originalCategory || '(blank)',
+        currentCategory: incident.location || 'General Site Issues',
+        suggestedCategory,
+        confidence: blockedConfidence,
+        reason: `Voting suggested "${suggestedCategory}" (${blockedConfidence}%) but blocked — Excel had generic category`,
+        incident
+      })
+      hasIssue = true
+    }
+
     if (hasIssue) {
       allUnclassifiable.add(incident.id || incident.externalId)
     }
@@ -2148,6 +2210,13 @@ export const getUnclassifiableRecords = (incidents) => {
         percentage: totalIncidents > 0 ? ((historicalPlaceholder.length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Historical/Placeholder',
         description: 'Legacy Enablon events marked as "ignore" - not real observations'
+      },
+      restrictedClassification: {
+        count: restrictedClassification.length,
+        records: restrictedClassification,
+        percentage: totalIncidents > 0 ? ((restrictedClassification.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        label: 'Restricted Classification',
+        description: 'High-confidence major hazard blocked because Excel had generic category'
       }
     },
     summary: {

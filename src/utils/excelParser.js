@@ -1484,7 +1484,7 @@ export const getObservationAnalysis = (description) => {
  * @param {string} description
  * @param {string} existingCategory
  * @param {string} mode
- * @returns {{ category: string, scores: Object|null, winMethod: string }}
+ * @returns {{ category: string, scores: Object|null, winMethod: string, blockedCategory: string|null, blockedConfidence: number|null }}
  */
 const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-excel') => {
   const text = (description || '').toLowerCase()
@@ -1510,7 +1510,7 @@ const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-
   if (existingCategory && existingCategory.trim() !== '' && !isOther) {
     const normalized = normalizeHazardCategory(existingCategory)
     if (normalized && normalized !== FALLBACK_CATEGORY) {
-      return { category: normalized, scores: null, winMethod: 'rule-1-excel' }
+      return { category: normalized, scores: null, winMethod: 'rule-1-excel', blockedCategory: null, blockedConfidence: null }
     }
   }
 
@@ -1525,16 +1525,24 @@ const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-
   }
 
   // No description to parse → fallback
-  if (!text) return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback' }
+  if (!text) return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback', blockedCategory: null, blockedConfidence: null }
 
   // ============================================
   // STEP 0: CRITICAL HAZARD KEYWORDS (ABSOLUTE PRIORITY)
   // These ALWAYS win over location/context words
   // Checks for life-threatening hazards, chemicals, supervision issues, permits
   // ============================================
+  let blockedCategory = null
+  let blockedConfidence = null
+
   const criticalCategory = checkCriticalKeywords(mainText)
-  if (criticalCategory && isAllowedForOtherSource(criticalCategory)) {
-    return { category: criticalCategory, scores: null, winMethod: 'step-0-critical' }
+  if (criticalCategory) {
+    if (isAllowedForOtherSource(criticalCategory)) {
+      return { category: criticalCategory, scores: null, winMethod: 'step-0-critical', blockedCategory: null, blockedConfidence: null }
+    }
+    // Blocked by "Other" source restriction
+    blockedCategory = criticalCategory
+    blockedConfidence = 95 // Critical keywords are very high confidence
   }
 
   // ============================================
@@ -1542,8 +1550,15 @@ const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-
   // Handles misleading terms like "line of fire", "fire extinguisher", etc.
   // ============================================
   const redirectCategory = checkContextRedirects(mainText)
-  if (redirectCategory && isAllowedForOtherSource(redirectCategory)) {
-    return { category: redirectCategory, scores: null, winMethod: 'step-1-redirect' }
+  if (redirectCategory) {
+    if (isAllowedForOtherSource(redirectCategory)) {
+      return { category: redirectCategory, scores: null, winMethod: 'step-1-redirect', blockedCategory: null, blockedConfidence: null }
+    }
+    // Blocked by "Other" source restriction (only if not already captured)
+    if (!blockedCategory) {
+      blockedCategory = redirectCategory
+      blockedConfidence = 90 // Context redirects are high confidence
+    }
   }
 
   // ============================================
@@ -1565,9 +1580,15 @@ const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-
   const contextResult = analyzeObservation(description, existingCategory)
 
   if (contextResult.shouldOverride && contextResult.confidence >= 85 &&
-      isAllowedForOtherSource(contextResult.category) &&
       !isExcludedTerm(text, contextResult.category)) {
-    return { category: contextResult.category, scores: null, winMethod: 'step-2-consensus' }
+    if (isAllowedForOtherSource(contextResult.category)) {
+      return { category: contextResult.category, scores: null, winMethod: 'step-2-consensus', blockedCategory: null, blockedConfidence: null }
+    }
+    // High-confidence consensus blocked by "Other" source restriction
+    if (!blockedCategory) {
+      blockedCategory = contextResult.category
+      blockedConfidence = contextResult.confidence
+    }
   }
 
   // Feed individual strategy votes into scoring
@@ -1648,10 +1669,27 @@ const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-
     for (const [cat, score] of entries) {
       roundedScores[cat] = Math.round(score)
     }
-    return { category: entries[0][0], scores: roundedScores, winMethod: 'scoring' }
+    const winner = entries[0][0]
+
+    // Post-scoring check: if ensemble voting suggested a major hazard but it was blocked
+    if (!blockedCategory && isOther && contextResult.category &&
+        contextResult.confidence >= 70 && MAJOR_HAZARDS.includes(contextResult.category) &&
+        winner !== contextResult.category) {
+      blockedCategory = contextResult.category
+      blockedConfidence = contextResult.confidence
+    }
+
+    return { category: winner, scores: roundedScores, winMethod: 'scoring', blockedCategory, blockedConfidence }
   }
 
-  return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback' }
+  // Final fallback: still check if ensemble had a suggestion that was blocked
+  if (!blockedCategory && isOther && contextResult.category &&
+      contextResult.confidence >= 70 && MAJOR_HAZARDS.includes(contextResult.category)) {
+    blockedCategory = contextResult.category
+    blockedConfidence = contextResult.confidence
+  }
+
+  return { category: FALLBACK_CATEGORY, scores: null, winMethod: 'fallback', blockedCategory, blockedConfidence }
 }
 
 /**
@@ -2248,6 +2286,11 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
         // Classification scoring details (for audit/copy)
         classificationScores: classificationResult.scores || null,
         classificationMethod: classificationResult.winMethod || null,
+        classificationBlocked: classificationResult.blockedCategory ? {
+          suggestedCategory: classificationResult.blockedCategory,
+          confidence: classificationResult.blockedConfidence,
+          reason: 'Source was generic ("Other") — major hazard classification restricted'
+        } : null,
         // Context-Aware Classification Analysis (Ensemble Voting System)
         contextAnalysis: {
           hazardObject: contextAnalysis.hazardObject,
@@ -2400,6 +2443,11 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       // Classification scoring details (for audit/copy)
       classificationScores: classificationResult.scores || null,
       classificationMethod: classificationResult.winMethod || null,
+      classificationBlocked: classificationResult.blockedCategory ? {
+        suggestedCategory: classificationResult.blockedCategory,
+        confidence: classificationResult.blockedConfidence,
+        reason: 'Source was generic ("Other") — major hazard classification restricted'
+      } : null,
       // Context-Aware Classification Analysis (Ensemble Voting System)
       contextAnalysis: {
         hazardObject: contextAnalysis.hazardObject,

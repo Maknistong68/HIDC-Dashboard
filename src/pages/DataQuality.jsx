@@ -785,7 +785,8 @@ const DataQuality = () => {
       tooShort: 'Too Short',
       unrecognizedCategory: 'Unrecognized Category',
       lowConfidence: 'Low Confidence',
-      historicalPlaceholder: 'Historical/Placeholder'
+      historicalPlaceholder: 'Historical/Placeholder',
+      restrictedClassification: 'Restricted Classification'
     }
 
     openDrillDown(
@@ -1766,6 +1767,25 @@ const DataQuality = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Restricted Classification (blocked by generic "Other" source) */}
+                {qualityData.unclassifiableRecords?.byReason?.restrictedClassification?.count > 0 && (
+                  <div
+                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
+                    onClick={() => handleUnclassifiableDrillDown('restrictedClassification')}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Restricted</span>
+                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.restrictedClassification.count}</span>
+                    </div>
+                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500 rounded-full transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.restrictedClassification.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
@@ -1846,18 +1866,9 @@ const DataQuality = () => {
                 {misclassificationData.totalMisclassified}
               </span>
             </h3>
-            <button
-              onClick={() => setShowMisclassification(!showMisclassification)}
-              className={`flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 transition-colors ${
-                isMobile ? 'h-11 px-3 bg-orange-50 rounded-lg active:bg-orange-100' : ''
-              }`}
-            >
-              {showMisclassification ? 'Hide' : 'View'} Details
-              {showMisclassification ? <ChevronUp size={isMobile ? 18 : 16} /> : <ChevronDown size={isMobile ? 18 : 16} />}
-            </button>
           </div>
 
-          {/* Summary Stats Row - always visible */}
+          {/* Summary Stats Row */}
           <div className={`grid gap-3 mb-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-5'}`}>
             <div className="bg-orange-50 rounded-lg p-2 text-center">
               <div className={`font-bold text-orange-700 ${isMobile ? 'text-base' : 'text-lg'}`}>{misclassificationData.totalMisclassified}</div>
@@ -1881,9 +1892,6 @@ const DataQuality = () => {
             </div>
           </div>
 
-          {/* Expanded Details */}
-          {showMisclassification && (
-            <>
               {/* Tabs */}
               <div className="flex gap-1 mb-3 border-b border-surface-200">
                 <button
@@ -1920,9 +1928,9 @@ const DataQuality = () => {
 
               {/* Tab Content - All Records */}
               {misclassificationTab === 'detailed' && (
-                <div className="overflow-auto max-h-96">
+                <div className="overflow-auto max-h-[600px]">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-surface-50">
+                    <thead className="sticky top-0 bg-surface-50 z-10">
                       <tr>
                         <th className="text-left p-2 font-medium text-surface-600">Date</th>
                         <th className="text-left p-2 font-medium text-surface-600">Current</th>
@@ -1933,7 +1941,7 @@ const DataQuality = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {misclassificationData.misclassifiedRecords.slice(0, 50).map((record, idx) => (
+                      {misclassificationData.misclassifiedRecords.map((record, idx) => (
                         <tr
                           key={record.id || idx}
                           className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} hover:bg-orange-50 cursor-pointer`}
@@ -1972,19 +1980,14 @@ const DataQuality = () => {
                       ))}
                     </tbody>
                   </table>
-                  {misclassificationData.misclassifiedRecords.length > 50 && (
-                    <div className="text-xs text-surface-400 mt-2 text-center">
-                      Showing 50 of {misclassificationData.misclassifiedRecords.length} records
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Tab Content - By Current Category */}
               {misclassificationTab === 'byCurrent' && (
-                <div className="overflow-auto max-h-80">
+                <div className="overflow-auto max-h-[600px]">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-surface-50">
+                    <thead className="sticky top-0 bg-surface-50 z-10">
                       <tr>
                         <th className="text-left p-2 font-medium text-surface-600">Current Category (Wrong)</th>
                         <th className="text-right p-2 font-medium text-surface-600">Count</th>
@@ -2016,9 +2019,9 @@ const DataQuality = () => {
 
               {/* Tab Content - By Suggested Category */}
               {misclassificationTab === 'bySuggested' && (
-                <div className="overflow-auto max-h-80">
+                <div className="overflow-auto max-h-[600px]">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-surface-50">
+                    <thead className="sticky top-0 bg-surface-50 z-10">
                       <tr>
                         <th className="text-left p-2 font-medium text-surface-600">Should Be Category (Correct)</th>
                         <th className="text-right p-2 font-medium text-surface-600">Count</th>
@@ -2047,8 +2050,6 @@ const DataQuality = () => {
                   </table>
                 </div>
               )}
-            </>
-          )}
         </div>
       )}
 
