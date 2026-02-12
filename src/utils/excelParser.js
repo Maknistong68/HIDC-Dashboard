@@ -261,6 +261,48 @@ export const mapExcelColumns = (headers) => {
 }
 
 /**
+ * Footer metadata patterns - rows appended by NEOM export system
+ * that should be stripped before parsing data rows.
+ */
+const FOOTER_MARKER_PATTERNS = [
+  /^\s*information\s*$/i,
+  /this report has been generated/i,
+  /search criteria/i,
+  /query builder/i,
+  /end of report/i,
+]
+
+/**
+ * Detect the start of footer metadata rows at the end of data.
+ * Scans backwards from the end for efficiency since footer is always at the tail.
+ * Returns the index of the first footer row, or -1 if none found.
+ */
+function detectFooterStart(rows) {
+  let footerStart = -1
+
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const row = rows[i]
+    // Get the first non-empty cell's text
+    const text = row
+      ?.find(cell => cell !== null && cell !== undefined && cell !== '')
+      ?.toString()
+      ?.trim()
+
+    if (!text) continue // skip fully-empty rows between footer lines
+
+    const isFooter = FOOTER_MARKER_PATTERNS.some(pattern => pattern.test(text))
+    if (isFooter) {
+      footerStart = i
+    } else {
+      // Hit a non-footer, non-empty row — stop scanning
+      break
+    }
+  }
+
+  return footerStart
+}
+
+/**
  * Normalize header for matching - removes special chars, spaces, lowercases
  */
 const normalizeHeader = (h) => {
@@ -1809,9 +1851,11 @@ export const parseExcelFile = (file) => {
         // Auto-detect header row (might not be row 0)
         const headerRowIndex = detectHeaderRow(jsonData)
         const headers = jsonData[headerRowIndex]
-        const rows = jsonData.slice(headerRowIndex + 1).filter(row =>
+        const allRows = jsonData.slice(headerRowIndex + 1).filter(row =>
           row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
         )
+        const footerStartIndex = detectFooterStart(allRows)
+        const rows = footerStartIndex >= 0 ? allRows.slice(0, footerStartIndex) : allRows
 
         resolve({
           sheetName,
