@@ -179,11 +179,11 @@ const Dashboard = () => {
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents, heatmapIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
 
-  // Calculate contributing factors for negative incidents (used for hazard insights drill-down)
+  // Calculate contributing factors for all observations (used for hazard insights drill-down)
   // Uses module-level cache so SafetyOutlook hitting the same function gets a cache hit
   const factorData = useDeferredMemo(() => {
-    return getCachedAggregation('dashboard-factors-negative', heatmapIncidents, (data) =>
-      aggregateContributingFactors(data, 'negative')
+    return getCachedAggregation('dashboard-factors-all', heatmapIncidents, (data) =>
+      aggregateContributingFactors(data)
     )
   }, [heatmapIncidents])
 
@@ -712,7 +712,7 @@ const Dashboard = () => {
           info="HOW THIS IS CALCULATED: We look at the 'Action Status' field in your data. If an observation is marked as 'Closed', it means someone has addressed the issue and completed any required actions. This percentage shows how many observations have been fully resolved compared to the total. GREEN (80%+): Excellent - your team is closing out issues quickly. YELLOW (50-79%): Needs attention - some issues are lingering. RED (below 50%): Urgent - too many open items need action."
         />
         <KPICard
-          title="Positive Rate"
+          title="Positive Observation"
           value={`${positivePercentage}%`}
           subtitle={`${positiveCount} of ${filteredIncidents.length} positive`}
           icon={ThumbsUp}
@@ -748,7 +748,7 @@ const Dashboard = () => {
           info="HOW THIS IS CALCULATED: We filter observations where the 'Approval Status' column contains 'Contractor Review'. These are items waiting for a contractor to look at and respond. The contractor needs to review what happened and provide their input before the observation can move forward. YELLOW (more than 10): You have a backlog - consider following up with contractors to speed up their reviews."
         />
         <KPICard
-          title="Review"
+          title="PMC/NDT Review"
           value={approvalCounts.review}
           subtitle="Pending review"
           icon={ClipboardList}

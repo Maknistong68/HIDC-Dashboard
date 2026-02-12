@@ -139,11 +139,11 @@ const SafetyOutlook = () => {
     )
   }, [filteredIncidents, period])
 
-  // Calculate contributing factors (negative observations only)
+  // Calculate contributing factors (all observations including positive)
   // Uses module-level cache so Dashboard hitting the same function gets a cache hit
   const factorData = useDeferredMemo(() => {
-    return getCachedAggregation('outlook-factors-negative', filteredIncidents, (data) =>
-      aggregateContributingFactors(data, 'negative')
+    return getCachedAggregation('outlook-factors-all', filteredIncidents, (data) =>
+      aggregateContributingFactors(data)
     )
   }, [filteredIncidents])
 
