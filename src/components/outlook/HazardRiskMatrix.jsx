@@ -12,12 +12,21 @@ import {
   HardHat,
   RotateCcw,
   Calendar,
-  X
+  X,
+  Grid3x3,
+  BarChart3,
+  Info
 } from 'lucide-react'
 import { SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../../utils/constants'
 import { getDayOfWeekPatterns, getHourlyPatterns } from '../../utils/insightsCalculations'
 import { generateDynamicSliders } from '../insights/ScenarioSimulatorEngine'
 import { SEVERITY_WEIGHTS } from '../../utils/calculations'
+import {
+  plotHazardsOnMatrix,
+  getCellRiskColor,
+  CONSEQUENCE_LABELS,
+  LIKELIHOOD_LABELS,
+} from '../../utils/riskMatrix'
 
 // ============================================================================
 // RISK SCORE CALCULATION (Severity-Weighted)
@@ -1159,6 +1168,220 @@ const HazardDetailModal = ({
 }
 
 // ============================================================================
+// TRUE RISK MATRIX VIEW (Likelihood x Consequence)
+// ============================================================================
+
+const RiskMatrixLegend = () => (
+  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-surface-600">
+    <div className="flex items-center gap-2 sm:gap-3">
+      <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
+        <span className="font-medium text-red-700">Intolerable</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
+        <span className="font-medium text-amber-700">High</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-yellow-50 border border-yellow-400" />
+        <span className="font-medium text-yellow-700">Medium</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300" />
+        <span className="font-medium text-emerald-700">Low</span>
+      </div>
+    </div>
+  </div>
+)
+
+/**
+ * HazardChip - Compact badge for a hazard in a risk matrix cell
+ */
+const HazardChip = ({ hazard, onClick }) => {
+  const zone = hazard.zone
+  return (
+    <button
+      onClick={() => onClick(hazard)}
+      className={`${zone.chipBg} ${zone.chipText} ${zone.chipBorder} border
+                  px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium
+                  truncate max-w-full transition-all hover:scale-105 hover:shadow-sm cursor-pointer`}
+      title={`${hazard.name} — L${hazard.likelihood} x C${hazard.consequence} = ${hazard.riskScore} (${zone.label})`}
+    >
+      {hazard.name}
+    </button>
+  )
+}
+
+/**
+ * RiskMatrixCell - A cell in the true L x C grid
+ * May contain 0 or multiple hazards
+ */
+const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
+  const zone = getCellRiskColor(likelihood, consequence)
+  const score = likelihood * consequence
+  const hasHazards = hazards.length > 0
+
+  return (
+    <div
+      className={`${zone.bg} ${zone.border} ${hasHazards ? 'border-2' : 'border opacity-40'}
+                  rounded-md p-1.5 min-h-[60px] sm:min-h-[72px] flex flex-col gap-0.5
+                  ${hasHazards ? zone.shadow : ''} relative`}
+    >
+      {/* Score badge in corner */}
+      <span className={`absolute top-0.5 right-1 text-[9px] font-semibold ${zone.text} opacity-50`}>
+        {score}
+      </span>
+
+      {/* Hazard chips */}
+      {hazards.length > 0 && (
+        <div className="flex flex-wrap gap-0.5 mt-1">
+          {hazards.map(h => (
+            <HazardChip key={h.name} hazard={h} onClick={onClick} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * RiskMatrixView - True 5x5 Likelihood x Consequence grid
+ */
+const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
+  // Build 5x5 grid: grid[consequence][likelihood] = [hazards]
+  const grid = useMemo(() => {
+    const g = {}
+    for (let c = 1; c <= 5; c++) {
+      g[c] = {}
+      for (let l = 1; l <= 5; l++) {
+        g[c][l] = []
+      }
+    }
+    if (matrixData?.hazards) {
+      for (const h of matrixData.hazards) {
+        if (h.consequence >= 1 && h.consequence <= 5 && h.likelihood >= 1 && h.likelihood <= 5) {
+          g[h.consequence][h.likelihood].push(h)
+        }
+      }
+    }
+    return g
+  }, [matrixData])
+
+  // Stats summary
+  const stats = useMemo(() => {
+    if (!matrixData?.hazards?.length) return null
+    const zones = { intolerable: 0, high: 0, medium: 0, low: 0 }
+    matrixData.hazards.forEach(h => { zones[h.zone.level]++ })
+    return { total: matrixData.hazards.length, ...zones, totalDays: matrixData.totalDays, isAdaptive: matrixData.isAdaptive }
+  }, [matrixData])
+
+  if (!matrixData?.hazards?.length) return null
+
+  return (
+    <div className="space-y-3">
+      {/* Stats row */}
+      {stats && (
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span className="text-surface-500">{stats.total} hazards plotted over {stats.totalDays} days</span>
+          {stats.isAdaptive && (
+            <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              <Info size={11} />
+              Adaptive thresholds (dataset &lt;90 days)
+            </span>
+          )}
+          {stats.intolerable > 0 && <span className="font-semibold text-red-700">{stats.intolerable} Intolerable</span>}
+          {stats.high > 0 && <span className="font-semibold text-amber-700">{stats.high} High</span>}
+          {stats.medium > 0 && <span className="font-semibold text-yellow-700">{stats.medium} Medium</span>}
+          {stats.low > 0 && <span className="font-semibold text-emerald-700">{stats.low} Low</span>}
+        </div>
+      )}
+
+      {/* Matrix Grid with axis labels */}
+      <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4 overflow-x-auto">
+        <div className="min-w-[480px]">
+          {/* Y-axis label */}
+          <div className="flex">
+            <div className="w-24 sm:w-28 flex-shrink-0" />
+            <div className="flex-1 text-center text-[10px] font-semibold text-surface-400 uppercase tracking-widest mb-1">
+              Likelihood &rarr;
+            </div>
+          </div>
+
+          {/* Column headers (Likelihood) */}
+          <div className="flex">
+            <div className="w-24 sm:w-28 flex-shrink-0 text-right pr-2">
+              <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">
+                Consequence &darr;
+              </span>
+            </div>
+            <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
+              {[1, 2, 3, 4, 5].map(l => (
+                <div key={`lh-${l}`} className="text-center">
+                  <span className="text-[10px] sm:text-xs font-bold text-surface-700">{l}</span>
+                  <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{LIKELIHOOD_LABELS[l]}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Rows: Consequence 5 (top) down to 1 (bottom) */}
+          <div className="mt-2 space-y-1.5 sm:space-y-2">
+            {[5, 4, 3, 2, 1].map(c => (
+              <div key={`row-${c}`} className="flex">
+                {/* Row label */}
+                <div className="w-24 sm:w-28 flex-shrink-0 flex items-center justify-end pr-2 gap-1">
+                  <div className="text-right">
+                    <span className="text-[10px] sm:text-xs font-bold text-surface-700">{c}</span>
+                    <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{CONSEQUENCE_LABELS[c]}</p>
+                  </div>
+                </div>
+                {/* Grid cells */}
+                <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
+                  {[1, 2, 3, 4, 5].map(l => (
+                    <RiskMatrixCell
+                      key={`cell-${l}-${c}`}
+                      likelihood={l}
+                      consequence={c}
+                      hazards={grid[c][l]}
+                      onClick={onHazardClick}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ViewToggle - Switch between Risk Matrix and Risk Ranking
+ */
+const ViewToggle = ({ view, onChange }) => (
+  <div className="flex items-center bg-surface-100 rounded-lg p-0.5">
+    <button
+      onClick={() => onChange('matrix')}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
+        ${view === 'matrix' ? 'bg-white text-surface-800 shadow-sm' : 'text-surface-500 hover:text-surface-700'}`}
+    >
+      <Grid3x3 size={14} />
+      Risk Matrix
+    </button>
+    <button
+      onClick={() => onChange('ranking')}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
+        ${view === 'ranking' ? 'bg-white text-surface-800 shadow-sm' : 'text-surface-500 hover:text-surface-700'}`}
+    >
+      <BarChart3 size={14} />
+      Risk Ranking
+    </button>
+  </div>
+)
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -1173,6 +1396,12 @@ const HazardRiskMatrix = ({
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedCellColor, setSelectedCellColor] = useState(null)
   const [selectedRank, setSelectedRank] = useState(1)
+  const [viewMode, setViewMode] = useState('matrix') // 'matrix' | 'ranking'
+
+  // True Risk Matrix data (L x C placement)
+  const matrixData = useMemo(() => {
+    return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
+  }, [filteredIncidents, sortedHazards])
 
   const rankedHazards = useMemo(() => {
     if (!sortedHazards?.length) return []
@@ -1228,6 +1457,14 @@ const HazardRiskMatrix = ({
     setSelectedRank(rank)
   }, [rankedHazards])
 
+  // Handle clicks from the true risk matrix view
+  const handleMatrixHazardClick = useCallback((hazard) => {
+    setSelectedHazard(hazard)
+    setSelectedCellColor(hazard.zone || null)
+    const rank = rankedHazards.findIndex(h => h.name === hazard.name) + 1
+    setSelectedRank(rank || 1)
+  }, [rankedHazards])
+
   const handleCloseModal = useCallback(() => {
     setSelectedHazard(null)
     setSelectedCellColor(null)
@@ -1256,7 +1493,10 @@ const HazardRiskMatrix = ({
   const dayPatterns = useMemo(() => hazardIncidents.length ? getDayOfWeekPatterns(hazardIncidents) : null, [hazardIncidents])
   const hourPatterns = useMemo(() => hazardIncidents.length ? getHourlyPatterns(hazardIncidents) : null, [hazardIncidents])
 
-  if (!rankedHazards.length) {
+  const hasMatrixData = matrixData?.hazards?.length > 0
+  const hasRankingData = rankedHazards.length > 0
+
+  if (!hasMatrixData && !hasRankingData) {
     return (
       <div className="bg-white rounded-xl border border-surface-200 p-10 text-center">
         <div className="w-16 h-16 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-4">
@@ -1275,30 +1515,49 @@ const HazardRiskMatrix = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-surface-800">Hazard Risk Matrix</h2>
-          <p className="text-xs text-surface-500 mt-0.5">Top 25 hazards ranked by risk score. Click any cell for detailed analysis.</p>
+          <p className="text-xs text-surface-500 mt-0.5">
+            {viewMode === 'matrix'
+              ? 'Hazards plotted by Likelihood x Consequence. Click any hazard for detailed analysis.'
+              : 'Top 25 hazards ranked by risk score. Click any cell for detailed analysis.'}
+          </p>
         </div>
-        <Legend />
+        <div className="flex items-center gap-3">
+          <ViewToggle view={viewMode} onChange={setViewMode} />
+          {viewMode === 'matrix' ? <RiskMatrixLegend /> : <Legend />}
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4">
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-          {grid.map((row, rowIdx) =>
-            row.map((hazard, colIdx) => {
-              const rank = rowIdx * 5 + colIdx + 1
-              return (
-                <MatrixCell
-                  key={hazard?.name || `empty-${rowIdx}-${colIdx}`}
-                  hazard={hazard}
-                  row={rowIdx}
-                  col={colIdx}
-                  rank={rank}
-                  onClick={handleCellClick}
-                />
-              )
-            })
-          )}
+      {/* True Risk Matrix View */}
+      {viewMode === 'matrix' && (
+        <RiskMatrixView
+          matrixData={matrixData}
+          allIncidents={filteredIncidents}
+          onHazardClick={handleMatrixHazardClick}
+        />
+      )}
+
+      {/* Legacy Risk Ranking View */}
+      {viewMode === 'ranking' && (
+        <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+            {grid.map((row, rowIdx) =>
+              row.map((hazard, colIdx) => {
+                const rank = rowIdx * 5 + colIdx + 1
+                return (
+                  <MatrixCell
+                    key={hazard?.name || `empty-${rowIdx}-${colIdx}`}
+                    hazard={hazard}
+                    row={rowIdx}
+                    col={colIdx}
+                    rank={rank}
+                    onClick={handleCellClick}
+                  />
+                )
+              })
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <HazardDetailModal
         isOpen={!!selectedHazard}

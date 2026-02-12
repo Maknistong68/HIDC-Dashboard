@@ -123,6 +123,7 @@ const IncidentTrendChart = ({ data, incidents }) => {
           period={effectiveGranularity}
           onPeriodChange={setGranularity}
           periods={GRANULARITY_OPTIONS}
+          hideWorkRelated
         />
       ) : undefined}>
         <Card.Title>

@@ -16,6 +16,8 @@ import {
   buildDailyCounts,
   calculateLinearRegression
 } from './incidentHelpers'
+import { walkForwardValidation as walkForwardValidationSync, compareModels as compareModelsSync } from './forecastValidation'
+import { ensembleForecast } from './forecastModels'
 
 // Re-export the new keyword-based root cause detection as extractDeviationsForHazard
 // for backward compatibility with existing components
@@ -1337,6 +1339,22 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
   const avgDaily = sumY / n
   const alerts = detectForecastAlerts(forecast, avgDaily)
 
+  // Walk-forward validation
+  let validation = null
+  let ensemble = null
+  try {
+    const dailyValues = historical.map(h => h.value)
+    const valResult = walkForwardValidationSync(dailyValues)
+    if (valResult.metrics) {
+      const comparison = compareModelsSync(valResult.metrics, valResult.naiveMetrics)
+      validation = { ...valResult, comparison }
+    }
+    // Ensemble forecast
+    ensemble = ensembleForecast(dailyValues, forecastDays)
+  } catch {
+    // Validation/ensemble not available - continue without
+  }
+
   return {
     historical,
     forecast,
@@ -1348,6 +1366,8 @@ export const forecastIncidents = (incidents, forecastDays = 30) => {
       dailyChange: Math.round(slope * 100) / 100
     },
     alerts,
+    validation,
+    ensemble,
     summary: {
       avgHistorical: Math.round(avgDaily * 10) / 10,
       avgForecast: Math.round(forecast.reduce((sum, f) => sum + f.value, 0) / forecast.length * 10) / 10,

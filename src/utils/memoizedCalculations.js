@@ -127,6 +127,40 @@ export const getCachedText = (text, normalizer) => {
 }
 
 // ============================================
+// FACTOR DETECTION CACHE
+// ============================================
+
+// Cache for per-incident factor detection results
+const factorCache = new LRUCache(5000)
+
+/**
+ * Get cached factor detection result for an incident description
+ * @param {string} description - Incident description
+ * @param {string} hazardCategory - Hazard category
+ * @param {Function} detectFn - Factor detection function to call on cache miss
+ * @param {string} incidentType - Incident type (e.g., 'unsafe-act') for classification-based detection
+ * @returns {Array} Detected factors
+ */
+export const getCachedFactors = (description, hazardCategory, detectFn, incidentType) => {
+  if (!description) return []
+  const key = `${description.substring(0, 200)}|${hazardCategory || ''}|${incidentType || ''}`
+  const cached = factorCache.get(key)
+  if (cached !== undefined) return cached
+  const result = incidentType
+    ? detectFn(description, hazardCategory, { incidentType })
+    : detectFn(description, hazardCategory)
+  factorCache.set(key, result)
+  return result
+}
+
+/**
+ * Clear factor detection cache
+ */
+export const clearFactorCache = () => {
+  factorCache.clear()
+}
+
+// ============================================
 // CLASSIFICATION CACHE
 // ============================================
 
@@ -237,8 +271,8 @@ export const getCachedChartData = (chartType, incidents, compute, additionalPara
   const result = compute(incidents, additionalParams)
   chartDataCache.set(cacheKey, result)
 
-  // Limit chart cache size (100 entries to prevent thrashing across 3 pages)
-  if (chartDataCache.size > 100) {
+  // Limit chart cache size (200 entries to accommodate dual-dataset caching)
+  if (chartDataCache.size > 200) {
     const firstKey = chartDataCache.keys().next().value
     chartDataCache.delete(firstKey)
   }
@@ -331,8 +365,8 @@ export const getCachedAggregation = (aggregationType, incidents, aggregateFn) =>
   const result = aggregateFn(incidents)
   aggregationCache.set(cacheKey, result)
 
-  // Limit cache size (100 entries to prevent thrashing across 3 pages)
-  if (aggregationCache.size > 100) {
+  // Limit cache size (200 entries to accommodate dual-dataset caching)
+  if (aggregationCache.size > 200) {
     const firstKey = aggregationCache.keys().next().value
     aggregationCache.delete(firstKey)
   }
@@ -360,6 +394,7 @@ export const clearAllCaches = () => {
   siteCache.clear()
   textCache.clear()
   classificationCache.clear()
+  factorCache.clear()
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
@@ -371,6 +406,7 @@ export const clearAllCaches = () => {
  */
 export const clearDataCaches = () => {
   classificationCache.clear()
+  factorCache.clear()
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
@@ -386,6 +422,7 @@ export const getCacheStats = () => {
     site: siteCache.size,
     text: textCache.size,
     classification: classificationCache.size,
+    factor: factorCache.size,
     chartData: chartDataCache.size,
     aggregation: aggregationCache.size,
     total:
@@ -393,6 +430,7 @@ export const getCacheStats = () => {
       siteCache.size +
       textCache.size +
       classificationCache.size +
+      factorCache.size +
       chartDataCache.size +
       aggregationCache.size
   }

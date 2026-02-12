@@ -23,6 +23,7 @@ export const FilterProvider = ({ children }) => {
   const [site, setSiteState] = useState('')
   const [subRegion, setSubRegionState] = useState('')
   const [excludedReporters, setExcludedReportersState] = useState([])
+  const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
 
   // Load excluded reporters from IndexedDB on mount
   useEffect(() => {
@@ -73,10 +74,11 @@ export const FilterProvider = ({ children }) => {
     setContractorState('')
     setSiteState('')
     setSubRegionState('')
+    setWorkRelatedOnly(true)
   }, [])
 
   // Combined filters object for FilterBar compatibility
-  const filters = useMemo(() => ({ contractor, site, subRegion, excludedReporters }), [contractor, site, subRegion, excludedReporters])
+  const filters = useMemo(() => ({ contractor, site, subRegion, excludedReporters, workRelatedOnly }), [contractor, site, subRegion, excludedReporters, workRelatedOnly])
 
   // State context value - will cause re-renders when state changes
   const stateValue = useMemo(() => ({
@@ -85,8 +87,9 @@ export const FilterProvider = ({ children }) => {
     site,
     subRegion,
     excludedReporters,
+    workRelatedOnly,
     filters
-  }), [period, contractor, site, subRegion, excludedReporters, filters])
+  }), [period, contractor, site, subRegion, excludedReporters, workRelatedOnly, filters])
 
   // Actions context value - stable reference, won't cause re-renders
   const actionsValue = useMemo(() => ({
@@ -95,6 +98,7 @@ export const FilterProvider = ({ children }) => {
     setSite,
     setSubRegion,
     setExcludedReporters,
+    setWorkRelatedOnly,
     setFilter,
     clearFilters
   }), [setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters])

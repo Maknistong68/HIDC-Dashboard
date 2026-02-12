@@ -1,4 +1,5 @@
 import { filterByHazard, normalizeText } from './incidentHelpers'
+import { getCachedFactors } from './memoizedCalculations'
 
 /**
  * Root Cause Engine - Phrase-Based Detection System
@@ -463,7 +464,12 @@ export const FACTOR_PHRASE_CONFIG = {
       // Positive fall protection
       'properly anchored', 'anchored properly', 'tied off properly', 'tie off properly',
       '100% tie off compliant', 'pfas used', 'harness secured', 'lanyard attached',
-      'harness point', 'anchor point provided', 'suitable anchoring'
+      'harness point', 'anchor point provided', 'suitable anchoring',
+      // === NEGATION PATTERNS ===
+      'chose not to wear', 'chose not to use', 'refused to wear',
+      'available but not worn', 'provided but not used', 'available but did not',
+      'had ppe but did not', 'ppe was available but', 'ppe provided but not',
+      'given ppe but did not wear'
     ],
     moderatePatterns: [
       // Only match these in combination with wearing/not wearing context
@@ -627,7 +633,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'induction completed', 'induction conducted', 'induction provided',
       'orientation completed', 'orientation conducted', 'orientation provided',
       'safety induction', 'site induction', 'inducted', 're-inducted',
-      're-inducting', 'inducting'
+      're-inducting', 'inducting',
+      // === NEGATION PATTERNS ===
+      'trained but not following', 'certificate available but expired'
     ],
     moderatePatterns: [
       'training', 'trained', 'trainee', 'trainer',
@@ -641,7 +649,11 @@ export const FACTOR_PHRASE_CONFIG = {
       // Inspection issues
       'inspection checklist', 'qr code', 'vvs', 'veri-fi', 'pre-use inspection',
       // Material handling context
-      'overloaded', 'manual loading', 'line of fire'
+      'overloaded', 'manual loading', 'line of fire',
+      // Cross-factor exclusions: PPE
+      'not wearing', 'without wearing', 'without ppe', 'no ppe',
+      // Cross-factor exclusions: Barriers
+      'barrier not', 'barricade not', 'guardrail not'
     ],
     minimumScore: 5
   },
@@ -705,7 +717,10 @@ export const FACTOR_PHRASE_CONFIG = {
       'without the availability of safety', 'availability of safety personnel',
       'safety personnel not available', 'no safety personnel',
       'without safety personnel', 'safety team not available',
-      'availability of safety team', 'safety officer not available'
+      'availability of safety team', 'safety officer not available',
+      // === NEGATION PATTERNS ===
+      'supervisor left the area', 'supervisor was not supervising',
+      'supervisor available but not'
     ],
     moderatePatterns: [
       'supervision', 'supervisor', 'supervised', 'supervising',
@@ -714,7 +729,13 @@ export const FACTOR_PHRASE_CONFIG = {
       'spotter', 'spotters', 'ground guide', 'signal man', 'signalman'
     ],
     exclusionPatterns: [
-      'inspection checklist', 'qr code', 'vvs', 'veri-fi'
+      'inspection checklist', 'qr code', 'vvs', 'veri-fi',
+      // Cross-factor exclusions: PPE
+      'not wearing', 'without wearing', 'without ppe',
+      // Cross-factor exclusions: Training
+      'training conducted', 'tbt conducted',
+      // Cross-factor exclusions: Barriers
+      'barrier not', 'barricade not'
     ],
     minimumScore: 5
   },
@@ -902,13 +923,6 @@ export const FACTOR_PHRASE_CONFIG = {
       'oil spillage', 'fuel spillage', 'liquid spill', 'chemical spill',
       'spill not cleaned', 'spillage not cleaned',
 
-      // === SEWAGE/OVERFLOW ===
-      'sewage overflow', 'sewage overflowed', 'toilet overflow',
-      'toilet overflowed', 'over flowed', 'overflow sewage',
-      'pump out sewage', 'pumping out sewage', 'sewage waste',
-      'overflow sewage waste', 'sewage waste coming out',
-      'toilet tank overflow', 'vacuum tanker',
-
       // === POSITIVE HOUSEKEEPING ===
       'good housekeeping', 'housekeeping done', 'housekeeping maintained',
       'housekeeping being done', 'ongoing housekeeping', 'proper housekeeping',
@@ -941,111 +955,36 @@ export const FACTOR_PHRASE_CONFIG = {
       // Misspellings
       'drinkng water', 'drinkin water', 'watrer', 'warter',
 
-      // === CABLE MANAGEMENT ===
+      // === CABLE MANAGEMENT (trip/clutter hazards only) ===
       'cable lying', 'cable lying on ground', 'cable lying on the ground',
       'cables lying', 'cables lying on ground', 'cables lying on the ground',
       'cable on the ground', 'cable on ground', 'cables on ground',
       'improper cable management', 'poor cable management', 'cable management',
-      'cable not properly', 'cables not properly', 'cable found lying',
-      'cables found lying', 'cable was lying', 'cables were lying',
+      'cable found lying', 'cables found lying', 'cable was lying', 'cables were lying',
       'cable was placed', 'cable placed on', 'cables placed on',
       'cable not properly elevated', 'cable not elevated', 'cables not elevated',
-      'electric cable was lying', 'electric cable lying', 'electrical cable lying',
       'cable was not properly arranged', 'cable not properly arranged',
       'cables not arranged', 'tangled cables', 'tangled electrical cables',
-      'cables draped over', 'cables hanging loosely', 'cables not secured',
+      'cables draped over', 'cables hanging loosely',
       'cable on scaffold', 'cables on scaffold', 'cable on scaffolding',
       'cable on rebar', 'cable placed on rebar', 'cable on the rebar',
-
-      // === ELECTRICAL CABLE EXTENDED PATTERNS ===
       // Cable laying (common misspelling of lying)
       'cable laying', 'cables laying', 'cable is laying', 'cables are laying',
       'cable laying on', 'cables laying on', 'cable laying on ground',
       'cable laying on floor', 'cables laying on floor', 'cable laying on the floor',
-      'electrical cable laying', 'electrical cables laying', 'electric cable laying',
-      'electrical cable was laying', 'electrical cables were laying',
-      'live cable laying', 'live cables laying', 'live electrical cable laying',
-
       // Cable on floor/pathway
       'cable on floor', 'cables on floor', 'cable on the floor',
       'cables on the floor', 'cable found on floor', 'cables found on floor',
       'cable across pathway', 'cables across pathway', 'cable in pathway',
       'cables in pathway', 'cable lying across', 'cables lying across',
       'cable across the access', 'cables across access', 'cables coiled',
-
       // Trailing cables
       'trailing cable', 'trailing cables', 'cables trailing', 'cable trailing',
       'trailing through', 'cables trailing through', 'trailing on ground',
-      'trailing electrical', 'trailing on steel', 'trailing to scaffolds',
+      'trailing on steel', 'trailing to scaffolds',
       'trailing to cup lock', 'training to cup lock', 'training to scaffolds',
-
-      // Damaged cables
-      'damaged cable', 'damaged cables', 'damaged electrical cable',
-      'damaged electrical cables', 'damaged power cable', 'damaged power cables',
-      'damaged power cord', 'damaged power cords', 'cable damaged',
-      'cables damaged', 'cable was damaged', 'cables were damaged',
-      'cable found damaged', 'cables found damaged', 'damage cable',
-      'damage power cable', 'worn cable', 'worn cables', 'worn electrical cable',
-
-      // Live cables
-      'live cable', 'live cables', 'live electrical cable', 'live electrical cables',
-      'live electric cable', 'live electric cables', 'live cable laying',
-      'live cables laying', 'live cable lying', 'live cables lying',
-      'live cable found', 'live cables found', 'live cable on',
-      'live cable in contact', 'live cables in contact', 'live cable was',
-      'energized cable', 'energized cables', 'energized electrical',
-
-      // Cable in contact with metal/steel
-      'cable in contact', 'cables in contact', 'cable in contact with',
-      'cables in contact with', 'in contact with metal', 'contact with metal',
-      'contact with the metal', 'contact of metal', 'cable on steel',
-      'cables on steel', 'cable on the steel', 'cables on the steel',
-      'cable on steel rebar', 'cables on steel rebars', 'cable on rebars',
-      'cables on rebars', 'cable touching', 'cables touching',
-      'cable on metal', 'cables on metal', 'cable on fence',
-      'cables on fence', 'cable on the fence', 'cables on the fence',
-
-      // Unsecured/loose cables
-      'unsecured cable', 'unsecured cables', 'unsecured electrical cable',
-      'loose cable', 'loose cables', 'loose cable connection',
-      'loose connection', 'loose electrical cable', 'cable not secured',
-      'cables not secured', 'cable left unattended', 'cables unattended',
-
-      // Exposed cables
-      'exposed cable', 'exposed cables', 'exposed electrical cable',
-      'exposed electrical cables', 'exposed power cable', 'exposed power cables',
-      'exposed conductor', 'exposed conductors', 'exposed wire', 'exposed wires',
-      'cable exposed', 'cables exposed', 'bare cable', 'bare cables',
-      'bare electrical cable', 'bare wire', 'bare wires', 'bare cable strands',
-
-      // Cable without protection
-      'cable without protection', 'cables without protection',
-      'cable without conduit', 'cables without conduit', 'without conduit protection',
-      'cable without insulation', 'cables without insulation',
-      'cable without sleeve', 'cables without sleeve', 'without secondary sleeve',
-      'without secondary insulation', 'without external sleeve',
-      'without weather protection', 'unprotected cable', 'unprotected cables',
-      'unprotected power cable', 'unprotected electrical cable',
-
-      // Cable on scaffold/steel structures
-      'cables on scaffolds', 'cable on scaffolds', 'cables on scaffold',
-      'cable on steel cage', 'cables on steel cage', 'cable on steel cages',
-      'cables on steel cages', 'cable on reinforcement', 'cables on reinforcement',
-      'cables hanging from', 'cable hanging from', 'cable draped over',
-      'cable found on scaffold', 'cables found on scaffold',
-      'cable on scaffolding structure', 'cables on scaffolding structure',
-      'cable found on a scaffolding', 'electrical cable on scaffold',
-
-      // Poor electrical management
-      'poor electrical management', 'poor electrical management system',
-      'improper electrical cable management', 'improper cable management',
-      'poor cables management', 'cables management', 'electrical management',
-      'cable distributed', 'cables distributed', 'cable scattered',
-      'cables scattered', 'cable without any inspection',
-
       // Misspellings
-      'cabel', 'cabels', 'cabl', 'cablle', 'electrcal cable',
-      'eletrical cable', 'electical cable', 'elctrical cable', 'electic cable',
+      'cabel', 'cabels', 'cabl', 'cablle',
       'laing', 'layng', 'lieing', 'lyng',
 
       // === SCATTERED MATERIALS ===
@@ -1103,11 +1042,7 @@ export const FACTOR_PHRASE_CONFIG = {
       'stored on the incomplete', 'lifting crew were loaded',
       'lifting crew loaded',
 
-      // === WIRE/CABLE IN CONTACT WITH SCAFFOLD ===
-      'wire in contact with', 'wire was in contact', 'electric wire in contact',
-      'electrical wire in contact', 'wire contact with scaffold',
-      'contact with the scaffold', 'contact with a scaffold',
-      'short circuit', 'risk of short', 'posing a risk',
+      // === WIRE/BINDING MATERIAL ON SITE ===
       'binding wire scattered', 'binding wire was scattered',
       // Positive material storage
       'well organized', 'properly arranged', 'storage area well organized',
@@ -1186,7 +1121,18 @@ export const FACTOR_PHRASE_CONFIG = {
       'equipment inspection', 'pre-use inspection',
       // Exclude wound cleaning (first aid)
       'laceration was cleaned', 'wound was cleaned', 'cleaned and bandaged',
-      'cleaning wounds'
+      'cleaning wounds',
+      // Electrical hazard cables → Maintenance (not Housekeeping)
+      'live cable', 'live electrical', 'energized cable', 'damaged cable',
+      'exposed cable', 'exposed conductor', 'bare cable', 'bare wire',
+      'cable in contact with metal', 'cable in contact with steel',
+      'short circuit', 'cable without insulation',
+      // Welfare → Environment (not Housekeeping)
+      'sewage', 'sewage overflow', 'sewage overflowed', 'overflow sewage',
+      'pump out sewage', 'pumping out sewage', 'sewage waste', 'vacuum tanker',
+      'toilet overflow', 'toilet overflowed', 'toilet tank overflow',
+      'drinking water not available', 'no drinking water',
+      'potable water unavailable', 'no potable water', 'water igloo unavailable'
     ],
     minimumScore: 5
   },
@@ -1777,7 +1723,75 @@ export const FACTOR_PHRASE_CONFIG = {
 
       // === OVERLOADING ===
       'being overloaded', 'trailers where being overloaded', 'overloaded by',
-      'trucks overloaded', 'overloading', 'in heap shape'
+      'trucks overloaded', 'overloading', 'in heap shape',
+
+      // === ELECTRICAL CABLE HAZARDS (moved from Housekeeping) ===
+      // Damaged cables
+      'damaged cable', 'damaged cables', 'damaged electrical cable',
+      'damaged electrical cables', 'damaged power cable', 'damaged power cables',
+      'damaged power cord', 'damaged power cords', 'cable damaged',
+      'cables damaged', 'cable was damaged', 'cables were damaged',
+      'cable found damaged', 'cables found damaged', 'damage cable',
+      'damage power cable', 'worn cable', 'worn cables', 'worn electrical cable',
+      // Live cables
+      'live cable', 'live cables', 'live electrical cable', 'live electrical cables',
+      'live electric cable', 'live electric cables',
+      'live cable lying', 'live cables lying',
+      'live cable found', 'live cables found', 'live cable on',
+      'live cable in contact', 'live cables in contact', 'live cable was',
+      'energized cable', 'energized cables', 'energized electrical',
+      'live cable laying', 'live cables laying', 'live electrical cable laying',
+      'electrical cable laying', 'electrical cables laying', 'electric cable laying',
+      'electrical cable was laying', 'electrical cables were laying',
+      'electric cable was lying', 'electric cable lying', 'electrical cable lying',
+      'trailing electrical',
+      // Cable in contact with metal/steel
+      'cable in contact', 'cables in contact', 'cable in contact with',
+      'cables in contact with', 'in contact with metal', 'contact with metal',
+      'contact with the metal', 'contact of metal', 'cable on steel',
+      'cables on steel', 'cable on the steel', 'cables on the steel',
+      'cable on steel rebar', 'cables on steel rebars', 'cable on rebars',
+      'cables on rebars', 'cable touching', 'cables touching',
+      'cable on metal', 'cables on metal', 'cable on fence',
+      'cables on fence', 'cable on the fence', 'cables on the fence',
+      // Unsecured/loose cables
+      'unsecured cable', 'unsecured cables', 'unsecured electrical cable',
+      'loose cable', 'loose cables', 'loose cable connection',
+      'loose connection', 'loose electrical cable', 'cable not secured',
+      'cables not secured', 'cable left unattended', 'cables unattended',
+      // Exposed cables
+      'exposed cable', 'exposed cables', 'exposed electrical cable',
+      'exposed electrical cables', 'exposed power cable', 'exposed power cables',
+      'exposed conductor', 'exposed conductors', 'exposed wire', 'exposed wires',
+      'cable exposed', 'cables exposed', 'bare cable', 'bare cables',
+      'bare electrical cable', 'bare wire', 'bare wires', 'bare cable strands',
+      // Cable without protection
+      'cable without protection', 'cables without protection',
+      'cable without conduit', 'cables without conduit', 'without conduit protection',
+      'cable without insulation', 'cables without insulation',
+      'cable without sleeve', 'cables without sleeve', 'without secondary sleeve',
+      'without secondary insulation', 'without external sleeve',
+      'without weather protection', 'unprotected cable', 'unprotected cables',
+      'unprotected power cable', 'unprotected electrical cable',
+      // Cable on scaffold/steel structures
+      'cables on scaffolds', 'cable on scaffolds',
+      'cable on steel cage', 'cables on steel cage', 'cable on steel cages',
+      'cables on steel cages', 'cable on reinforcement', 'cables on reinforcement',
+      'cables hanging from', 'cable hanging from', 'cable draped over',
+      'cable found on scaffold', 'cables found on scaffold',
+      'cable on scaffolding structure', 'cables on scaffolding structure',
+      'cable found on a scaffolding', 'electrical cable on scaffold',
+      // Poor electrical management
+      'poor electrical management', 'poor electrical management system',
+      'improper electrical cable management', 'improper cable management',
+      'poor cables management', 'cables management', 'electrical management',
+      'cable distributed', 'cables distributed', 'cable scattered',
+      'cables scattered', 'cable without any inspection',
+      // Short circuit
+      'short circuit', 'risk of short',
+      // Misspellings
+      'electrcal cable', 'eletrical cable', 'electical cable',
+      'elctrical cable', 'electic cable'
     ],
     moderatePatterns: [
       'maintenance', 'repair', 'repaired', 'serviced', 'servicing',
@@ -2390,7 +2404,7 @@ export const FACTOR_PHRASE_CONFIG = {
       'gas test not conducted', 'gas test was not conducted', 'no gas test',
       'without gas test', 'gas testing', 'atmospheric testing',
       'watchman with log sheet', 'watch man with log', 'watchman log sheet',
-      'confined space arrangements', 'proper arrangements', '100% tie off'
+      'confined space arrangements', 'proper arrangements'
     ],
     moderatePatterns: [
       'permit', 'ptw', 'work permit', 'hot work', 'excavation permit',
@@ -2417,37 +2431,15 @@ export const FACTOR_PHRASE_CONFIG = {
       'method statement available', 'risk assessment available',
       'rams available', 'jsa completed', 'procedure followed',
 
-      // === CHEMICAL STORAGE / MSDS ===
+      // === MSDS / COSHH DOCUMENTATION (paperwork only — physical storage → Environment) ===
       'msds', 'material safety data sheet', 'safety data sheet', 'sds',
       'msds requirements', 'following the msds', 'not following msds',
       'without following msds', 'chemical without msds', 'chemicals without',
-      'msds regarding', 'chemical has been used', 'chemicals used without',
-      'chemical storage', 'chemicals stored', 'chemical container',
-      'chemical exposed to sunlight', 'chemical directly exposed',
-      'chemical silicone', 'unauthorized location', 'cold storage',
-      'hazardous chemicals', 'hazardous chemical', 'chemicals without drip',
-      'drip trays', 'without drip trays', 'soil contamination',
-
-      // === COMPRESSED GAS CYLINDERS ===
-      'compressed gas', 'gas cylinders', 'compressed gas cylinders',
-      'unsecured compressed gas', 'unsecured cylinders', 'unsecured gas cylinders',
-      'oxygen & acetylene', 'oxygen and acetylene', 'acetylene cylinders',
-      'oxygen cylinders', 'no protective caps', 'no protective cap',
-      'protective caps at nozzle', 'without trolly', 'without trolley',
-      'cylinders without trolley', 'gas cylinder storage', 'cylinder storage',
-
-      // === PAINTING CHEMICALS / COSHH ASSESSMENT ===
-      'painting chemicals', 'painting chemical substances', 'chemicals substances',
-      'chemicals substances observed', 'no coshh assessment', 'missing coshh assessment',
+      'msds regarding', 'chemicals used without',
+      'no coshh assessment', 'missing coshh assessment',
       'coshh assessment not', 'coshh assessment missing', 'there is no coshh',
       'without coshh assessment', 'coshh not available', 'coshh not done',
-      'coshh assessment of hazardous', 'coshh assessment was not',
-
-      // === FLAMMABLE CHEMICAL CONTAINERS ===
-      'flammable properties', 'having flammable properties', 'containers having flammable',
-      'flammable containers', 'chemical used containers', 'used containers',
-      'containers disposed on ground', 'disposed on the ground',
-      'disposed on ground', 'chemical containers disposed', 'flammable disposed'
+      'coshh assessment of hazardous', 'coshh assessment was not'
     ],
     moderatePatterns: [
       'documentation', 'documents', 'method statement', 'risk assessment',
@@ -2467,28 +2459,6 @@ export const FACTOR_PHRASE_CONFIG = {
       'unsafe practice', 'unsafe work practice', 'unsafe working practice',
       'near miss', 'near-miss', 'nearmiss', 'near hit',
       'good catch', 'stop work', 'stop work authority',
-
-      // === PPE BEHAVIOR VIOLATIONS (not wearing/using PPE) ===
-      'not wearing proper ppe', 'not wearing mandatory ppe', 'not wearing required ppe',
-      'not wearing ppe', 'without wearing ppe', 'without the required ppe',
-      'without mandatory ppe', 'without proper ppe', 'not using ppe',
-      'without the mandatory ppe', 'without mandatory ppe', 'on-site without the mandatory',
-      'working on-site without the mandatory', 'working without the mandatory ppe',
-      'operator was not wearing', 'worker was not wearing', 'workers not wearing',
-      'operatives not wearing', 'found not wearing', 'observed not wearing',
-      'surveyor was not wearing', 'surveyor working without', 'engineer not wearing',
-      'was not wearing helmet', 'was not wearing gloves', 'was not wearing mask',
-      'was not wearing seatbelt', 'was not wearing safety shoes', 'was not wearing harness',
-      'without wearing helmet', 'without wearing gloves', 'without wearing mask',
-      'without wearing harness', 'without wearing safety', 'without wearing hand gloves',
-      'working without wearing', 'performing without wearing', 'engaged without wearing',
-      'come to site without helmet', 'arrived without ppe', 'found without ppe',
-      'not wearing ear protection', 'not wearing safety glasses', 'not wearing hi-vest',
-      'not wearing high-visibility', 'not wearing overall', 'not wearing face shield',
-      'without the mandatory personal protective', 'without essential personal protective',
-      'without mandatory personal protective', 'without required personal protective',
-      'without any fall protection', 'without fall protection', 'found without fall protection',
-      'outside barricades without', 'found outside barricades',
 
       // === POSITION/LOCATION VIOLATIONS ===
       'standing on the edges', 'standing on edges', 'standing at edges',
@@ -2514,9 +2484,6 @@ export const FACTOR_PHRASE_CONFIG = {
       'using undesignated', 'walking in undesignated', 'passing through undesignated',
       'taking shortcuts', 'taking a shortcut', 'using shortcuts',
       'walking through equipment area', 'passing through equipment',
-      'unsafe access and egress', 'using unsafe access', 'improper access',
-      'climbing in and out', 'climbing without ladder', 'climbing without proper',
-      'without designated ladders', 'without approved access',
       'placed in undesignated area', 'parked haphazardly', 'parked in wrong area',
 
       // === DISTRACTION BEHAVIORS ===
@@ -2527,7 +2494,6 @@ export const FACTOR_PHRASE_CONFIG = {
       'using hand-free', 'using hand free', 'hand-free during', 'hand free during',
       'using bluetooth', 'bluetooth hearing devise', 'bluetooth device',
       'bluetooth whilst', 'distraction of the', 'resulting in distraction',
-      // Extended driver distraction patterns
       'on cell phone call', 'cell phone call while', 'alwys use hand free',
       'use handfee', 'use hand fee', 'handfree during driving',
       'driver alwys', 'this trailer driver',
@@ -2539,45 +2505,17 @@ export const FACTOR_PHRASE_CONFIG = {
       'over taking', 'overtaking', 'doing over taking', 'over taking on work',
       'dumping very closely', 'trucks were dumping very closely',
       'not following safe distance', 'not maintaining safe distance',
-      'without driving license', 'without driving linces', 'no driving license',
-      'driver don\'t have', 'driver doing drive without',
-      'don\'t fallow safety requirements', 'alwys ignore', 'ignore safety',
       'wrong parking', 'not in reverse parking', 'reverse parking of vehicles',
-
-      // === POOR DRIVER BEHAVIOR ===
-      'poor conditions', 'poor condition bus', 'not meeting standards',
-      'not meeting standards', 'workers transport buses',
-      'driver out side', 'driver outside without', 'driver without healmet',
-      'drivers don\'t', 'driver don\'t', 'some drivers don\'t',
-      'some driver no wear', 'driver no wear', 'drivers no wear',
-      'drivers doing', 'some drivers doing', 'driver doing',
-      'wearing home dresses', 'wearing loose clothes', 'sub standard helmets',
-      'substandard helmets', 'poor quality helmet',
+      'driving without seatbelt', 'driving without seat belt', 'driving on site without',
+      'driver driving without', 'without using seat belt', 'without using seatbelt',
+      'reversing without watchman', 'reversing without a watchman',
+      'tanker reversing without', 'truck reversing without',
 
       // === VEHICLE LEFT RUNNING / PARKED ISSUES ===
       'leave his vehicle without', 'without switched off', 'engine running',
       'vehicle without switched off the engine', 'left without switching off',
       'parked near to fire pump', 'near to fire pump', 'near fire pump',
       'parked near control room', 'near control room',
-      'checkpoint placed exposed', 'security checkpoint placed',
-      'exposed to live vehicles', 'exposed to vehicles and equipment',
-      'security vehicle was not available', 'security vehicle not available',
-      'ambulance driver was not available', 'ambulance driver not available',
-      'collided with', 'vehicle collided', 'vehicles collided',
-      'other vehicles that were parked', 'collision', 'collided',
-
-      // === MANEUVERING / OBSTRUCTION ===
-      'having dificulty maneuvering', 'difficulty maneuvering', 'obstructing narrow',
-      'obstrucgting', 'obstructing', 'long carriage', 'long carriage sent',
-
-      // === BOOTS ON GROUND / MAN-MACHINE ===
-      'waking beside the equipment', 'walking beside the equipment',
-      'boot-on-the-ground', 'boots on the ground', 'no boots on ground',
-      'boots on ground', 'no boot-on-the-ground policy', 'violating no boots',
-
-      // === COSHH / CHEMICALS ===
-      'coshh was found', 'coshh found', 'without any precautionary measures',
-      'precautionary measures taken', 'without precautionary',
 
       // === VISION OBSTRUCTION (Equipment) ===
       'cover his wind sheild', 'cover his windshield', 'covered his wind screen',
@@ -2588,10 +2526,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'glass covered by cloth', 'covered by a cloth', 'covered using thick film',
       'vision obstruction', 'obstructive view', 'restricted vision',
       'dirt on windscreens', 'dirt on windscreen', 'dirty windscreen',
-      // Misspellings: sceeen, screeen
       'covered his wind sceeen', 'wind sceeen with curtain', 'wind sceeen covered',
       'covered his wind screeen', 'excavator covered wind',
-      // Rear view glass covered
       'rear view glass of dozer', 'glass of dozer covered', 'dozer covered by curtain',
       'rear view glass covered by', 'rear view covered by',
 
@@ -2612,7 +2548,6 @@ export const FACTOR_PHRASE_CONFIG = {
       // === PARKED NEAR EDGE / UNSAFE PARKING ===
       'parked near the edge', 'parked near edge', 'parked at the edge',
       'parked close to edge', 'jcb was parked near', 'equipment parked near edge',
-      'while engaged in backfilling', 'engaged in backfilling around',
 
       // === TRUCK NOT LEVEL / DUMPING ISSUES ===
       'not on a level surface', 'not on level surface', 'not level surface',
@@ -2624,33 +2559,22 @@ export const FACTOR_PHRASE_CONFIG = {
       'sitting under heavy equipment', 'drivers sitting under', 'workers sitting under',
       'under equipment shade', 'under loader shade', 'taking rest under',
 
-      // === NO BOOTS ON GROUND VIOLATIONS ===
+      // === BOOTS ON GROUND / MAN-MACHINE ===
+      'waking beside the equipment', 'walking beside the equipment',
+      'boot-on-the-ground', 'boots on the ground', 'no boots on ground',
+      'boots on ground', 'no boot-on-the-ground policy', 'violating no boots',
       'violating the no boots on ground', 'no boots on ground policy',
       'violating no boots on ground', 'person moving around mobile plant',
       'moving around mobile plant equipment', 'walking at ground while',
       'praying outside the equipment', 'praying outside equipment',
-
-      // === SUPERVISION/COVERAGE ABSENCE (behavioral choice) ===
-      'safety officer not present', 'safety officer was not present', 'safety officer were not present',
-      'supervisor not present', 'supervisor was not present', 'supervisor were not present',
-      'supervisor absent', 'no supervisor available', 'without supervisor', 'lack of supervision',
-      'working without supervision', 'no safety coverage', 'lack of safety coverage',
-      'safety team not present', 'no competent person present',
-      'lap was not present', 'lap were not present', 'lifting appointed person not present',
-      'lifting appointed person were not present', 'appointed person not present',
-      'were not present at workplace', 'were not present at the workplace',
-      'was not present at workplace', 'was not present at the workplace',
-      'no banksman present', 'without banksman', 'banksman not present',
-      'no spotter present', 'without spotter', 'spotter not available',
-      'no standby person', 'without standby person',
 
       // === IMPROPER EQUIPMENT USE (behavior) ===
       'excavator was being used for lifting', 'used for lifting purpose',
       'equipment used for lifting', 'improper use of equipment',
       'unsafe lifting operations', 'unsafe lifting techniques',
       'unsafe handling', 'improper lifting', 'improper rigging',
-      'without proper rigging', 'lifting without plan', 'lifting without supervision',
-      'riding the crane hook', 'standing on chain slings', 'standing on suspended',
+      'without proper rigging', 'riding the crane hook',
+      'standing on chain slings', 'standing on suspended',
       'holding onto suspended load', 'unsafe use of', 'improper use of',
 
       // === OVERREACHING/BALANCE RISKS ===
@@ -2681,109 +2605,9 @@ export const FACTOR_PHRASE_CONFIG = {
       // === FREELANCER / UNAUTHORIZED DRIVER ===
       'freelancer driver', 'a freelancer driver', 'freelancer driver was driving',
 
-      // === WORKING WITHOUT SAFETY MEASURES ===
-      'working without fall protection', 'without fall protection',
-      'without fall arrest', 'without safety harness', 'without harness',
-      'without 100% tie off', 'without tie off', 'not anchored',
-      'harness not anchored', 'lanyard not attached', 'not hooked on',
-      'working at height without', 'performing at height without',
-      'working without safe platform', 'working on unsafe platform',
-      'using unsafe platform', 'using an unsafe platform', 'standing on unsafe platform',
-      'using unsafe means', 'using an unsafe', 'observed using an unsafe',
-      'not using proper platform', 'not using proper and appropriate platform',
-      'not using appropriate platform', 'using unstable platform', 'chance of tip over',
-      'tip over of unstable', 'unstable platform', 'inappropriate platform',
-      'poses a high risk', 'this practice poses', 'practice poses a risk',
-      'lifting material manually', 'lifting manually with rope', 'lifting with rope',
-      'manually with a rope', 'without using proper equipment',
-      'materials kept in rest shelter', 'materials are kept in the rest',
-      'may obstruct', 'obstructing', 'obstructed',
-      // Climbing behaviors
-      'climbed into and out', 'climbing into and out', 'climbed using the rebar',
-      'climbing using rebar', 'climbed into the cage', 'climbing into cage',
-      'using the rebar frame', 'climbing on rebar', 'falling from height',
-      'falling from a height', 'safe access is not provided', 'safe access not provided',
-      // Anchor point issues
-      'anchor point not rated', 'anchor point is not rated', 'anchor point that is not',
-      'unsafe anchor point', 'unsafe anchor points', 'unapproved anchor point',
-      'anchor not rated', 'anchorage not rated',
-      'improper anchorage point', 'improper anchorage', 'anchorage point observed',
-      'spliced pipes', 'spliced pipes are being used', 'not rated to withstand',
-      '5,000 lbs', '5000 lbs', 'force in the event of a fall',
-
-      // === WALKING/WORKING UNDERNEATH HAZARDS ===
-      'walking underneath', 'working underneath', 'standing underneath',
-      'underneath suspended load', 'underneath scaffold', 'underneath crane',
-      'standing behind reversing', 'behind reversing vehicle',
-
-      // === DOCUMENTATION/COMPLIANCE BEHAVIORS ===
-      'checklist not available', 'checklist was not available',
-      'checklist not updated', 'checklist in outdated status',
-      'documents not available', 'license not available',
-      'without safety induction', 'not undergone induction', 'induction not completed',
-      'induction stickers missing', 'without training card',
-
-      // === IMPROPER DISPOSAL/HANDLING ===
-      'disposed in general waste', 'disposed directly on ground',
-      'placed directly on soil', 'waste placed on soil',
-      'improper disposal', 'improper waste handling',
-
-      // === POSITIVE BEHAVIORS ===
-      'safe behavior', 'safe behaviour', 'safe act', 'safe practice',
-      'positive observation', 'good practice', 'best practice',
-      'safety observation', 'safety compliant', 'following safety',
-      'adhering to safety', 'wearing proper ppe', 'properly wearing',
-      'standby person positioned', 'standby person provided',
-      'safety protocols followed', 'safe working practice',
-
-      // === SECURITY GUARD BEHAVIOR (positive safety observations) ===
-      // NOTE: Patterns must be specific to guard BEHAVIOR, not general security topics
-      'security guard was seen', 'security guard checking', 'security guard verifying',
-      'security guard ready', 'security guard on duty', 'security guard monitoring',
-      'security guard was available', 'security guard available at',
-      'security guard present at', 'security guard observed',
-      'security personnel checking', 'security personnel verifying',
-      'security personnel present at', 'security personnel on duty',
-      'security verifying vehicles', 'verifying vehicles before entry',
-      'security checking vehicles', 'checking vehicles at entrance',
-      'security guard strict surveillance', 'strict security surveillance',
-
-      // === PROPER ACCESS/PLATFORM (positive observations) ===
-      'wooden planks provided', 'planks provided', 'planks have been provided',
-      'wooden walkways provided', 'walkways provided', 'walkway provided',
-      'pedestrian walkway established', 'pedestrian walkway maintained',
-      'proper platform', 'safe platform', 'stable platform', 'working platform',
-      'designated harness point', 'harness point created', 'harness storage point',
-      'safe access provided', 'proper access provided', 'access provided',
-
-      // === ACCESS VIOLATIONS (behavioral issues) ===
-      'no proper access', 'without proper access', 'no safe access',
-      'safe access not provided', 'safe access is not provided',
-      'proper access not provided', 'access not provided', 'lack of proper access',
-      'lack of safe access', 'improper access observed', 'access improper',
-      'access way blocked', 'accessway blocked', 'access blocked',
-      'blocking the access', 'obstruct the access', 'obstructing access',
-      'working without access', 'working without proper access',
-      'without access and egress', 'no access and egress', 'access and egress not',
-      'egress arrangements not', 'no egress arrangements', 'egress not provided',
-      'access has been blocked', 'access blocked by', 'blocked by rebar',
-      'blocked by materials', 'blocked by scaffold', 'fire point access blocked',
-
-      // === DRIVING VIOLATIONS ===
-      'driving without seatbelt', 'driving without seat belt', 'driving on site without',
-      'driver driving without', 'without using seat belt', 'without using seatbelt',
-      'reversing without watchman', 'reversing without a watchman',
-      'tanker reversing without', 'truck reversing without',
-
       // === THREE POINT CONTACT VIOLATION ===
       'three points of contact', 'three point contact', '3 point contact',
       'without maintaining three', 'not maintaining three', 'holding tools while climbing',
-
-      // === LADDER VIOLATIONS ===
-      'standing on top step', 'top step of ladder', 'on the top step',
-      'step ladder unstable', 'ladder unstable', 'ladder not secured',
-      'ladder extending more than', 'extending more than 2 meters',
-      '6m ladder without rest platform', 'ladder without rest platform',
 
       // === IMPROPER SITTING/POSITIONING ===
       'improper sitting', 'sitting for painting', 'improper sitting for',
@@ -2796,54 +2620,59 @@ export const FACTOR_PHRASE_CONFIG = {
       'low bed reversing', 'standing behind the low bed', 'behind low bed',
       'personnel standing behind', 'created a potential danger',
 
-      // === ACCESS/EGRESS INSIDE EXCAVATION ===
-      'inside an excavation pit without', 'inside excavation without access',
-      'excavation pit without a proper access', 'without a proper access/egress',
-      'access/egress', 'such as ladder or ramp', 'excavation safety requirements',
-      'scaffold platform is blocked', 'blocked by steel materials',
-      'blocked by steel', 'blocked by wood', 'materials and wood',
+      // === WALKING/WORKING UNDERNEATH HAZARDS ===
+      'walking underneath', 'working underneath', 'standing underneath',
+      'underneath suspended load', 'underneath scaffold', 'underneath crane',
+      'standing behind reversing', 'behind reversing vehicle',
 
-      // === SCAFFOLDING ACCESS LADDER POSITION ===
-      'ladder landing', 'access ladder landing', 'ladder\'s landing',
-      'landing is positioned on', 'positioned on the edge of excavation',
-      'edge of the excavation', 'poses a safety risk to users',
+      // === POSITIVE BEHAVIORS ===
+      'safe behavior', 'safe behaviour', 'safe act', 'safe practice',
+      'positive observation', 'good practice', 'best practice',
+      'safety observation', 'safety compliant', 'following safety',
+      'adhering to safety', 'wearing proper ppe', 'properly wearing',
+      'standby person positioned', 'standby person provided',
+      'safety protocols followed', 'safe working practice',
 
-      // === IMPROPER USE OF TOOLS/EQUIPMENT ===
-      'improper use', 'improper use for', 'using wood for support',
-      'electrical power tools', 'power tools on area', 'improper use of electrical',
-      'pumps near to water', 'electrical water pumps', 'near to water',
+      // === SECURITY GUARD BEHAVIOR (positive safety observations) ===
+      'security guard was seen', 'security guard checking', 'security guard verifying',
+      'security guard ready', 'security guard on duty', 'security guard monitoring',
+      'security guard was available', 'security guard available at',
+      'security guard present at', 'security guard observed',
+      'security personnel checking', 'security personnel verifying',
+      'security personnel present at', 'security personnel on duty',
+      'security verifying vehicles', 'verifying vehicles before entry',
+      'security checking vehicles', 'checking vehicles at entrance',
+      'security guard strict surveillance', 'strict security surveillance',
 
-      // === ADDITIONAL ACCESS ISSUES ===
-      'access towards', 'access was not safe', 'access not safe for use',
-      'not safe for use', 'need to be closed', 'clean the access',
-      'adding proper steps', 'instead of slopes', 'hdd excavated',
-      'without access', 'working without access', 'on the top without access',
-      'on top without access', 'top of the foundation without access',
-      'inside the steel structure without', 'without rest platform',
-      'crane dismantling without', 'worker on the top without',
-      'Improper/unstable access', 'improper/unstable', 'unstable access',
-
-      // === PEDESTRIAN WALKWAY ===
+      // === PEDESTRIAN WALKWAY (positive) ===
       'pedestrian walkway has been established', 'pedestrian walkway established',
-      'walkway has been established', 'walkway inside the red zone',
-      'inside the red zone of the excavator', 'inside red zone of excavator',
+      'walkway has been established',
 
       // === SECURITY PRESENCE (simple) ===
       'security was seen', 'a security was seen', 'security seen at the entrance'
     ],
     moderatePatterns: [
       'behavior', 'behaviour', 'unsafe', 'safe act', 'near miss',
-      'good catch', 'observation', 'not wearing', 'without wearing',
-      'too close', 'undesignated', 'without supervision', 'unsafe practice',
-      'overreaching', 'standing on', 'climbing on', 'working without',
+      'good catch', 'observation', 'too close', 'undesignated',
+      'unsafe practice', 'overreaching', 'standing on', 'climbing on',
       'idle', 'shortcuts', 'distracted'
     ],
     exclusionPatterns: [
       'inspection checklist', 'qr code', 'vvs', 'veri-fi', 'loading point',
       'unsafe condition observed', 'unsafe scaffold observed', 'unsafe ladder observed',
-      'unsafe access provided', 'unsafe barricade observed', 'unsafe guardrail observed'
+      'unsafe access provided', 'unsafe barricade observed', 'unsafe guardrail observed',
+      // Cross-factor exclusions: PPE
+      'not wearing ppe', 'without ppe', 'ppe not worn',
+      // Cross-factor exclusions: Training
+      'training conducted', 'tbt conducted', 'training session',
+      // Cross-factor exclusions: Supervision
+      'supervision provided', 'flagman assigned', 'banksman assigned',
+      // Cross-factor exclusions: Barriers
+      'barrier not installed', 'barricade not', 'guardrail not', 'handrail not',
+      // Cross-factor exclusions: Housekeeping
+      'housekeeping', 'toilet cleaning', 'waste bin', 'drinking water'
     ],
-    minimumScore: 5
+    minimumScore: 10
   },
 
   'No Authorization': {
@@ -3181,7 +3010,32 @@ export const FACTOR_PHRASE_CONFIG = {
       'no have water', 'no available water', 'not available water in rest shelter',
       'no available water in rest', 'water not available in', 'water unavailable in',
       'potable water in the toilet', 'toilet facilities was unavailable',
-      'poor hygiene practices', 'health issues', 'non-compliance with welfare'
+      'poor hygiene practices', 'health issues', 'non-compliance with welfare',
+
+      // === WELFARE (moved from Housekeeping) ===
+      'drinking water not available', 'no drinking water',
+      'potable water unavailable', 'no potable water',
+      'sewage overflow', 'sewage overflowed', 'toilet overflow',
+      'toilet overflowed', 'over flowed', 'overflow sewage',
+      'pump out sewage', 'pumping out sewage', 'sewage waste',
+      'overflow sewage waste', 'sewage waste coming out',
+      'toilet tank overflow', 'vacuum tanker',
+
+      // === CHEMICAL/GAS STORAGE (moved from Documentations) ===
+      'compressed gas', 'gas cylinders', 'compressed gas cylinders',
+      'unsecured compressed gas', 'unsecured cylinders', 'unsecured gas cylinders',
+      'oxygen & acetylene', 'oxygen and acetylene', 'acetylene cylinders',
+      'oxygen cylinders', 'no protective caps', 'no protective cap',
+      'protective caps at nozzle', 'without trolly', 'without trolley',
+      'cylinders without trolley', 'gas cylinder storage', 'cylinder storage',
+      'chemical storage', 'chemicals stored', 'chemical container',
+      'chemical exposed to sunlight', 'chemical directly exposed',
+      'hazardous chemicals', 'hazardous chemical', 'chemicals without drip',
+      'drip trays', 'without drip trays', 'soil contamination',
+      'flammable properties', 'having flammable properties', 'containers having flammable',
+      'flammable containers', 'chemical used containers', 'used containers',
+      'containers disposed on ground', 'disposed on the ground',
+      'disposed on ground', 'chemical containers disposed', 'flammable disposed'
     ],
     moderatePatterns: [
       'lighting', 'illumination', 'visibility', 'ventilation',
@@ -3241,7 +3095,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'validation', 'validated', 'commissioning'
     ],
     exclusionPatterns: [
-      'inspection checklist', 'vvs', 'veri-fi', 'loading point'
+      'inspection checklist', 'vvs', 'veri-fi', 'loading point',
+      // Cross-factor exclusions: Permit
+      'confined space', 'confined space entry'
     ],
     minimumScore: 5
   },
@@ -3333,764 +3189,6 @@ export const GLOBAL_EXCLUSIONS = [
   // as they appear in many valid BBS observations
 ]
 
-// ============================================================================
-// LEGACY: HAZARD-SPECIFIC FACTOR VALIDATION RULES (kept for compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use FACTOR_PHRASE_CONFIG instead
- * Kept for backward compatibility
- */
-export const HAZARD_FACTOR_RULES = {
-  'Mobile Plant & Equipment': {
-    // Common rules for ALL factors in this hazard category
-    _common: {
-      // Equipment-related context required for ANY factor to be valid
-      requiredContext: [
-        // Equipment types
-        'equipment', 'truck', 'trucks', 'excavator', 'excavators', 'loader', 'loaders',
-        'grader', 'graders', 'roller', 'rollers', 'tanker', 'tankers', 'vehicle', 'vehicles',
-        'plant', 'plants', 'dozer', 'dozers', 'bulldozer', 'bulldozers', 'backhoe', 'backhoes',
-        'jcb', 'bobcat', 'bobcats', 'compactor', 'compactors', 'crane', 'cranes',
-        'forklift', 'forklifts', 'trailer', 'trailers', 'dumper', 'dumpers', 'tipper', 'tippers',
-        'bus', 'buses', 'pickup', 'pickups', 'car', 'cars', 'van', 'vans',
-        'machinery', 'machine', 'machines', 'mewp', 'mewps', 'boom', 'boomtruck',
-        'wheel', 'skid', 'steer', 'pneumatic', 'drum', 'crusher', 'mixer',
-        // Operator-related
-        'operator', 'operators', 'driver', 'drivers',
-        // Equipment components
-        'pwas', 'camera', 'cameras', 'reverse alarm', 'horn', 'tyre', 'tyres', 'tire', 'tires',
-        'cabin', 'windshield', 'windscreen', 'engine', 'brake', 'brakes'
-      ],
-      // Global exclusions - these exclude from ALL factors
-      globalExclusions: [
-        // Welfare/facilities - NOT about mobile plant
-        'toilet facilities', 'toilet not', 'toilet water', 'toilets', 'welfare facilities',
-        'restroom', 'washroom', 'latrine', 'drinking water', 'potable water',
-        'water unavailable in the toilet', 'water was unavailable in the toilet',
-        // Geological/terrain - NOT about mobile plant
-        'loose rock', 'loose rocks', 'rock fall', 'rockfall', 'terrain hazard',
-        'geological', 'slope stability', 'ground condition', 'rocks rolling',
-        // Construction activities unrelated to equipment
-        'concrete grouting', 'bar bending', 'bar bender', 'scaffolding work',
-        'grouting activities', 'rebar', 'formwork'
-      ]
-    },
-
-    // Inspections factor - specific rules
-    'Inspections': {
-      requiredContext: [
-        'checklist', 'checklists', 'tuv', 'tpc', 'qr', 'qrcode', 'barcode', 'bar code',
-        'verifi', 'veri-fi', 'vvs', 'status', 'green', 'red', 'expired', 'valid',
-        'sticker', 'stickers', 'tag', 'tags', 'colour code', 'color code',
-        'preuse', 'pre-use', 'prestart', 'pre-start', 'daily', 'weekly', 'monthly',
-        'third party', 'thirdparty', '3rd party', 'certification', 'certificate',
-        'istamara', 'insurance', 'license', 'licence', 'inspected', 'uninspected',
-        'fire extinguisher', 'extinguisher', 'first aid', 'firstaid'
-      ],
-      exclusionPatterns: [
-        // Operator behavior - NOT inspection compliance
-        'speaking on phone', 'phone while driving', 'using phone', 'mobile phone while',
-        'on the phone while', 'talking on phone',
-        'over speeding', 'overspeeding', 'speeding on site', 'speed limit',
-        'not wearing seatbelt', 'without seatbelt', 'seatbelt while operating',
-        'standing close to', 'standing very close', 'too close to', 'unsafe proximity',
-        'within an unsafe proximity', 'close to a moving',
-        // PPE issues - separate factor
-        'without wearing', 'not wearing ppe', 'without ppe', 'no ppe', 'missing ppe',
-        'ear protection', 'hearing protection', 'safety shoes not',
-        'none of the operatives were wearing',
-        // Parking/traffic - NOT inspection
-        'parked on slope', 'parked on a slope', 'parking violation',
-        'wheel chock', 'wheel chocks', 'without wheel chocks',
-        'stuck on', 'causing blockage', 'blocking traffic',
-        'washing his light vehicle', 'washing vehicle',
-        // Lifting misuse
-        'lifting purpose', 'used for lifting'
-      ]
-    },
-
-    // PPE factor - specific rules
-    'PPE': {
-      requiredContext: [
-        'ppe', 'helmet', 'hard hat', 'hardhat', 'gloves', 'goggles', 'glasses',
-        'vest', 'hi-vis', 'hivis', 'high visibility', 'reflective',
-        'boots', 'safety shoes', 'steel toe', 'steeltoe',
-        'harness', 'lanyard', 'respirator', 'mask', 'ear plug', 'earplug',
-        'ear muff', 'earmuff', 'face shield', 'faceshield', 'seatbelt', 'seat belt',
-        'wearing', 'worn', 'donned'
-      ],
-      exclusionPatterns: [
-        // Inspection issues - separate factor
-        'qr code', 'qrcode', 'veri-fi', 'verifi', 'vvs', 'tuv', 'tpc',
-        'checklist not updated', 'checklist was not', 'expired inspection',
-        // Training issues - separate factor
-        'not trained', 'without training', 'no training', 'untrained'
-      ]
-    },
-
-    // Training factor - specific rules
-    'Training': {
-      requiredContext: [
-        'training', 'trained', 'untrained', 'certificate', 'certification', 'certified',
-        'license', 'licence', 'licensed', 'induction', 'inducted', 'orientation',
-        'competent', 'competency', 'qualified', 'qualification', 'tpc', 'third party',
-        'refresher', 'course', 'session'
-      ],
-      exclusionPatterns: [
-        // Inspection issues - separate factor
-        'checklist not', 'qr code', 'veri-fi', 'expired tag', 'colour code',
-        // PPE issues - separate factor
-        'not wearing', 'without ppe', 'missing ppe'
-      ]
-    },
-
-    // Competency factor - specific rules
-    'Competency': {
-      requiredContext: [
-        'competent', 'competency', 'qualified', 'qualification', 'unqualified',
-        'skilled', 'unskilled', 'experienced', 'inexperienced', 'expertise',
-        'capable', 'incapable', 'proficient', 'ability', 'knowledge',
-        'license', 'licence', 'tpc', 'third party certificate'
-      ],
-      exclusionPatterns: [
-        // Inspection issues
-        'checklist not', 'qr code', 'veri-fi', 'expired tag',
-        // PPE issues
-        'not wearing', 'without ppe'
-      ]
-    },
-
-    // Supervision factor - specific rules
-    'Supervision': {
-      requiredContext: [
-        'supervisor', 'supervision', 'supervised', 'unsupervised', 'foreman',
-        'overseer', 'oversight', 'watchman', 'spotter', 'banksman',
-        'monitoring', 'monitored', 'unmonitored'
-      ],
-      exclusionPatterns: [
-        // Inspection issues
-        'checklist not', 'qr code', 'veri-fi', 'expired inspection',
-        // PPE issues
-        'not wearing', 'without ppe'
-      ]
-    },
-
-    // Communication factor - specific rules
-    'Communication': {
-      requiredContext: [
-        'communication', 'briefing', 'briefed', 'unbriefed', 'toolbox', 'tbt',
-        'tailgate', 'prestart', 'prejob', 'informed', 'uninformed', 'radio',
-        'signal', 'signaling', 'hand signal'
-      ],
-      exclusionPatterns: [
-        // Inspection issues
-        'qr code', 'veri-fi', 'checklist not',
-        // PPE issues
-        'not wearing', 'without ppe'
-      ]
-    },
-
-    // Documentations factor - specific rules
-    'Documentations': {
-      requiredContext: [
-        'documentation', 'document', 'documents', 'procedure', 'sop', 'method statement',
-        'risk assessment', 'rams', 'jsa', 'jha', 'checklist', 'paperwork',
-        'logbook', 'record', 'records', 'permit', 'ptw', 'work instruction'
-      ],
-      exclusionPatterns: [
-        // PPE issues
-        'not wearing', 'without ppe',
-        // Behavior issues
-        'speeding', 'phone while'
-      ]
-    },
-
-    // Maintenance factor - specific rules
-    'Maintenance': {
-      requiredContext: [
-        'maintenance', 'maintained', 'unmaintained', 'repair', 'repaired',
-        'broken', 'defective', 'defect', 'malfunction', 'faulty', 'fault',
-        'preventive', 'corrective', 'breakdown', 'service', 'serviced'
-      ],
-      exclusionPatterns: [
-        // Inspection compliance issues
-        'qr code', 'veri-fi', 'expired inspection', 'checklist not updated'
-      ]
-    },
-
-    // Safety Devices factor - specific rules
-    'Safety Devices': {
-      requiredContext: [
-        'alarm', 'reverse alarm', 'horn', 'beacon', 'light', 'camera', 'cameras',
-        'pwas', 'sensor', 'detector', 'interlock', 'guard', 'guarding',
-        'emergency stop', 'e-stop', 'failsafe', 'warning system'
-      ],
-      exclusionPatterns: [
-        // Inspection compliance issues
-        'expired inspection', 'qr code not', 'veri-fi red'
-      ]
-    },
-
-    // Emergency Preparedness factor - specific rules
-    'Emergency Preparedness': {
-      requiredContext: [
-        'emergency', 'fire extinguisher', 'extinguisher', 'first aid', 'firstaid',
-        'evacuation', 'muster', 'assembly', 'rescue', 'ert', 'drill',
-        'spill kit', 'emergency kit'
-      ],
-      exclusionPatterns: [
-        // Inspection compliance issues (unless about extinguisher inspection)
-        'qr code', 'veri-fi', 'vvs status'
-      ]
-    },
-
-    // Behavioural (Behavior-Based Safety) factor - specific rules
-    'Behavioural': {
-      requiredContext: [
-        'behavior', 'behaviour', 'unsafe act', 'safe act', 'at risk', 'atrisk',
-        'near miss', 'nearmiss', 'good catch', 'stop work', 'observation'
-      ],
-      exclusionPatterns: [
-        // Inspection issues
-        'qr code', 'veri-fi', 'checklist not'
-      ]
-    },
-
-    // Barriers factor - specific rules
-    'Barriers': {
-      requiredContext: [
-        'barrier', 'barricade', 'guardrail', 'handrail', 'fence', 'fencing',
-        'bollard', 'cone', 'delineator', 'demarcation', 'exclusion zone',
-        'drop zone', 'caution tape'
-      ],
-      exclusionPatterns: [
-        // Inspection issues
-        'qr code', 'veri-fi', 'checklist not'
-      ]
-    },
-
-    // Signage factor - specific rules
-    'Signage': {
-      requiredContext: [
-        'sign', 'signage', 'signboard', 'label', 'marking', 'placard',
-        'poster', 'caution', 'warning sign', 'danger sign', 'safety sign',
-        'sticker'
-      ],
-      exclusionPatterns: [
-        // Unless specifically about equipment signage
-      ]
-    },
-
-    // Housekeeping factor - specific rules
-    'Housekeeping': {
-      requiredContext: [
-        'housekeeping', 'clean', 'cleanliness', 'dirty', 'clutter', 'cluttered',
-        'debris', 'trash', 'rubbish', 'garbage', 'waste', 'messy', 'tidy',
-        'orderly', 'disorderly', 'spillage', 'cabin', 'cabin not cleaned'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Material Handling factor - specific rules
-    'Material Handling': {
-      requiredContext: [
-        // Actual material handling activities
-        'material handling', 'manual handling', 'lifting material', 'lifting load',
-        'rigging', 'sling', 'slinging', 'shackle',
-        'loading material', 'unloading material', 'manual loading', 'manual unloading',
-        'stacking', 'stacked', 'storage of material', 'storing material',
-        'hoist', 'hoisting', 'load securing', 'lashing',
-        'overload', 'overloaded', 'overloading',
-        'material into', 'material from', 'load into', 'load from',
-        'bucket load', 'bucket unload', 'into bucket', 'from bucket',
-        'transferring material', 'moving material', 'shifting material',
-        'man machine interface', 'line of fire'
-      ],
-      exclusionPatterns: [
-        // VVS/Inspection status observations - NOT material handling
-        'green status under', 'red status under', 'overdue status under',
-        'vvs at zone', 'vvs at location', 'verification system at zone',
-        'verification', 'vvs', 'veri-fi', 'verifi',
-        'access granted', 'access denied', 'qr code',
-        // Equipment inspection issues - NOT material handling
-        'checklist not', 'checklist was not', 'inspection checklist',
-        'pre-use inspection', 'daily inspection', 'equipment inspection',
-        // Location-only mentions (loading point as place, not activity)
-        'at zone 3 loading point', 'at zone 4 loading point', 'at zone 5 loading point',
-        'at zone 6 loading point', 'at zone 7 loading point',
-        'at the zone 3 loading', 'at the zone 4 loading', 'at the zone 5 loading',
-        'at the zone 6 loading', 'at the zone 7 loading',
-        'at location zone', 'found in green status', 'found in red status',
-        // Operator behavior issues - NOT material handling
-        'speaking on phone', 'phone while driving', 'using phone',
-        'not wearing seatbelt', 'without seatbelt', 'seat belt',
-        // Equipment type mentions only (not handling activity)
-        'wheel loader inspection', 'loader inspection', 'backhoe inspection',
-        'wheel loader check', 'loader check list', 'backhoe check'
-      ]
-    },
-
-    // No Authorization factor - specific rules
-    'No Authorization': {
-      requiredContext: [
-        'authorization', 'authorisation', 'authorized', 'unauthorised', 'unauthorized',
-        'permission', 'permitted', 'unpermitted', 'restricted', 'access',
-        'approval', 'approved', 'unapproved', 'denied'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Planning factor - specific rules
-    'Planning': {
-      requiredContext: [
-        'planning', 'planned', 'unplanned', 'schedule', 'scheduled', 'coordination',
-        'coordinated', 'preparation', 'prepared', 'unprepared', 'methodology'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Interfaces factor - specific rules
-    'Interfaces': {
-      requiredContext: [
-        'interface', 'handover', 'changeover', 'transition', 'turnover',
-        'shift change', 'crew change', 'simultaneous', 'simops', 'overlap'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Testing factor - specific rules
-    'Testing': {
-      requiredContext: [
-        'testing', 'test', 'tested', 'calibration', 'calibrated', 'uncalibrated',
-        'validation', 'validated', 'commissioning', 'function test'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Machine Guarding factor - specific rules
-    'Machine Guarding': {
-      requiredContext: [
-        'guard', 'guarding', 'guarded', 'unguarded', 'machinery', 'machine',
-        'rotating', 'pinch point', 'nip point', 'crush', 'entanglement',
-        'moving parts', 'exposed parts', 'belt guard', 'shaft guard'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Environment factor - specific rules
-    'Environment': {
-      requiredContext: [
-        'environment', 'weather', 'lighting', 'illumination', 'ventilation',
-        'temperature', 'humidity', 'dusty', 'dust', 'windy', 'visibility',
-        'conditions', 'workplace', 'worksite'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Leadership factor - specific rules
-    'Leadership': {
-      requiredContext: [
-        'leadership', 'leader', 'management', 'manager', 'accountability',
-        'responsible', 'responsibility', 'superintendent', 'director',
-        'commitment', 'governance'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Procurement factor - specific rules
-    'Procurement': {
-      requiredContext: [
-        'procurement', 'purchase', 'supplier', 'vendor', 'contractor',
-        'subcontractor', 'sourcing', 'specification', 'tender'
-      ],
-      exclusionPatterns: []
-    },
-
-    // Permit factor - specific rules
-    'Permit': {
-      requiredContext: [
-        'permit', 'ptw', 'hot work', 'cold work', 'loto', 'lockout', 'tagout',
-        'isolation', 'isolated', 'excavation permit', 'confined space',
-        'height permit', 'work permit'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Working at Height hazard category
-  'Working at Height': {
-    _common: {
-      requiredContext: [
-        'scaffold', 'scaffolding', 'ladder', 'ladders', 'platform', 'platforms',
-        'height', 'elevated', 'roof', 'rooftop', 'edge', 'fall', 'falling',
-        'harness', 'lanyard', 'anchor', 'lifeline', 'guardrail', 'handrail',
-        'mewp', 'cherry picker', 'boom lift', 'scissor lift', 'aerial'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare', 'drinking water'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'inspection', 'inspected', 'checklist', 'tag', 'tags', 'colour code',
-        'color code', 'scaffold tag', 'green tag', 'red tag'
-      ],
-      exclusionPatterns: [
-        'speeding', 'phone while', 'toilet'
-      ]
-    },
-    'PPE': {
-      requiredContext: [
-        'harness', 'lanyard', 'helmet', 'hard hat', 'safety net', 'fall arrest',
-        'fall protection', 'anchor point', 'lifeline'
-      ],
-      exclusionPatterns: []
-    },
-    'Training': {
-      requiredContext: [
-        'training', 'trained', 'certified', 'competent', 'work at height'
-      ],
-      exclusionPatterns: []
-    },
-    'Barriers': {
-      requiredContext: [
-        // Guardrails/Handrails
-        'guardrail', 'guardrails', 'guard rail', 'handrail', 'handrails', 'hand rail',
-        'mid rail', 'midrail', 'mid-rail', 'knee rail', 'intermediate rail',
-        // Toe boards
-        'toe board', 'toeboard', 'toe boards', 'toeboards', 'toe-board', 'kick plate', 'kickboard',
-        // Barriers/Barricades
-        'barrier', 'barriers', 'barricade', 'barricades', 'barricading',
-        'hard barricade', 'soft barricade', 'rigid barricade',
-        // Edge protection
-        'edge protection', 'edge protected', 'unprotected edge', 'leading edge',
-        'perimeter protection', 'perimeter barrier', 'open edge', 'exposed edge',
-        // Safety nets
-        'safety net', 'safety netting', 'catch net', 'catch netting',
-        'catch platform', 'debris net', 'fall net', 'fall arrest net',
-        // Parapet/Walls
-        'parapet', 'parapet wall', 'kick wall', 'retaining wall',
-        // Floor openings
-        'floor opening', 'opening cover', 'hole cover', 'void cover',
-        'shaft opening', 'stairwell opening', 'elevator opening',
-        // Scaffold barriers
-        'scaffold guardrail', 'scaffold handrail', 'platform guardrail',
-        'scaffold barrier', 'scaffolding barrier', 'ladder cage',
-        // Demarcation/Tape
-        'demarcation', 'caution tape', 'warning tape', 'barrier tape', 'hazard tape',
-        'exclusion zone', 'drop zone', 'danger zone'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Lifting Operations hazard category
-  'Lifting Operations': {
-    _common: {
-      requiredContext: [
-        'crane', 'cranes', 'hoist', 'hoists', 'sling', 'slings', 'shackle',
-        'lifting', 'lift', 'rigging', 'rigger', 'load', 'swl', 'wll',
-        'banksman', 'signaler', 'signaller', 'hook', 'block', 'tackle'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare', 'drinking water'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'inspection', 'inspected', 'colour code', 'color code', 'certificate',
-        'thorough examination', 'loler', 'checklist', 'tag', 'valid'
-      ],
-      exclusionPatterns: [
-        'speeding', 'phone while', 'toilet'
-      ]
-    },
-    'Competency': {
-      requiredContext: [
-        'competent', 'qualified', 'rigger', 'banksman', 'crane operator',
-        'slinger', 'signaler', 'license', 'certification'
-      ],
-      exclusionPatterns: []
-    },
-    'Communication': {
-      requiredContext: [
-        'signal', 'signaling', 'hand signal', 'radio', 'communication',
-        'briefing', 'lift plan'
-      ],
-      exclusionPatterns: []
-    },
-    'Planning': {
-      requiredContext: [
-        'lift plan', 'lifting plan', 'planning', 'method statement', 'rams',
-        'radius', 'capacity', 'load chart'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Electrical Safety hazard category
-  'Electrical Safety': {
-    _common: {
-      requiredContext: [
-        'electrical', 'electric', 'power', 'voltage', 'current', 'wire', 'wiring',
-        'cable', 'cables', 'circuit', 'panel', 'switchboard', 'transformer',
-        'generator', 'socket', 'plug', 'extension', 'energized', 'energised',
-        'live', 'shock', 'electrocution', 'arc flash'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'inspection', 'inspected', 'pat test', 'pat tested', 'visual inspection',
-        'checklist', 'tag', 'colour code', 'damaged cable', 'frayed'
-      ],
-      exclusionPatterns: []
-    },
-    'Permit': {
-      requiredContext: [
-        'permit', 'loto', 'lockout', 'tagout', 'isolation', 'isolated',
-        'de-energized', 'de-energised', 'electrical permit'
-      ],
-      exclusionPatterns: []
-    },
-    'Competency': {
-      requiredContext: [
-        'electrician', 'qualified', 'competent', 'authorized', 'authorised'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Excavation & Trenching hazard category
-  'Excavation & Trenching': {
-    _common: {
-      requiredContext: [
-        'excavation', 'excavate', 'trench', 'trenching', 'dig', 'digging',
-        'shoring', 'shored', 'benching', 'sloping', 'cave-in', 'collapse',
-        'underground', 'buried', 'utilities', 'soil', 'spoil'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'inspection', 'inspected', 'competent person', 'daily inspection',
-        'checklist', 'before entry'
-      ],
-      exclusionPatterns: []
-    },
-    'Permit': {
-      requiredContext: [
-        'permit', 'excavation permit', 'dig permit', 'utility clearance',
-        'permit to dig'
-      ],
-      exclusionPatterns: []
-    },
-    'Barriers': {
-      requiredContext: [
-        'barrier', 'barricade', 'edge protection', 'guardrail', 'warning tape',
-        'demarcation'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Confined Space hazard category
-  'Confined Space': {
-    _common: {
-      requiredContext: [
-        'confined space', 'confined', 'tank', 'vessel', 'pit', 'manhole',
-        'sewer', 'chamber', 'silo', 'hopper', 'entry', 'entrant', 'attendant',
-        'rescue', 'atmosphere', 'ventilation', 'gas test', 'oxygen'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'gas test', 'atmospheric test', 'monitoring', 'meter', 'detector',
-        'checklist', 'inspection'
-      ],
-      exclusionPatterns: []
-    },
-    'Permit': {
-      requiredContext: [
-        'permit', 'confined space permit', 'entry permit', 'cse permit'
-      ],
-      exclusionPatterns: []
-    },
-    'Training': {
-      requiredContext: [
-        'training', 'trained', 'certified', 'competent', 'entry', 'attendant',
-        'rescue'
-      ],
-      exclusionPatterns: []
-    },
-    'Emergency Preparedness': {
-      requiredContext: [
-        'rescue', 'emergency', 'retrieval', 'tripod', 'winch', 'breathing apparatus',
-        'scba', 'evacuation'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Fire Safety hazard category
-  'Fire Safety': {
-    _common: {
-      requiredContext: [
-        'fire', 'flame', 'flammable', 'combustible', 'ignition', 'spark',
-        'hot work', 'welding', 'cutting', 'grinding', 'extinguisher',
-        'fire alarm', 'smoke detector', 'sprinkler', 'hydrant', 'hose reel'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare'
-      ]
-    },
-    'Inspections': {
-      requiredContext: [
-        'inspection', 'inspected', 'checklist', 'tag', 'colour code',
-        'monthly inspection', 'annual inspection', 'service'
-      ],
-      exclusionPatterns: []
-    },
-    'Permit': {
-      requiredContext: [
-        'permit', 'hot work permit', 'fire watch', 'fire watcher'
-      ],
-      exclusionPatterns: []
-    },
-    'Emergency Preparedness': {
-      requiredContext: [
-        'extinguisher', 'fire alarm', 'evacuation', 'assembly point', 'drill',
-        'fire drill', 'fire warden', 'emergency'
-      ],
-      exclusionPatterns: []
-    }
-  },
-
-  // Traffic Management hazard category
-  'Traffic Management': {
-    _common: {
-      requiredContext: [
-        'traffic', 'vehicle', 'vehicles', 'pedestrian', 'speed', 'speeding',
-        'road', 'route', 'crossing', 'segregation', 'parking', 'reversing',
-        'banksman', 'spotter', 'marshal'
-      ],
-      globalExclusions: [
-        'toilet', 'welfare'
-      ]
-    },
-    'Signage': {
-      requiredContext: [
-        'sign', 'signage', 'speed sign', 'warning sign', 'stop sign',
-        'traffic sign', 'road marking'
-      ],
-      exclusionPatterns: []
-    },
-    'Barriers': {
-      requiredContext: [
-        'barrier', 'bollard', 'cone', 'delineator', 'guardrail', 'jersey barrier',
-        'segregation', 'separation'
-      ],
-      exclusionPatterns: []
-    },
-    'Planning': {
-      requiredContext: [
-        'traffic plan', 'traffic management plan', 'tmp', 'route', 'planning'
-      ],
-      exclusionPatterns: []
-    }
-  }
-}
-
-/**
- * Validates if a factor match is a true positive based on hazard-specific rules
- * Uses compound matching (factor keyword + context) and exclusion pattern filtering
- *
- * VALIDATION LOGIC:
- * 1. Check _common.globalExclusions - if matched, REJECT (applies to ALL factors)
- * 2. Check factor-specific exclusionPatterns - if matched, REJECT
- * 3. Check if ANY context matches from _common.requiredContext OR factor.requiredContext
- *
- * @param {string} factorName - The factor being validated (e.g., "Inspections")
- * @param {string} description - Full observation description text
- * @param {string} hazardCategory - The hazard category (e.g., "Mobile Plant & Equipment")
- * @returns {Object} { isValid: boolean, reason: string, matchedPattern?: string, matchedContext?: string }
- */
-export const validateFactorMatch = (factorName, description, hazardCategory = null) => {
-  // If no hazard category specified or no rules exist, allow the match (backwards compatible)
-  if (!hazardCategory || !HAZARD_FACTOR_RULES[hazardCategory]) {
-    return { isValid: true, reason: 'no_rules_defined' }
-  }
-
-  const hazardRules = HAZARD_FACTOR_RULES[hazardCategory]
-  const textLower = description.toLowerCase()
-
-  // Get common rules and factor-specific rules
-  const commonRules = hazardRules._common || {}
-  const factorRules = hazardRules[factorName] || {}
-
-  // STEP 1: Check global exclusions (apply to ALL factors in this hazard)
-  if (commonRules.globalExclusions && commonRules.globalExclusions.length > 0) {
-    for (const pattern of commonRules.globalExclusions) {
-      if (textLower.includes(pattern.toLowerCase())) {
-        return {
-          isValid: false,
-          reason: 'global_exclusion_matched',
-          matchedPattern: pattern
-        }
-      }
-    }
-  }
-
-  // STEP 2: Check factor-specific exclusion patterns
-  if (factorRules.exclusionPatterns && factorRules.exclusionPatterns.length > 0) {
-    for (const pattern of factorRules.exclusionPatterns) {
-      if (textLower.includes(pattern.toLowerCase())) {
-        return {
-          isValid: false,
-          reason: 'factor_exclusion_matched',
-          matchedPattern: pattern
-        }
-      }
-    }
-  }
-
-  // STEP 3: Check required context - need to match from EITHER common OR factor-specific
-  const commonContext = commonRules.requiredContext || []
-  const factorContext = factorRules.requiredContext || []
-  const allRequiredContext = [...commonContext, ...factorContext]
-
-  // If no context rules defined, allow the match (backwards compatible)
-  if (allRequiredContext.length === 0) {
-    return { isValid: true, reason: 'no_context_rules' }
-  }
-
-  // Check if ANY context keyword matches
-  for (const context of allRequiredContext) {
-    if (textLower.includes(context.toLowerCase())) {
-      return {
-        isValid: true,
-        reason: 'context_matched',
-        matchedContext: context
-      }
-    }
-  }
-
-  // No context matched - reject
-  return {
-    isValid: false,
-    reason: 'missing_required_context',
-    requiredAny: allRequiredContext.slice(0, 15) // Show first 15 for debugging
-  }
-}
-
 /**
  * Gets the hazard category from an incident object
  * Supports multiple field names for flexibility
@@ -4102,1594 +3200,6 @@ export const getHazardCategory = (incident) => {
   if (!incident) return null
   // Support multiple possible field names
   return incident.location || incident.hazardCategory || incident.hazard || null
-}
-
-// ============================================================================
-// FACTOR KEYWORDS MAPPING
-// ============================================================================
-
-export const FACTOR_KEYWORDS = {
-  // Permit (50+)
-  permit: 'Permit',
-  permits: 'Permit',
-  permitted: 'Permit',
-  permiting: 'Permit',
-  permitting: 'Permit',
-  permt: 'Permit',
-  permitt: 'Permit',
-  permitts: 'Permit',
-  permited: 'Permit',
-  permitwork: 'Permit',
-  ptw: 'Permit',
-  ptwwork: 'Permit',
-  workpermit: 'Permit',
-  workpermits: 'Permit',
-  hotwork: 'Permit',
-  hotworks: 'Permit',
-  coldwork: 'Permit',
-  coldworks: 'Permit',
-  loto: 'Permit',
-  lotoo: 'Permit',
-  lockout: 'Permit',
-  lockouts: 'Permit',
-  lockedout: 'Permit',
-  lockingout: 'Permit',
-  tagout: 'Permit',
-  tagouts: 'Permit',
-  taggedout: 'Permit',
-  taggingout: 'Permit',
-  lototo: 'Permit',
-  isolation: 'Permit',
-  isolations: 'Permit',
-  isolated: 'Permit',
-  isolate: 'Permit',
-  isolating: 'Permit',
-  unisolated: 'Permit',
-  deisolated: 'Permit',
-  energized: 'Permit',
-  energised: 'Permit',
-  deenergized: 'Permit',
-  deenergised: 'Permit',
-  excavation: 'Permit',
-  excavations: 'Permit',
-  excavate: 'Permit',
-  excavating: 'Permit',
-  confinedspace: 'Permit',
-  confinedspaces: 'Permit',
-  heightpermit: 'Permit',
-  heightpermits: 'Permit',
-  workatpermit: 'Permit',
-  radiography: 'Permit',
-  breakinpermit: 'Permit',
-
-  // Training (50+)
-  training: 'Training',
-  trainings: 'Training',
-  trained: 'Training',
-  trainer: 'Training',
-  trainers: 'Training',
-  trainee: 'Training',
-  trainees: 'Training',
-  trainin: 'Training',
-  traning: 'Training',
-  trianing: 'Training',
-  trainning: 'Training',
-  traing: 'Training',
-  untrained: 'Training',
-  retrained: 'Training',
-  retraining: 'Training',
-  crosstraining: 'Training',
-  crosstrained: 'Training',
-  induction: 'Training',
-  inductions: 'Training',
-  inducted: 'Training',
-  inductee: 'Training',
-  inductees: 'Training',
-  inducion: 'Training',
-  orientation: 'Training',
-  orientations: 'Training',
-  oriented: 'Training',
-  orientated: 'Training',
-  onboarding: 'Training',
-  onboarded: 'Training',
-  certified: 'Training',
-  certification: 'Training',
-  certifications: 'Training',
-  recertified: 'Training',
-  recertification: 'Training',
-  uncertified: 'Training',
-  certificate: 'Training',
-  certificates: 'Training',
-  certificated: 'Training',
-  coursework: 'Training',
-  courseware: 'Training',
-  refresher: 'Training',
-  refreshers: 'Training',
-  workshop: 'Training',
-  workshops: 'Training',
-  seminar: 'Training',
-  seminars: 'Training',
-  classroom: 'Training',
-  elearning: 'Training',
-  ojt: 'Training',
-  onthejob: 'Training',
-
-  // Competency (50+)
-  competency: 'Competency',
-  competencies: 'Competency',
-  competent: 'Competency',
-  competance: 'Competency',
-  competense: 'Competency',
-  compitency: 'Competency',
-  compitent: 'Competency',
-  incompetent: 'Competency',
-  incompetence: 'Competency',
-  incompetant: 'Competency',
-  qualified: 'Competency',
-  qualification: 'Competency',
-  qualifications: 'Competency',
-  unqualified: 'Competency',
-  disqualified: 'Competency',
-  requalified: 'Competency',
-  prequalified: 'Competency',
-  qualifed: 'Competency',
-  skilled: 'Competency',
-  unskilled: 'Competency',
-  skillset: 'Competency',
-  skillsets: 'Competency',
-  skills: 'Competency',
-  skilful: 'Competency',
-  skillful: 'Competency',
-  deskilled: 'Competency',
-  multiskilled: 'Competency',
-  experienced: 'Competency',
-  inexperienced: 'Competency',
-  experience: 'Competency',
-  experiences: 'Competency',
-  experiance: 'Competency',
-  expertise: 'Competency',
-  expert: 'Competency',
-  experts: 'Competency',
-  proficient: 'Competency',
-  proficiency: 'Competency',
-  nonproficient: 'Competency',
-  capable: 'Competency',
-  capability: 'Competency',
-  capabilities: 'Competency',
-  incapable: 'Competency',
-  knowledgeable: 'Competency',
-  knowlegeable: 'Competency',
-  knowledgable: 'Competency',
-  knowledge: 'Competency',
-  ability: 'Competency',
-  abilities: 'Competency',
-  inability: 'Competency',
-  aptitude: 'Competency',
-
-  // Documentations (50+)
-  documentation: 'Documentations',
-  documentations: 'Documentations',
-  documented: 'Documentations',
-  undocumented: 'Documentations',
-  documenting: 'Documentations',
-  documentaion: 'Documentations',
-  documenation: 'Documentations',
-  documention: 'Documentations',
-  docs: 'Documentations',
-  procedure: 'Documentations',
-  procedures: 'Documentations',
-  procedural: 'Documentations',
-  proceedure: 'Documentations',
-  proceedures: 'Documentations',
-  procedurs: 'Documentations',
-  proceduers: 'Documentations',
-  sop: 'Documentations',
-  sops: 'Documentations',
-  swms: 'Documentations',
-  swp: 'Documentations',
-  ssow: 'Documentations',
-  jsa: 'Documentations',
-  jsas: 'Documentations',
-  jha: 'Documentations',
-  jhas: 'Documentations',
-  jsea: 'Documentations',
-  jseas: 'Documentations',
-  rams: 'Documentations',
-  ramss: 'Documentations',
-  risk: 'Documentations',
-  rissk: 'Documentations',
-  riskassessment: 'Documentations',
-  riskassessments: 'Documentations',
-  checklist: 'Documentations',
-  checklists: 'Documentations',
-  checksheet: 'Documentations',
-  checksheets: 'Documentations',
-  paperwork: 'Documentations',
-  paperworks: 'Documentations',
-  logbook: 'Documentations',
-  logbooks: 'Documentations',
-  logsheet: 'Documentations',
-  logsheets: 'Documentations',
-  workinstruction: 'Documentations',
-  workinstructions: 'Documentations',
-  methodstatement: 'Documentations',
-  methodstatements: 'Documentations',
-  permit: 'Documentations',
-  manual: 'Documentations',
-  manuals: 'Documentations',
-
-  // Supervision (50+)
-  supervision: 'Supervision',
-  supervisions: 'Supervision',
-  supervisor: 'Supervision',
-  supervisors: 'Supervision',
-  supervised: 'Supervision',
-  supervising: 'Supervision',
-  supervisory: 'Supervision',
-  supervison: 'Supervision',
-  superviser: 'Supervision',
-  supervisers: 'Supervision',
-  superivision: 'Supervision',
-  supervisior: 'Supervision',
-  unsupervised: 'Supervision',
-  undersupervised: 'Supervision',
-  resupervised: 'Supervision',
-  foreman: 'Supervision',
-  foremans: 'Supervision',
-  foremen: 'Supervision',
-  forman: 'Supervision',
-  formans: 'Supervision',
-  overseer: 'Supervision',
-  overseers: 'Supervision',
-  oversee: 'Supervision',
-  overseeing: 'Supervision',
-  oversight: 'Supervision',
-  oversights: 'Supervision',
-  oversite: 'Supervision',
-  watchman: 'Supervision',
-  watchmen: 'Supervision',
-  watchmans: 'Supervision',
-  spotter: 'Supervision',
-  spotters: 'Supervision',
-  spotting: 'Supervision',
-  spotted: 'Supervision',
-  banksman: 'Supervision',
-  banksmen: 'Supervision',
-  banksmans: 'Supervision',
-  chargehand: 'Supervision',
-  chargehands: 'Supervision',
-  leadhand: 'Supervision',
-  leadhands: 'Supervision',
-  gangboss: 'Supervision',
-  gangbosses: 'Supervision',
-  sitesupervisor: 'Supervision',
-  shiftsupervisor: 'Supervision',
-  areasupervisor: 'Supervision',
-  linesupervisor: 'Supervision',
-  teamsupervisor: 'Supervision',
-  crewsupervisor: 'Supervision',
-
-  // Environment (50+)
-  environment: 'Environment',
-  environments: 'Environment',
-  environmental: 'Environment',
-  enviroment: 'Environment',
-  enviromental: 'Environment',
-  enviornment: 'Environment',
-  enviornmental: 'Environment',
-  enviorment: 'Environment',
-  envirnoment: 'Environment',
-  weather: 'Environment',
-  weathers: 'Environment',
-  weathering: 'Environment',
-  weathered: 'Environment',
-  lighting: 'Environment',
-  lightings: 'Environment',
-  lighted: 'Environment',
-  unlighted: 'Environment',
-  poorlighting: 'Environment',
-  illumination: 'Environment',
-  illuminated: 'Environment',
-  ventilation: 'Environment',
-  ventilated: 'Environment',
-  unventilated: 'Environment',
-  ventilating: 'Environment',
-  poorventilation: 'Environment',
-  temperature: 'Environment',
-  temperatures: 'Environment',
-  tempurature: 'Environment',
-  temprature: 'Environment',
-  humidity: 'Environment',
-  humid: 'Environment',
-  humidty: 'Environment',
-  dusty: 'Environment',
-  dustyness: 'Environment',
-  dust: 'Environment',
-  windy: 'Environment',
-  windyness: 'Environment',
-  rainy: 'Environment',
-  raining: 'Environment',
-  visibility: 'Environment',
-  visability: 'Environment',
-  poorvisibility: 'Environment',
-  lowvisibility: 'Environment',
-  workplace: 'Environment',
-  workplaces: 'Environment',
-  worksite: 'Environment',
-  worksites: 'Environment',
-  workarea: 'Environment',
-  workareas: 'Environment',
-  conditions: 'Environment',
-  siteconditions: 'Environment',
-
-  // Planning (50+)
-  planning: 'Planning',
-  plannings: 'Planning',
-  planned: 'Planning',
-  planner: 'Planning',
-  planners: 'Planning',
-  planing: 'Planning',
-  planninng: 'Planning',
-  unplanned: 'Planning',
-  preplanning: 'Planning',
-  preplanned: 'Planning',
-  preplan: 'Planning',
-  preplans: 'Planning',
-  misplanned: 'Planning',
-  replanned: 'Planning',
-  replanning: 'Planning',
-  schedule: 'Planning',
-  schedules: 'Planning',
-  scheduled: 'Planning',
-  scheduling: 'Planning',
-  unscheduled: 'Planning',
-  rescheduled: 'Planning',
-  rescheduling: 'Planning',
-  scedule: 'Planning',
-  schedual: 'Planning',
-  schdule: 'Planning',
-  coordination: 'Planning',
-  coordinated: 'Planning',
-  uncoordinated: 'Planning',
-  coordinating: 'Planning',
-  coordinator: 'Planning',
-  coordinators: 'Planning',
-  coordinaton: 'Planning',
-  miscoordinated: 'Planning',
-  preparation: 'Planning',
-  preparations: 'Planning',
-  prepared: 'Planning',
-  unprepared: 'Planning',
-  preparing: 'Planning',
-  preparedness: 'Planning',
-  illprepared: 'Planning',
-  workplan: 'Planning',
-  workplans: 'Planning',
-  taskplan: 'Planning',
-  taskplans: 'Planning',
-  jobplan: 'Planning',
-  jobplans: 'Planning',
-  safetyplan: 'Planning',
-  safetyplans: 'Planning',
-  methodology: 'Planning',
-  sequencing: 'Planning',
-  // Geotechnical/Soil reports (excavation planning)
-  geotechnical: 'Planning',
-  geotechnicalreport: 'Planning',
-  geotechnicalreports: 'Planning',
-  geotechreport: 'Planning',
-  geotechreports: 'Planning',
-  soilreport: 'Planning',
-  soilreports: 'Planning',
-  soilsurvey: 'Planning',
-  soilsurveys: 'Planning',
-  soiltest: 'Planning',
-  soiltests: 'Planning',
-  soiltesting: 'Planning',
-  soilanalysis: 'Planning',
-  soilcondition: 'Planning',
-  soilconditions: 'Planning',
-  groundcondition: 'Planning',
-  groundconditions: 'Planning',
-  groundsurvey: 'Planning',
-  groundsurveys: 'Planning',
-  // Utility layouts and drawings (excavation planning)
-  utilitylayout: 'Planning',
-  utilitylayouts: 'Planning',
-  utilitydrawing: 'Planning',
-  utilitydrawings: 'Planning',
-  utilitydiagram: 'Planning',
-  utilitydiagrams: 'Planning',
-  utilitymap: 'Planning',
-  utilitymaps: 'Planning',
-  utilitylocate: 'Planning',
-  utilitylocating: 'Planning',
-  utilitylocation: 'Planning',
-  utilitylocations: 'Planning',
-  asbuiltdrawing: 'Planning',
-  asbuiltdrawings: 'Planning',
-  asbuilt: 'Planning',
-  asbuilts: 'Planning',
-  layoutdrawing: 'Planning',
-  layoutdrawings: 'Planning',
-  // Expired documents
-  expired: 'Planning',
-  expiry: 'Planning',
-  expiring: 'Planning',
-  outofdate: 'Planning',
-  outdated: 'Planning',
-  lapsed: 'Planning',
-  // Availability issues
-  unavailability: 'Planning',
-  unavailable: 'Planning',
-  notavailable: 'Planning',
-  missingdocument: 'Planning',
-  missingdocuments: 'Planning',
-  missingdrawing: 'Planning',
-  missingdrawings: 'Planning',
-  missinglayout: 'Planning',
-  // Distance/spacing planning
-  safedistance: 'Planning',
-  safedistances: 'Planning',
-  minimumdistance: 'Planning',
-  clearance: 'Planning',
-  clearances: 'Planning',
-  setback: 'Planning',
-  setbacks: 'Planning',
-
-  // Signage (50+)
-  signage: 'Signage',
-  signages: 'Signage',
-  sign: 'Signage',
-  signs: 'Signage',
-  signed: 'Signage',
-  signboard: 'Signage',
-  signboards: 'Signage',
-  signeage: 'Signage',
-  signege: 'Signage',
-  signag: 'Signage',
-  nosign: 'Signage',
-  nosigns: 'Signage',
-  missingsign: 'Signage',
-  missingsigns: 'Signage',
-  label: 'Signage',
-  labels: 'Signage',
-  labeled: 'Signage',
-  labelled: 'Signage',
-  labeling: 'Signage',
-  labelling: 'Signage',
-  unlabeled: 'Signage',
-  unlabelled: 'Signage',
-  mislabeled: 'Signage',
-  mislabelled: 'Signage',
-  relabeled: 'Signage',
-  relabelled: 'Signage',
-  marking: 'Signage',
-  markings: 'Signage',
-  marked: 'Signage',
-  unmarked: 'Signage',
-  mismarked: 'Signage',
-  remarked: 'Signage',
-  placard: 'Signage',
-  placards: 'Signage',
-  placarded: 'Signage',
-  unplacarded: 'Signage',
-  poster: 'Signage',
-  posters: 'Signage',
-  posted: 'Signage',
-  unposted: 'Signage',
-  caution: 'Signage',
-  cautionary: 'Signage',
-  cautiontape: 'Signage',
-  warningsign: 'Signage',
-  warningsigns: 'Signage',
-  dangersign: 'Signage',
-  dangersigns: 'Signage',
-  safetysign: 'Signage',
-  safetysigns: 'Signage',
-  sticker: 'Signage',
-  stickers: 'Signage',
-  // Stop signs (traffic/excavation areas)
-  stopsign: 'Signage',
-  stopsigns: 'Signage',
-  nostopsign: 'Signage',
-  missingstopsign: 'Signage',
-  // Excavation signage
-  excavationsign: 'Signage',
-  excavationsigns: 'Signage',
-  excavationsignage: 'Signage',
-  trenchsign: 'Signage',
-  trenchsigns: 'Signage',
-  digsign: 'Signage',
-  digsigns: 'Signage',
-  // Warning for excavations
-  notclearlysigned: 'Signage',
-  clearlysigned: 'Signage',
-  notproperlysigned: 'Signage',
-  properlysigned: 'Signage',
-  lackofsignage: 'Signage',
-  missingsignage: 'Signage',
-  nosignage: 'Signage',
-  // Hazard information signs
-  hazardsign: 'Signage',
-  hazardsigns: 'Signage',
-  informationsign: 'Signage',
-  informationsigns: 'Signage',
-
-  // Barriers (50+)
-  // Barriers (100+)
-  barriers: 'Barriers',
-  barrier: 'Barriers',
-  barier: 'Barriers',
-  bariers: 'Barriers',
-  barriar: 'Barriers',
-  barriars: 'Barriers',
-  barior: 'Barriers',
-  barricade: 'Barriers',
-  barricades: 'Barriers',
-  barricaded: 'Barriers',
-  barricading: 'Barriers',
-  unbarricaded: 'Barriers',
-  baricade: 'Barriers',
-  baricades: 'Barriers',
-  baracade: 'Barriers',
-  baracades: 'Barriers',
-  barrikade: 'Barriers',
-  barrikades: 'Barriers',
-  barrricade: 'Barriers',
-  hardbarricade: 'Barriers',
-  softbarricade: 'Barriers',
-  rigidbarricade: 'Barriers',
-  // Guardrails/Handrails
-  guardrail: 'Barriers',
-  guardrails: 'Barriers',
-  guardrial: 'Barriers',
-  gaurdrial: 'Barriers',
-  gaurdrail: 'Barriers',
-  gaurdrails: 'Barriers',
-  gaurdail: 'Barriers',
-  guadrail: 'Barriers',
-  guarail: 'Barriers',
-  handrail: 'Barriers',
-  handrails: 'Barriers',
-  handrial: 'Barriers',
-  handrals: 'Barriers',
-  hanrail: 'Barriers',
-  hanrails: 'Barriers',
-  handral: 'Barriers',
-  railing: 'Barriers',
-  railings: 'Barriers',
-  railling: 'Barriers',
-  midrail: 'Barriers',
-  midrial: 'Barriers',
-  kneerail: 'Barriers',
-  intermediaterail: 'Barriers',
-  // Fencing
-  fencing: 'Barriers',
-  fenced: 'Barriers',
-  unfenced: 'Barriers',
-  fence: 'Barriers',
-  fences: 'Barriers',
-  fenceing: 'Barriers',
-  fensing: 'Barriers',
-  fense: 'Barriers',
-  fenses: 'Barriers',
-  hoarding: 'Barriers',
-  hoardings: 'Barriers',
-  chainlink: 'Barriers',
-  wiremesh: 'Barriers',
-  greenmesh: 'Barriers',
-  // Bollards/Cones
-  bollard: 'Barriers',
-  bollards: 'Barriers',
-  bollerd: 'Barriers',
-  bolards: 'Barriers',
-  cone: 'Barriers',
-  cones: 'Barriers',
-  trafficcone: 'Barriers',
-  trafficcones: 'Barriers',
-  safetycones: 'Barriers',
-  // Delineators
-  delineator: 'Barriers',
-  delineators: 'Barriers',
-  delinator: 'Barriers',
-  delinators: 'Barriers',
-  delinater: 'Barriers',
-  delineaters: 'Barriers',
-  // Demarcation
-  demarcation: 'Barriers',
-  demarcated: 'Barriers',
-  demarcating: 'Barriers',
-  undemarcated: 'Barriers',
-  demaracation: 'Barriers',
-  demarkation: 'Barriers',
-  demarcaton: 'Barriers',
-  // Zones
-  exclusionzone: 'Barriers',
-  exclusionzones: 'Barriers',
-  dropzone: 'Barriers',
-  dropzones: 'Barriers',
-  dangerzone: 'Barriers',
-  safezone: 'Barriers',
-  redzone: 'Barriers',
-  swingzone: 'Barriers',
-  bufferzone: 'Barriers',
-  // Edge protection
-  edgeprotection: 'Barriers',
-  unprotectededge: 'Barriers',
-  leadingedge: 'Barriers',
-  openedge: 'Barriers',
-  exposededge: 'Barriers',
-  perimeterprotection: 'Barriers',
-  // Toe boards
-  toeboard: 'Barriers',
-  toeboards: 'Barriers',
-  kickplate: 'Barriers',
-  kickplates: 'Barriers',
-  kickboard: 'Barriers',
-  kickboards: 'Barriers',
-  kickwall: 'Barriers',
-  // Safety nets
-  safetynet: 'Barriers',
-  safetynets: 'Barriers',
-  safetynetting: 'Barriers',
-  catchnet: 'Barriers',
-  catchnets: 'Barriers',
-  catchnetting: 'Barriers',
-  catchplatform: 'Barriers',
-  debrisnet: 'Barriers',
-  debrisnetting: 'Barriers',
-  fallnet: 'Barriers',
-  fallnets: 'Barriers',
-  // Parapet
-  parapet: 'Barriers',
-  parapets: 'Barriers',
-  parapetwall: 'Barriers',
-  // Floor openings
-  flooropening: 'Barriers',
-  flooropenings: 'Barriers',
-  holecover: 'Barriers',
-  voidcover: 'Barriers',
-  openingcover: 'Barriers',
-  shaftopening: 'Barriers',
-  // Tapes
-  cautiontape: 'Barriers',
-  warningtape: 'Barriers',
-  barriertape: 'Barriers',
-  hazardtape: 'Barriers',
-  dangertape: 'Barriers',
-  safetytape: 'Barriers',
-  // Wheel chocks
-  wheelchock: 'Barriers',
-  wheelchocks: 'Barriers',
-  chock: 'Barriers',
-  chocks: 'Barriers',
-  chok: 'Barriers',
-  choks: 'Barriers',
-  wheelstopper: 'Barriers',
-  wheelstoppers: 'Barriers',
-  stopper: 'Barriers',
-  stoppers: 'Barriers',
-  wheelchoker: 'Barriers',
-  wheelchokers: 'Barriers',
-  choker: 'Barriers',
-  chokers: 'Barriers',
-  wheelblock: 'Barriers',
-  wheelblocks: 'Barriers',
-  // Segregation
-  segregation: 'Barriers',
-  segregated: 'Barriers',
-  unsegregated: 'Barriers',
-  separation: 'Barriers',
-  separated: 'Barriers',
-  unseparated: 'Barriers',
-  // Berms (excavation edge protection)
-  berm: 'Barriers',
-  berms: 'Barriers',
-  sandberm: 'Barriers',
-  sandberms: 'Barriers',
-  soilberm: 'Barriers',
-  soilberms: 'Barriers',
-  earthberm: 'Barriers',
-  earthberms: 'Barriers',
-  bermwall: 'Barriers',
-  bermwalls: 'Barriers',
-  // Stop blocks (vehicle edge protection)
-  stopblock: 'Barriers',
-  stopblocks: 'Barriers',
-  stoplog: 'Barriers',
-  stoplogs: 'Barriers',
-  vehiclestop: 'Barriers',
-  vehiclestops: 'Barriers',
-  // Unsecured excavations
-  unsecuredexcavation: 'Barriers',
-  unsecuredtrench: 'Barriers',
-  unsecuredpit: 'Barriers',
-  unprotectedexcavation: 'Barriers',
-  unprotectedtrench: 'Barriers',
-  openexcavation: 'Barriers',
-  opentrench: 'Barriers',
-  openpit: 'Barriers',
-
-  // Inspections (50+)
-  inspection: 'Inspections',
-  inspections: 'Inspections',
-  inspect: 'Inspections',
-  inspected: 'Inspections',
-  inspecting: 'Inspections',
-  inspector: 'Inspections',
-  inspectors: 'Inspections',
-  uninspected: 'Inspections',
-  reinspected: 'Inspections',
-  reinspection: 'Inspections',
-  preinspection: 'Inspections',
-  preinspected: 'Inspections',
-  inpection: 'Inspections',
-  insepction: 'Inspections',
-  inpsection: 'Inspections',
-  ispection: 'Inspections',
-  audit: 'Inspections',
-  audits: 'Inspections',
-  audited: 'Inspections',
-  auditing: 'Inspections',
-  auditor: 'Inspections',
-  auditors: 'Inspections',
-  unaudited: 'Inspections',
-  preaudit: 'Inspections',
-  reaudit: 'Inspections',
-  reaudited: 'Inspections',
-  walkthrough: 'Inspections',
-  walkthroughs: 'Inspections',
-  walkdown: 'Inspections',
-  walkdowns: 'Inspections',
-  walkaround: 'Inspections',
-  walkarounds: 'Inspections',
-  verify: 'Inspections',
-  verified: 'Inspections',
-  verification: 'Inspections',
-  verifications: 'Inspections',
-  unverified: 'Inspections',
-  reverified: 'Inspections',
-  examine: 'Inspections',
-  examined: 'Inspections',
-  examination: 'Inspections',
-  examinations: 'Inspections',
-  examining: 'Inspections',
-  review: 'Inspections',
-  reviewed: 'Inspections',
-  reviewing: 'Inspections',
-  safetyinspection: 'Inspections',
-  siteinspection: 'Inspections',
-  dailyinspection: 'Inspections',
-  weeklyinspection: 'Inspections',
-
-  // Interfaces (50+)
-  interfaces: 'Interfaces',
-  interface: 'Interfaces',
-  interfacing: 'Interfaces',
-  interfaced: 'Interfaces',
-  interphase: 'Interfaces',
-  interphases: 'Interfaces',
-  handover: 'Interfaces',
-  handovers: 'Interfaces',
-  handedover: 'Interfaces',
-  handingover: 'Interfaces',
-  handovr: 'Interfaces',
-  handoff: 'Interfaces',
-  handoffs: 'Interfaces',
-  handedoff: 'Interfaces',
-  changeover: 'Interfaces',
-  changeovers: 'Interfaces',
-  changedover: 'Interfaces',
-  changingover: 'Interfaces',
-  transition: 'Interfaces',
-  transitions: 'Interfaces',
-  transitioning: 'Interfaces',
-  transitioned: 'Interfaces',
-  turnover: 'Interfaces',
-  turnovers: 'Interfaces',
-  turnedover: 'Interfaces',
-  turningover: 'Interfaces',
-  shiftchange: 'Interfaces',
-  shiftchanges: 'Interfaces',
-  shifthandover: 'Interfaces',
-  shifthandovers: 'Interfaces',
-  crewchange: 'Interfaces',
-  crewchanges: 'Interfaces',
-  crewhandover: 'Interfaces',
-  reliefchange: 'Interfaces',
-  reliefchanges: 'Interfaces',
-  interchange: 'Interfaces',
-  interchanges: 'Interfaces',
-  crossover: 'Interfaces',
-  crossovers: 'Interfaces',
-  interteam: 'Interfaces',
-  interdepartment: 'Interfaces',
-  interdepartmental: 'Interfaces',
-  intercompany: 'Interfaces',
-  intercontractor: 'Interfaces',
-  multiparty: 'Interfaces',
-  simultaneousops: 'Interfaces',
-  simops: 'Interfaces',
-  coactivity: 'Interfaces',
-  coactivities: 'Interfaces',
-  overlap: 'Interfaces',
-  overlapping: 'Interfaces',
-
-  // Housekeeping (50+)
-  housekeeping: 'Housekeeping',
-  houskeeping: 'Housekeeping',
-  houskepping: 'Housekeeping',
-  housekeepng: 'Housekeeping',
-  housekkeping: 'Housekeeping',
-  poorhousekeeping: 'Housekeeping',
-  goodhousekeeping: 'Housekeeping',
-  cleanliness: 'Housekeeping',
-  cleaniness: 'Housekeeping',
-  cleanlness: 'Housekeeping',
-  cleaner: 'Housekeeping',
-  cleaners: 'Housekeeping',
-  cleaning: 'Housekeeping',
-  cleaned: 'Housekeeping',
-  uncleaned: 'Housekeeping',
-  unclean: 'Housekeeping',
-  dirty: 'Housekeeping',
-  dirtiness: 'Housekeeping',
-  dirtyness: 'Housekeeping',
-  clutter: 'Housekeeping',
-  cluttered: 'Housekeeping',
-  uncluttered: 'Housekeeping',
-  cluttering: 'Housekeeping',
-  declutter: 'Housekeeping',
-  decluttered: 'Housekeeping',
-  debris: 'Housekeeping',
-  debri: 'Housekeeping',
-  debries: 'Housekeeping',
-  trash: 'Housekeeping',
-  trashed: 'Housekeeping',
-  trashes: 'Housekeeping',
-  rubbish: 'Housekeeping',
-  rubish: 'Housekeeping',
-  garbage: 'Housekeeping',
-  garbages: 'Housekeeping',
-  waste: 'Housekeeping',
-  wastes: 'Housekeeping',
-  wasted: 'Housekeeping',
-  messy: 'Housekeeping',
-  messiness: 'Housekeeping',
-  mess: 'Housekeeping',
-  tidy: 'Housekeeping',
-  tidiness: 'Housekeeping',
-  untidy: 'Housekeeping',
-  tidied: 'Housekeeping',
-  orderly: 'Housekeeping',
-  disorderly: 'Housekeeping',
-  organized: 'Housekeeping',
-  disorganized: 'Housekeeping',
-  spillage: 'Housekeeping',
-  spillages: 'Housekeeping',
-
-  // Behavioural (50+)
-  bbs: 'Behavioural',
-  bbss: 'Behavioural',
-  behavior: 'Behavioural',
-  behaviors: 'Behavioural',
-  behaviour: 'Behavioural',
-  behaviours: 'Behavioural',
-  behavioral: 'Behavioural',
-  behavioural: 'Behavioural',
-  behavor: 'Behavioural',
-  behavors: 'Behavioural',
-  behavour: 'Behavioural',
-  behavours: 'Behavioural',
-  behavier: 'Behavioural',
-  behaviers: 'Behavioural',
-  behaviorbased: 'Behavioural',
-  behaviourbased: 'Behavioural',
-  behaviorsafety: 'Behavioural',
-  behavioursafety: 'Behavioural',
-  safebehavior: 'Behavioural',
-  safebehaviour: 'Behavioural',
-  safebehaviors: 'Behavioural',
-  safebehaviours: 'Behavioural',
-  unsafebehavior: 'Behavioural',
-  unsafebehaviour: 'Behavioural',
-  unsafebehaviors: 'Behavioural',
-  unsafebehaviours: 'Behavioural',
-  atrisk: 'Behavioural',
-  atrisks: 'Behavioural',
-  atriskbehavior: 'Behavioural',
-  atriskbehaviour: 'Behavioural',
-  riskybehavior: 'Behavioural',
-  riskybehaviour: 'Behavioural',
-  safeact: 'Behavioural',
-  safeacts: 'Behavioural',
-  unsafeact: 'Behavioural',
-  unsafeacts: 'Behavioural',
-  safecondition: 'Behavioural',
-  safeconditions: 'Behavioural',
-  unsafecondition: 'Behavioural',
-  unsafeconditions: 'Behavioural',
-  nearmiss: 'Behavioural',
-  nearmisses: 'Behavioural',
-  nearmis: 'Behavioural',
-  goodcatch: 'Behavioural',
-  goodcatches: 'Behavioural',
-  stopwork: 'Behavioural',
-  stopworks: 'Behavioural',
-  stopworkauthority: 'Behavioural',
-  swa: 'Behavioural',
-  safetyobservation: 'Behavioural',
-  safetyobservations: 'Behavioural',
-
-  // Communication (50+)
-  communication: 'Communication',
-  communications: 'Communication',
-  communicate: 'Communication',
-  communicated: 'Communication',
-  communicating: 'Communication',
-  communicator: 'Communication',
-  communicators: 'Communication',
-  comunication: 'Communication',
-  communcation: 'Communication',
-  communicaton: 'Communication',
-  communiation: 'Communication',
-  comminication: 'Communication',
-  miscommunication: 'Communication',
-  miscommunicated: 'Communication',
-  miscommunications: 'Communication',
-  poorcommunication: 'Communication',
-  lackcommunication: 'Communication',
-  briefing: 'Communication',
-  briefings: 'Communication',
-  briefed: 'Communication',
-  unbriefed: 'Communication',
-  rebriefed: 'Communication',
-  rebriefing: 'Communication',
-  debriefing: 'Communication',
-  debriefed: 'Communication',
-  debriefings: 'Communication',
-  prebriefing: 'Communication',
-  prebriefed: 'Communication',
-  toolbox: 'Communication',
-  toolboxes: 'Communication',
-  toolboxtalk: 'Communication',
-  toolboxtalks: 'Communication',
-  toolboxmeeting: 'Communication',
-  tbt: 'Communication',
-  tbts: 'Communication',
-  tailgate: 'Communication',
-  tailgates: 'Communication',
-  tailgatemeeting: 'Communication',
-  prestart: 'Communication',
-  prestarts: 'Communication',
-  prestartmeeting: 'Communication',
-  prejob: 'Communication',
-  prejobs: 'Communication',
-  prejobmeeting: 'Communication',
-  informed: 'Communication',
-  uninformed: 'Communication',
-  misinformed: 'Communication',
-  notinformed: 'Communication',
-  radio: 'Communication',
-  radios: 'Communication',
-  twowayradio: 'Communication',
-
-  // PPE (50+)
-  ppe: 'PPE',
-  ppes: 'PPE',
-  ppee: 'PPE',
-  pppe: 'PPE',
-  noppe: 'PPE',
-  lackppe: 'PPE',
-  missingppe: 'PPE',
-  incorrectppe: 'PPE',
-  wrongppe: 'PPE',
-  helmet: 'PPE',
-  helmets: 'PPE',
-  helment: 'PPE',
-  helments: 'PPE',
-  hardhat: 'PPE',
-  hardhats: 'PPE',
-  hardhet: 'PPE',
-  safetyhelmet: 'PPE',
-  safetyhelmets: 'PPE',
-  gloves: 'PPE',
-  glove: 'PPE',
-  glovs: 'PPE',
-  glovess: 'PPE',
-  safetygloves: 'PPE',
-  workgloves: 'PPE',
-  goggles: 'PPE',
-  goggle: 'PPE',
-  gogle: 'PPE',
-  gogles: 'PPE',
-  safetygoggles: 'PPE',
-  glasses: 'PPE',
-  safetyglasses: 'PPE',
-  safetyglass: 'PPE',
-  eyewear: 'PPE',
-  eyeware: 'PPE',
-  eyeprotection: 'PPE',
-  harness: 'PPE',
-  harnesses: 'PPE',
-  harnes: 'PPE',
-  harneses: 'PPE',
-  fullharness: 'PPE',
-  bodyharness: 'PPE',
-  safetyharness: 'PPE',
-  lanyard: 'PPE',
-  lanyards: 'PPE',
-  laniard: 'PPE',
-  laniards: 'PPE',
-  vest: 'PPE',
-  vests: 'PPE',
-  safetyvest: 'PPE',
-  safetyvests: 'PPE',
-  hiviz: 'PPE',
-  hivizs: 'PPE',
-  highvis: 'PPE',
-  hivis: 'PPE',
-  reflective: 'PPE',
-  reflectives: 'PPE',
-  respirator: 'PPE',
-  respirators: 'PPE',
-  resprator: 'PPE',
-  faceshield: 'PPE',
-  faceshields: 'PPE',
-  earplugs: 'PPE',
-  earplug: 'PPE',
-  earmuffs: 'PPE',
-  earmuff: 'PPE',
-  hearingprotection: 'PPE',
-  boots: 'PPE',
-  safetyboots: 'PPE',
-  steelcap: 'PPE',
-  steelcaps: 'PPE',
-  steeltoe: 'PPE',
-  steeltoes: 'PPE',
-
-  // Safety Devices (50+)
-  safetydevice: 'Safety Devices',
-  safetydevices: 'Safety Devices',
-  safetydevise: 'Safety Devices',
-  safetydevises: 'Safety Devices',
-  safeguard: 'Safety Devices',
-  safeguards: 'Safety Devices',
-  safeguarded: 'Safety Devices',
-  unsafeguarded: 'Safety Devices',
-  safeguarding: 'Safety Devices',
-  safegaurd: 'Safety Devices',
-  safegaurds: 'Safety Devices',
-  alarm: 'Safety Devices',
-  alarms: 'Safety Devices',
-  alarmed: 'Safety Devices',
-  unalarmed: 'Safety Devices',
-  alarming: 'Safety Devices',
-  firealarm: 'Safety Devices',
-  firealarms: 'Safety Devices',
-  gasalarm: 'Safety Devices',
-  gasalarms: 'Safety Devices',
-  detector: 'Safety Devices',
-  detectors: 'Safety Devices',
-  detecting: 'Safety Devices',
-  detected: 'Safety Devices',
-  gasdetector: 'Safety Devices',
-  gasdetectors: 'Safety Devices',
-  smokedetector: 'Safety Devices',
-  smokedetectors: 'Safety Devices',
-  sensor: 'Safety Devices',
-  sensors: 'Safety Devices',
-  sensing: 'Safety Devices',
-  sensored: 'Safety Devices',
-  interlock: 'Safety Devices',
-  interlocks: 'Safety Devices',
-  interlocked: 'Safety Devices',
-  interlocking: 'Safety Devices',
-  interlocker: 'Safety Devices',
-  safetyinterlock: 'Safety Devices',
-  failsafe: 'Safety Devices',
-  failsafes: 'Safety Devices',
-  failsafed: 'Safety Devices',
-  estop: 'Safety Devices',
-  estops: 'Safety Devices',
-  emergencystop: 'Safety Devices',
-  emergencystops: 'Safety Devices',
-  shutoff: 'Safety Devices',
-  shutoffs: 'Safety Devices',
-  autoshutoff: 'Safety Devices',
-  cutoff: 'Safety Devices',
-  cutoffs: 'Safety Devices',
-  tripwire: 'Safety Devices',
-  tripwires: 'Safety Devices',
-  lightcurtain: 'Safety Devices',
-  lightcurtains: 'Safety Devices',
-  pressuremat: 'Safety Devices',
-  pressuremats: 'Safety Devices',
-
-  // Emergency Preparedness (50+)
-  emergency: 'Emergency Preparedness',
-  emergencies: 'Emergency Preparedness',
-  emergancy: 'Emergency Preparedness',
-  emergancys: 'Emergency Preparedness',
-  emergencys: 'Emergency Preparedness',
-  emergncy: 'Emergency Preparedness',
-  emergeny: 'Emergency Preparedness',
-  nonemergency: 'Emergency Preparedness',
-  evacuation: 'Emergency Preparedness',
-  evacuations: 'Emergency Preparedness',
-  evacuate: 'Emergency Preparedness',
-  evacuated: 'Emergency Preparedness',
-  evacuating: 'Emergency Preparedness',
-  evacuee: 'Emergency Preparedness',
-  evacuees: 'Emergency Preparedness',
-  evacation: 'Emergency Preparedness',
-  evaucation: 'Emergency Preparedness',
-  muster: 'Emergency Preparedness',
-  musters: 'Emergency Preparedness',
-  mustering: 'Emergency Preparedness',
-  mustered: 'Emergency Preparedness',
-  musterpoint: 'Emergency Preparedness',
-  musterpoints: 'Emergency Preparedness',
-  musterstation: 'Emergency Preparedness',
-  musterstations: 'Emergency Preparedness',
-  assembly: 'Emergency Preparedness',
-  assemblys: 'Emergency Preparedness',
-  assemblypoint: 'Emergency Preparedness',
-  assemblypoints: 'Emergency Preparedness',
-  assemblyarea: 'Emergency Preparedness',
-  assemblyareas: 'Emergency Preparedness',
-  firstaid: 'Emergency Preparedness',
-  firstaids: 'Emergency Preparedness',
-  firstaider: 'Emergency Preparedness',
-  firstaiders: 'Emergency Preparedness',
-  firstaidkit: 'Emergency Preparedness',
-  firstaidkits: 'Emergency Preparedness',
-  extinguisher: 'Emergency Preparedness',
-  extinguishers: 'Emergency Preparedness',
-  extinguisher: 'Emergency Preparedness',
-  extingusher: 'Emergency Preparedness',
-  fireextinguisher: 'Emergency Preparedness',
-  fireextinguishers: 'Emergency Preparedness',
-  rescue: 'Emergency Preparedness',
-  rescues: 'Emergency Preparedness',
-  rescuer: 'Emergency Preparedness',
-  rescuers: 'Emergency Preparedness',
-  rescuing: 'Emergency Preparedness',
-  rescued: 'Emergency Preparedness',
-  rescueteam: 'Emergency Preparedness',
-  rescueteams: 'Emergency Preparedness',
-  ert: 'Emergency Preparedness',
-  emergencyresponse: 'Emergency Preparedness',
-  emergencyresponseteam: 'Emergency Preparedness',
-  drill: 'Emergency Preparedness',
-  drills: 'Emergency Preparedness',
-  firedrill: 'Emergency Preparedness',
-  firedrills: 'Emergency Preparedness',
-
-  // Leadership (50+)
-  leadership: 'Leadership',
-  leaderships: 'Leadership',
-  leader: 'Leadership',
-  leaders: 'Leadership',
-  leading: 'Leadership',
-  leadrship: 'Leadership',
-  leadeship: 'Leadership',
-  leardership: 'Leadership',
-  poorleadership: 'Leadership',
-  lackleadership: 'Leadership',
-  management: 'Leadership',
-  managements: 'Leadership',
-  manager: 'Leadership',
-  managers: 'Leadership',
-  managing: 'Leadership',
-  managment: 'Leadership',
-  managemnt: 'Leadership',
-  managerial: 'Leadership',
-  mismanagement: 'Leadership',
-  mismanaged: 'Leadership',
-  accountability: 'Leadership',
-  accountabilities: 'Leadership',
-  accountable: 'Leadership',
-  unaccountable: 'Leadership',
-  accountablity: 'Leadership',
-  responsible: 'Leadership',
-  responsibility: 'Leadership',
-  responsibilities: 'Leadership',
-  irresponsible: 'Leadership',
-  responsibilty: 'Leadership',
-  responsable: 'Leadership',
-  superintendent: 'Leadership',
-  superintendents: 'Leadership',
-  superintendant: 'Leadership',
-  superintendants: 'Leadership',
-  director: 'Leadership',
-  directors: 'Leadership',
-  directorship: 'Leadership',
-  executive: 'Leadership',
-  executives: 'Leadership',
-  ownership: 'Leadership',
-  ownerships: 'Leadership',
-  commitment: 'Leadership',
-  commitments: 'Leadership',
-  committed: 'Leadership',
-  uncommitted: 'Leadership',
-  comitment: 'Leadership',
-  commitent: 'Leadership',
-  governance: 'Leadership',
-  governances: 'Leadership',
-  stewardship: 'Leadership',
-
-  // Maintenance (50+)
-  maintenance: 'Maintenance',
-  maintenace: 'Maintenance',
-  maintainance: 'Maintenance',
-  maintainence: 'Maintenance',
-  maintenence: 'Maintenance',
-  maintanance: 'Maintenance',
-  maintnance: 'Maintenance',
-  maintain: 'Maintenance',
-  maintained: 'Maintenance',
-  unmaintained: 'Maintenance',
-  maintaining: 'Maintenance',
-  maintainer: 'Maintenance',
-  maintainers: 'Maintenance',
-  poorlymaintained: 'Maintenance',
-  wellmaintained: 'Maintenance',
-  repair: 'Maintenance',
-  repairs: 'Maintenance',
-  repaired: 'Maintenance',
-  repairing: 'Maintenance',
-  unrepaired: 'Maintenance',
-  repairable: 'Maintenance',
-  unrepairable: 'Maintenance',
-  repairman: 'Maintenance',
-  repairmen: 'Maintenance',
-  broken: 'Maintenance',
-  brokenn: 'Maintenance',
-  broked: 'Maintenance',
-  defective: 'Maintenance',
-  defect: 'Maintenance',
-  defects: 'Maintenance',
-  defected: 'Maintenance',
-  nondefective: 'Maintenance',
-  malfunction: 'Maintenance',
-  malfunctions: 'Maintenance',
-  malfunctioned: 'Maintenance',
-  malfunctioning: 'Maintenance',
-  malfonction: 'Maintenance',
-  faulty: 'Maintenance',
-  faultiness: 'Maintenance',
-  fault: 'Maintenance',
-  faults: 'Maintenance',
-  faulted: 'Maintenance',
-  nonfaulty: 'Maintenance',
-  preventive: 'Maintenance',
-  preventative: 'Maintenance',
-  corrective: 'Maintenance',
-  predictive: 'Maintenance',
-  scheduled: 'Maintenance',
-  unscheduled: 'Maintenance',
-  breakdown: 'Maintenance',
-  breakdowns: 'Maintenance',
-
-  // Material Handling (50+)
-  material: 'Material Handling',
-  materials: 'Material Handling',
-  materialhandling: 'Material Handling',
-  materialshandling: 'Material Handling',
-  matrial: 'Material Handling',
-  matrials: 'Material Handling',
-  handling: 'Material Handling',
-  handled: 'Material Handling',
-  handler: 'Material Handling',
-  handlers: 'Material Handling',
-  mishandled: 'Material Handling',
-  mishandling: 'Material Handling',
-  manualhandling: 'Material Handling',
-  safehandling: 'Material Handling',
-  lifting: 'Material Handling',
-  lifted: 'Material Handling',
-  lifts: 'Material Handling',
-  lifter: 'Material Handling',
-  lifters: 'Material Handling',
-  heavylifting: 'Material Handling',
-  manuallifting: 'Material Handling',
-  rigging: 'Material Handling',
-  rigged: 'Material Handling',
-  rigger: 'Material Handling',
-  riggers: 'Material Handling',
-  riging: 'Material Handling',
-  sling: 'Material Handling',
-  slings: 'Material Handling',
-  slinging: 'Material Handling',
-  slinged: 'Material Handling',
-  slinger: 'Material Handling',
-  slingers: 'Material Handling',
-  load: 'Material Handling',
-  loads: 'Material Handling',
-  loaded: 'Material Handling',
-  loading: 'Material Handling',
-  loader: 'Material Handling',
-  loaders: 'Material Handling',
-  unloading: 'Material Handling',
-  unloaded: 'Material Handling',
-  overloaded: 'Material Handling',
-  overloading: 'Material Handling',
-  underloaded: 'Material Handling',
-  stacking: 'Material Handling',
-  stacked: 'Material Handling',
-  stacker: 'Material Handling',
-  stackers: 'Material Handling',
-  unstacking: 'Material Handling',
-  storage: 'Material Handling',
-  storages: 'Material Handling',
-  stored: 'Material Handling',
-  storing: 'Material Handling',
-  hoist: 'Material Handling',
-  hoists: 'Material Handling',
-  hoisting: 'Material Handling',
-  hoisted: 'Material Handling',
-
-  // No Authorization (50+)
-  authorization: 'No Authorization',
-  authorizations: 'No Authorization',
-  authorize: 'No Authorization',
-  authorized: 'No Authorization',
-  unauthorized: 'No Authorization',
-  authorizing: 'No Authorization',
-  authorisation: 'No Authorization',
-  authorisations: 'No Authorization',
-  authorising: 'No Authorization',
-  authorised: 'No Authorization',
-  unauthorised: 'No Authorization',
-  authorise: 'No Authorization',
-  authorizaton: 'No Authorization',
-  authoriztion: 'No Authorization',
-  autherization: 'No Authorization',
-  reauthorized: 'No Authorization',
-  reauthorised: 'No Authorization',
-  preauthorized: 'No Authorization',
-  preauthorised: 'No Authorization',
-  permission: 'No Authorization',
-  permissions: 'No Authorization',
-  permitted: 'No Authorization',
-  unpermitted: 'No Authorization',
-  permissible: 'No Authorization',
-  impermissible: 'No Authorization',
-  permision: 'No Authorization',
-  permisions: 'No Authorization',
-  nopermission: 'No Authorization',
-  withoutpermission: 'No Authorization',
-  restricted: 'No Authorization',
-  restriction: 'No Authorization',
-  restrictions: 'No Authorization',
-  unrestricted: 'No Authorization',
-  restricting: 'No Authorization',
-  access: 'No Authorization',
-  accessed: 'No Authorization',
-  accessing: 'No Authorization',
-  accessible: 'No Authorization',
-  inaccessible: 'No Authorization',
-  noaccess: 'No Authorization',
-  accessdenied: 'No Authorization',
-  approval: 'No Authorization',
-  approvals: 'No Authorization',
-  approved: 'No Authorization',
-  unapproved: 'No Authorization',
-  disapproved: 'No Authorization',
-  approving: 'No Authorization',
-  reapproved: 'No Authorization',
-  preapproved: 'No Authorization',
-  noapproval: 'No Authorization',
-  withoutapproval: 'No Authorization',
-
-  // Machine Guarding (50+)
-  guarding: 'Machine Guarding',
-  guard: 'Machine Guarding',
-  guards: 'Machine Guarding',
-  guarded: 'Machine Guarding',
-  unguarded: 'Machine Guarding',
-  guardings: 'Machine Guarding',
-  reguarded: 'Machine Guarding',
-  safetygaurd: 'Machine Guarding',
-  safetygaurds: 'Machine Guarding',
-  safetyguard: 'Machine Guarding',
-  safetyguards: 'Machine Guarding',
-  machineguard: 'Machine Guarding',
-  machineguards: 'Machine Guarding',
-  machineguarding: 'Machine Guarding',
-  beltguard: 'Machine Guarding',
-  beltguards: 'Machine Guarding',
-  shaftguard: 'Machine Guarding',
-  shaftguards: 'Machine Guarding',
-  machinery: 'Machine Guarding',
-  machinerys: 'Machine Guarding',
-  machinary: 'Machine Guarding',
-  machine: 'Machine Guarding',
-  machines: 'Machine Guarding',
-  machining: 'Machine Guarding',
-  machinry: 'Machine Guarding',
-  rotating: 'Machine Guarding',
-  rotational: 'Machine Guarding',
-  rotation: 'Machine Guarding',
-  rotations: 'Machine Guarding',
-  rotatingparts: 'Machine Guarding',
-  pinchpoint: 'Machine Guarding',
-  pinchpoints: 'Machine Guarding',
-  pinch: 'Machine Guarding',
-  pinched: 'Machine Guarding',
-  nippoint: 'Machine Guarding',
-  nippoints: 'Machine Guarding',
-  nip: 'Machine Guarding',
-  nipped: 'Machine Guarding',
-  crushpoint: 'Machine Guarding',
-  crushpoints: 'Machine Guarding',
-  crush: 'Machine Guarding',
-  crushed: 'Machine Guarding',
-  crushing: 'Machine Guarding',
-  entanglement: 'Machine Guarding',
-  entanglements: 'Machine Guarding',
-  entangled: 'Machine Guarding',
-  entangling: 'Machine Guarding',
-  movingparts: 'Machine Guarding',
-  movingpart: 'Machine Guarding',
-  exposedparts: 'Machine Guarding',
-  exposedpart: 'Machine Guarding',
-
-  // Procurement (50+)
-  procurement: 'Procurement',
-  procurements: 'Procurement',
-  procure: 'Procurement',
-  procured: 'Procurement',
-  procuring: 'Procurement',
-  procurment: 'Procurement',
-  procuremnt: 'Procurement',
-  procurment: 'Procurement',
-  purchase: 'Procurement',
-  purchases: 'Procurement',
-  purchased: 'Procurement',
-  purchasing: 'Procurement',
-  purchaser: 'Procurement',
-  purchasers: 'Procurement',
-  purchace: 'Procurement',
-  purchaces: 'Procurement',
-  supplier: 'Procurement',
-  suppliers: 'Procurement',
-  supplying: 'Procurement',
-  supplied: 'Procurement',
-  supply: 'Procurement',
-  supplies: 'Procurement',
-  supplychain: 'Procurement',
-  supplychains: 'Procurement',
-  vendor: 'Procurement',
-  vendors: 'Procurement',
-  vendoring: 'Procurement',
-  vendored: 'Procurement',
-  vender: 'Procurement',
-  venders: 'Procurement',
-  contractor: 'Procurement',
-  contractors: 'Procurement',
-  contracting: 'Procurement',
-  contracted: 'Procurement',
-  contractr: 'Procurement',
-  subcontractor: 'Procurement',
-  subcontractors: 'Procurement',
-  subcontracting: 'Procurement',
-  subcontracted: 'Procurement',
-  subbie: 'Procurement',
-  subbies: 'Procurement',
-  sourcing: 'Procurement',
-  sourced: 'Procurement',
-  outsourcing: 'Procurement',
-  outsourced: 'Procurement',
-  specification: 'Procurement',
-  specifications: 'Procurement',
-  specs: 'Procurement',
-  tender: 'Procurement',
-  tenders: 'Procurement',
-  tendering: 'Procurement',
-
-  // Testing (50+)
-  testing: 'Testing',
-  test: 'Testing',
-  tests: 'Testing',
-  tested: 'Testing',
-  untested: 'Testing',
-  tester: 'Testing',
-  testers: 'Testing',
-  testng: 'Testing',
-  testin: 'Testing',
-  retest: 'Testing',
-  retested: 'Testing',
-  retesting: 'Testing',
-  retests: 'Testing',
-  pretest: 'Testing',
-  pretested: 'Testing',
-  pretesting: 'Testing',
-  pretests: 'Testing',
-  posttest: 'Testing',
-  posttested: 'Testing',
-  calibration: 'Testing',
-  calibrations: 'Testing',
-  calibrate: 'Testing',
-  calibrated: 'Testing',
-  uncalibrated: 'Testing',
-  calibrating: 'Testing',
-  recalibrated: 'Testing',
-  recalibration: 'Testing',
-  recalibrating: 'Testing',
-  miscalibrated: 'Testing',
-  miscalibration: 'Testing',
-  calibraton: 'Testing',
-  calibrater: 'Testing',
-  validation: 'Testing',
-  validations: 'Testing',
-  validate: 'Testing',
-  validated: 'Testing',
-  unvalidated: 'Testing',
-  validating: 'Testing',
-  revalidated: 'Testing',
-  revalidation: 'Testing',
-  invalidated: 'Testing',
-  commissioning: 'Testing',
-  commissioned: 'Testing',
-  decommissioned: 'Testing',
-  decommissioning: 'Testing',
-  recommissioned: 'Testing',
-  recommissioning: 'Testing',
-  precommissioning: 'Testing',
-  precommissioned: 'Testing',
-  functiontest: 'Testing',
-  functiontests: 'Testing',
-  functiontesting: 'Testing',
-
-  // Excavation & Trenching (100+)
-  // Shoring and support
-  // Slope and benching
-  // Cave-in and collapse
-  // Trench walls and sides
-  // Spoil and material piles
-  // Dewatering
-  // Access to excavation
-  // Soil types and conditions
-  // Excavation depth
-  // Edge and perimeter
-  // Protective measures
-
-  // Traffic Management (additional keywords)
-  // Pedestrian
-  // Speed limits
-  // Traffic signals
-  // Bunds and berms for traffic
-  // Tower lights
-  // Safety poles
-  // Parking
-  // Road conditions
-
-  // Electrical Safety (additional keywords)
-  // Power tools and disconnection
-  // Wires and cables
-  // Switches
-  // Electric shock
-  // Damaged electrical
-  // Compressor hoses and whip
-
-  // Confined Space (additional keywords)
-  // Manholes
-  // Fall prevention
-  // Entry and exclusion
-  // Covers
-
-  // Access (additional keywords)
-  // Stairs and steps
-  // Bridges and improvised access
-  // Blocked access
-  // Egress
-  // Pits and openings
-  // Anchor bolts and trip hazards
-  // Material blocking
-  blockingaccessways: 'Access'
 }
 
 // ============================================================================
@@ -5813,6 +3323,32 @@ export const aggregateRootCausesForHazard = (incidents, hazardName, observationT
 // ============================================================================
 
 /**
+ * Check if pattern matches in text with word boundary enforcement
+ * Short patterns (<=3 chars like ppe, ptw, jsa) skip boundary check
+ * @param {string} text - Normalized text (lowercase)
+ * @param {string} pattern - Pattern to match
+ * @returns {boolean}
+ */
+const matchesWithBoundary = (text, pattern) => {
+  const idx = text.indexOf(pattern)
+  if (idx === -1) return false
+  // Short patterns (<=3 chars) like ppe, ptw, jsa, sds: skip boundary check
+  if (pattern.length <= 3) return true
+  // Left boundary: start of string or non-alphanumeric
+  if (idx > 0) {
+    const c = text.charCodeAt(idx - 1)
+    if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) return false
+  }
+  // Right boundary: end of string or non-alphanumeric
+  const end = idx + pattern.length
+  if (end < text.length) {
+    const c = text.charCodeAt(end)
+    if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) return false
+  }
+  return true
+}
+
+/**
  * Calculate factor score by matching phrases in text
  * @param {string} text - Normalized text (lowercase)
  * @param {Object} config - Factor configuration from FACTOR_PHRASE_CONFIG
@@ -5827,7 +3363,7 @@ const calculateFactorScore = (text, config) => {
   // Check strong patterns (+10 each)
   if (config.strongPatterns) {
     for (const pattern of config.strongPatterns) {
-      if (text.includes(pattern)) {
+      if (matchesWithBoundary(text, pattern)) {
         score += 10
         strongMatches.push(pattern)
       }
@@ -5837,7 +3373,7 @@ const calculateFactorScore = (text, config) => {
   // Check moderate patterns (+5 each) - only if no strong matches to avoid double counting
   if (config.moderatePatterns && strongMatches.length === 0) {
     for (const pattern of config.moderatePatterns) {
-      if (text.includes(pattern)) {
+      if (matchesWithBoundary(text, pattern)) {
         score += 5
         moderateMatches.push(pattern)
       }
@@ -5848,7 +3384,7 @@ const calculateFactorScore = (text, config) => {
   // Reduced from -15 to -5 to prevent single false-positive exclusion from hiding valid factors
   if (config.exclusionPatterns) {
     for (const pattern of config.exclusionPatterns) {
-      if (text.includes(pattern)) {
+      if (matchesWithBoundary(text, pattern)) {
         score -= 5
         exclusionMatches.push(pattern)
       }
@@ -5866,7 +3402,7 @@ const calculateFactorScore = (text, config) => {
 const checkGlobalExclusions = (text) => {
   const matches = []
   for (const pattern of GLOBAL_EXCLUSIONS) {
-    if (text.includes(pattern)) {
+    if (matchesWithBoundary(text, pattern)) {
       matches.push(pattern)
     }
   }
@@ -5898,6 +3434,7 @@ export const detectContributingFactors = (description, hazardCategory = null, op
   }
 
   const matchedFactors = []
+  const isUnsafeAct = options.incidentType === 'unsafe-act'
 
   // Check each factor against the text
   for (const [factorName, config] of Object.entries(FACTOR_PHRASE_CONFIG)) {
@@ -5913,6 +3450,17 @@ export const detectContributingFactors = (description, hazardCategory = null, op
         exclusionMatches: result.exclusionMatches
       })
     }
+  }
+
+  // Auto-include Behavioural for Unsafe Act observations from Excel Classification column
+  if (isUnsafeAct && !matchedFactors.some(f => f.name === 'Behavioural')) {
+    matchedFactors.push({
+      name: 'Behavioural',
+      score: 15,
+      strongMatches: ['unsafe-act (classification)'],
+      moderateMatches: [],
+      exclusionMatches: []
+    })
   }
 
   // Sort by score (highest first) and return names
@@ -5933,7 +3481,7 @@ export const detectContributingFactors = (description, hazardCategory = null, op
  * @param {string} hazardCategory - Hazard category (used for context)
  * @returns {Object} { factors: string[], candidates: Object[], excluded: Object[], globalExclusions: string[] }
  */
-export const detectContributingFactorsWithDetails = (description, hazardCategory = null) => {
+export const detectContributingFactorsWithDetails = (description, hazardCategory = null, options = {}) => {
   if (!description || typeof description !== 'string') {
     return { factors: [], candidates: [], excluded: [], globalExclusions: [] }
   }
@@ -5959,6 +3507,7 @@ export const detectContributingFactorsWithDetails = (description, hazardCategory
 
   const validated = []
   const excluded = []
+  const isUnsafeAct = options.incidentType === 'unsafe-act'
 
   // Check each factor
   for (const [factorName, config] of Object.entries(FACTOR_PHRASE_CONFIG)) {
@@ -5985,6 +3534,19 @@ export const detectContributingFactorsWithDetails = (description, hazardCategory
       excluded.push(factorResult)
     }
     // Skip factors with score 0 and no exclusions (no match at all)
+  }
+
+  // Auto-include Behavioural for Unsafe Act observations from Excel Classification column
+  if (isUnsafeAct && !validated.some(v => v.factor === 'Behavioural')) {
+    validated.push({
+      factor: 'Behavioural',
+      score: 15,
+      threshold: 10,
+      strongMatches: ['unsafe-act (classification)'],
+      moderateMatches: [],
+      exclusionMatches: [],
+      reason: 'unsafe_act_classification'
+    })
   }
 
   // Sort validated by score
@@ -6031,6 +3593,19 @@ export const detectKeywordsInText = (description, factorName = null, hazardCateg
         let searchIndex = 0
         let foundIndex
         while ((foundIndex = normalizedText.indexOf(phrase, searchIndex)) !== -1) {
+          searchIndex = foundIndex + 1
+          // Word boundary check for patterns > 3 chars
+          if (phrase.length > 3) {
+            if (foundIndex > 0) {
+              const c = normalizedText.charCodeAt(foundIndex - 1)
+              if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) continue
+            }
+            const end = foundIndex + phrase.length
+            if (end < normalizedText.length) {
+              const c = normalizedText.charCodeAt(end)
+              if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) continue
+            }
+          }
           factors.add(factor)
           matches.push({
             phrase: description.substring(foundIndex, foundIndex + phrase.length),
@@ -6040,7 +3615,6 @@ export const detectKeywordsInText = (description, factorName = null, hazardCateg
             start: foundIndex,
             end: foundIndex + phrase.length
           })
-          searchIndex = foundIndex + 1
         }
       }
     }
@@ -6053,6 +3627,19 @@ export const detectKeywordsInText = (description, factorName = null, hazardCateg
         let searchIndex = 0
         let foundIndex
         while ((foundIndex = normalizedText.indexOf(phrase, searchIndex)) !== -1) {
+          searchIndex = foundIndex + 1
+          // Word boundary check for patterns > 3 chars
+          if (phrase.length > 3) {
+            if (foundIndex > 0) {
+              const c = normalizedText.charCodeAt(foundIndex - 1)
+              if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) continue
+            }
+            const end = foundIndex + phrase.length
+            if (end < normalizedText.length) {
+              const c = normalizedText.charCodeAt(end)
+              if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) continue
+            }
+          }
           // Check if not already matched by strong pattern
           const alreadyMatched = matches.some(m =>
             m.factor === factor && foundIndex >= m.start && foundIndex < m.end
@@ -6068,7 +3655,6 @@ export const detectKeywordsInText = (description, factorName = null, hazardCateg
               end: foundIndex + phrase.length
             })
           }
-          searchIndex = foundIndex + 1
         }
       }
     }
@@ -6103,10 +3689,7 @@ export const getKeywordsForFactor = (factorName) => {
 
   const config = FACTOR_PHRASE_CONFIG[factorName]
   if (!config) {
-    // Fallback to legacy keywords if factor not in phrase config
-    return Object.entries(FACTOR_KEYWORDS)
-      .filter(([_, factor]) => factor === factorName)
-      .map(([keyword, _]) => keyword)
+    return []
   }
 
   // Combine strong and moderate patterns
@@ -6166,25 +3749,28 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
     // Get hazard category for validation
     const hazardCategory = useValidation ? getHazardCategory(incident) : null
 
-    // Detect factors with hazard-specific validation
-    const factors = detectContributingFactors(incident.description, hazardCategory)
+    // Detect factors with scores for confidence tracking
+    const factorsWithScores = detectContributingFactors(incident.description, hazardCategory, { returnScores: true, incidentType: incident.type })
 
     // Track incidents with no factors detected as "Unclassified"
-    if (factors.length === 0) {
+    if (factorsWithScores.length === 0) {
       unclassifiedIncidents.push(incident)
     }
 
-    for (const factor of factors) {
+    for (const factorObj of factorsWithScores) {
+      const factor = factorObj.name
       if (!factorMap[factor]) {
         factorMap[factor] = {
           name: factor,
           count: 0,
+          totalScore: 0,
           hazards: {},
           incidents: []
         }
       }
 
       factorMap[factor].count++
+      factorMap[factor].totalScore += factorObj.score
       factorMap[factor].incidents.push(incident)
 
       // Track hazard distribution
@@ -6197,7 +3783,7 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
 
     // Optionally track excluded factors for debugging
     if (trackExcluded) {
-      const details = detectContributingFactorsWithDetails(incident.description, hazardCategory)
+      const details = detectContributingFactorsWithDetails(incident.description, hazardCategory, { incidentType: incident.type })
       for (const excluded of details.excluded) {
         if (!excludedMap[excluded.factor]) {
           excludedMap[excluded.factor] = {
@@ -6225,16 +3811,21 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
 
   // Convert to array and sort by count
   const byFactor = Object.values(factorMap)
-    .map(f => ({
-      ...f,
-      // Calculate percentage of total analyzed incidents
-      percentage: filteredIncidents.length > 0
-        ? (f.count / filteredIncidents.length) * 100
-        : 0,
-      hazardBreakdown: Object.entries(f.hazards)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-    }))
+    .map(f => {
+      const avgScore = f.count > 0 ? Math.round(f.totalScore / f.count) : 0
+      return {
+        ...f,
+        // Calculate percentage of total analyzed incidents
+        percentage: filteredIncidents.length > 0
+          ? (f.count / filteredIncidents.length) * 100
+          : 0,
+        avgScore,
+        confidence: avgScore >= 20 ? 'high' : avgScore >= 10 ? 'medium' : 'low',
+        hazardBreakdown: Object.entries(f.hazards)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+      }
+    })
     .sort((a, b) => b.count - a.count)
 
   // Add "Unclassified" factor for observations with no detected factors
@@ -6306,7 +3897,7 @@ export const detectFactorsForHazard = (incidents, hazardName, options = {}) => {
   for (const incident of hazardIncidents) {
     // Use hazard-specific validation when enabled
     const hazardCategory = useValidation ? hazardName : null
-    const factors = detectContributingFactors(incident.description, hazardCategory)
+    const factors = getCachedFactors(incident.description, hazardCategory, detectContributingFactors, incident.type)
 
     for (const factor of factors) {
       if (!factorCounts[factor]) {
@@ -6346,7 +3937,7 @@ export const getIncidentsForHazardFactor = (incidents, hazardName, factorName, o
   // Filter to incidents with this factor (with validation)
   return hazardIncidents.filter(incident => {
     const hazardCategory = useValidation ? hazardName : null
-    const factors = detectContributingFactors(incident.description, hazardCategory)
+    const factors = getCachedFactors(incident.description, hazardCategory, detectContributingFactors, incident.type)
     return factors.includes(factorName)
   })
 }
@@ -6370,7 +3961,7 @@ export const analyzeFactorDetection = (incidents, hazardName, factorName) => {
   const excluded = []
 
   for (const incident of hazardIncidents) {
-    const details = detectContributingFactorsWithDetails(incident.description, hazardName)
+    const details = detectContributingFactorsWithDetails(incident.description, hazardName, { incidentType: incident.type })
 
     // Check if this factor was detected at all (before validation)
     const wasCandidate = details.candidates.some(c => c.factor === factorName) ||
@@ -6422,10 +4013,8 @@ export const analyzeFactorDetection = (incidents, hazardName, factorName) => {
 
 export default {
   // Constants
-  FACTOR_KEYWORDS,
   NEGATIVE_TYPES,
   POSITIVE_TYPES,
-  HAZARD_FACTOR_RULES,
 
   // Observation type helpers
   isPositiveType,
@@ -6439,7 +4028,6 @@ export default {
   getKeywordsForFactor,
 
   // Factor detection - Hazard-specific
-  validateFactorMatch,
   getHazardCategory,
 
   // Aggregation functions

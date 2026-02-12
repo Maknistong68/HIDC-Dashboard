@@ -161,6 +161,7 @@ const QualityScoreTrend = ({ incidents, isMobile }) => {
               period={granularity}
               onPeriodChange={setGranularity}
               periods={GRANULARITY_OPTIONS}
+              hideWorkRelated
             />
           }
         >

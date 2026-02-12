@@ -153,6 +153,7 @@ const NearMissComplianceTrend = ({ incidents, isMobile }) => {
               period={granularity}
               onPeriodChange={setGranularity}
               periods={GRANULARITY_OPTIONS}
+              hideWorkRelated
             />
           }
         >

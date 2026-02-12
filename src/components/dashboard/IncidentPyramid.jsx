@@ -19,7 +19,6 @@ const TOTAL_LEVELS = ALL_TYPES.length
 const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) => {
   const [selectedType, setSelectedType] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
   const [, startTransition] = useTransition()
 
   const handleTypeClick = useCallback((typeKey) => {
@@ -36,39 +35,11 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
     })
   }, [])
 
-  // Filter incidents based on work-related toggle
-  const displayIncidents = useMemo(() => {
-    if (!workRelatedOnly) return incidents
-    return incidents.filter(i => i.workRelated !== false)
-  }, [incidents, workRelatedOnly])
-
-  // Re-compute pyramid counts based on filtered incidents
-  const localPyramidData = useMemo(() => {
-    if (!workRelatedOnly) return pyramidData
-    const result = {}
-    PYRAMID_SECTIONS.forEach(section => {
-      section.types.forEach(t => {
-        result[t.key] = { open: 0, closed: 0 }
-      })
-    })
-    displayIncidents.forEach(incident => {
-      const typeKey = incident.type
-      if (result[typeKey]) {
-        if (incident.actionStatus === 'closed') {
-          result[typeKey].closed++
-        } else {
-          result[typeKey].open++
-        }
-      }
-    })
-    return result
-  }, [displayIncidents, pyramidData, workRelatedOnly])
-
-  // Get all incidents for selected type
+  // Get all incidents for selected type (incidents are already globally filtered by work-related toggle)
   const filteredIncidents = useMemo(() => {
-    if (!selectedType || !displayIncidents.length) return []
-    return displayIncidents.filter(i => i.type === selectedType)
-  }, [selectedType, displayIncidents])
+    if (!selectedType || !incidents.length) return []
+    return incidents.filter(i => i.type === selectedType)
+  }, [selectedType, incidents])
 
   // Get type label from PYRAMID_SECTIONS
   const getTypeLabel = useCallback((type) => {
@@ -95,31 +66,6 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
           Safety Pyramid
           <InfoTooltip text="HOW THIS PYRAMID IS BUILT: Each observation is categorized by its Type and Consequence columns. The pyramid is organized by severity from top (most critical) to bottom (proactive). INJURY/ILLNESS: Fatality, Lost Time, Medical Treatment, First Aid. ENVIRONMENTAL: Major (P1), Moderate (P2), Minor (P3). PROPERTY DAMAGE: Light Vehicle, Heavy Plant, Truck & Trailer, Static Equipment. OBSERVATIONS: Near Miss, Non-Conformance, Unsafe Act, Unsafe Condition. PROACTIVE: Positive Observations, Leadership Events, Emergency Drills. Click any level to see records." />
         </Card.Title>
-        {/* Work-Related Only slide toggle */}
-        <label className="flex items-center gap-2 cursor-pointer select-none ml-auto">
-          <span className={`text-[11px] font-medium transition-colors ${workRelatedOnly ? 'text-amber-600' : 'text-surface-400'}`}>
-            Work-Related Only
-          </span>
-          <button
-            role="switch"
-            aria-checked={workRelatedOnly}
-            onClick={() => setWorkRelatedOnly(!workRelatedOnly)}
-            className={`
-              relative inline-flex h-5 w-9 items-center rounded-full
-              transition-colors duration-200 ease-in-out
-              focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-              ${workRelatedOnly ? 'bg-amber-600/80' : 'bg-surface-300'}
-            `}
-          >
-            <span
-              className={`
-                inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm
-                transition-transform duration-200 ease-in-out
-                ${workRelatedOnly ? 'translate-x-[18px]' : 'translate-x-[3px]'}
-              `}
-            />
-          </button>
-        </label>
       </Card.Header>
 
       {/* Centered Triangle Pyramid */}
@@ -129,7 +75,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
             const idx = globalIdx
             globalIdx++
 
-            const statusData = localPyramidData?.[level.key] || { open: 0, closed: 0 }
+            const statusData = pyramidData?.[level.key] || { open: 0, closed: 0 }
             const total = statusData.open + statusData.closed
             const openPercent = total > 0 ? (statusData.open / total) * 100 : 0
             const closedPercent = total > 0 ? (statusData.closed / total) * 100 : 0
@@ -244,7 +190,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
         insightsData={{
           categoryType: selectedType,
           categoryIncidents: filteredIncidents,
-          allIncidents: displayIncidents
+          allIncidents: incidents
         }}
       />
     </Card>

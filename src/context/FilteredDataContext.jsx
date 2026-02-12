@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useMemo } from 'react'
+import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react'
 import { useData } from './DataContext'
 import { useDate } from './DateContext'
 import { useFilter } from './FilterContext'
 import { PROACTIVE_TYPES } from '../utils/constants'
-import { getCachedFilteredIncidents } from '../utils/memoizedCalculations'
 
 const FilteredDataContext = createContext(null)
 
@@ -13,6 +12,9 @@ const FilteredDataContext = createContext(null)
  * All 3 pages (Dashboard, DataQuality, SafetyOutlook) independently computed the EXACT same
  * filteredIncidents, uniqueContractors, siteOptions, and filterConfig (~12 duplicate useMemo hooks).
  * This context computes once and shares with all pages.
+ *
+ * Dual-dataset pattern: Both work-related and all-incidents arrays are pre-computed so
+ * toggling workRelatedOnly is an instant reference swap with zero recomputation.
  *
  * Provides:
  * - filteredIncidents: incidents filtered by contractor, site, subRegion, and period
@@ -24,39 +26,42 @@ const FilteredDataContext = createContext(null)
 export const FilteredDataProvider = ({ children }) => {
   const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
   const { getPeriodRange } = useDate()
-  const { period, contractor, site, subRegion } = useFilter()
+  const { period, contractor, site, subRegion, workRelatedOnly } = useFilter()
 
-  // Filtered incidents based on contractor, site, subRegion, and period
-  // Uses module-level cache for cross-render deduplication
-  const filteredIncidents = useMemo(() => {
-    const filters = { contractor, site, subRegion, period }
-
-    return getCachedFilteredIncidents(incidents, filters, (data, f) => {
-      if (f.period === null) {
-        return data.filter(i => {
-          if (f.contractor && i.contractor !== f.contractor) return false
-          if (f.site && i.site !== f.site) return false
-          if (f.subRegion && siteClassifications[i.site] !== f.subRegion) return false
-          return true
-        })
-      }
-
-      const { start: dateFrom, end: dateTo } = getPeriodRange(f.period)
-
-      return data.filter(i => {
-        if (f.contractor && i.contractor !== f.contractor) return false
-        if (f.site && i.site !== f.site) return false
-        if (f.subRegion && siteClassifications[i.site] !== f.subRegion) return false
-        if (i.date < dateFrom) return false
-        if (i.date > dateTo) return false
+  // Base filtered set: all filters EXCEPT workRelated
+  // This does NOT recompute when workRelatedOnly toggles
+  const baseFiltered = useMemo(() => {
+    if (period === null) {
+      return incidents.filter(i => {
+        if (contractor && i.contractor !== contractor) return false
+        if (site && i.site !== site) return false
+        if (subRegion && siteClassifications[i.site] !== subRegion) return false
         return true
       })
+    }
+
+    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
+
+    return incidents.filter(i => {
+      if (contractor && i.contractor !== contractor) return false
+      if (site && i.site !== site) return false
+      if (subRegion && siteClassifications[i.site] !== subRegion) return false
+      if (i.date < dateFrom) return false
+      if (i.date > dateTo) return false
+      return true
     })
   }, [incidents, contractor, site, subRegion, siteClassifications, period, getPeriodRange])
 
-  // Heatmap uses ALL incidents (not filtered by period)
-  // Excludes proactive types, applies contractor/site/subRegion filters
-  const heatmapIncidents = useMemo(() => {
+  // Pre-compute work-related variant (cheap .filter on already-filtered base)
+  const workRelatedFiltered = useMemo(() => {
+    return baseFiltered.filter(i => i.workRelated !== false)
+  }, [baseFiltered])
+
+  // Swap reference based on toggle — no recomputation
+  const filteredIncidents = workRelatedOnly ? workRelatedFiltered : baseFiltered
+
+  // Base heatmap: all filters EXCEPT workRelated and period, excludes proactive types
+  const baseHeatmap = useMemo(() => {
     return incidents.filter(i => {
       if (PROACTIVE_TYPES.includes(i.type)) return false
       if (contractor && i.contractor !== contractor) return false
@@ -65,6 +70,51 @@ export const FilteredDataProvider = ({ children }) => {
       return true
     })
   }, [incidents, contractor, site, subRegion, siteClassifications])
+
+  // Pre-compute work-related heatmap variant
+  const workRelatedHeatmap = useMemo(() => {
+    return baseHeatmap.filter(i => i.workRelated !== false)
+  }, [baseHeatmap])
+
+  // Swap reference based on toggle — no recomputation
+  const heatmapIncidents = workRelatedOnly ? workRelatedHeatmap : baseHeatmap
+
+  // Background-warm aggregation caches for the INACTIVE variant
+  const warmingRef = useRef([])
+  useEffect(() => {
+    // Cancel any in-flight warming tasks
+    warmingRef.current.forEach(id => {
+      if (typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(id)
+      } else {
+        clearTimeout(id)
+      }
+    })
+    warmingRef.current = []
+
+    // Determine inactive arrays (the ones NOT currently displayed)
+    const inactiveFiltered = workRelatedOnly ? baseFiltered : workRelatedFiltered
+    const inactiveHeatmap = workRelatedOnly ? baseHeatmap : workRelatedHeatmap
+
+    if (inactiveFiltered.length === 0) return
+
+    // Dynamic import to avoid adding heavy transitive deps to critical render path
+    import('../utils/cacheWarmer').then(({ warmCaches }) => {
+      const ids = warmCaches(inactiveFiltered, inactiveHeatmap, period)
+      warmingRef.current = ids
+    })
+
+    return () => {
+      warmingRef.current.forEach(id => {
+        if (typeof cancelIdleCallback === 'function') {
+          cancelIdleCallback(id)
+        } else {
+          clearTimeout(id)
+        }
+      })
+      warmingRef.current = []
+    }
+  }, [baseFiltered, workRelatedFiltered, baseHeatmap, workRelatedHeatmap, workRelatedOnly, period])
 
   // Unique contractors from all incidents (not filtered)
   const uniqueContractors = useMemo(() => {
