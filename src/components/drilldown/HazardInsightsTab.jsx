@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { Eye, ChevronRight, Info } from 'lucide-react'
+import { Eye, Info, ChevronRight } from 'lucide-react'
 import { getHazardInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
 import HazardTemporalPatterns from './HazardTemporalPatterns'
 import HazardContractorBreakdown from './HazardContractorBreakdown'
-import HazardRecommendations from './HazardRecommendations'
 
 /**
  * HazardInsightsTab - Main container for hazard insights in DrillDownModal
@@ -20,10 +19,6 @@ import HazardRecommendations from './HazardRecommendations'
  * +-------------------------------------------------------+
  * |   HazardTemporalPatterns  |  HazardContractorBreakdown|
  * +---------------------------+---------------------------+
- * |         HazardRecommendations (Full Width)            |
- * +-------------------------------------------------------+
- * |        [View All Records] Button                      |
- * +-------------------------------------------------------+
  */
 const HazardInsightsTab = ({
   hazardName,
@@ -123,24 +118,6 @@ const HazardInsightsTab = ({
           isMobile={isMobile}
         />
       </div>
-
-      {/* Row 4: Recommendations (Full Width) */}
-      <HazardRecommendations
-        recommendations={insights.recommendations}
-        isMobile={isMobile}
-      />
-
-      {/* View All Records Button */}
-      {onViewRecords && hazardIncidents.length > 0 && (
-        <button
-          onClick={onViewRecords}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
-        >
-          <Eye size={18} />
-          View All {insights.totalCount} Records
-          <ChevronRight size={16} />
-        </button>
-      )}
 
       {/* Data Source Info (collapsible) */}
       <div className="pt-2 border-t border-surface-100">

@@ -5,7 +5,7 @@
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES } from './constants'
+import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, INCIDENT_CATEGORY_TYPES, PROACTIVE_TYPES } from './constants'
 import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
 import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType, detectContributingFactors } from './rootCauseEngine'
 import {
@@ -3207,9 +3207,9 @@ export const getRootCausesForHazard = (incidents, hazardName) => {
  * Get daily breakdown for a specific hazard within time period
  * Used for the trend chart in detail view
  */
-// Observation type constants
-const NEGATIVE_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
-const POSITIVE_TYPES = ['positive']
+// Observation type constants derived from pyramid definitions
+const NEGATIVE_TYPES = [...NEGATIVE_OBSERVATION_TYPES, ...INCIDENT_CATEGORY_TYPES]
+const POSITIVE_TYPES = PROACTIVE_TYPES
 
 export const getHazardDailyData = (incidents, hazardName, periodMonths = 6) => {
   const dates = getSortedDates(incidents)
@@ -4927,8 +4927,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
 
   // ── 1. Risk Summary ──
   // Calculate risk score based on severity mix, open actions, and trend
-  const negativeTypes = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr', 'fac', 'mti', 'lti']
-  const negativeIncidents = hazardIncidents.filter(i => negativeTypes.includes(i.type))
+  const negativeIncidents = hazardIncidents.filter(i => NEGATIVE_TYPES.includes(i.type))
   const severeIncidents = hazardIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type))
   const openIncidents = hazardIncidents.filter(i => i.actionStatus !== 'closed')
 
@@ -5051,7 +5050,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
     closed: hazardIncidents.filter(i => i.actionStatus === 'closed').length
   }
   const closureRate = hazardIncidents.length > 0
-    ? Math.round((actionCounts.closed / hazardIncidents.length) * 100)
+    ? (actionCounts.closed === hazardIncidents.length ? 100 : Math.min(99, Math.round((actionCounts.closed / hazardIncidents.length) * 100)))
     : 0
 
   // Overdue actions (> 30 days old and still open)
@@ -5289,7 +5288,7 @@ export const getCategoryInsights = (incidents, categoryType, allIncidents = null
     closed: incidents.filter(i => i.actionStatus === 'closed').length
   }
   const closureRate = incidents.length > 0
-    ? Math.round((actionCounts.closed / incidents.length) * 100)
+    ? (actionCounts.closed === incidents.length ? 100 : Math.min(99, Math.round((actionCounts.closed / incidents.length) * 100)))
     : 0
 
   // Overdue actions (> 30 days old and still open)
@@ -5491,7 +5490,7 @@ export const getObserverInsights = (incidents, observerName, allIncidents = null
     closed: incidents.filter(i => i.actionStatus === 'closed').length
   }
   const closureRate = incidents.length > 0
-    ? Math.round((actionCounts.closed / incidents.length) * 100)
+    ? (actionCounts.closed === incidents.length ? 100 : Math.min(99, Math.round((actionCounts.closed / incidents.length) * 100)))
     : 0
 
   // ── 4. Temporal Patterns ──

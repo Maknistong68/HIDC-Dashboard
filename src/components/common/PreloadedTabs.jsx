@@ -1,5 +1,6 @@
 import { memo, useMemo, useState, useEffect, startTransition } from 'react'
 import { useLocation } from 'react-router-dom'
+import { TabVisibilityContext } from '../../hooks/useDeferredMemo'
 import Dashboard from '../../pages/Dashboard'
 import DataQuality from '../../pages/DataQuality'
 import SafetyOutlook from '../../pages/SafetyOutlook'
@@ -44,13 +45,19 @@ const PreloadedTabs = memo(() => {
   return (
     <div style={{ display: isVisible ? 'block' : 'none' }}>
       <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
-        {mountedTabs.dashboard && <Dashboard />}
+        <TabVisibilityContext.Provider value={activeTab === 'dashboard'}>
+          {mountedTabs.dashboard && <Dashboard />}
+        </TabVisibilityContext.Provider>
       </div>
       <div style={{ display: activeTab === 'dataQuality' ? 'block' : 'none' }}>
-        {mountedTabs.dataQuality && <DataQuality />}
+        <TabVisibilityContext.Provider value={activeTab === 'dataQuality'}>
+          {mountedTabs.dataQuality && <DataQuality />}
+        </TabVisibilityContext.Provider>
       </div>
       <div style={{ display: activeTab === 'outlook' ? 'block' : 'none' }}>
-        {mountedTabs.outlook && <SafetyOutlook />}
+        <TabVisibilityContext.Provider value={activeTab === 'outlook'}>
+          {mountedTabs.outlook && <SafetyOutlook />}
+        </TabVisibilityContext.Provider>
       </div>
     </div>
   )

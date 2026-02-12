@@ -3,7 +3,7 @@
  * Provides metrics for coverage, quality, and performance analysis
  */
 
-import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays } from 'date-fns'
+import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, startOfQuarter, endOfQuarter, getQuarter, getDate, getDaysInMonth } from 'date-fns'
 import { CONTEXT_REDIRECTS, HAZARD_PHRASES, HAZARD_PATTERNS, MAJOR_HAZARDS, FOUL_WORDS_LIST, VAGUE_HAZARD_TERMS, RECORDABLE_INCIDENT_TYPES } from './constants'
 import { analyzeObservation } from './contextClassifier'
 import { categorizeHazard } from './excelParser'
@@ -181,8 +181,8 @@ export const getCategorizationMetrics = (incidents) => {
 export const getDescriptionMetrics = (incidents) => {
   const distribution = {
     veryShort: 0,  // 0-5 words
-    short: 0,      // 6-15 words
-    good: 0,       // 16-30 words
+    short: 0,      // 6-9 words
+    good: 0,       // 10-30 words
     excellent: 0   // 31+ words
   }
 
@@ -203,7 +203,7 @@ export const getDescriptionMetrics = (incidents) => {
         description: incident.description?.substring(0, 50) || '(empty)',
         wordCount
       })
-    } else if (wordCount <= 15) {
+    } else if (wordCount <= 9) {
       distribution.short++
     } else if (wordCount <= 30) {
       distribution.good++
@@ -288,8 +288,10 @@ export const getNearMissMetrics = (incidents) => {
 
   const siteMonths = Object.values(siteMonthMap)
   const meetingTarget = siteMonths.filter(sm => sm.count >= TARGET_PER_SITE_PER_MONTH)
+  // Proportional compliance: 0 NM = 0%, 1 NM = 50%, 2+ NM = 100%
+  const totalScore = siteMonths.reduce((sum, sm) => sum + Math.min(sm.count / TARGET_PER_SITE_PER_MONTH, 1), 0)
   const complianceRate = siteMonths.length > 0
-    ? (meetingTarget.length / siteMonths.length) * 100
+    ? (totalScore / siteMonths.length) * 100
     : 0
 
   return {
@@ -301,23 +303,149 @@ export const getNearMissMetrics = (incidents) => {
     target: 5, // Legacy percentage target
     gap: Math.max(0, 5 - rate).toFixed(1),
 
-    // NEW primary metric (count-based)
+    // NEW primary metric (proportional count-based)
     siteMonthTarget: TARGET_PER_SITE_PER_MONTH,
     siteMonthBreakdown: siteMonths,
     sitesMetTarget: meetingTarget.length,
     totalSiteMonths: siteMonths.length,
     complianceRate: complianceRate.toFixed(1),
 
-    // STATUS uses NEW count-based metric
+    // STATUS uses proportional metric
     // ≥80% = good, 50-79% = warning, <50% = poor
     status: complianceRate >= 80 ? 'good' : complianceRate >= 50 ? 'warning' : 'poor'
   }
 }
 
 /**
+ * Calculate near-miss compliance trend over time
+ * Groups incidents into monthly or quarterly buckets and computes the
+ * site-month compliance rate for each bucket (same logic as getNearMissMetrics).
+ *
+ * @param {Array} incidents - All incidents
+ * @param {'monthly'|'quarterly'} granularity - Time bucketing
+ * @returns {Array<{label, complianceRate, nearMissCount, sitesMetTarget, totalSiteMonths}>}
+ */
+export const getNearMissComplianceTrend = (incidents, granularity = 'monthly') => {
+  if (!incidents || incidents.length === 0) return []
+
+  const TARGET_PER_SITE_PER_MONTH = 2
+  const pyramidTypes = ['lti', 'mti', 'fac', 'near-miss', 'unsafe-act', 'unsafe-condition']
+
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return []
+
+  const endDate = parseISO(dates[dates.length - 1])
+  const startDate = parseISO(dates[0])
+
+  const monthsInRange = eachMonthOfInterval({
+    start: startOfMonth(startDate),
+    end: endOfMonth(endDate),
+  })
+
+  // Compute per-month compliance
+  const now = new Date()
+  const monthlyData = monthsInRange.map(monthStart => {
+    const monthStr = format(monthStart, 'yyyy-MM')
+
+    // Immature month exclusion: skip current month if <80% elapsed
+    const isCurrentMonth =
+      monthStart.getFullYear() === now.getFullYear() &&
+      monthStart.getMonth() === now.getMonth()
+    if (isCurrentMonth) {
+      const dayOfMonth = getDate(now)
+      const totalDays = getDaysInMonth(now)
+      if (dayOfMonth / totalDays < 0.8) return null
+    }
+
+    const monthIncidents = incidents.filter(
+      i => i.date && i.date.substring(0, 7) === monthStr
+    )
+    const pyramidIncidents = monthIncidents.filter(i => pyramidTypes.includes(i.type))
+    const nearMisses = monthIncidents.filter(i => i.type === 'near-miss')
+
+    // Build site-month map
+    const siteMonthMap = {}
+    nearMisses.forEach(i => {
+      if (!i.site) return
+      siteMonthMap[i.site] = (siteMonthMap[i.site] || 0) + 1
+    })
+    // Include sites with 0 near-misses from pyramid incidents
+    pyramidIncidents.forEach(i => {
+      if (i.site && !(i.site in siteMonthMap)) {
+        siteMonthMap[i.site] = 0
+      }
+    })
+
+    const counts = Object.values(siteMonthMap)
+    const totalSiteMonths = counts.length
+    const sitesMetTarget = counts.filter(c => c >= TARGET_PER_SITE_PER_MONTH).length
+    // Proportional: 0 NM = 0%, 1 NM = 50%, 2+ NM = 100%
+    const totalScore = counts.reduce((sum, c) => sum + Math.min(c / TARGET_PER_SITE_PER_MONTH, 1), 0)
+    const complianceRate = totalSiteMonths > 0
+      ? (totalScore / totalSiteMonths) * 100
+      : 0
+
+    return {
+      label: format(monthStart, 'MMM yy'),
+      monthKey: monthStr,
+      complianceRate: Math.round(complianceRate * 10) / 10,
+      nearMissCount: nearMisses.length,
+      sitesMetTarget,
+      totalSiteMonths,
+    }
+  }).filter(Boolean)
+
+  if (granularity === 'quarterly') {
+    // Group monthly data into quarters
+    const quarterMap = new Map()
+    monthlyData.forEach(m => {
+      const d = parseISO(m.monthKey + '-01')
+      const qStart = startOfQuarter(d)
+      const qKey = format(qStart, 'yyyy-MM')
+
+      if (!quarterMap.has(qKey)) {
+        quarterMap.set(qKey, {
+          label: `Q${getQuarter(qStart)} '${format(qStart, 'yy')}`,
+          months: [],
+        })
+      }
+      quarterMap.get(qKey).months.push(m)
+    })
+
+    // Immature quarter exclusion
+    const currentQStart = startOfQuarter(now)
+    const currentQEnd = endOfQuarter(now)
+    const qProgress = (now.getTime() - currentQStart.getTime()) /
+      (currentQEnd.getTime() - currentQStart.getTime())
+    const currentQKey = format(currentQStart, 'yyyy-MM')
+
+    return Array.from(quarterMap.entries())
+      .filter(([key]) => key !== currentQKey || qProgress >= 0.8)
+      .map(([, q]) => {
+        const totalNM = q.months.reduce((s, m) => s + m.nearMissCount, 0)
+        const totalSM = q.months.reduce((s, m) => s + m.totalSiteMonths, 0)
+        const totalMet = q.months.reduce((s, m) => s + m.sitesMetTarget, 0)
+        const avgCompliance = q.months.length > 0
+          ? q.months.reduce((s, m) => s + m.complianceRate, 0) / q.months.length
+          : 0
+
+        return {
+          label: q.label,
+          complianceRate: Math.round(avgCompliance * 10) / 10,
+          nearMissCount: totalNM,
+          sitesMetTarget: totalMet,
+          totalSiteMonths: totalSM,
+        }
+      })
+  }
+
+  return monthlyData
+}
+
+/**
  * Calculate reporter performance metrics
  */
-export const getReporterMetrics = (incidents) => {
+export const getReporterMetrics = (incidents, misclassificationData = null) => {
   const reporters = {}
 
   incidents.forEach(incident => {
@@ -347,20 +475,34 @@ export const getReporterMetrics = (incidents) => {
     if (wordCount > 15) reporters[name].qualityCount++
   })
 
+  // Build misclassification lookup by reporter
+  const misclassifiedByReporter = {}
+  if (misclassificationData?.misclassifiedRecords) {
+    misclassificationData.misclassifiedRecords.forEach(record => {
+      const name = record.reporter || 'Unknown'
+      misclassifiedByReporter[name] = (misclassifiedByReporter[name] || 0) + 1
+    })
+  }
+
   return Object.values(reporters)
-    .map(r => ({
-      ...r,
-      avgWordCount: r.total > 0 ? Math.round(r.totalWords / r.total) : 0,
-      qualityRate: r.total > 0 ? ((r.qualityCount / r.total) * 100).toFixed(1) : '0.0',
-      nonPositive: r.total - r.positive
-    }))
+    .map(r => {
+      const misclassifiedCount = misclassifiedByReporter[r.name] || 0
+      return {
+        ...r,
+        avgWordCount: r.total > 0 ? Math.round(r.totalWords / r.total) : 0,
+        qualityRate: r.total > 0 ? ((r.qualityCount / r.total) * 100).toFixed(1) : '0.0',
+        nonPositive: r.total - r.positive,
+        misclassifiedCount,
+        classificationAccuracy: r.total > 0 ? (((r.total - misclassifiedCount) / r.total) * 100).toFixed(1) : '100.0'
+      }
+    })
     .sort((a, b) => b.total - a.total)
 }
 
 /**
  * Calculate contractor quality metrics
  */
-export const getContractorMetrics = (incidents) => {
+export const getContractorMetrics = (incidents, misclassificationData = null) => {
   const contractors = {}
 
   incidents.forEach(incident => {
@@ -408,24 +550,41 @@ export const getContractorMetrics = (incidents) => {
     if (incident.type !== 'positive') c.nonPositive++
   })
 
+  // Build misclassification lookup by contractor
+  const misclassifiedByContractor = {}
+  if (misclassificationData?.misclassifiedRecords) {
+    misclassificationData.misclassifiedRecords.forEach(record => {
+      const name = record.contractor || 'Unassigned'
+      misclassifiedByContractor[name] = (misclassifiedByContractor[name] || 0) + 1
+    })
+  }
+
   return Object.values(contractors)
-    .map(c => ({
-      name: c.name,
-      totalObs: c.total,
-      categorizationRate: c.total > 0 ? ((c.properCategory / c.total) * 100).toFixed(1) : '0.0',
-      avgWordCount: c.total > 0 ? Math.round(c.totalWords / c.total) : 0,
-      qualityRate: c.total > 0 ? ((c.qualityCount / c.total) * 100).toFixed(1) : '0.0',
-      nearMissRate: c.nonPositive > 0 ? ((c.nearMiss / c.nonPositive) * 100).toFixed(1) : '0.0',
-      activeDays: c.datesSet.size,
-      activeReporters: c.reporters.size,
-      // Calculate composite quality score (0-100)
-      qualityScore: Math.round(
-        (c.total > 0 ? (c.properCategory / c.total) : 0) * 30 +
-        (c.total > 0 ? (c.qualityCount / c.total) : 0) * 30 +
-        (c.nonPositive > 0 ? Math.min((c.nearMiss / c.nonPositive) / 0.05, 1) : 0) * 20 +
-        Math.min(c.datesSet.size / 30, 1) * 20
-      )
-    }))
+    .map(c => {
+      const misclassifiedCount = misclassifiedByContractor[c.name] || 0
+      const classificationAccuracy = c.total > 0
+        ? (((c.total - misclassifiedCount) / c.total) * 100).toFixed(1)
+        : '100.0'
+      return {
+        name: c.name,
+        totalObs: c.total,
+        categorizationRate: c.total > 0 ? ((c.properCategory / c.total) * 100).toFixed(1) : '0.0',
+        avgWordCount: c.total > 0 ? Math.round(c.totalWords / c.total) : 0,
+        qualityRate: c.total > 0 ? ((c.qualityCount / c.total) * 100).toFixed(1) : '0.0',
+        nearMissRate: c.nonPositive > 0 ? ((c.nearMiss / c.nonPositive) * 100).toFixed(1) : '0.0',
+        activeDays: c.datesSet.size,
+        activeReporters: c.reporters.size,
+        misclassifiedCount,
+        classificationAccuracy,
+        // Calculate composite quality score (0-100) - uses classification accuracy instead of categorization
+        qualityScore: Math.round(
+          (c.total > 0 ? ((c.total - misclassifiedCount) / c.total) : 0) * 30 +
+          (c.total > 0 ? (c.qualityCount / c.total) : 0) * 30 +
+          (c.nonPositive > 0 ? Math.min((c.nearMiss / c.nonPositive) / 0.05, 1) : 0) * 20 +
+          Math.min(c.datesSet.size / 30, 1) * 20
+        )
+      }
+    })
     .sort((a, b) => b.totalObs - a.totalObs)
 }
 
@@ -457,7 +616,7 @@ export const getCoverageMetrics = (incidents, daysInPeriod = 30) => {
  *
  * CONFIGURABLE WEIGHTS:
  * All 5 weight factors can be customized via settings.validation.qualityScoring.weights:
- * - categorization: How well observations are categorized (default: 25%)
+ * - classificationAccuracy: How accurately observations are classified (default: 25%)
  * - description: Quality of description text (default: 25%)
  * - nearMiss: Near-miss reporting rate (default: 20%)
  * - reporters: Reporter engagement rate (default: 15%)
@@ -469,7 +628,7 @@ export const getCoverageMetrics = (incidents, daysInPeriod = 30) => {
  * Note: Coverage metric was removed - it unfairly penalized contractors with
  * different schedules (no night shifts, regional weekend patterns, etc.)
  */
-export const calculateQualityScore = (incidents) => {
+export const calculateQualityScore = (incidents, misclassificationData = null) => {
   if (incidents.length === 0) return { score: 0, breakdown: {} }
 
   // Get settings for quality scoring weights
@@ -479,7 +638,7 @@ export const calculateQualityScore = (incidents) => {
 
   // Default weights with documentation
   const defaultWeights = {
-    categorization: 25,  // How well observations are categorized
+    classificationAccuracy: 25,  // How accurately observations are classified
     description: 25,     // Quality of description text
     nearMiss: 20,        // Near-miss reporting rate (leading indicator)
     reporters: 15,       // Reporter engagement rate
@@ -487,9 +646,9 @@ export const calculateQualityScore = (incidents) => {
   }
 
   // Use custom weights from settings if available, otherwise use defaults
-  // ALL weights are now configurable
+  // Backward compat: accept old 'categorization' key as fallback
   const weights = {
-    categorization: customWeights.categorization ?? defaultWeights.categorization,
+    classificationAccuracy: customWeights.classificationAccuracy ?? customWeights.categorization ?? defaultWeights.classificationAccuracy,
     description: customWeights.description ?? defaultWeights.description,
     nearMiss: customWeights.nearMiss ?? defaultWeights.nearMiss,
     reporters: customWeights.reporters ?? defaultWeights.reporters,
@@ -503,21 +662,27 @@ export const calculateQualityScore = (incidents) => {
     normalizedWeights[key] = (weights[key] / totalWeight) * 100
   }
 
-  const categorization = getCategorizationMetrics(incidents)
   const description = getDescriptionMetrics(incidents)
   const nearMiss = getNearMissMetrics(incidents)
   const reporters = getReporterMetrics(incidents)
   const duplicates = getDuplicateDescriptions(incidents)
+
+  // Classification accuracy: ((total - misclassified) / total) * 100
+  const totalIncidents = incidents.length
+  const misclassifiedCount = misclassificationData?.totalMisclassified || 0
+  const classificationAccuracyScore = totalIncidents > 0
+    ? ((totalIncidents - misclassifiedCount) / totalIncidents) * 100
+    : 100
+  const classificationAccuracyStatus = classificationAccuracyScore >= 95 ? 'good' : classificationAccuracyScore >= 85 ? 'warning' : 'poor'
 
   // Active reporters (>5 observations)
   const activeReporters = reporters.filter(r => r.total >= 5).length
   const totalReporters = reporters.length
   const reporterEngagement = totalReporters > 0 ? (activeReporters / totalReporters) * 100 : 0
 
-  // Calculate composite score
-  const categorizationScore = parseFloat(categorization.properRate)
   const descriptionScore = parseFloat(description.qualityRate)
-  const nearMissScore = Math.min(parseFloat(nearMiss.rate) / 5 * 100, 100) // Scale: 5% = 100
+  // Near-miss score: use site-month compliance rate (≥2 NM per site per month)
+  const nearMissScore = parseFloat(nearMiss.complianceRate)
 
   // Data Integrity score: Lower duplicate rate = higher score
   // Formula: 0% = 100%, 5% = 75%, 10% = 50%, 20%+ = 0%
@@ -527,7 +692,7 @@ export const calculateQualityScore = (incidents) => {
 
   // Calculate score using normalized weights (coverage removed)
   const score = Math.round(
-    categorizationScore * (normalizedWeights.categorization / 100) +
+    classificationAccuracyScore * (normalizedWeights.classificationAccuracy / 100) +
     descriptionScore * (normalizedWeights.description / 100) +
     nearMissScore * (normalizedWeights.nearMiss / 100) +
     reporterEngagement * (normalizedWeights.reporters / 100) +
@@ -541,9 +706,9 @@ export const calculateQualityScore = (incidents) => {
   return {
     score,
     breakdown: {
-      categorization: { value: categorizationScore, weight: Math.round(normalizedWeights.categorization), status: categorization.status },
+      classificationAccuracy: { value: classificationAccuracyScore, weight: Math.round(normalizedWeights.classificationAccuracy), status: classificationAccuracyStatus, misclassifiedCount, total: totalIncidents },
       description: { value: descriptionScore, weight: Math.round(normalizedWeights.description), status: description.status },
-      nearMiss: { value: nearMissScore, weight: Math.round(normalizedWeights.nearMiss), status: nearMiss.status, actualRate: nearMiss.rate },
+      nearMiss: { value: nearMissScore, weight: Math.round(normalizedWeights.nearMiss), status: nearMiss.status, sitesMetTarget: nearMiss.sitesMetTarget, totalSiteMonths: nearMiss.totalSiteMonths, complianceRate: nearMiss.complianceRate },
       reporters: { value: reporterEngagement, weight: Math.round(normalizedWeights.reporters), active: activeReporters, total: totalReporters },
       dataIntegrity: { value: dataIntegrityScore, weight: Math.round(normalizedWeights.dataIntegrity), status: dataIntegrityStatus, duplicateRate: duplicates.duplicateRate, duplicateCount: duplicates.totalDuplicates }
     },
@@ -551,7 +716,7 @@ export const calculateQualityScore = (incidents) => {
     settingsApplied: customWeightsApplied,
     weightsUsed: weights,
     normalizedWeights: {
-      categorization: Math.round(normalizedWeights.categorization),
+      classificationAccuracy: Math.round(normalizedWeights.classificationAccuracy),
       description: Math.round(normalizedWeights.description),
       nearMiss: Math.round(normalizedWeights.nearMiss),
       reporters: Math.round(normalizedWeights.reporters),
@@ -630,6 +795,106 @@ export const getQualityTrend = (incidents, months = 12) => {
       count: monthIncidents.length
     }
   })
+}
+
+/**
+ * Calculate quality score trend over time with granularity support.
+ * Skips months with 0 incidents and excludes immature periods.
+ *
+ * @param {Array} incidents - All incidents
+ * @param {'monthly'|'quarterly'} granularity - Time bucketing
+ * @returns {Array<{label, monthKey, qualityScore, count}>}
+ */
+export const getQualityScoreTrend = (incidents, granularity = 'monthly') => {
+  if (!incidents || incidents.length === 0) return []
+
+  const dates = incidents.map(i => i.date).filter(Boolean).sort()
+  if (dates.length === 0) return []
+
+  const endDate = parseISO(dates[dates.length - 1])
+  const startDate = parseISO(dates[0])
+
+  const monthsInRange = eachMonthOfInterval({
+    start: startOfMonth(startDate),
+    end: endOfMonth(endDate),
+  })
+
+  const now = new Date()
+
+  // Compute per-month quality scores, skipping empty and immature months
+  const monthlyData = monthsInRange.map(monthStart => {
+    const monthEnd = endOfMonth(monthStart)
+    const monthStr = format(monthStart, 'yyyy-MM')
+
+    // Immature month exclusion: skip current month if <80% elapsed
+    const isCurrentMonth =
+      monthStart.getFullYear() === now.getFullYear() &&
+      monthStart.getMonth() === now.getMonth()
+    if (isCurrentMonth) {
+      const dayOfMonth = getDate(now)
+      const totalDays = getDaysInMonth(now)
+      if (dayOfMonth / totalDays < 0.8) return null
+    }
+
+    const monthIncidents = incidents.filter(
+      i => i.date && i.date.substring(0, 7) === monthStr
+    )
+
+    // Skip months with no data instead of returning 0
+    if (monthIncidents.length === 0) return null
+
+    const misclass = getMisclassificationAnalysis(monthIncidents)
+    const quality = calculateQualityScore(monthIncidents, misclass)
+
+    return {
+      label: format(monthStart, 'MMM yy'),
+      monthKey: monthStr,
+      qualityScore: quality.score,
+      count: monthIncidents.length,
+    }
+  }).filter(Boolean)
+
+  if (granularity === 'quarterly') {
+    const quarterMap = new Map()
+    monthlyData.forEach(m => {
+      const d = parseISO(m.monthKey + '-01')
+      const qStart = startOfQuarter(d)
+      const qKey = format(qStart, 'yyyy-MM')
+
+      if (!quarterMap.has(qKey)) {
+        quarterMap.set(qKey, {
+          label: `Q${getQuarter(qStart)} '${format(qStart, 'yy')}`,
+          months: [],
+        })
+      }
+      quarterMap.get(qKey).months.push(m)
+    })
+
+    // Immature quarter exclusion
+    const currentQStart = startOfQuarter(now)
+    const currentQEnd = endOfQuarter(now)
+    const qProgress = (now.getTime() - currentQStart.getTime()) /
+      (currentQEnd.getTime() - currentQStart.getTime())
+    const currentQKey = format(currentQStart, 'yyyy-MM')
+
+    return Array.from(quarterMap.entries())
+      .filter(([key]) => key !== currentQKey || qProgress >= 0.8)
+      .map(([, q]) => {
+        const totalCount = q.months.reduce((s, m) => s + m.count, 0)
+        const avgScore = q.months.length > 0
+          ? Math.round(q.months.reduce((s, m) => s + m.qualityScore, 0) / q.months.length)
+          : 0
+
+        return {
+          label: q.label,
+          monthKey: q.months[0]?.monthKey,
+          qualityScore: avgScore,
+          count: totalCount,
+        }
+      })
+  }
+
+  return monthlyData
 }
 
 /**
@@ -1150,7 +1415,7 @@ export const getBeforeAfterCategorizationMetrics = (incidents) => {
 /**
  * Get comprehensive reporter analytics for deep dive modal
  */
-export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
+export const getReporterDeepDive = (incidents, reporterName, allIncidents, misclassificationData = null) => {
   // Filter incidents for this reporter
   const reporterIncidents = incidents.filter(i => i.reportedBy === reporterName)
 
@@ -1315,6 +1580,14 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
     .filter(r => r.confidence < 65)
     .slice(0, 10)
 
+  // Misclassification data for this reporter
+  const misclassifiedRecords = misclassificationData?.misclassifiedRecords
+    ?.filter(r => r.reporter === reporterName) || []
+  const misclassifiedCount = misclassifiedRecords.length
+  const classificationAccuracy = total > 0
+    ? (((total - misclassifiedCount) / total) * 100).toFixed(1)
+    : '100.0'
+
   return {
     name: reporterName,
     total,
@@ -1353,6 +1626,11 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
     // Near miss rate
     nearMissRate,
 
+    // Classification accuracy
+    classificationAccuracy,
+    misclassifiedCount,
+    misclassifiedRecords: misclassifiedRecords.slice(0, 10),
+
     // Team comparison
     comparison: {
       totalVsAvg: { reporter: total, team: Math.round(avgTotal), better: total > avgTotal },
@@ -1377,7 +1655,7 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents) => {
  * Deep dive analytics for a specific contractor
  * Similar to getReporterDeepDive but for contractors
  */
-export const getContractorDeepDive = (incidents, contractorName, allIncidents) => {
+export const getContractorDeepDive = (incidents, contractorName, allIncidents, misclassificationData = null) => {
   // Filter incidents for this contractor
   const contractorIncidents = incidents.filter(i => i.contractor === contractorName)
 
@@ -1559,6 +1837,14 @@ export const getContractorDeepDive = (incidents, contractorName, allIncidents) =
     .filter(r => r.confidence < 65)
     .slice(0, 10)
 
+  // Misclassification data for this contractor
+  const misclassifiedRecords = misclassificationData?.misclassifiedRecords
+    ?.filter(r => (r.contractor || 'Unassigned') === contractorName) || []
+  const misclassifiedCount = misclassifiedRecords.length
+  const classificationAccuracy = total > 0
+    ? (((total - misclassifiedCount) / total) * 100).toFixed(1)
+    : '100.0'
+
   return {
     name: contractorName,
     total,
@@ -1600,6 +1886,11 @@ export const getContractorDeepDive = (incidents, contractorName, allIncidents) =
 
     // Near miss rate
     nearMissRate,
+
+    // Classification accuracy
+    classificationAccuracy,
+    misclassifiedCount,
+    misclassifiedRecords: misclassifiedRecords.slice(0, 10),
 
     // Contractor comparison (vs other contractors average)
     comparison: {

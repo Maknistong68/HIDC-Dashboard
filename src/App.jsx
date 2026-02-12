@@ -8,6 +8,7 @@ import PreloadedTabs from './components/common/PreloadedTabs'
 import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 import { ImportLockProvider } from './context/ImportLockContext'
+import { FilteredDataProvider } from './context/FilteredDataContext'
 import { useData } from './context/DataContext'
 import { OnboardingScreen, InitialLoadingScreen } from './components/onboarding'
 
@@ -38,41 +39,44 @@ function AppContent() {
   }
 
   // Normal app with Layout - preloaded tabs for instant switching
+  // FilteredDataProvider centralizes filtered data computation for all 3 pages
   return (
     <>
-      <Layout>
-        <InstallPrompt />
-        <ServiceWorkerUpdatePrompt />
+      <FilteredDataProvider>
+        <Layout>
+          <InstallPrompt />
+          <ServiceWorkerUpdatePrompt />
 
-        {/* All 3 main tabs preloaded - instant switching via CSS display */}
-        <PreloadedTabs />
+          {/* All 3 main tabs preloaded - instant switching via CSS display */}
+          <PreloadedTabs />
 
-        <Routes>
-          {/* Main tabs - null element, handled by PreloadedTabs */}
-          <Route path="/" element={null} />
-          <Route path="/data-control" element={null} />
-          <Route path="/outlook" element={null} />
+          <Routes>
+            {/* Main tabs - null element, handled by PreloadedTabs */}
+            <Route path="/" element={null} />
+            <Route path="/data-control" element={null} />
+            <Route path="/outlook" element={null} />
 
-          {/* Lazy-loaded secondary pages */}
-          <Route path="/files" element={
-            <Suspense fallback={<PageLoadingFallback />}>
-              <FileManagement />
-            </Suspense>
-          } />
-          <Route path="/legal" element={
-            <Suspense fallback={<PageLoadingFallback />}>
-              <Legal />
-            </Suspense>
-          } />
+            {/* Lazy-loaded secondary pages */}
+            <Route path="/files" element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <FileManagement />
+              </Suspense>
+            } />
+            <Route path="/legal" element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Legal />
+              </Suspense>
+            } />
 
-          {/* Legacy redirects */}
-          <Route path="/data-quality" element={<Navigate to="/data-control" replace />} />
-          <Route path="/data" element={<Navigate to="/" replace />} />
-          <Route path="/import" element={<Navigate to="/data-control" replace />} />
-          <Route path="/settings" element={<Navigate to="/" replace />} />
-          <Route path="/predictive" element={<Navigate to="/outlook" replace />} />
-        </Routes>
-      </Layout>
+            {/* Legacy redirects */}
+            <Route path="/data-quality" element={<Navigate to="/data-control" replace />} />
+            <Route path="/data" element={<Navigate to="/" replace />} />
+            <Route path="/import" element={<Navigate to="/data-control" replace />} />
+            <Route path="/settings" element={<Navigate to="/" replace />} />
+            <Route path="/predictive" element={<Navigate to="/outlook" replace />} />
+          </Routes>
+        </Layout>
+      </FilteredDataProvider>
       <GlobalLoadingOverlay />
     </>
   )

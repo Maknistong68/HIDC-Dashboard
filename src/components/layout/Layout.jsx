@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, memo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Target, ShieldCheck, Eye, EyeOff, Trash2, FolderOpen, Gauge } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useUIState, useDataActions, useDataState } from '../../context/DataContext'
 import { useImportLock } from '../../context/ImportLockContext'
 import { Logo } from '../ui'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -9,9 +9,10 @@ import Footer from './Footer'
 import MobileNav from './MobileNav'
 import useIsMobile from '../../hooks/useIsMobile'
 
-const Layout = ({ children }) => {
+const Layout = memo(({ children }) => {
   const location = useLocation()
-  const { showOpenClosed, setShowOpenClosed, incidents, clearData, isImporting } = useData()
+  const { showOpenClosed, setShowOpenClosed, isImporting, hasData } = useUIState()
+  const { clearData } = useDataActions()
   const { isLocked: isImportLocked } = useImportLock()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const isMobile = useIsMobile(768) // Use md breakpoint for nav switch
@@ -42,8 +43,6 @@ const Layout = ({ children }) => {
     { path: '/data-control', label: 'Data Control', icon: ShieldCheck },
     { path: '/outlook', label: 'Safety Outlook', icon: Gauge },
   ]
-
-  const hasData = incidents.length > 0
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-50">
@@ -225,6 +224,8 @@ const Layout = ({ children }) => {
       />
     </div>
   )
-}
+})
+
+Layout.displayName = 'Layout'
 
 export default Layout

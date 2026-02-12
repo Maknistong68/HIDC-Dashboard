@@ -24,15 +24,77 @@ import { categorizeForImport, runBackgroundCategorization } from '../utils/categ
 import { clearAllCaches, clearDataCaches } from '../utils/memoizedCalculations'
 import { useLoading } from './LoadingContext'
 
-const DataContext = createContext()
+// ============================================
+// THREE SEPARATE CONTEXTS
+// ============================================
 
-export const useData = () => {
-  const context = useContext(DataContext)
+// DataStateContext: incidents, files, siteClassifications, isLoading, storageStats, etc.
+const DataStateContext = createContext(null)
+
+// UIStateContext: showOpenClosed, isImporting, isProcessingBatch, hasData
+const UIStateContext = createContext(null)
+
+// DataActionsContext: all callbacks (stable references)
+const DataActionsContext = createContext(null)
+
+// ============================================
+// SELECTIVE HOOKS
+// ============================================
+
+/**
+ * useDataState - Access data state (incidents, files, etc.)
+ * Components using this re-render when data changes, but NOT on UI toggles
+ */
+export const useDataState = () => {
+  const context = useContext(DataStateContext)
   if (!context) {
-    throw new Error('useData must be used within a DataProvider')
+    throw new Error('useDataState must be used within a DataProvider')
   }
   return context
 }
+
+/**
+ * useUIState - Access UI state (showOpenClosed, isImporting, hasData)
+ * Components using this re-render on UI toggles, but NOT on data changes
+ */
+export const useUIState = () => {
+  const context = useContext(UIStateContext)
+  if (!context) {
+    throw new Error('useUIState must be used within a DataProvider')
+  }
+  return context
+}
+
+/**
+ * useDataActions - Access action callbacks (stable references, no re-renders)
+ */
+export const useDataActions = () => {
+  const context = useContext(DataActionsContext)
+  if (!context) {
+    throw new Error('useDataActions must be used within a DataProvider')
+  }
+  return context
+}
+
+/**
+ * useData - Backward-compatible combined hook
+ * Returns all state + actions in a single object (same as before the split)
+ */
+export const useData = () => {
+  const dataState = useDataState()
+  const uiState = useUIState()
+  const actions = useDataActions()
+
+  return useMemo(() => ({
+    ...dataState,
+    ...uiState,
+    ...actions,
+  }), [dataState, uiState, actions])
+}
+
+// ============================================
+// PROVIDER
+// ============================================
 
 export const DataProvider = ({ children }) => {
   const [projects, setProjects] = useState([])
@@ -209,8 +271,6 @@ export const DataProvider = ({ children }) => {
     // Update state immediately
     setIncidents(prev => [...prev, newIncident])
 
-    // Note: For single additions without file context, we just update state
-    // The record will be persisted on next full save or through addIncidentsWithFile
     return newIncident
   }, [])
 
@@ -239,8 +299,6 @@ export const DataProvider = ({ children }) => {
       clearDataCaches()
 
       // Incremental state update: merge new records directly instead of full reload
-      // This avoids fetching all records from IndexedDB after every import
-      // IMPORTANT: Add fileId to each incident so timeline visualization works
       const incidentsWithFileId = incidentsWithIds.map(incident => ({
         ...incident,
         fileId: result.fileId
@@ -248,7 +306,6 @@ export const DataProvider = ({ children }) => {
       setIncidents(prev => [...prev, ...incidentsWithFileId])
 
       // Skip reload during batch operations to prevent overlapping IndexedDB transactions
-      // The caller (BatchImportModal) will call reloadFiles() once at the end
       if (!importOptions.skipReload) {
         // Only reload files list (lightweight) to update the file management UI
         await reloadFiles()
@@ -554,29 +611,49 @@ export const DataProvider = ({ children }) => {
   }, [])
 
   // ============================================
-  // CONTEXT VALUE (Memoized to prevent unnecessary re-renders)
+  // CONTEXT VALUES (Split into 3)
   // ============================================
 
-  const value = useMemo(() => ({
-    // Data
+  // Data state - changes when data changes
+  const dataStateValue = useMemo(() => ({
     projects,
     incidents,
     files,
     isLoading,
-    isImporting,
-    setIsImporting,
-    isProcessingBatch,
-    setIsProcessingBatch,
     importWarnings,
     lastImportStats,
-    showOpenClosed,
-    setShowOpenClosed,
     storageStats,
     categorizationProgress,
     siteClassifications,
     hasSubregionAssignments,
     assignedSubRegions,
+  }), [
+    projects,
+    incidents,
+    files,
+    isLoading,
+    importWarnings,
+    lastImportStats,
+    storageStats,
+    categorizationProgress,
+    siteClassifications,
+    hasSubregionAssignments,
+    assignedSubRegions,
+  ])
 
+  // UI state - changes on UI toggles only
+  const uiStateValue = useMemo(() => ({
+    showOpenClosed,
+    setShowOpenClosed,
+    isImporting,
+    setIsImporting,
+    isProcessingBatch,
+    setIsProcessingBatch,
+    hasData: incidents.length > 0,
+  }), [showOpenClosed, isImporting, isProcessingBatch, incidents.length])
+
+  // Actions - stable references, rarely change
+  const actionsValue = useMemo(() => ({
     // Project operations
     addProject,
     updateProject,
@@ -615,18 +692,6 @@ export const DataProvider = ({ children }) => {
     clearImportWarnings,
     recordImportStats,
   }), [
-    projects,
-    incidents,
-    files,
-    isLoading,
-    isImporting,
-    isProcessingBatch,
-    importWarnings,
-    lastImportStats,
-    showOpenClosed,
-    storageStats,
-    categorizationProgress,
-    siteClassifications,
     addProject,
     updateProject,
     deleteProject,
@@ -656,8 +721,12 @@ export const DataProvider = ({ children }) => {
   ])
 
   return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
+    <DataStateContext.Provider value={dataStateValue}>
+      <UIStateContext.Provider value={uiStateValue}>
+        <DataActionsContext.Provider value={actionsValue}>
+          {children}
+        </DataActionsContext.Provider>
+      </UIStateContext.Provider>
+    </DataStateContext.Provider>
   )
 }

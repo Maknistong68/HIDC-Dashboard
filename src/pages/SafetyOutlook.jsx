@@ -1,14 +1,16 @@
 import React, { useMemo, useState, useCallback, useEffect, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
 import { useData } from '../context/DataContext'
-import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
+import { useFilteredData } from '../context/FilteredDataContext'
+import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
+import { getCachedAggregation } from '../utils/memoizedCalculations'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -113,11 +115,13 @@ const MAIN_TABS = [
  * Tab 3: Risk & Performance
  */
 const SafetyOutlook = () => {
-  const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
-  const { getPeriodRange } = useDate()
+  const { incidents, siteClassifications } = useData()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters } = useFilter()
+
+  // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
+  const { filteredIncidents, filterConfig } = useFilteredData()
 
   // Local state
   const [activeMainTab, setActiveMainTab] = useState('correlations')
@@ -125,100 +129,32 @@ const SafetyOutlook = () => {
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
 
-  // Get unique contractors from incidents
-  const uniqueContractors = useMemo(() => {
-    const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
-    return contractors.sort().map(contractor => ({ value: contractor, label: contractor }))
-  }, [incidents])
-
-  // Get sites filtered by selected contractor (parent-child relationship)
-  const siteOptions = useMemo(() => {
-    let relevantIncidents = incidents
-    if (contractor) {
-      relevantIncidents = incidents.filter(i => i.contractor === contractor)
-    }
-    const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
-    return sites.sort().map(site => ({ value: site, label: site }))
-  }, [incidents, contractor])
-
-  // Filter configuration - Contractor (parent), Site (child), and Sub-Region (conditional)
-  const filterConfig = useMemo(() => {
-    const config = [
-      {
-        key: 'contractor',
-        type: 'select',
-        label: 'Contractor',
-        placeholder: 'All Contractors',
-        options: uniqueContractors
-      },
-      {
-        key: 'site',
-        type: 'select',
-        label: 'Site',
-        placeholder: 'All Sites',
-        options: siteOptions
-      }
-    ]
-
-    // Only show Sub-Region filter if there are any site assignments
-    if (hasSubregionAssignments) {
-      config.push({
-        key: 'subRegion',
-        type: 'select',
-        label: 'Sub-Region',
-        placeholder: 'All Sub-Regions',
-        options: assignedSubRegions
-      })
-    }
-
-    return config
-  }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
-
-  // Filtered incidents based on contractor, site, subRegion, and period
-  const filteredIncidents = useMemo(() => {
-    // If period is null, show all data (no date filtering)
-    if (period === null) {
-      return incidents.filter(i => {
-        if (contractor && i.contractor !== contractor) return false
-        if (site && i.site !== site) return false
-        // Filter by sub-region using site classifications
-        if (subRegion && siteClassifications[i.site] !== subRegion) return false
-        return true
-      })
-    }
-
-    // Get date range from period
-    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
-
-    return incidents.filter(i => {
-      if (contractor && i.contractor !== contractor) return false
-      if (site && i.site !== site) return false
-      // Filter by sub-region using site classifications
-      if (subRegion && siteClassifications[i.site] !== subRegion) return false
-      if (i.date < dateFrom) return false
-      if (i.date > dateTo) return false
-      return true
-    })
-  }, [incidents, contractor, site, subRegion, siteClassifications, period, getPeriodRange])
+  // uniqueContractors, siteOptions, filterConfig, filteredIncidents
+  // are now provided by FilteredDataContext (see useFilteredData() above)
 
   // Calculate hazard trends based on filtered incidents and period
-  const sortedHazards = useMemo(() => {
-    return getHazardTrendingByPeriod(filteredIncidents, period)
+  const sortedHazards = useDeferredMemo(() => {
+    return getCachedAggregation(`outlook-hazardTrending-${period}`, filteredIncidents, (data) =>
+      getHazardTrendingByPeriod(data, period)
+    )
   }, [filteredIncidents, period])
 
   // Calculate contributing factors (negative observations only)
-  const factorData = useMemo(() => {
-    return aggregateContributingFactors(filteredIncidents, 'negative')
+  // Uses module-level cache so Dashboard hitting the same function gets a cache hit
+  const factorData = useDeferredMemo(() => {
+    return getCachedAggregation('outlook-factors-negative', filteredIncidents, (data) =>
+      aggregateContributingFactors(data, 'negative')
+    )
   }, [filteredIncidents])
 
   // Calculate hazard trend data for selected hazard
-  const hazardTrendData = useMemo(() => {
+  const hazardTrendData = useDeferredMemo(() => {
     if (!selectedHazard?.name) return null
     return getHazardDailyData(filteredIncidents, selectedHazard.name, period)
   }, [filteredIncidents, selectedHazard?.name, period])
 
   // Calculate factor trend data for selected factor
-  const factorTrendData = useMemo(() => {
+  const factorTrendData = useDeferredMemo(() => {
     if (!selectedFactor?.name || !factorData?.byFactor) return null
     // Build trend data from factor's incidents
     const factor = factorData.byFactor.find(f => f.name === selectedFactor.name)

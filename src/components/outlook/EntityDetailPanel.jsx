@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useEffect, useState, startTransition } from 're
 import { Shield, BarChart3, Activity, CheckCircle2, AlertTriangle } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 import EntityScoreGauge from './EntityScoreGauge'
-import EntityMetricCards from './EntityMetricCards'
 import SafetySignalRadar from './SafetySignalRadar'
 import SignalPriorityList from './SignalPriorityList'
 import SignalDetailCard from './SignalDetailCard'
@@ -29,96 +28,6 @@ const getBarColor = (count, maxCount) => {
   if (ratio > 0.2) return '#3b82f6'
   return '#10b981'
 }
-
-/**
- * SignalBars - Horizontal bars showing each signal score
- */
-const SignalBars = React.memo(({ signals, isTransitioning, entityName }) => {
-  if (!signals) return null
-
-  return (
-    <div className={`space-y-3 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-      {Object.entries(SIGNAL_LABELS).map(([key, label]) => {
-        const sig = signals[key]
-        if (!sig) return null
-        const meta = SIGNAL_META[key]
-        return (
-          <div key={key}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="flex items-center gap-1">
-                <span className="text-xs font-medium text-surface-700">{label}</span>
-                {meta?.inverted && (
-                  <span className="text-2xs bg-blue-50 text-blue-600 px-1 py-0.5 rounded leading-none">
-                    ↕ {meta.invertedNote}
-                  </span>
-                )}
-                {meta && (
-                  <Tooltip content={meta.tooltip} position="top" delay={200}>
-                    <Info size={12} className="text-surface-400 cursor-help" />
-                  </Tooltip>
-                )}
-              </span>
-              <span className="text-xs font-bold text-surface-600">{sig.score}/100</span>
-            </div>
-            <div className="h-2.5 bg-surface-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getSignalBarColor(sig.score)}`}
-                style={{ width: `${Math.max(2, sig.score)}%` }}
-              />
-            </div>
-            <p className="text-2xs mt-0.5">
-              <span className="text-surface-500">{meta ? meta.interpret(sig.score) : ''}</span>
-              {sig.detail && <span className="text-surface-400"> ({sig.detail})</span>}
-            </p>
-            {key === 'trend' && sig.detail && (() => {
-              const arrow = getTrendArrow(sig.detail)
-              return (
-                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                  {arrow && (
-                    <>
-                      {arrow.icon}
-                      <span className={`text-2xs font-medium ${arrow.color}`}>{arrow.text}</span>
-                    </>
-                  )}
-                  {sig.spikeDetected && (
-                    <span className="text-2xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded flex items-center gap-1">
-                      <TrendingUp size={10} />
-                      Recent spike
-                    </span>
-                  )}
-                </div>
-              )
-            })()}
-            {meta?.inverted && sig.score > 30 && INVERTED_EXPLANATIONS[key] && (
-              <div className={`mt-1.5 flex items-start gap-1.5 rounded px-2 py-1.5 ${
-                sig.hasCultureContext === false
-                  ? 'bg-surface-50 border border-surface-200'
-                  : 'bg-blue-50 border border-blue-100'
-              }`}>
-                {sig.hasCultureContext === false ? (
-                  <HelpCircle size={12} className="text-surface-400 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <Info size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                )}
-                <p className={`text-2xs leading-relaxed ${
-                  sig.hasCultureContext === false ? 'text-surface-600' : 'text-blue-800'
-                }`}>
-                  {sig.hasCultureContext === false
-                    ? INVERTED_EXPLANATIONS[key].smallSample
-                    : sig.score > 60
-                      ? INVERTED_EXPLANATIONS[key].high
-                      : INVERTED_EXPLANATIONS[key].moderate}
-                </p>
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-})
-
-SignalBars.displayName = 'SignalBars'
 
 /**
  * EntityTrendChart - Daily incidents bar chart for the entity
@@ -189,11 +98,11 @@ EntityTrendChart.displayName = 'EntityTrendChart'
 /**
  * EntityDetailPanel - Right panel showing detail for selected entity
  * Redesigned with score gauge, metric cards, and tighter layout
+ * Thresholds are now passed from parent (global settings)
  */
-const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, rankings }) => {
+const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, rankings, thresholds }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeTab, setActiveTab] = useState('signals')
-  const [threshold, setThreshold] = useState(60)
   const [selectedSignal, setSelectedSignal] = useState(null)
   const prevEntityRef = useRef(null)
 
@@ -205,10 +114,12 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
     return { avg, rank, total }
   }, [rankings, entity])
 
-  // Calculate trend for gauge
+  // Calculate trend for gauge (using trend signal if present for backward compatibility)
   const trendInfo = useMemo(() => {
-    if (!entity?.signals?.trend?.detail) return { direction: null, percent: 0 }
-    const match = entity.signals.trend.detail.match(/(\d+)\s*cur\s*\/\s*(\d+)\s*prev/i)
+    // Check for trend data in signals (backward compatibility)
+    const trendDetail = entity?.signals?.trend?.detail
+    if (!trendDetail) return { direction: null, percent: 0 }
+    const match = trendDetail.match(/(\d+)\s*cur\s*\/\s*(\d+)\s*prev/i)
     if (!match) return { direction: null, percent: 0 }
     const cur = parseInt(match[1], 10)
     const prev = parseInt(match[2], 10)
@@ -354,11 +265,6 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="px-4 py-3 border-b border-surface-100">
-        <EntityMetricCards entity={entity} incidents={incidents} />
-      </div>
-
       {/* Tab selector */}
       <div className="flex items-center gap-1 px-4 py-2 border-b border-surface-100">
         <button
@@ -389,59 +295,42 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
       <div className="flex-1 p-4 overflow-y-auto min-h-0 relative">
         {activeTab === 'signals' ? (
           <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-            {/* Radar + Priority Panel - Flex layout */}
+            {/* Radar + Priority Panel - 50/50 split */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
-              {/* Radar Chart */}
-              <div className="flex-shrink-0">
+              {/* Radar Chart - 50% width */}
+              <div className="w-full md:w-1/2 flex flex-col items-center">
                 <SafetySignalRadar
                   signals={entity.signals}
-                  threshold={threshold}
-                  onThresholdChange={setThreshold}
+                  thresholds={thresholds}
                   onSignalSelect={setSelectedSignal}
                   selectedSignal={selectedSignal}
-                  size={260}
+                  size={340}
                 />
+                {/* Legend - directly under radar */}
+                <div className="flex flex-wrap justify-center gap-3 mt-2 text-2xs text-surface-500">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <span>Score</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-0.5 border-t-2 border-dashed border-red-500" />
+                    <span>Threshold</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                    <span>Exceeds</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Priority Signals List */}
-              <div className="w-full md:flex-1 md:min-w-0">
+              {/* Priority Signals List - 50% width */}
+              <div className="w-full md:w-1/2">
                 <SignalPriorityList
                   signals={entity.signals}
-                  threshold={threshold}
+                  thresholds={thresholds}
                   onSignalClick={setSelectedSignal}
                   maxItems={3}
                 />
-              </div>
-            </div>
-
-            {/* Threshold slider below chart */}
-            <div className="flex items-center justify-center gap-3 mt-4 max-w-xs mx-auto">
-              <span className="text-xs text-surface-500 whitespace-nowrap">Threshold:</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={threshold}
-                onChange={(e) => setThreshold(Number(e.target.value))}
-                className="flex-1 h-2 bg-surface-200 rounded-full appearance-none cursor-pointer"
-                aria-label="Threshold slider"
-              />
-              <span className="text-sm font-semibold text-red-600 w-8 text-right">{threshold}</span>
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap justify-center gap-4 mt-3 text-2xs text-surface-500">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span>Signal score</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5 border-t-2 border-dashed border-red-500" />
-                <span>Threshold (drag to adjust)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500 radar-point-pulse" style={{ animation: 'radarPulse 1.2s ease-in-out infinite' }} />
-                <span>Exceeds threshold</span>
               </div>
             </div>
 

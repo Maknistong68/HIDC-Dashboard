@@ -239,9 +239,13 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
         type="records"
         breadcrumb={breadcrumb}
         source="Safety Pyramid"
-        showInsights={false}
-        insightsMode={null}
-        insightsData={null}
+        showInsights={true}
+        insightsMode="category"
+        insightsData={{
+          categoryType: selectedType,
+          categoryIncidents: filteredIncidents,
+          allIncidents: displayIncidents
+        }}
       />
     </Card>
   )

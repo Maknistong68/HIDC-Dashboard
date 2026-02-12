@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useMemo, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Bell, Download, Upload, RefreshCw } from 'lucide-react'
+import { Bell, Download } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useDate } from '../../context/DateContext'
 import { downloadJSON, exportAllData } from '../../utils/storage'
@@ -17,20 +17,19 @@ const pageTitles = {
   '/settings': 'Settings',
 }
 
-const Header = () => {
+const Header = memo(() => {
   const location = useLocation()
-  const { incidents, compliance, exportData } = useData()
-  const { currentDate, isExpired, isExpiringSoon, formatCurrentDate, getCurrentDate } = useDate()
+  const { incidents, exportData } = useData()
+  const { formatCurrentDate, getCurrentDate } = useDate()
 
   const title = pageTitles[location.pathname] || 'HSE Dashboard'
 
-  // Calculate alerts using centralized date functions
-  const openActions = incidents.filter(isOpenAction).length
+  // Memoize open actions count to prevent 3 array scans on every render
+  const openActions = useMemo(() => {
+    return incidents.filter(isOpenAction).length
+  }, [incidents])
 
-  const expiringCompliance = compliance.filter((c) => isExpiringSoon(c.expiryDate, 30)).length
-  const expiredCompliance = compliance.filter((c) => isExpired(c.expiryDate)).length
-
-  const totalAlerts = openActions + expiringCompliance + expiredCompliance
+  const totalAlerts = openActions
 
   const handleExport = () => {
     const data = exportData()
@@ -75,6 +74,8 @@ const Header = () => {
       </div>
     </header>
   )
-}
+})
+
+Header.displayName = 'Header'
 
 export default Header

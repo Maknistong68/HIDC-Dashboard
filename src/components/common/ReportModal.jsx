@@ -1,14 +1,13 @@
 import React from 'react'
 import ModalPortal from './ModalPortal'
-import { X, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown } from 'lucide-react'
+import { X, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, AlertTriangle, FileText, Briefcase, FileSpreadsheet } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import { INCIDENT_TYPES, ACTION_STATUSES } from '../../utils/constants'
+import { INCIDENT_TYPES } from '../../utils/constants'
 
 const ReportModal = ({ record, onClose }) => {
   if (!record) return null
 
   const typeInfo = INCIDENT_TYPES.find(t => t.value === record.type)
-  const statusInfo = ACTION_STATUSES.find(s => s.value === record.actionStatus)
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -16,17 +15,6 @@ const ReportModal = ({ record, onClose }) => {
       return format(parseISO(dateStr), 'MMMM d, yyyy')
     } catch {
       return dateStr
-    }
-  }
-
-  const StatusIcon = ({ status }) => {
-    switch (status) {
-      case 'closed':
-        return <CheckCircle size={14} className="text-green-600" />
-      case 'in-progress':
-        return <Clock size={14} className="text-orange-500" />
-      default:
-        return <AlertCircle size={14} className="text-red-500" />
     }
   }
 
@@ -68,7 +56,7 @@ const ReportModal = ({ record, onClose }) => {
 
             {/* Content */}
             <div className="p-4 max-h-[70vh] overflow-y-auto">
-              {/* Details Grid */}
+              {/* All Fields */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="field">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
@@ -77,6 +65,16 @@ const ReportModal = ({ record, onClose }) => {
                   </div>
                   <div className="text-sm text-surface-900">{formatDate(record.date)}</div>
                 </div>
+
+                {record.eventTime && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <Clock size={12} />
+                      Time
+                    </div>
+                    <div className="text-sm text-surface-900">{record.eventTime}</div>
+                  </div>
+                )}
 
                 <div className="field">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
@@ -94,12 +92,29 @@ const ReportModal = ({ record, onClose }) => {
                   <div className="text-sm text-surface-900">{record.site || '-'}</div>
                 </div>
 
+                {record.company && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <Briefcase size={12} />
+                      Company
+                    </div>
+                    <div className="text-sm text-surface-900">{record.company}</div>
+                  </div>
+                )}
+
                 <div className="field">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
                     <AlertCircle size={12} />
                     Hazard Category
                   </div>
-                  <div className="text-sm text-surface-900">{record.location || '-'}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-surface-900">{record.location || '-'}</span>
+                    {record.hazardCategorySource && (
+                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${record.hazardCategorySource === 'excel' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {record.hazardCategorySource === 'excel' ? 'Excel' : 'Auto'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="field">
@@ -111,29 +126,61 @@ const ReportModal = ({ record, onClose }) => {
                 </div>
 
                 <div className="field">
-                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                    Action Status
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <StatusIcon status={record.actionStatus} />
-                    <span
-                      className="px-2 py-0.5 text-xs font-medium rounded"
-                      style={{
-                        backgroundColor: statusInfo?.color + '20',
-                        color: statusInfo?.color,
-                      }}
-                    >
-                      {statusInfo?.label || record.actionStatus || 'Open'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="field">
-                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
-                    Approval Status
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <CheckCircle size={12} />
+                    Approval
                   </div>
                   <div className="text-sm text-surface-900">{record.approvalStatus || '-'}</div>
                 </div>
+
+                {record.consequence && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <AlertTriangle size={12} />
+                      Consequence
+                    </div>
+                    <div className="text-sm text-surface-900">{record.consequence}</div>
+                  </div>
+                )}
+
+                {record.workRelated != null && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <Briefcase size={12} />
+                      Work-Related
+                    </div>
+                    <div className="text-sm text-surface-900">{record.workRelated ? 'Yes' : 'No'}</div>
+                  </div>
+                )}
+
+                {record.bodyPart && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <User size={12} />
+                      Body Part
+                    </div>
+                    <div className="text-sm text-surface-900">{record.bodyPart}</div>
+                  </div>
+                )}
+
+                <div className="field">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                    <FileSpreadsheet size={12} />
+                    Original Type
+                  </div>
+                  <div className="text-sm text-surface-900">{record.originalType || record.type || '-'}</div>
+                </div>
+
+                {record.originalClassification && (
+                  <div className="field">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1">
+                      <FileText size={12} />
+                      Original Classification
+                    </div>
+                    <div className="text-sm text-surface-900">{record.originalClassification}</div>
+                  </div>
+                )}
+
               </div>
 
               {/* Description */}
@@ -145,32 +192,6 @@ const ReportModal = ({ record, onClose }) => {
                   {record.description || 'No description provided.'}
                 </div>
               </div>
-
-              {/* Additional Fields (if any) */}
-              {(record.bodyPart || record.correctiveAction) && (
-                <div className="mb-4">
-                  <div className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2 border-b border-surface-200 pb-1">
-                    Additional Information
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    {record.bodyPart && (
-                      <div>
-                        <span className="text-xs font-medium text-surface-500">Body Part Affected: </span>
-                        <span className="text-sm text-surface-900">{record.bodyPart}</span>
-                      </div>
-                    )}
-                    {record.correctiveAction && (
-                      <div>
-                        <span className="text-xs font-medium text-surface-500">Corrective Action: </span>
-                        <span className="text-sm text-surface-900">{record.correctiveAction}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Data Quality Section */}
-              <DataQualitySection record={record} />
 
               {/* History/Timeline (if available) */}
               {record.history && record.history.length > 0 && (
@@ -206,91 +227,6 @@ const ReportModal = ({ record, onClose }) => {
         </div>
       </div>
     </ModalPortal>
-  )
-}
-
-/**
- * Data Quality Section Component - Compact & Collapsible
- * Shows whether hazard category was from Excel or auto-classified
- */
-const DataQualitySection = ({ record }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-
-  // Check if data quality fields exist (only for newly imported records)
-  const hasDataQualityInfo = record.hazardCategorySource !== undefined
-  if (!hasDataQualityInfo) return null
-
-  const isFromExcel = record.hazardCategorySource === 'excel'
-  const isValidated = record.hazardCategoryValidated
-  const hasIssue = record.dataQualityIssue && !isValidated
-
-  // Check if there's a meaningful description to validate against
-  const description = record.description || ''
-  const hasDescription = description.trim().length > 10 &&
-    !description.toLowerCase().includes('no description provided')
-
-  // Compact status indicator - adjusted logic for missing descriptions
-  const getStatusBadge = () => {
-    if (hasIssue) {
-      return { icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Review Needed' }
-    }
-    if (isValidated) {
-      return { icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' }
-    }
-    // No validation but also no issue - could be missing description
-    if (isFromExcel && !hasDescription) {
-      // Excel category trusted, no description to validate - show neutral status
-      return { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-50', label: 'From Source' }
-    }
-    // Has description but no keywords match
-    return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', label: 'Unverified' }
-  }
-
-  const badge = getStatusBadge()
-  const BadgeIcon = badge.icon
-
-  // Generate appropriate explanation text
-  const getExplanationText = () => {
-    if (isValidated) {
-      return `Description contains "${record.location}" keywords`
-    }
-    if (isFromExcel && !hasDescription) {
-      return 'Category from source data (no description to verify against)'
-    }
-    return `No "${record.location}" keywords found in description`
-  }
-
-  return (
-    <div className="mb-4">
-      {/* Compact Header - Click to expand */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between px-2 py-1.5 text-xs transition-colors rounded ${badge.bg} hover:opacity-80`}
-      >
-        <div className="flex items-center gap-2">
-          <BadgeIcon size={12} className={badge.color} />
-          <span className={`font-medium ${badge.color}`}>{badge.label}</span>
-          <span className="text-surface-400">•</span>
-          <span className="text-surface-500">
-            {isFromExcel ? 'From Excel' : 'Auto-classified'}
-            {record.originalHazardCategory && record.originalHazardCategory !== record.location &&
-              ` (was "${record.originalHazardCategory}")`
-            }
-          </span>
-        </div>
-        <ChevronDown size={14} className={`text-surface-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-      </button>
-
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="mt-1 p-2 bg-surface-50 border border-surface-200 rounded text-xs space-y-1">
-          {record.dataQualityIssue && (
-            <p className="text-surface-600">{record.dataQualityIssue}</p>
-          )}
-          <p className="text-surface-500">{getExplanationText()}</p>
-        </div>
-      )}
-    </div>
   )
 }
 

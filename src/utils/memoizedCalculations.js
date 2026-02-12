@@ -237,8 +237,8 @@ export const getCachedChartData = (chartType, incidents, compute, additionalPara
   const result = compute(incidents, additionalParams)
   chartDataCache.set(cacheKey, result)
 
-  // Limit chart cache size
-  if (chartDataCache.size > 50) {
+  // Limit chart cache size (100 entries to prevent thrashing across 3 pages)
+  if (chartDataCache.size > 100) {
     const firstKey = chartDataCache.keys().next().value
     chartDataCache.delete(firstKey)
   }
@@ -331,8 +331,8 @@ export const getCachedAggregation = (aggregationType, incidents, aggregateFn) =>
   const result = aggregateFn(incidents)
   aggregationCache.set(cacheKey, result)
 
-  // Limit cache size
-  if (aggregationCache.size > 30) {
+  // Limit cache size (100 entries to prevent thrashing across 3 pages)
+  if (aggregationCache.size > 100) {
     const firstKey = aggregationCache.keys().next().value
     aggregationCache.delete(firstKey)
   }

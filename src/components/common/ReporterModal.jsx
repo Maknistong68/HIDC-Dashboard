@@ -131,7 +131,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-5 gap-3 mt-4">
             <div className="bg-blue-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-blue-700">{data.total}</div>
               <div className="text-xs text-blue-600">Total Obs</div>
@@ -139,6 +139,10 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
             <div className="bg-green-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-green-700">{data.qualityRate}%</div>
               <div className="text-xs text-green-600">Quality Rate</div>
+            </div>
+            <div className={`rounded-lg p-2 text-center ${parseFloat(data.classificationAccuracy) >= 95 ? 'bg-green-50' : parseFloat(data.classificationAccuracy) >= 85 ? 'bg-amber-50' : 'bg-red-50'}`}>
+              <div className={`text-lg font-bold ${parseFloat(data.classificationAccuracy) >= 95 ? 'text-green-700' : parseFloat(data.classificationAccuracy) >= 85 ? 'text-amber-700' : 'text-red-700'}`}>{data.classificationAccuracy}%</div>
+              <div className={`text-xs ${parseFloat(data.classificationAccuracy) >= 95 ? 'text-green-600' : parseFloat(data.classificationAccuracy) >= 85 ? 'text-amber-600' : 'text-red-600'}`}>Accuracy</div>
             </div>
             <div className="bg-purple-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-purple-700">{data.nearMissRate}%</div>
@@ -356,15 +360,45 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
           )}
 
           {/* Row 5: Data Quality Issues */}
-          {(data.flaggedRecords?.length > 0 || data.duplicateDescriptions?.length > 0 || data.vagueDescriptions?.length > 0) ? (
+          {(data.flaggedRecords?.length > 0 || data.duplicateDescriptions?.length > 0 || data.vagueDescriptions?.length > 0 || data.misclassifiedRecords?.length > 0) ? (
             <div className="bg-red-50 rounded-xl p-4">
               <h3 className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <AlertTriangle size={14} />
                 Data Quality Issues
                 <span className="ml-auto px-2 py-0.5 bg-red-200 text-red-800 rounded-full text-xs font-bold">
-                  {(data.flaggedRecords?.length || 0) + (data.duplicateDescriptions?.length || 0) + (data.vagueDescriptions?.length || 0)} issues
+                  {(data.flaggedRecords?.length || 0) + (data.duplicateDescriptions?.length || 0) + (data.vagueDescriptions?.length || 0) + (data.misclassifiedRecords?.length || 0)} issues
                 </span>
               </h3>
+
+              {/* Potential Misclassifications */}
+              {data.misclassifiedRecords?.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 bg-purple-200 text-purple-700 rounded text-xs font-medium">
+                      Potential Misclassifications ({data.misclassifiedRecords.length})
+                    </span>
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {data.misclassifiedRecords.slice(0, 5).map((record, idx) => (
+                      <div key={record.id || idx} className="bg-white/70 rounded p-2 text-xs">
+                        <div className="flex justify-between text-surface-500 mb-1">
+                          <span>{record.date}</span>
+                          <span className="text-purple-600 font-medium">{record.confidence}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-surface-600 mb-1">
+                          <span className="text-red-600 line-through">{record.currentCategory}</span>
+                          <span className="text-surface-400">→</span>
+                          <span className="text-green-600 font-medium">{record.suggestedCategory}</span>
+                        </div>
+                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                      </div>
+                    ))}
+                    {data.misclassifiedRecords.length > 5 && (
+                      <div className="text-xs text-purple-500 text-center">+{data.misclassifiedRecords.length - 5} more</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Short Descriptions */}
               {data.flaggedRecords?.length > 0 && (

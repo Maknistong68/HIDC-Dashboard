@@ -28,7 +28,7 @@ export { default as EntityRiskList } from './EntityRiskList'
 export { default as EntityDetailPanel } from './EntityDetailPanel'
 export { default as EntityScoreGauge } from './EntityScoreGauge'
 export { default as EntityMetricCards } from './EntityMetricCards'
-export { default as AdjustWeightsPanel } from './AdjustWeightsPanel'
+export { default as RiskSettingsModal } from './RiskSettingsModal'
 
 // Predictive & Simulation feature additions
 export { default as ScenarioComparisonPanel } from './ScenarioComparisonPanel'

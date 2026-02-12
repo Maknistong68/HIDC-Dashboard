@@ -1,29 +1,29 @@
-import React, { useMemo, useCallback, useState, useRef } from 'react'
-import { SIGNAL_META } from '../../utils/signalConstants'
+import React, { useMemo, useCallback, useState } from 'react'
+import { SIGNAL_META, DEFAULT_THRESHOLDS } from '../../utils/signalConstants'
 
 /**
- * SafetySignalRadar - Hexagonal radar chart for safety signals
- * Shows 6 risk signals with draggable threshold ring
+ * SafetySignalRadar - Pentagon radar chart for safety signals
+ * Shows 5 risk signals with individual threshold markers per axis
  *
  * Enhanced with:
  * - onSignalSelect callback for click interactions
  * - selectedSignal prop for highlight state
  * - Larger invisible hit areas (20px radius) for easier clicks
  * - Enhanced hover tooltip with interpretation
+ * - Individual thresholds per signal (thresholds object prop)
  */
 
-// Signal configuration - order matters (clockwise from top)
+// Signal configuration - order matters (clockwise from top) - 5 signals (trend removed)
 export const SIGNAL_CONFIG = [
   { key: 'severityMix', label: 'Severity', fullLabel: 'Injury Severity' },
-  { key: 'trend', label: 'Trend', fullLabel: 'Trend (60d)' },
   { key: 'openActionRate', label: 'Actions', fullLabel: 'Open Actions' },
   { key: 'highRiskExposure', label: 'Exposure', fullLabel: 'High-Risk Exposure' },
   { key: 'nearMissRate', label: 'Near-Miss', fullLabel: 'Near-Miss Rate' },
   { key: 'positiveRate', label: 'Positive', fullLabel: 'Positive Rate' }
 ]
 
-// Get angle for axis i (starting at top, clockwise)
-const getAngle = (i) => (i * 60 - 90) * (Math.PI / 180)
+// Get angle for axis i (starting at top, clockwise) - 72° per axis (360/5)
+const getAngle = (i) => (i * 72 - 90) * (Math.PI / 180)
 
 // Get point coordinates at distance from center
 const getPoint = (i, value, cx, cy, radius) => {
@@ -47,92 +47,42 @@ const getPolygonPoints = (values, cx, cy, radius) => {
 
 const SafetySignalRadar = ({
   signals,
-  threshold = 60,
-  onThresholdChange,
+  thresholds = DEFAULT_THRESHOLDS,
   onSignalSelect,
   selectedSignal = null,
   size = 260
 }) => {
-  const [isDragging, setIsDragging] = useState(false)
   const [hoveredAxis, setHoveredAxis] = useState(null)
-  const svgRef = useRef(null)
 
   // Layout calculations
-  const padding = 45 // Space for labels
+  const padding = 55 // Space for labels (increased from 45 for label room)
   const cx = size / 2
   const cy = size / 2
   const radius = (size - padding * 2) / 2
 
   // Extract signal scores
   const signalValues = useMemo(() => {
-    if (!signals) return Array(6).fill(0)
+    if (!signals) return Array(5).fill(0)
     return SIGNAL_CONFIG.map(({ key }) => {
       const sig = signals[key]
       return sig?.score ?? 0
     })
   }, [signals])
 
+  // Extract threshold values per signal
+  const thresholdValues = useMemo(() => {
+    return SIGNAL_CONFIG.map(({ key }) => thresholds[key] ?? 60)
+  }, [thresholds])
+
   // Grid levels (25%, 50%, 75%, 100%)
   const gridLevels = [25, 50, 75, 100]
 
-  // Calculate distance from center to determine threshold value
-  const calculateThresholdFromPosition = useCallback(
-    (clientX, clientY) => {
-      if (!svgRef.current) return threshold
-      const rect = svgRef.current.getBoundingClientRect()
-      const x = clientX - rect.left - cx
-      const y = clientY - rect.top - cy
-      const distance = Math.sqrt(x * x + y * y)
-      const newThreshold = Math.round((distance / radius) * 100)
-      return Math.max(0, Math.min(100, newThreshold))
-    },
-    [cx, cy, radius, threshold]
-  )
-
-  // Mouse/touch handlers for threshold drag
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isDragging || !onThresholdChange) return
-      const newThreshold = calculateThresholdFromPosition(e.clientX, e.clientY)
-      onThresholdChange(newThreshold)
-    },
-    [isDragging, onThresholdChange, calculateThresholdFromPosition]
-  )
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
-
-  const handleTouchStart = useCallback((e) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleTouchMove = useCallback(
-    (e) => {
-      if (!isDragging || !onThresholdChange) return
-      const touch = e.touches[0]
-      const newThreshold = calculateThresholdFromPosition(touch.clientX, touch.clientY)
-      onThresholdChange(newThreshold)
-    },
-    [isDragging, onThresholdChange, calculateThresholdFromPosition]
-  )
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false)
-  }, [])
-
-  // Which signals exceed threshold
+  // Which signals exceed their individual threshold
   const exceedingIndices = useMemo(() => {
     return signalValues
-      .map((v, i) => (v > threshold ? i : -1))
+      .map((v, i) => (v > thresholdValues[i] ? i : -1))
       .filter((i) => i !== -1)
-  }, [signalValues, threshold])
+  }, [signalValues, thresholdValues])
 
   // Get selected signal index
   const selectedIndex = useMemo(() => {
@@ -152,22 +102,16 @@ const SafetySignalRadar = ({
 
   return (
     <svg
-      ref={svgRef}
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       className="select-none"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Grid circles */}
       {gridLevels.map((level) => (
         <polygon
           key={`grid-${level}`}
-          points={getPolygonPoints(Array(6).fill(level), cx, cy, radius)}
+          points={getPolygonPoints(Array(5).fill(level), cx, cy, radius)}
           fill="none"
           stroke="#e2e8f0"
           strokeWidth={1}
@@ -190,17 +134,15 @@ const SafetySignalRadar = ({
         )
       })}
 
-      {/* Threshold ring (draggable) */}
+      {/* Individual threshold polygon (irregular - each axis has its own threshold) */}
       <polygon
-        points={getPolygonPoints(Array(6).fill(threshold), cx, cy, radius)}
+        points={getPolygonPoints(thresholdValues, cx, cy, radius)}
         fill="none"
         stroke="#ef4444"
         strokeWidth={2}
         strokeDasharray="6 4"
-        className={`cursor-pointer ${isDragging ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        style={{ transition: isDragging ? 'none' : 'all 0.2s ease' }}
+        className="opacity-70"
+        style={{ transition: 'all 0.2s ease' }}
       />
 
       {/* Data polygon */}
@@ -290,20 +232,23 @@ const SafetySignalRadar = ({
         const labelDistance = radius + 20
         const pt = getPoint(i, (labelDistance / radius) * 100, cx, cy, radius)
 
-        // Adjust label position based on angle
+        // Adjust label position based on angle (72° per axis for pentagon)
         let textAnchor = 'middle'
         let dy = 0
-        const angle = i * 60
+        const angle = i * 72
 
-        if (angle === 0 || angle === 180) {
-          // Top or bottom
-          dy = angle === 0 ? -4 : 12
+        if (angle === 0) {
+          // Top
+          dy = -4
         } else if (angle < 180) {
-          // Right side
+          // Right side (72°, 144°)
           textAnchor = 'start'
           dy = 4
+        } else if (angle === 180) {
+          // Bottom (not reached with 5 points at 72° each)
+          dy = 12
         } else {
-          // Left side
+          // Left side (216°, 288°)
           textAnchor = 'end'
           dy = 4
         }

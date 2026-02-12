@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback, startTransition } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Settings } from 'lucide-react'
 import { calculateEntityRiskRanking } from '../../utils/insightsCalculations'
+import { DEFAULT_THRESHOLDS } from '../../utils/signalConstants'
 import EntityRiskList from './EntityRiskList'
 import EntityDetailPanel from './EntityDetailPanel'
-import AdjustWeightsPanel from './AdjustWeightsPanel'
+import RiskSettingsModal from './RiskSettingsModal'
 
-const STORAGE_KEY = 'hse_risk_weights'
+const WEIGHTS_STORAGE_KEY = 'hse_risk_weights'
+const THRESHOLDS_STORAGE_KEY = 'hse_signal_thresholds'
 
 const DEFAULT_ENTITY_WEIGHTS = { severityMix: 25, trend: 20, openActionRate: 20, highRiskExposure: 15, nearMissRate: 10, positiveRate: 10 }
 
 const DIMENSION_LABELS = { contractor: 'Contractor', site: 'Site', subregion: 'SubRegion' }
 
-
 const loadWeights = () => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(WEIGHTS_STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
       return {
@@ -26,6 +27,16 @@ const loadWeights = () => {
   return { entity: DEFAULT_ENTITY_WEIGHTS, preset: 'balanced' }
 }
 
+const loadThresholds = () => {
+  try {
+    const saved = localStorage.getItem(THRESHOLDS_STORAGE_KEY)
+    if (saved) {
+      return { ...DEFAULT_THRESHOLDS, ...JSON.parse(saved) }
+    }
+  } catch { /* ignore */ }
+  return { ...DEFAULT_THRESHOLDS }
+}
+
 /**
  * RiskPerformanceTab - Tab 3: Master-detail layout matching Hazards tab
  * Weight editor moved to floating AdjustWeightsPanel
@@ -35,14 +46,26 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
   const [selectedEntity, setSelectedEntity] = useState(null)
   const [entityWeights, setEntityWeights] = useState(() => loadWeights().entity)
   const [presetProfile, setPresetProfile] = useState(() => loadWeights().preset)
+  const [thresholds, setThresholds] = useState(() => loadThresholds())
+  const [showSettings, setShowSettings] = useState(false)
 
   // Persist weights
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(WEIGHTS_STORAGE_KEY, JSON.stringify({
       entity: entityWeights,
       preset: presetProfile
     }))
   }, [entityWeights, presetProfile])
+
+  // Persist thresholds
+  useEffect(() => {
+    localStorage.setItem(THRESHOLDS_STORAGE_KEY, JSON.stringify(thresholds))
+  }, [thresholds])
+
+  // Handler for updating individual threshold
+  const updateThreshold = useCallback((signalKey, value) => {
+    setThresholds(prev => ({ ...prev, [signalKey]: value }))
+  }, [])
 
   // Calculate rankings
   const rankings = useMemo(() => {
@@ -139,19 +162,31 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
           ))}
         </div>
 
-        {/* Risk summary */}
-        <div className="flex items-center gap-3 text-xs">
-          <span className="text-surface-500">
-            <span className="font-medium text-red-500">{riskSummary.high}</span> High
-          </span>
-          <span className="text-surface-300">&middot;</span>
-          <span className="text-surface-500">
-            <span className="font-medium text-amber-500">{riskSummary.moderate}</span> Moderate
-          </span>
-          <span className="text-surface-300">&middot;</span>
-          <span className="text-surface-500">
-            <span className="font-medium text-green-500">{riskSummary.low}</span> Low
-          </span>
+        {/* Right: Risk summary + Settings button */}
+        <div className="flex items-center gap-4">
+          {/* Risk summary counts */}
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-surface-500">
+              <span className="font-medium text-red-500">{riskSummary.high}</span> High
+            </span>
+            <span className="text-surface-300">&middot;</span>
+            <span className="text-surface-500">
+              <span className="font-medium text-amber-500">{riskSummary.moderate}</span> Moderate
+            </span>
+            <span className="text-surface-300">&middot;</span>
+            <span className="text-surface-500">
+              <span className="font-medium text-green-500">{riskSummary.low}</span> Low
+            </span>
+          </div>
+
+          {/* Settings button */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-600 hover:text-surface-800 bg-surface-100 hover:bg-surface-200 rounded-lg transition-colors"
+          >
+            <Settings size={14} />
+            Settings
+          </button>
         </div>
       </div>
 
@@ -180,16 +215,22 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
             dimension={DIMENSION_LABELS[dimension]}
             totalIncidents={filteredIncidents.length}
             rankings={rankings}
+            thresholds={thresholds}
           />
         </div>
       </div>
 
-      {/* Floating weight adjustment panel */}
-      <AdjustWeightsPanel
+      {/* Settings Modal */}
+      <RiskSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
         entityWeights={entityWeights}
         setEntityWeights={setEntityWeights}
         presetProfile={presetProfile}
         setPresetProfile={setPresetProfile}
+        thresholds={thresholds}
+        onThresholdChange={updateThreshold}
+        signals={selectedEntity?.signals}
       />
     </div>
   )

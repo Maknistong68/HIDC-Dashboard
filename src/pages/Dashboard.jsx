@@ -13,6 +13,8 @@ import {
 import { useData } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
+import { useFilteredData } from '../context/FilteredDataContext'
+import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import KPICard from '../components/dashboard/KPICard'
 import IncidentTrendChart from '../components/dashboard/IncidentTrendChart'
 import IncidentPyramid from '../components/dashboard/IncidentPyramid'
@@ -25,13 +27,13 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS } from '../utils/constants'
+import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS, NEGATIVE_OBSERVATION_TYPES, PROACTIVE_TYPES, INCIDENT_CATEGORY_TYPES } from '../utils/constants'
 import {
   getIncidentCountsByType,
   getOpenActionsCount,
 } from '../utils/calculations'
 import { aggregateContributingFactors } from '../utils/rootCauseEngine'
-import { memoize } from '../utils/memoizedCalculations'
+import { memoize, getCachedAggregation, getCachedChartData } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { Link } from 'react-router-dom'
@@ -58,11 +60,14 @@ const normalizeHazard = memoize((hazard) => {
 
 
 const Dashboard = () => {
-  const { projects, incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
-  const { cutoffDates, getPeriodRange } = useDate()
+  const { incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments } = useData()
+  const { cutoffDates } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters, contractor, site, subRegion } = useFilter()
+  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
+
+  // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
+  const { filteredIncidents, heatmapIncidents, filterConfig } = useFilteredData()
 
   // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({
@@ -171,104 +176,15 @@ const Dashboard = () => {
     setDrillDown(prev => ({ ...prev, level: 3, period: monthData.period }))
   }, [])
 
-  // Get unique contractors from incidents
-  const uniqueContractors = useMemo(() => {
-    const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
-    return contractors.sort().map(contractor => ({ value: contractor, label: contractor }))
-  }, [incidents])
-
-  // Get sites filtered by selected contractor (parent-child relationship)
-  const siteOptions = useMemo(() => {
-    let relevantIncidents = incidents
-    // If contractor is selected, only show sites belonging to that contractor
-    if (contractor) {
-      relevantIncidents = incidents.filter(i => i.contractor === contractor)
-    }
-    const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
-    return sites.sort().map(site => ({ value: site, label: site }))
-  }, [incidents, contractor])
-
-  // Filter configuration - Contractor (parent), Site (child), and Sub-Region (conditional)
-  // Memoized to prevent unnecessary re-renders in FilterBar
-  const filterConfig = useMemo(() => {
-    const config = [
-      {
-        key: 'contractor',
-        type: 'select',
-        label: 'Contractor',
-        placeholder: 'All Contractors',
-        options: uniqueContractors
-      },
-      {
-        key: 'site',
-        type: 'select',
-        label: 'Site',
-        placeholder: 'All Sites',
-        options: siteOptions
-      }
-    ]
-
-    // Only show Sub-Region filter if there are any site assignments
-    if (hasSubregionAssignments) {
-      config.push({
-        key: 'subRegion',
-        type: 'select',
-        label: 'Sub-Region',
-        placeholder: 'All Sub-Regions',
-        options: assignedSubRegions
-      })
-    }
-
-    return config
-  }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
-
-  // Filtered incidents based on contractor, site, subRegion, and period (for KPIs, charts, Top Hazards, Top Observers)
-  // Note: Hazard categorization is done at import time, so no recategorization needed here
-  // Note: getPeriodRange is a stable function from dateUtils - no need in dependency array
-  const filteredIncidents = useMemo(() => {
-    // If period is null, show all data (no date filtering)
-    if (period === null) {
-      return incidents.filter(i => {
-        if (contractor && i.contractor !== contractor) return false
-        if (site && i.site !== site) return false
-        // Filter by sub-region using site classifications
-        if (subRegion && siteClassifications[i.site] !== subRegion) return false
-        return true
-      })
-    }
-
-    // Get date range from period
-    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
-
-    return incidents.filter(i => {
-      if (contractor && i.contractor !== contractor) return false
-      if (site && i.site !== site) return false
-      // Filter by sub-region using site classifications
-      if (subRegion && siteClassifications[i.site] !== subRegion) return false
-      if (i.date < dateFrom) return false
-      if (i.date > dateTo) return false
-      return true
-    })
-  }, [incidents, contractor, site, subRegion, siteClassifications, period])
-
-  // Heatmap uses ALL incidents (not filtered by "This Month")
-  // Contractor/site/subRegion filters apply to heatmap
-  // Exclude positive observations from heatmap
-  // Note: Hazard categorization is done at import time, so no recategorization needed here
-  const heatmapIncidents = useMemo(() => {
-    return incidents.filter(i => {
-      if (i.type === 'positive') return false
-      if (contractor && i.contractor !== contractor) return false
-      if (site && i.site !== site) return false
-      // Filter by sub-region using site classifications
-      if (subRegion && siteClassifications[i.site] !== subRegion) return false
-      return true
-    })
-  }, [incidents, contractor, site, subRegion, siteClassifications])
+  // uniqueContractors, siteOptions, filterConfig, filteredIncidents, heatmapIncidents
+  // are now provided by FilteredDataContext (see useFilteredData() above)
 
   // Calculate contributing factors for negative incidents (used for hazard insights drill-down)
-  const factorData = useMemo(() => {
-    return aggregateContributingFactors(heatmapIncidents, 'negative')
+  // Uses module-level cache so SafetyOutlook hitting the same function gets a cache hit
+  const factorData = useDeferredMemo(() => {
+    return getCachedAggregation('dashboard-factors-negative', heatmapIncidents, (data) =>
+      aggregateContributingFactors(data, 'negative')
+    )
   }, [heatmapIncidents])
 
   // Get filtered data based on drill-down selection
@@ -286,10 +202,10 @@ const Dashboard = () => {
     } else if (drillDown.chart === 'observers') {
       filtered = filteredIncidents.filter(i => i.reportedBy === drillDown.filter)
     } else if (drillDown.chart === 'hazards') {
-      // Exclude positive observations for hazards drill-down (consistent with Top Hazards chart)
+      // Exclude proactive types for hazards drill-down (consistent with Top Hazards chart)
       const normalizedFilter = normalizeHazard(drillDown.filter)
       filtered = filteredIncidents.filter(i =>
-        i.type !== 'positive' && normalizeHazard(i.location) === normalizedFilter
+        !PROACTIVE_TYPES.includes(i.type) && normalizeHazard(i.location) === normalizedFilter
       )
     } else if (drillDown.chart === 'company') {
       // Filter by contractor/company
@@ -297,14 +213,18 @@ const Dashboard = () => {
         (i.contractor || 'Unknown') === drillDown.filter
       )
     } else if (drillDown.chart === 'positiveNegative') {
-      // Filter by positive or negative category
+      // Filter by positive, negative, or incidents category
       if (drillDown.filter === 'Negative') {
         filtered = filteredIncidents.filter(i =>
-          ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr'].includes(i.type)
+          NEGATIVE_OBSERVATION_TYPES.includes(i.type)
         )
       } else if (drillDown.filter === 'Positive') {
         filtered = filteredIncidents.filter(i =>
-          ['leadership', 'positive'].includes(i.type)
+          PROACTIVE_TYPES.includes(i.type)
+        )
+      } else if (drillDown.filter === 'Incidents') {
+        filtered = filteredIncidents.filter(i =>
+          INCIDENT_CATEGORY_TYPES.includes(i.type)
         )
       }
     } else if (drillDown.chart === 'subRegion') {
@@ -364,7 +284,7 @@ const Dashboard = () => {
   )
 
   // Pyramid data with open/closed breakdown - counts each specific sub-type
-  const pyramidData = useMemo(() => {
+  const pyramidData = useDeferredMemo(() => {
     const result = {}
 
     // Initialize all pyramid types
@@ -416,7 +336,7 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Approval status counts (from original approval column)
-  const approvalCounts = useMemo(() => {
+  const approvalCounts = useDeferredMemo(() => {
     const counts = {
       closed: 0,
       contractorReview: 0,
@@ -441,7 +361,7 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Observers data with open/closed breakdown
-  const observersData = useMemo(() => {
+  const observersData = useDeferredMemo(() => {
     const counts = {}
     filteredIncidents.forEach(incident => {
       const reporter = incident.reportedBy || 'Unknown'
@@ -466,7 +386,7 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Company data with open/closed breakdown (by contractor field)
-  const companyData = useMemo(() => {
+  const companyData = useDeferredMemo(() => {
     const companyMap = {}
     filteredIncidents.forEach(incident => {
       const company = incident.contractor || 'Unknown'
@@ -485,25 +405,30 @@ const Dashboard = () => {
       .slice(0, 10)
   }, [filteredIncidents])
 
-  // Positive vs Negative data for pie chart
-  const positiveNegativeData = useMemo(() => {
+  // Observation breakdown: Negative / Positive / Incidents pie chart
+  const positiveNegativeData = useDeferredMemo(() => {
     const negative = filteredIncidents.filter(i =>
-      ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr'].includes(i.type)
+      NEGATIVE_OBSERVATION_TYPES.includes(i.type)
     ).length
 
     const positive = filteredIncidents.filter(i =>
-      ['leadership', 'positive'].includes(i.type)
+      PROACTIVE_TYPES.includes(i.type)
+    ).length
+
+    const incidentCount = filteredIncidents.filter(i =>
+      INCIDENT_CATEGORY_TYPES.includes(i.type)
     ).length
 
     return [
       { name: 'Negative', value: negative, color: '#ef4444' },
-      { name: 'Positive', value: positive, color: '#22c55e' }
+      { name: 'Positive', value: positive, color: '#22c55e' },
+      { name: 'Incidents', value: incidentCount, color: '#f59e0b' }
     ]
   }, [filteredIncidents])
 
-  // Hazard Classification: Primary vs Other (excludes positive observations)
-  const hazardClassificationData = useMemo(() => {
-    const nonPositive = filteredIncidents.filter(i => i.type !== 'positive')
+  // Hazard Classification: Primary vs Other (excludes proactive types)
+  const hazardClassificationData = useDeferredMemo(() => {
+    const nonPositive = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
     let primary = 0
     let other = 0
     nonPositive.forEach(i => {
@@ -523,7 +448,7 @@ const Dashboard = () => {
   }, [filteredIncidents])
 
   // Subregion Contribution: top 6 subregions + Others
-  const subregionContributionData = useMemo(() => {
+  const subregionContributionData = useDeferredMemo(() => {
     const counts = {}
     filteredIncidents.forEach(i => {
       const site = i.site || 'Unknown'
@@ -548,12 +473,12 @@ const Dashboard = () => {
     return result
   }, [filteredIncidents, siteClassifications])
 
-  // Top Hazards data - EXCLUDES positive observations (only counts non-positive)
+  // Top Hazards data - EXCLUDES proactive types (only counts non-proactive)
   // Significant Hazards (13 official categories) are prioritized first
-  const topHazards = useMemo(() => {
+  const topHazards = useDeferredMemo(() => {
     const counts = {}
-    // Filter out positive observations - Top Hazards should only show non-positive observations
-    const nonPositiveIncidents = filteredIncidents.filter(i => i.type !== 'positive')
+    // Filter out proactive types - Top Hazards should only show non-proactive observations
+    const nonPositiveIncidents = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
     nonPositiveIncidents.forEach(incident => {
       const normalized = normalizeHazard(incident.location)
       if (normalized && normalized !== 'Not Specified') {
@@ -594,7 +519,7 @@ const Dashboard = () => {
 
   // Hazards Heatmap data (uses heatmapIncidents - not affected by "This Month")
   // Always shows all 14 Significant Hazards + any additional hazards with data
-  const hazardsHeatmap = useMemo(() => {
+  const hazardsHeatmap = useDeferredMemo(() => {
     // Start with all 14 Significant Hazards - use canonical names
     const hazardSet = new Set(SIGNIFICANT_HAZARDS)
 

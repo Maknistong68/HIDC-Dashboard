@@ -3,34 +3,41 @@ import { CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-react'
 import {
   SIGNAL_LABELS,
   SIGNAL_META,
+  SIGNAL_KEYS,
+  DEFAULT_THRESHOLDS,
   getSignalDotColor,
   getSignalTextColor
 } from '../../utils/signalConstants'
 
 /**
- * SignalPriorityList - Condensed list showing top signals exceeding threshold
+ * SignalPriorityList - Condensed list showing top signals exceeding their individual threshold
  *
  * Features:
- * - Shows top 2-3 highest signals above threshold
+ * - Shows top 2-3 highest signals above their respective thresholds
  * - Each item: color dot + label + score + one-line interpretation
  * - Click to expand detail card
  * - "All signals OK" message when none exceed threshold
+ * - Supports individual thresholds per signal (thresholds object)
  */
-const SignalPriorityList = ({ signals, threshold = 60, onSignalClick, maxItems = 3 }) => {
-  // Get signals exceeding threshold, sorted by score descending
+const SignalPriorityList = ({ signals, thresholds = DEFAULT_THRESHOLDS, onSignalClick, maxItems = 3 }) => {
+  // Get signals exceeding their individual threshold, sorted by score descending
   const prioritySignals = useMemo(() => {
     if (!signals) return []
-    return Object.entries(signals)
-      .filter(([_, sig]) => sig?.score > threshold)
+    return SIGNAL_KEYS
+      .map((key) => [key, signals[key]])
+      .filter(([key, sig]) => sig?.score > (thresholds[key] ?? 60))
       .sort((a, b) => b[1].score - a[1].score)
       .slice(0, maxItems)
-  }, [signals, threshold, maxItems])
+  }, [signals, thresholds, maxItems])
 
-  // Count total exceeding
+  // Count total exceeding their individual threshold
   const totalExceeding = useMemo(() => {
     if (!signals) return 0
-    return Object.values(signals).filter((sig) => sig?.score > threshold).length
-  }, [signals, threshold])
+    return SIGNAL_KEYS.filter((key) => {
+      const sig = signals[key]
+      return sig?.score > (thresholds[key] ?? 60)
+    }).length
+  }, [signals, thresholds])
 
   // Empty state - all signals OK
   if (prioritySignals.length === 0) {
@@ -43,7 +50,7 @@ const SignalPriorityList = ({ signals, threshold = 60, onSignalClick, maxItems =
           <div>
             <h4 className="text-sm font-semibold text-emerald-800">All Signals OK</h4>
             <p className="text-xs text-emerald-600 mt-0.5">
-              No signals exceed the {threshold} threshold. Continue monitoring.
+              No signals exceed their thresholds. Continue monitoring.
             </p>
           </div>
         </div>
@@ -54,7 +61,7 @@ const SignalPriorityList = ({ signals, threshold = 60, onSignalClick, maxItems =
   return (
     <div className="space-y-2">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <AlertTriangle size={14} className="text-amber-500" />
         <h4 className="text-xs font-semibold text-surface-700">
           Priority Signals ({totalExceeding})

@@ -112,6 +112,13 @@ export const PYRAMID_SECTIONS = [
 // Negative observation types (for ratio calculations)
 export const NEGATIVE_OBSERVATION_TYPES = ['unsafe-act', 'unsafe-condition', 'near-miss', 'ncr']
 
+// Derived type groupings for chart categorization (aligned with PYRAMID_SECTIONS)
+export const INCIDENT_CATEGORY_TYPES = [
+  'fatality', 'lti', 'mti', 'fac',
+  'environmental', 'fire', 'security', 'damage-to-property'
+]
+export const PROACTIVE_TYPES = ['positive', 'leadership', 'emergency-drill']
+
 // 27 Approved Hazard Categories (HAZARDS ONLY - controls removed)
 // 14 Significant Hazards + 13 Additional Hazards
 // Observations without clear hazard keywords → "General Site Issues" for manual review
