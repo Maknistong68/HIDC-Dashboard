@@ -125,17 +125,17 @@ const RISK_ZONES = {
 
 /**
  * Get risk zone from Likelihood × Impact using score-based thresholds.
- * Score = L × C product determines the risk level.
- * Very High: 20-25, High: 15-19, Medium: 8-14, Low: 4-7, Very Low: 1-3
+ * Score = L × C product determines the risk level (RAM standard).
+ * Very High: 20-25, High: 10-19, Medium: 5-9, Low: 3-4, Very Low: 1-2
  */
 export const getRiskZone = (likelihood, impact) => {
   const l = Math.max(1, Math.min(5, likelihood))
   const i = Math.max(1, Math.min(5, impact))
   const score = l * i
   if (score >= 20) return RISK_ZONES.veryHigh
-  if (score >= 15) return RISK_ZONES.high
-  if (score >= 8) return RISK_ZONES.medium
-  if (score >= 4) return RISK_ZONES.low
+  if (score >= 10) return RISK_ZONES.high
+  if (score >= 5) return RISK_ZONES.medium
+  if (score >= 3) return RISK_ZONES.low
   return RISK_ZONES.veryLow
 }
 
@@ -147,16 +147,16 @@ export const getCellRiskColor = (likelihood, consequence) => {
 }
 
 /**
- * Get solid color for a score (1-25) based on its risk level.
- * Each of the 5 levels gets a distinct, recognizable color.
+ * Get bold solid color for a score (1-25) based on its risk level (RAM standard).
+ * Very High & High are both red shades; Medium yellow; Low lime; Very Low green.
  */
 export const getScoreColor = (score) => {
   const s = Math.max(1, Math.min(25, score))
-  if (s >= 20) return { backgroundColor: '#fee2e2', color: '#991b1b', borderColor: '#f87171' } // Very High – red
-  if (s >= 15) return { backgroundColor: '#ffedd5', color: '#9a3412', borderColor: '#fb923c' } // High – orange
-  if (s >= 8) return { backgroundColor: '#fef9c3', color: '#854d0e', borderColor: '#facc15' } // Medium – yellow
-  if (s >= 4) return { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#4ade80' } // Low – green
-  return { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#34d399' } // Very Low – emerald
+  if (s >= 20) return { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#991b1b' } // Very High – dark red
+  if (s >= 10) return { backgroundColor: '#ef4444', color: '#450a0a', borderColor: '#dc2626' } // High – red
+  if (s >= 5) return { backgroundColor: '#eab308', color: '#422006', borderColor: '#ca8a04' } // Medium – yellow
+  if (s >= 3) return { backgroundColor: '#84cc16', color: '#1a2e05', borderColor: '#65a30d' } // Low – lime
+  return { backgroundColor: '#22c55e', color: '#052e16', borderColor: '#16a34a' } // Very Low – green
 }
 
 /**

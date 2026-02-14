@@ -1329,24 +1329,24 @@ const RiskMatrixLegend = () => (
     <div className="flex items-center gap-2 sm:gap-3">
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fee2e2', border: '2px solid #f87171' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#dc2626', border: '1px solid #991b1b' }} />
         <span className="font-medium text-red-700">V.High <span className="text-[10px] text-surface-400">(20-25)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ffedd5', border: '1px solid #fb923c' }} />
-        <span className="font-medium text-amber-700">High <span className="text-[10px] text-surface-400">(15-19)</span></span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444', border: '1px solid #dc2626' }} />
+        <span className="font-medium text-red-600">High <span className="text-[10px] text-surface-400">(10-19)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fef9c3', border: '1px solid #facc15' }} />
-        <span className="font-medium text-yellow-700">Medium <span className="text-[10px] text-surface-400">(8-14)</span></span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308', border: '1px solid #ca8a04' }} />
+        <span className="font-medium text-yellow-700">Medium <span className="text-[10px] text-surface-400">(5-9)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#dcfce7', border: '1px solid #4ade80' }} />
-        <span className="font-medium text-emerald-700">Low <span className="text-[10px] text-surface-400">(4-7)</span></span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#84cc16', border: '1px solid #65a30d' }} />
+        <span className="font-medium text-lime-700">Low <span className="text-[10px] text-surface-400">(3-4)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#d1fae5', border: '1px solid #34d399' }} />
-        <span className="font-medium text-green-700">V.Low <span className="text-[10px] text-surface-400">(1-3)</span></span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e', border: '1px solid #16a34a' }} />
+        <span className="font-medium text-green-700">V.Low <span className="text-[10px] text-surface-400">(1-2)</span></span>
       </div>
     </div>
   </div>
@@ -1382,23 +1382,22 @@ const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
 
   return (
     <div
-      className={`${hasHazards ? 'border-2' : 'border'}
-                  rounded-md p-1.5 min-h-[60px] sm:min-h-[72px] flex flex-col items-center justify-center gap-0.5
-                  ${hasHazards ? 'shadow-sm' : 'opacity-60'} relative`}
+      className={`${hasHazards ? 'border-2 shadow-sm' : 'border'}
+                  rounded p-1 sm:p-1.5 flex flex-col items-center justify-center gap-0.5 overflow-hidden`}
       style={{
         backgroundColor: scoreColor.backgroundColor,
         color: scoreColor.color,
         borderColor: scoreColor.borderColor,
       }}
     >
-      {/* Level - Score label centered */}
-      <span className="text-[9px] sm:text-[10px] font-bold leading-tight text-center whitespace-nowrap">
+      {/* Level - Score label */}
+      <span className="text-[9px] sm:text-[11px] font-bold leading-tight text-center whitespace-nowrap">
         {label}
       </span>
 
       {/* Hazard chips */}
       {hazards.length > 0 && (
-        <div className="flex flex-wrap gap-0.5 mt-0.5 justify-center">
+        <div className="flex flex-wrap gap-0.5 justify-center overflow-y-auto w-full">
           {hazards.map(h => (
             <HazardChip key={h.name} hazard={h} onClick={onClick} />
           ))}
@@ -1455,67 +1454,69 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
             </span>
           )}
           {stats.veryHigh > 0 && <span className="font-semibold text-red-700">{stats.veryHigh} Very High</span>}
-          {stats.high > 0 && <span className="font-semibold text-amber-700">{stats.high} High</span>}
+          {stats.high > 0 && <span className="font-semibold text-red-600">{stats.high} High</span>}
           {stats.medium > 0 && <span className="font-semibold text-yellow-700">{stats.medium} Medium</span>}
           {stats.low > 0 && <span className="font-semibold text-emerald-700">{stats.low} Low</span>}
           {stats.veryLow > 0 && <span className="font-semibold text-green-700">{stats.veryLow} Very Low</span>}
         </div>
       )}
 
-      {/* Matrix Grid with axis labels — columns reversed (L5 left → L1 right) */}
-      <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4 overflow-x-auto">
-        <div className="min-w-[480px]">
-          {/* X-axis label */}
-          <div className="flex">
-            <div className="w-24 sm:w-28 flex-shrink-0" />
-            <div className="flex-1 text-center text-[10px] font-semibold text-surface-400 uppercase tracking-widest mb-1">
-              &larr; Likelihood
-            </div>
+      {/* Matrix Grid — single CSS grid, columns reversed (L5 left → L1 right) */}
+      <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-5">
+        <div
+          className="w-full"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '4.5rem repeat(5, 1fr)',
+            gridTemplateRows: 'auto auto repeat(5, minmax(80px, 1fr))',
+            gap: '4px 5px',
+            minHeight: 'calc(100vh - 290px)',
+          }}
+        >
+          {/* Row 0: empty corner + "← Likelihood" spanning data cols */}
+          <div />
+          <div
+            style={{ gridColumn: '2 / -1' }}
+            className="text-center text-[10px] font-semibold text-surface-400 uppercase tracking-widest pb-0.5"
+          >
+            &larr; Likelihood
           </div>
 
-          {/* Column headers (Likelihood reversed: 5, 4, 3, 2, 1) */}
-          <div className="flex">
-            <div className="w-24 sm:w-28 flex-shrink-0 text-right pr-2">
-              <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">
-                Impact &darr;
-              </span>
-            </div>
-            <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
-              {[5, 4, 3, 2, 1].map(l => (
-                <div key={`lh-${l}`} className="text-center">
-                  <span className="text-[10px] sm:text-xs font-bold text-surface-700">{l}</span>
-                  <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{LIKELIHOOD_LABELS[l]}</p>
-                </div>
-              ))}
-            </div>
+          {/* Row 1: "Impact ↓" + column headers */}
+          <div className="flex items-end justify-end pr-2 pb-0.5">
+            <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest leading-tight">
+              Impact&nbsp;&darr;
+            </span>
           </div>
+          {[5, 4, 3, 2, 1].map(l => (
+            <div key={`lh-${l}`} className="text-center pb-0.5">
+              <span className="text-[10px] sm:text-xs font-bold text-surface-700">{l}</span>
+              <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{LIKELIHOOD_LABELS[l]}</p>
+            </div>
+          ))}
 
-          {/* Rows: Impact 5 (top) down to 1 (bottom), columns reversed */}
-          <div className="mt-2 space-y-1.5 sm:space-y-2">
-            {[5, 4, 3, 2, 1].map(c => (
-              <div key={`row-${c}`} className="flex">
-                {/* Row label */}
-                <div className="w-24 sm:w-28 flex-shrink-0 flex items-center justify-end pr-2 gap-1">
-                  <div className="text-right">
-                    <span className="text-[10px] sm:text-xs font-bold text-surface-700">{c}</span>
-                    <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{CONSEQUENCE_LABELS[c]}</p>
-                  </div>
-                </div>
-                {/* Grid cells — reversed: L5, L4, L3, L2, L1 */}
-                <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
-                  {[5, 4, 3, 2, 1].map(l => (
-                    <RiskMatrixCell
-                      key={`cell-${l}-${c}`}
-                      likelihood={l}
-                      consequence={c}
-                      hazards={grid[c][l]}
-                      onClick={onHazardClick}
-                    />
-                  ))}
+          {/* Rows 2-6: data rows (Impact 5 → 1) */}
+          {[5, 4, 3, 2, 1].map(c => (
+            <React.Fragment key={`row-${c}`}>
+              {/* Row label */}
+              <div className="flex items-center justify-end pr-2">
+                <div className="text-right">
+                  <span className="text-[10px] sm:text-xs font-bold text-surface-700">{c}</span>
+                  <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{CONSEQUENCE_LABELS[c]}</p>
                 </div>
               </div>
-            ))}
-          </div>
+              {/* 5 data cells — reversed: L5, L4, L3, L2, L1 */}
+              {[5, 4, 3, 2, 1].map(l => (
+                <RiskMatrixCell
+                  key={`cell-${l}-${c}`}
+                  likelihood={l}
+                  consequence={c}
+                  hazards={grid[c][l]}
+                  onClick={onHazardClick}
+                />
+              ))}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </div>
