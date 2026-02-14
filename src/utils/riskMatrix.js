@@ -51,7 +51,8 @@ const DEFAULT_LIKELIHOOD_THRESHOLDS = [
 ]
 
 // ============================================================================
-// RISK LEVEL ZONES — NEOM 5-level classification
+// RISK LEVEL ZONES — 5-level score-based classification
+// Score = L × C: Very High (20-25), High (15-19), Medium (8-14), Low (4-7), Very Low (1-3)
 // ============================================================================
 
 const RISK_ZONES = {
@@ -122,44 +123,50 @@ const RISK_ZONES = {
   },
 }
 
-// ============================================================================
-// NEOM RISK MATRIX LOOKUP TABLE (Likelihood × Impact → Risk Level)
-// NEOM-NLF-STD-002.01 Rev 0.3.00, December 2024
-//
-//        Impact →   1(VL)    2(L)     3(M)     4(H)     5(VH)
-// L=5 Almost Cert   M        H        H        VH       VH
-// L=4 Likely        L        M        H        H        VH
-// L=3 Possible      L        M        M        H        VH
-// L=2 Unlikely      VL       L        M        M        H
-// L=1 Rare          VL       VL       L        L        M
-// ============================================================================
-
-const NEOM_RISK_MATRIX = {
-  // [likelihood][impact] → zone key
-  1: { 1: 'veryLow', 2: 'veryLow', 3: 'low',    4: 'low',    5: 'medium'  },
-  2: { 1: 'veryLow', 2: 'low',     3: 'medium',  4: 'medium', 5: 'high'    },
-  3: { 1: 'low',     2: 'medium',  3: 'medium',  4: 'high',   5: 'veryHigh'},
-  4: { 1: 'low',     2: 'medium',  3: 'high',    4: 'high',   5: 'veryHigh'},
-  5: { 1: 'medium',  2: 'high',    3: 'high',    4: 'veryHigh',5: 'veryHigh'},
-}
-
 /**
- * Get risk zone from Likelihood × Impact using NEOM lookup table.
- * The specific cell position determines the risk level, NOT just the L×I product.
+ * Get risk zone from Likelihood × Impact using score-based thresholds.
+ * Score = L × C product determines the risk level.
+ * Very High: 20-25, High: 15-19, Medium: 8-14, Low: 4-7, Very Low: 1-3
  */
 export const getRiskZone = (likelihood, impact) => {
   const l = Math.max(1, Math.min(5, likelihood))
   const i = Math.max(1, Math.min(5, impact))
-  const zoneKey = NEOM_RISK_MATRIX[l][i]
-  return RISK_ZONES[zoneKey]
+  const score = l * i
+  if (score >= 20) return RISK_ZONES.veryHigh
+  if (score >= 15) return RISK_ZONES.high
+  if (score >= 8) return RISK_ZONES.medium
+  if (score >= 4) return RISK_ZONES.low
+  return RISK_ZONES.veryLow
 }
 
 /**
  * Get risk zone color for a specific L x C cell
- * Used to color empty cells in the matrix
  */
 export const getCellRiskColor = (likelihood, consequence) => {
   return getRiskZone(likelihood, consequence)
+}
+
+/**
+ * Get inline HSL gradient color for a score (1-25).
+ * Maps score to a smooth red↔green gradient for cell backgrounds.
+ */
+export const getScoreColor = (score) => {
+  const s = Math.max(1, Math.min(25, score))
+  const hue = 120 * (25 - s) / 24 // 120° (green) → 0° (red)
+  return {
+    backgroundColor: `hsl(${hue}, 72%, 85%)`,
+    color: `hsl(${hue}, 80%, 22%)`,
+    borderColor: `hsl(${hue}, 55%, 55%)`,
+  }
+}
+
+/**
+ * Get "Level - Score" label for a cell
+ */
+export const getScoreLabel = (likelihood, consequence) => {
+  const score = likelihood * consequence
+  const zone = getRiskZone(likelihood, consequence)
+  return `${zone.label} - ${score}`
 }
 
 // ============================================================================

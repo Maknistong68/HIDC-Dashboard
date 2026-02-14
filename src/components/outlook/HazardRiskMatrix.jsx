@@ -34,6 +34,8 @@ import { isOpenAction } from '../../utils/incidentHelpers'
 import {
   plotHazardsOnMatrix,
   getCellRiskColor,
+  getScoreColor,
+  getScoreLabel,
   CONSEQUENCE_LABELS,
   LIKELIHOOD_LABELS,
 } from '../../utils/riskMatrix'
@@ -95,45 +97,34 @@ const calculateRiskScore = (hazard, maxWeightedCount, maxRawCount) => {
 }
 
 /**
- * Get cell color based on grid position with improved contrast
+ * Get cell color based on grid position with improved contrast (5 levels)
  */
 const getCellColor = (row, col) => {
   const positionScore = (4 - row) + (4 - col)
-  if (positionScore >= 6) return {
-    bg: 'bg-red-50',
-    border: 'border-red-400',
-    text: 'text-red-900',
-    hover: 'hover:bg-red-100',
-    badge: 'bg-red-600',
-    shadow: 'shadow-md shadow-red-200/50',
-    level: 'critical'
+  if (positionScore >= 7) return {
+    bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-900',
+    hover: 'hover:bg-red-100', badge: 'bg-red-600',
+    shadow: 'shadow-md shadow-red-200/50', level: 'veryHigh'
   }
-  if (positionScore >= 4) return {
-    bg: 'bg-amber-50',
-    border: 'border-amber-400',
-    text: 'text-amber-900',
-    hover: 'hover:bg-amber-100',
-    badge: 'bg-amber-600',
-    shadow: 'shadow-sm shadow-amber-200/50',
-    level: 'high'
+  if (positionScore >= 5) return {
+    bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-900',
+    hover: 'hover:bg-amber-100', badge: 'bg-amber-600',
+    shadow: 'shadow-sm shadow-amber-200/50', level: 'high'
   }
-  if (positionScore >= 2) return {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-400',
-    text: 'text-yellow-800',
-    hover: 'hover:bg-yellow-100',
-    badge: 'bg-yellow-500',
-    shadow: '',
-    level: 'medium'
+  if (positionScore >= 3) return {
+    bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800',
+    hover: 'hover:bg-yellow-100', badge: 'bg-yellow-500',
+    shadow: '', level: 'medium'
+  }
+  if (positionScore >= 1) return {
+    bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-800',
+    hover: 'hover:bg-emerald-100', badge: 'bg-emerald-500',
+    shadow: '', level: 'low'
   }
   return {
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-300',
-    text: 'text-emerald-800',
-    hover: 'hover:bg-emerald-100',
-    badge: 'bg-emerald-500',
-    shadow: '',
-    level: 'low'
+    bg: 'bg-sky-50', border: 'border-sky-300', text: 'text-sky-800',
+    hover: 'hover:bg-sky-100', badge: 'bg-sky-500',
+    shadow: '', level: 'veryLow'
   }
 }
 
@@ -188,7 +179,7 @@ const SeverityDots = ({ incidents }) => {
  */
 const MatrixCell = ({ hazard, row, col, onClick, rank }) => {
   const colors = getCellColor(row, col)
-  const isCritical = colors.level === 'critical'
+  const isVeryHigh = colors.level === 'veryHigh'
   const isHigh = colors.level === 'high'
 
   if (!hazard) {
@@ -201,7 +192,7 @@ const MatrixCell = ({ hazard, row, col, onClick, rank }) => {
     <button
       onClick={() => onClick(hazard, row, col)}
       className={`aspect-[16/10] w-full rounded-md ${colors.bg} ${colors.border}
-                  ${isCritical ? 'border-2' : 'border'}
+                  ${isVeryHigh ? 'border-2' : 'border'}
                   ${colors.shadow}
                   px-2 py-1.5 relative
                   flex flex-col items-center justify-center text-center
@@ -213,7 +204,7 @@ const MatrixCell = ({ hazard, row, col, onClick, rank }) => {
       {/* Rank Badge - smaller */}
       <div className={`absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full ${colors.badge}
                        flex items-center justify-center shadow-sm
-                       ${isCritical || isHigh ? 'ring-1 ring-white' : ''}`}>
+                       ${isVeryHigh || isHigh ? 'ring-1 ring-white' : ''}`}>
         <span className="text-[8px] sm:text-[9px] font-bold text-white">{rank}</span>
       </div>
 
@@ -241,7 +232,7 @@ const Legend = () => (
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
-        <span className="font-medium text-red-700">Very High</span>
+        <span className="font-medium text-red-700">V.High</span>
       </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
@@ -257,7 +248,7 @@ const Legend = () => (
       </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-sky-50 border border-sky-300" />
-        <span className="font-medium text-sky-700">Very Low</span>
+        <span className="font-medium text-sky-700">V.Low</span>
       </div>
     </div>
     {/* Severity Dots Legend */}
@@ -384,17 +375,18 @@ const QuickActionButton = ({ label, icon: Icon, onClick, isActive, colorClass })
 )
 
 /**
- * Get risk level from grid position
+ * Get risk level from grid position (5 levels)
  */
 const getRiskLevel = (position) => {
-  if (position < 0) return { level: 'Critical', color: 'text-red-700', bg: 'bg-red-50' }
+  if (position < 0) return { level: 'Very High', color: 'text-red-700', bg: 'bg-red-50' }
   const row = Math.floor(position / 5)
   const col = position % 5
   const positionScore = (4 - row) + (4 - col)
-  if (positionScore >= 6) return { level: 'Critical', color: 'text-red-700', bg: 'bg-red-50' }
-  if (positionScore >= 4) return { level: 'High', color: 'text-amber-700', bg: 'bg-amber-50' }
-  if (positionScore >= 2) return { level: 'Medium', color: 'text-yellow-700', bg: 'bg-yellow-50' }
-  return { level: 'Low', color: 'text-emerald-700', bg: 'bg-emerald-50' }
+  if (positionScore >= 7) return { level: 'Very High', color: 'text-red-700', bg: 'bg-red-50' }
+  if (positionScore >= 5) return { level: 'High', color: 'text-amber-700', bg: 'bg-amber-50' }
+  if (positionScore >= 3) return { level: 'Medium', color: 'text-yellow-700', bg: 'bg-yellow-50' }
+  if (positionScore >= 1) return { level: 'Low', color: 'text-emerald-700', bg: 'bg-emerald-50' }
+  return { level: 'Very Low', color: 'text-sky-700', bg: 'bg-sky-50' }
 }
 
 /**
@@ -408,15 +400,16 @@ const MiniMatrixComparison = ({ currentRank, projectedRank, impactScore }) => {
   const projectedLevel = getRiskLevel(projectedPosition)
   const hasChange = improvement !== 0 && impactScore > 0
 
-  // Generate cell colors for mini matrix
+  // Generate cell colors for mini matrix (5 levels)
   const getCellBg = (idx) => {
     const row = Math.floor(idx / 5)
     const col = idx % 5
     const positionScore = (4 - row) + (4 - col)
-    if (positionScore >= 6) return 'bg-red-400'
-    if (positionScore >= 4) return 'bg-amber-400'
-    if (positionScore >= 2) return 'bg-yellow-400'
-    return 'bg-emerald-400'
+    if (positionScore >= 7) return 'bg-red-400'
+    if (positionScore >= 5) return 'bg-amber-400'
+    if (positionScore >= 3) return 'bg-yellow-400'
+    if (positionScore >= 1) return 'bg-emerald-400'
+    return 'bg-sky-400'
   }
 
   return (
@@ -1328,32 +1321,32 @@ const HazardDetailModal = ({
 }
 
 // ============================================================================
-// TRUE RISK MATRIX VIEW (Likelihood x Impact)
+// TRUE RISK MATRIX VIEW (Likelihood x Impact, score-based classification)
 // ============================================================================
 
 const RiskMatrixLegend = () => (
-  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-surface-600">
+  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-surface-600">
     <div className="flex items-center gap-2 sm:gap-3">
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
-        <span className="font-medium text-red-700">Very High</span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(0, 72%, 85%)', border: '2px solid hsl(0, 55%, 55%)' }} />
+        <span className="font-medium text-red-700">V.High <span className="text-[10px] text-surface-400">(20-25)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
-        <span className="font-medium text-amber-700">High</span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(35, 72%, 85%)', border: '1px solid hsl(35, 55%, 55%)' }} />
+        <span className="font-medium text-amber-700">High <span className="text-[10px] text-surface-400">(15-19)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-yellow-50 border border-yellow-400" />
-        <span className="font-medium text-yellow-700">Medium</span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(70, 72%, 85%)', border: '1px solid hsl(70, 55%, 55%)' }} />
+        <span className="font-medium text-yellow-700">Medium <span className="text-[10px] text-surface-400">(8-14)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300" />
-        <span className="font-medium text-emerald-700">Low</span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(95, 72%, 85%)', border: '1px solid hsl(95, 55%, 55%)' }} />
+        <span className="font-medium text-emerald-700">Low <span className="text-[10px] text-surface-400">(4-7)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-sky-50 border border-sky-300" />
-        <span className="font-medium text-sky-700">Very Low</span>
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(120, 72%, 85%)', border: '1px solid hsl(120, 55%, 55%)' }} />
+        <span className="font-medium text-green-700">V.Low <span className="text-[10px] text-surface-400">(1-3)</span></span>
       </div>
     </div>
   </div>
@@ -1378,28 +1371,34 @@ const HazardChip = ({ hazard, onClick }) => {
 }
 
 /**
- * RiskMatrixCell - A cell in the true L x C grid
- * May contain 0 or multiple hazards
+ * RiskMatrixCell - A cell in the true L x C grid with HSL gradient background
+ * Shows "Level - Score" label centered, hazard chips below
  */
 const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
-  const zone = getCellRiskColor(likelihood, consequence)
   const score = likelihood * consequence
   const hasHazards = hazards.length > 0
+  const scoreColor = getScoreColor(score)
+  const label = getScoreLabel(likelihood, consequence)
 
   return (
     <div
-      className={`${zone.bg} ${zone.border} ${hasHazards ? 'border-2' : 'border opacity-40'}
-                  rounded-md p-1.5 min-h-[60px] sm:min-h-[72px] flex flex-col gap-0.5
-                  ${hasHazards ? zone.shadow : ''} relative`}
+      className={`${hasHazards ? 'border-2' : 'border'}
+                  rounded-md p-1.5 min-h-[60px] sm:min-h-[72px] flex flex-col items-center justify-center gap-0.5
+                  ${hasHazards ? 'shadow-sm' : 'opacity-60'} relative`}
+      style={{
+        backgroundColor: scoreColor.backgroundColor,
+        color: scoreColor.color,
+        borderColor: scoreColor.borderColor,
+      }}
     >
-      {/* Score badge in corner */}
-      <span className={`absolute top-0.5 right-1 text-[9px] font-semibold ${zone.text} opacity-50`}>
-        {score}
+      {/* Level - Score label centered */}
+      <span className="text-[9px] sm:text-[10px] font-bold leading-tight text-center whitespace-nowrap">
+        {label}
       </span>
 
       {/* Hazard chips */}
       {hazards.length > 0 && (
-        <div className="flex flex-wrap gap-0.5 mt-1">
+        <div className="flex flex-wrap gap-0.5 mt-0.5 justify-center">
           {hazards.map(h => (
             <HazardChip key={h.name} hazard={h} onClick={onClick} />
           ))}
@@ -1410,7 +1409,8 @@ const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
 }
 
 /**
- * RiskMatrixView - True 5x5 Likelihood x Impact grid (NEOM standard)
+ * RiskMatrixView - True 5x5 Likelihood x Impact grid (score-based)
+ * Columns reversed: L5 (left) → L1 (right) so highest risk is top-left
  */
 const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
   // Build 5x5 grid: grid[consequence][likelihood] = [hazards]
@@ -1458,22 +1458,22 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
           {stats.high > 0 && <span className="font-semibold text-amber-700">{stats.high} High</span>}
           {stats.medium > 0 && <span className="font-semibold text-yellow-700">{stats.medium} Medium</span>}
           {stats.low > 0 && <span className="font-semibold text-emerald-700">{stats.low} Low</span>}
-          {stats.veryLow > 0 && <span className="font-semibold text-sky-700">{stats.veryLow} Very Low</span>}
+          {stats.veryLow > 0 && <span className="font-semibold text-green-700">{stats.veryLow} Very Low</span>}
         </div>
       )}
 
-      {/* Matrix Grid with axis labels */}
+      {/* Matrix Grid with axis labels — columns reversed (L5 left → L1 right) */}
       <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4 overflow-x-auto">
         <div className="min-w-[480px]">
-          {/* Y-axis label */}
+          {/* X-axis label */}
           <div className="flex">
             <div className="w-24 sm:w-28 flex-shrink-0" />
             <div className="flex-1 text-center text-[10px] font-semibold text-surface-400 uppercase tracking-widest mb-1">
-              Likelihood &rarr;
+              &larr; Likelihood
             </div>
           </div>
 
-          {/* Column headers (Likelihood) */}
+          {/* Column headers (Likelihood reversed: 5, 4, 3, 2, 1) */}
           <div className="flex">
             <div className="w-24 sm:w-28 flex-shrink-0 text-right pr-2">
               <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">
@@ -1481,7 +1481,7 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
               </span>
             </div>
             <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
-              {[1, 2, 3, 4, 5].map(l => (
+              {[5, 4, 3, 2, 1].map(l => (
                 <div key={`lh-${l}`} className="text-center">
                   <span className="text-[10px] sm:text-xs font-bold text-surface-700">{l}</span>
                   <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{LIKELIHOOD_LABELS[l]}</p>
@@ -1490,7 +1490,7 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
             </div>
           </div>
 
-          {/* Rows: Impact 5 (top) down to 1 (bottom) */}
+          {/* Rows: Impact 5 (top) down to 1 (bottom), columns reversed */}
           <div className="mt-2 space-y-1.5 sm:space-y-2">
             {[5, 4, 3, 2, 1].map(c => (
               <div key={`row-${c}`} className="flex">
@@ -1501,9 +1501,9 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
                     <p className="text-[8px] sm:text-[10px] text-surface-400 leading-tight">{CONSEQUENCE_LABELS[c]}</p>
                   </div>
                 </div>
-                {/* Grid cells */}
+                {/* Grid cells — reversed: L5, L4, L3, L2, L1 */}
                 <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
-                  {[1, 2, 3, 4, 5].map(l => (
+                  {[5, 4, 3, 2, 1].map(l => (
                     <RiskMatrixCell
                       key={`cell-${l}-${c}`}
                       likelihood={l}
@@ -1682,7 +1682,7 @@ const HazardRiskMatrix = ({
           <h2 className="text-lg font-bold text-surface-800">Hazard Risk Matrix</h2>
           <p className="text-xs text-surface-500 mt-0.5">
             {viewMode === 'matrix'
-              ? 'Hazards plotted by Likelihood x Impact (NEOM standard). Click any hazard for detailed analysis.'
+              ? 'Hazards plotted by Likelihood × Impact. Score = L × C. Click any hazard for detailed analysis.'
               : 'Top 25 hazards ranked by risk score. Click any cell for detailed analysis.'}
           </p>
         </div>
