@@ -2,15 +2,16 @@ import { isPositiveType } from './rootCauseEngine'
 import { getSortedDates } from './incidentHelpers'
 
 // ============================================================================
-// CONSEQUENCE AXIS - "What is the worst that has happened?"
+// IMPACT AXIS - "What is the worst that has happened?"
+// NEOM Safety Risk Assessment Standard (NEOM-NLF-STD-002.01 Rev 0.3.00)
 // ============================================================================
 
-// Maps incident type → consequence severity level (1-5)
+// Maps incident type → impact severity level (1-5)
 export const CONSEQUENCE_TYPE_MAP = {
   fatality: 5,
-  lti: 4,
+  lti: 3,
   fire: 4,
-  mti: 3,
+  mti: 2,
   environmental: 3,
   security: 3,
   fac: 2,
@@ -24,11 +25,11 @@ export const CONSEQUENCE_TYPE_MAP = {
 
 export const CONSEQUENCE_LABELS = [
   '', // index 0 unused
-  'Insignificant',
-  'Minor',
-  'Moderate',
-  'Major',
-  'Catastrophic',
+  'Very Low',
+  'Low',
+  'Medium',
+  'High',
+  'Very High',
 ]
 
 export const LIKELIHOOD_LABELS = [
@@ -50,19 +51,19 @@ const DEFAULT_LIKELIHOOD_THRESHOLDS = [
 ]
 
 // ============================================================================
-// RISK LEVEL COLORS (L x C product → risk zone)
+// RISK LEVEL ZONES — NEOM 5-level classification
 // ============================================================================
 
 const RISK_ZONES = {
-  intolerable: {
+  veryHigh: {
     bg: 'bg-red-50',
     border: 'border-red-400',
     text: 'text-red-900',
     hover: 'hover:bg-red-100',
     badge: 'bg-red-600',
     shadow: 'shadow-md shadow-red-200/50',
-    level: 'intolerable',
-    label: 'Intolerable',
+    level: 'veryHigh',
+    label: 'Very High',
     chipBg: 'bg-red-100',
     chipText: 'text-red-800',
     chipBorder: 'border-red-300',
@@ -88,7 +89,7 @@ const RISK_ZONES = {
     badge: 'bg-yellow-500',
     shadow: '',
     level: 'medium',
-    label: 'Medium (ALARP)',
+    label: 'Medium',
     chipBg: 'bg-yellow-100',
     chipText: 'text-yellow-800',
     chipBorder: 'border-yellow-300',
@@ -106,18 +107,51 @@ const RISK_ZONES = {
     chipText: 'text-emerald-800',
     chipBorder: 'border-emerald-300',
   },
+  veryLow: {
+    bg: 'bg-sky-50',
+    border: 'border-sky-300',
+    text: 'text-sky-800',
+    hover: 'hover:bg-sky-100',
+    badge: 'bg-sky-500',
+    shadow: '',
+    level: 'veryLow',
+    label: 'Very Low',
+    chipBg: 'bg-sky-100',
+    chipText: 'text-sky-800',
+    chipBorder: 'border-sky-300',
+  },
+}
+
+// ============================================================================
+// NEOM RISK MATRIX LOOKUP TABLE (Likelihood × Impact → Risk Level)
+// NEOM-NLF-STD-002.01 Rev 0.3.00, December 2024
+//
+//        Impact →   1(VL)    2(L)     3(M)     4(H)     5(VH)
+// L=5 Almost Cert   M        H        H        VH       VH
+// L=4 Likely        L        M        H        H        VH
+// L=3 Possible      L        M        M        H        VH
+// L=2 Unlikely      VL       L        M        M        H
+// L=1 Rare          VL       VL       L        L        M
+// ============================================================================
+
+const NEOM_RISK_MATRIX = {
+  // [likelihood][impact] → zone key
+  1: { 1: 'veryLow', 2: 'veryLow', 3: 'low',    4: 'low',    5: 'medium'  },
+  2: { 1: 'veryLow', 2: 'low',     3: 'medium',  4: 'medium', 5: 'high'    },
+  3: { 1: 'low',     2: 'medium',  3: 'medium',  4: 'high',   5: 'veryHigh'},
+  4: { 1: 'low',     2: 'medium',  3: 'high',    4: 'high',   5: 'veryHigh'},
+  5: { 1: 'medium',  2: 'high',    3: 'high',    4: 'veryHigh',5: 'veryHigh'},
 }
 
 /**
- * Get risk zone from L x C product
- * 15-25 = Intolerable, 10-14 = High, 5-9 = Medium, 1-4 = Low
+ * Get risk zone from Likelihood × Impact using NEOM lookup table.
+ * The specific cell position determines the risk level, NOT just the L×I product.
  */
-export const getRiskZone = (likelihood, consequence) => {
-  const score = likelihood * consequence
-  if (score >= 15) return RISK_ZONES.intolerable
-  if (score >= 10) return RISK_ZONES.high
-  if (score >= 5) return RISK_ZONES.medium
-  return RISK_ZONES.low
+export const getRiskZone = (likelihood, impact) => {
+  const l = Math.max(1, Math.min(5, likelihood))
+  const i = Math.max(1, Math.min(5, impact))
+  const zoneKey = NEOM_RISK_MATRIX[l][i]
+  return RISK_ZONES[zoneKey]
 }
 
 /**

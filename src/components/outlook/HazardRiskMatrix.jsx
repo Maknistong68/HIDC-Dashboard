@@ -15,12 +15,22 @@ import {
   X,
   Grid3x3,
   BarChart3,
-  Info
+  Info,
+  CheckCircle,
+  User,
+  AlertCircle,
 } from 'lucide-react'
-import { SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS } from '../../utils/constants'
+import { SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, QUICK_ACTION_PRESETS } from '../../utils/constants'
 import { getDayOfWeekPatterns, getHourlyPatterns } from '../../utils/insightsCalculations'
-import { generateDynamicSliders } from '../insights/ScenarioSimulatorEngine'
+import {
+  generateContextualSliders,
+  calculateProjectedChange,
+  calculateFactorPrevalence,
+  calculateActionClosureEffect,
+  applyQuickActionPreset,
+} from '../insights/ScenarioSimulatorEngine'
 import { SEVERITY_WEIGHTS } from '../../utils/calculations'
+import { isOpenAction } from '../../utils/incidentHelpers'
 import {
   plotHazardsOnMatrix,
   getCellRiskColor,
@@ -231,7 +241,7 @@ const Legend = () => (
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
-        <span className="font-medium text-red-700">Critical</span>
+        <span className="font-medium text-red-700">Very High</span>
       </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
@@ -244,6 +254,10 @@ const Legend = () => (
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300" />
         <span className="font-medium text-emerald-700">Low</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-sky-50 border border-sky-300" />
+        <span className="font-medium text-sky-700">Very Low</span>
       </div>
     </div>
     {/* Severity Dots Legend */}
@@ -271,12 +285,31 @@ const Legend = () => (
 
 const FactorSlider = ({ slider, value, onChange }) => {
   const normalizedValue = ((value + 50) / 150) * 100
+  const sources = slider.sources || {}
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-surface-700">{slider.label}</span>
-        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm font-medium text-surface-700 truncate">{slider.label}</span>
+          {/* Relevance badges */}
+          {sources.expert && (
+            <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200" title={sources.expertAction || 'Expert recommended'}>
+              Expert
+            </span>
+          )}
+          {sources.temporal && (
+            <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200" title={sources.peakDays ? `Peak: ${sources.peakDays.join(', ')}` : 'Peak time correlation'}>
+              Peak Time
+            </span>
+          )}
+          {!sources.expert && sources.data && (
+            <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200" title="Detected in incident data">
+              Data
+            </span>
+          )}
+        </div>
+        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${
           value > 0 ? 'bg-green-100 text-green-700' : value < 0 ? 'bg-red-100 text-red-700' : 'text-surface-500'
         }`}>
           {value > 0 ? '+' : ''}{value}%
@@ -468,11 +501,30 @@ const MiniMatrixComparison = ({ currentRank, projectedRank, impactScore }) => {
   )
 }
 
-const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRank, allHazards }) => {
+const ICON_MAP = { Settings, Shield, User, CheckCircle, HardHat }
+
+const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns, currentRank, allHazards }) => {
   const [sliders, setSliders] = useState({})
+  const [actionsToClose, setActionsToClose] = useState(0)
   const [activeQuickAction, setActiveQuickAction] = useState(null)
 
-  const dynamicSliders = useMemo(() => {
+  // Count open actions for this hazard
+  const openActionsCount = useMemo(() => {
+    if (!hazardIncidents?.length) return 0
+    return hazardIncidents.filter(isOpenAction).length
+  }, [hazardIncidents])
+
+  // Confidence indicator based on observation count
+  const confidence = useMemo(() => {
+    const count = hazardIncidents?.length || 0
+    if (count >= 50) return { level: 'High', pct: 90, color: 'text-green-600' }
+    if (count >= 20) return { level: 'Moderate', pct: 70, color: 'text-blue-600' }
+    if (count >= 10) return { level: 'Low', pct: 50, color: 'text-amber-600' }
+    return { level: 'Insufficient', pct: 25, color: 'text-red-500' }
+  }, [hazardIncidents])
+
+  // Generate contextual sliders using engine (Expert 50% + Data 30% + Temporal 20%)
+  const contextualSliders = useMemo(() => {
     if (!factorData?.byFactor || !hazardIncidents?.length) return []
     const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
     const hazardFactors = factorData.byFactor
@@ -483,35 +535,63 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
       })
       .filter(f => f.count > 0)
       .sort((a, b) => b.count - a.count)
-    const result = generateDynamicSliders({ byFactor: hazardFactors }, currentHazard?.name, hazardIncidents.length)
-    return (result.sliders || result).slice(0, 5)
-  }, [factorData, currentHazard, hazardIncidents])
+    const result = generateContextualSliders(
+      { byFactor: hazardFactors },
+      currentHazard?.name,
+      hazardIncidents.length,
+      dayPatterns
+    )
+    return (result.sliders || result).slice(0, 8)
+  }, [factorData, currentHazard, hazardIncidents, dayPatterns])
 
+  // Calculate factor prevalence for engine projection
+  const prevalence = useMemo(() => {
+    if (!factorData?.byFactor || !hazardIncidents?.length) return {}
+    const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
+    const hazardFactors = factorData.byFactor
+      .filter(f => !f.isUnclassified && f.name !== 'Unclassified')
+      .map(factor => {
+        const matchingIncidents = (factor.incidents || []).filter(inc => hazardIncidentIds.has(inc.id))
+        return { name: factor.name, count: matchingIncidents.length }
+      })
+      .filter(f => f.count > 0)
+    return calculateFactorPrevalence({ byFactor: hazardFactors }, hazardIncidents.length)
+  }, [factorData, hazardIncidents, currentHazard])
+
+  // Project change using engine (diminishing returns, -60% to +40% cap)
   const projection = useMemo(() => {
-    if (!Object.keys(sliders).length || !dynamicSliders.length) return { impactScore: 0, factorsAddressed: 0, breakdown: [] }
-    let totalEffect = 0
-    const breakdown = []
-    for (const slider of dynamicSliders) {
-      const sliderValue = sliders[slider.id] || 0
-      if (sliderValue === 0) continue
-      const hazardPrevalence = slider.prevalence || 0
-      const effectivenessMultiplier = { engineering: 0.85, administrative: 0.60, ppe: 0.40, environmental: 0.55 }[slider.categoryKey] || 0.50
-      const impact = (hazardPrevalence / 100) * effectivenessMultiplier * (sliderValue / 100) * 1.5 * 100
-      if (impact > 0.1) {
-        breakdown.push({ factor: slider.factor, label: slider.label, sliderValue, impact: Math.round(impact * 10) / 10, prevalence: hazardPrevalence })
-        totalEffect += impact
-      }
+    const hasSliders = Object.values(sliders).some(v => v !== 0)
+    if (!hasSliders && actionsToClose === 0) return { totalEffect: 0, effects: {}, factorsAddressed: 0 }
+
+    const engineResult = calculateProjectedChange(sliders, prevalence)
+
+    // Add action closure effect
+    let actionEffect = 0
+    if (actionsToClose > 0 && openActionsCount > 0) {
+      actionEffect = calculateActionClosureEffect(actionsToClose, openActionsCount, hazardIncidents?.length || 0)
     }
-    return { impactScore: Math.round(Math.min(70, Math.max(0, totalEffect)) * 10) / 10, factorsAddressed: breakdown.length, breakdown }
-  }, [sliders, dynamicSliders])
+
+    const combinedEffect = engineResult.totalEffect + actionEffect
+    // Clamp to engine bounds: -60% to +40%
+    const clampedEffect = Math.round(Math.min(40, Math.max(-60, combinedEffect)) * 10) / 10
+
+    const factorsAddressed = Object.keys(engineResult.effects || {}).length + (actionsToClose > 0 ? 1 : 0)
+
+    return {
+      // impactScore is absolute value of reduction (positive = good)
+      impactScore: clampedEffect < 0 ? Math.abs(clampedEffect) : 0,
+      totalEffect: clampedEffect,
+      effects: engineResult.effects,
+      factorsAddressed,
+      isCapped: engineResult.isCapped,
+    }
+  }, [sliders, actionsToClose, prevalence, openActionsCount, hazardIncidents])
 
   // Calculate projected rank based on intervention impact
   const projectedRank = useMemo(() => {
     if (projection.impactScore === 0 || !allHazards?.length || !currentHazard) return currentRank
-    // Reduce current hazard's risk score by intervention impact
     const currentScore = currentHazard.riskScore || 50
     const projectedScore = currentScore * (1 - projection.impactScore / 100)
-    // Count how many hazards would rank higher after intervention
     let newRank = 1
     for (const h of allHazards) {
       if (h.name !== currentHazard.name && (h.riskScore || 0) > projectedScore) newRank++
@@ -519,28 +599,73 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
     return Math.min(newRank, 25)
   }, [projection.impactScore, allHazards, currentHazard, currentRank])
 
-  const applyQuickAction = (type) => {
-    if (activeQuickAction === type) { setSliders({}); setActiveQuickAction(null); return }
-    const presets = { engineering: { barriers: 50, guards: 50, devices: 50 }, admin: { training: 50, supervision: 50, inspections: 50 }, ppe: { ppe: 50 } }
-    const validSliderIds = new Set(dynamicSliders.map(s => s.id))
+  const applyQuickAction = useCallback((presetId) => {
+    if (activeQuickAction === presetId) {
+      setSliders({})
+      setActionsToClose(0)
+      setActiveQuickAction(null)
+      return
+    }
+    const result = applyQuickActionPreset(presetId, prevalence, openActionsCount)
+    // Only apply slider values that match available sliders
+    const validSliderIds = new Set(contextualSliders.map(s => s.id))
     const filtered = {}
-    for (const [key, val] of Object.entries(presets[type] || {})) { if (validSliderIds.has(key)) filtered[key] = val }
-    if (Object.keys(filtered).length === 0 && dynamicSliders.length > 0) dynamicSliders.forEach(s => { filtered[s.id] = 50 })
+    for (const [key, val] of Object.entries(result.sliders || {})) {
+      if (validSliderIds.has(key)) filtered[key] = val
+    }
+    // If no sliders matched, set all available sliders to 50
+    if (Object.keys(filtered).length === 0 && contextualSliders.length > 0 && presetId !== 'close-actions') {
+      contextualSliders.forEach(s => { filtered[s.id] = 50 })
+    }
     setSliders(filtered)
-    setActiveQuickAction(type)
-  }
+    setActionsToClose(result.actionsToClose || 0)
+    setActiveQuickAction(presetId)
+  }, [activeQuickAction, prevalence, openActionsCount, contextualSliders])
+
+  const presetColorMap = { blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200', indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', amber: 'bg-amber-100 text-amber-700 hover:bg-amber-200', green: 'bg-green-100 text-green-700 hover:bg-green-200' }
+
+  const isInsufficient = (hazardIncidents?.length || 0) < 10
 
   return (
     <div className="space-y-4">
-      {/* Quick Actions */}
+      {/* Insufficient data warning */}
+      {isInsufficient && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+          <p className="text-xs text-amber-700">
+            <span className="font-semibold">Low confidence:</span> Only {hazardIncidents?.length || 0} observations. Results improve with 10+ observations.
+          </p>
+        </div>
+      )}
+
+      {/* Confidence indicator */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-surface-500">Confidence:</span>
+        <div className="flex-1 h-1.5 bg-surface-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${confidence.pct >= 70 ? 'bg-green-400' : confidence.pct >= 50 ? 'bg-blue-400' : 'bg-amber-400'}`} style={{ width: `${confidence.pct}%` }} />
+        </div>
+        <span className={`font-semibold ${confidence.color}`}>{confidence.level}</span>
+      </div>
+
+      {/* Quick Actions from QUICK_ACTION_PRESETS */}
       <div>
         <h3 className="text-sm font-semibold text-surface-800 mb-3">Quick Actions</h3>
         <div className="flex flex-wrap items-center gap-2">
-          <QuickActionButton label="+50% Eng" icon={Settings} onClick={() => applyQuickAction('engineering')} isActive={activeQuickAction === 'engineering'} colorClass="bg-blue-100 text-blue-700 hover:bg-blue-200" />
-          <QuickActionButton label="+50% Admin" icon={Shield} onClick={() => applyQuickAction('admin')} isActive={activeQuickAction === 'admin'} colorClass="bg-indigo-100 text-indigo-700 hover:bg-indigo-200" />
-          <QuickActionButton label="+50% PPE" icon={HardHat} onClick={() => applyQuickAction('ppe')} isActive={activeQuickAction === 'ppe'} colorClass="bg-amber-100 text-amber-700 hover:bg-amber-200" />
-          {Object.keys(sliders).length > 0 && (
-            <button onClick={() => { setSliders({}); setActiveQuickAction(null) }} className="flex items-center gap-1 text-xs text-surface-500 hover:text-surface-700 ml-2">
+          {QUICK_ACTION_PRESETS.map(preset => {
+            const PresetIcon = ICON_MAP[preset.icon] || Settings
+            return (
+              <QuickActionButton
+                key={preset.id}
+                label={preset.label}
+                icon={PresetIcon}
+                onClick={() => applyQuickAction(preset.id)}
+                isActive={activeQuickAction === preset.id}
+                colorClass={presetColorMap[preset.color] || 'bg-surface-100 text-surface-700 hover:bg-surface-200'}
+              />
+            )
+          })}
+          {(Object.keys(sliders).length > 0 || actionsToClose > 0) && (
+            <button onClick={() => { setSliders({}); setActionsToClose(0); setActiveQuickAction(null) }} className="flex items-center gap-1 text-xs text-surface-500 hover:text-surface-700 ml-2">
               <RotateCcw size={12} />Reset
             </button>
           )}
@@ -548,11 +673,11 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
       </div>
 
       {/* Intervention Sliders */}
-      {dynamicSliders.length > 0 ? (
+      {contextualSliders.length > 0 ? (
         <div className="bg-white rounded-lg border border-surface-200 p-4">
           <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-3">Intervention Sliders</h4>
           <div className="space-y-3">
-            {dynamicSliders.map(slider => (
+            {contextualSliders.map(slider => (
               <FactorSlider
                 key={slider.id}
                 slider={slider}
@@ -567,6 +692,40 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, currentRa
           <p className="text-sm text-surface-500">No controllable factors detected for this hazard.</p>
         </div>
       )}
+
+      {/* Action Closure Slider */}
+      {openActionsCount > 0 && (
+        <div className="bg-white rounded-lg border border-surface-200 p-4">
+          <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-3">Action Closure</h4>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-surface-700">Close Open Actions</span>
+              <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                {actionsToClose} / {openActionsCount}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max={openActionsCount}
+              value={actionsToClose}
+              onChange={(e) => setActionsToClose(parseInt(e.target.value, 10))}
+              className="w-full h-6 appearance-none bg-transparent cursor-pointer"
+            />
+            <div className="flex items-center justify-between text-[10px] text-surface-400">
+              <span>0</span>
+              <span>{openActionsCount} open</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Impact Score Card */}
+      <ImpactScoreCard
+        impactScore={projection.impactScore}
+        factorsAddressed={projection.factorsAddressed}
+        confidence={confidence.pct}
+      />
 
       {/* Mini Matrix Comparison */}
       <MiniMatrixComparison
@@ -1155,6 +1314,7 @@ const HazardDetailModal = ({
                 currentHazard={hazard}
                 hazardIncidents={hazardIncidents}
                 factorData={factorData}
+                dayPatterns={dayPatterns}
                 currentRank={currentRank}
                 allHazards={allHazards}
               />
@@ -1168,7 +1328,7 @@ const HazardDetailModal = ({
 }
 
 // ============================================================================
-// TRUE RISK MATRIX VIEW (Likelihood x Consequence)
+// TRUE RISK MATRIX VIEW (Likelihood x Impact)
 // ============================================================================
 
 const RiskMatrixLegend = () => (
@@ -1177,7 +1337,7 @@ const RiskMatrixLegend = () => (
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
-        <span className="font-medium text-red-700">Intolerable</span>
+        <span className="font-medium text-red-700">Very High</span>
       </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
@@ -1190,6 +1350,10 @@ const RiskMatrixLegend = () => (
       <div className="flex items-center gap-1">
         <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300" />
         <span className="font-medium text-emerald-700">Low</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded bg-sky-50 border border-sky-300" />
+        <span className="font-medium text-sky-700">Very Low</span>
       </div>
     </div>
   </div>
@@ -1206,7 +1370,7 @@ const HazardChip = ({ hazard, onClick }) => {
       className={`${zone.chipBg} ${zone.chipText} ${zone.chipBorder} border
                   px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium
                   truncate max-w-full transition-all hover:scale-105 hover:shadow-sm cursor-pointer`}
-      title={`${hazard.name} — L${hazard.likelihood} x C${hazard.consequence} = ${hazard.riskScore} (${zone.label})`}
+      title={`${hazard.name} — L${hazard.likelihood} x I${hazard.consequence} = ${hazard.riskScore} (${zone.label})`}
     >
       {hazard.name}
     </button>
@@ -1246,7 +1410,7 @@ const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
 }
 
 /**
- * RiskMatrixView - True 5x5 Likelihood x Consequence grid
+ * RiskMatrixView - True 5x5 Likelihood x Impact grid (NEOM standard)
  */
 const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
   // Build 5x5 grid: grid[consequence][likelihood] = [hazards]
@@ -1271,8 +1435,8 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
   // Stats summary
   const stats = useMemo(() => {
     if (!matrixData?.hazards?.length) return null
-    const zones = { intolerable: 0, high: 0, medium: 0, low: 0 }
-    matrixData.hazards.forEach(h => { zones[h.zone.level]++ })
+    const zones = { veryHigh: 0, high: 0, medium: 0, low: 0, veryLow: 0 }
+    matrixData.hazards.forEach(h => { zones[h.zone.level] = (zones[h.zone.level] || 0) + 1 })
     return { total: matrixData.hazards.length, ...zones, totalDays: matrixData.totalDays, isAdaptive: matrixData.isAdaptive }
   }, [matrixData])
 
@@ -1290,10 +1454,11 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
               Adaptive thresholds (dataset &lt;90 days)
             </span>
           )}
-          {stats.intolerable > 0 && <span className="font-semibold text-red-700">{stats.intolerable} Intolerable</span>}
+          {stats.veryHigh > 0 && <span className="font-semibold text-red-700">{stats.veryHigh} Very High</span>}
           {stats.high > 0 && <span className="font-semibold text-amber-700">{stats.high} High</span>}
           {stats.medium > 0 && <span className="font-semibold text-yellow-700">{stats.medium} Medium</span>}
           {stats.low > 0 && <span className="font-semibold text-emerald-700">{stats.low} Low</span>}
+          {stats.veryLow > 0 && <span className="font-semibold text-sky-700">{stats.veryLow} Very Low</span>}
         </div>
       )}
 
@@ -1312,7 +1477,7 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
           <div className="flex">
             <div className="w-24 sm:w-28 flex-shrink-0 text-right pr-2">
               <span className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">
-                Consequence &darr;
+                Impact &darr;
               </span>
             </div>
             <div className="flex-1 grid grid-cols-5 gap-1.5 sm:gap-2">
@@ -1325,7 +1490,7 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
             </div>
           </div>
 
-          {/* Rows: Consequence 5 (top) down to 1 (bottom) */}
+          {/* Rows: Impact 5 (top) down to 1 (bottom) */}
           <div className="mt-2 space-y-1.5 sm:space-y-2">
             {[5, 4, 3, 2, 1].map(c => (
               <div key={`row-${c}`} className="flex">
@@ -1517,7 +1682,7 @@ const HazardRiskMatrix = ({
           <h2 className="text-lg font-bold text-surface-800">Hazard Risk Matrix</h2>
           <p className="text-xs text-surface-500 mt-0.5">
             {viewMode === 'matrix'
-              ? 'Hazards plotted by Likelihood x Consequence. Click any hazard for detailed analysis.'
+              ? 'Hazards plotted by Likelihood x Impact (NEOM standard). Click any hazard for detailed analysis.'
               : 'Top 25 hazards ranked by risk score. Click any cell for detailed analysis.'}
           </p>
         </div>
