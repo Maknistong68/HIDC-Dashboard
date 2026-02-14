@@ -13,14 +13,12 @@ import {
   RotateCcw,
   Calendar,
   X,
-  Grid3x3,
-  BarChart3,
   Info,
   CheckCircle,
   User,
   AlertCircle,
 } from 'lucide-react'
-import { SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, QUICK_ACTION_PRESETS } from '../../utils/constants'
+import { QUICK_ACTION_PRESETS } from '../../utils/constants'
 import { getDayOfWeekPatterns, getHourlyPatterns } from '../../utils/insightsCalculations'
 import {
   generateContextualSliders,
@@ -41,94 +39,6 @@ import {
 } from '../../utils/riskMatrix'
 
 // ============================================================================
-// RISK SCORE CALCULATION (Severity-Weighted)
-// ============================================================================
-
-/**
- * Calculate severity-weighted count for a list of incidents
- * Uses SEVERITY_WEIGHTS: LTI=25, MTI=15, FAC=10, NCR=5, Near-Miss=3, default=1
- *
- * This ensures high-severity incidents (LTI, MTI) contribute more to risk score
- * than low-severity observations (unsafe acts/conditions)
- */
-const calculateSeverityWeightedCount = (incidents) => {
-  if (!incidents?.length) return 0
-  return incidents.reduce((sum, incident) => {
-    const weight = SEVERITY_WEIGHTS[incident.type] || SEVERITY_WEIGHTS.default || 1
-    return sum + weight
-  }, 0)
-}
-
-/**
- * Calculate risk score for a hazard (0-100)
- *
- * NEW FORMULA (Severity-Weighted):
- * - 40% Severity-weighted volume (LTI counts more than near-miss)
- * - 30% Trend direction (rising/stable/declining)
- * - 30% Hazard significance (14 significant hazards)
- *
- * This replaces the old 33/33/33 raw-count formula to ensure
- * hazards with actual injuries rank higher than high-volume low-severity hazards.
- */
-const calculateRiskScore = (hazard, maxWeightedCount, maxRawCount) => {
-  // 40% - Severity-weighted volume score
-  // Uses weighted count (LTI=25pts, near-miss=3pts, observation=1pt)
-  const weightedCount = hazard.severityWeightedCount || 0
-  const volumeScore = maxWeightedCount > 0 ? (weightedCount / maxWeightedCount) * 40 : 0
-
-  // 30% - Trend score
-  let trendScore = 15 // Stable baseline
-  const level = hazard.trendLevel?.level
-  if (level === 'significant-rise' || level === 'rising') {
-    trendScore = 30 // Max for rising trend
-  } else if (level === 'declining' || level === 'significant-decline') {
-    trendScore = 0 // No points for declining
-  }
-
-  // 30% - Significance score (based on hazard category)
-  let significanceScore = 0
-  if (SIGNIFICANT_HAZARDS.includes(hazard.name)) {
-    significanceScore = 30 // Full points for 14 significant hazards
-  } else if (SUB_SIGNIFICANT_HAZARDS.includes(hazard.name)) {
-    significanceScore = 15 // Half points for sub-significant
-  }
-
-  return Math.round(volumeScore + trendScore + significanceScore)
-}
-
-/**
- * Get cell color based on grid position with improved contrast (5 levels)
- */
-const getCellColor = (row, col) => {
-  const positionScore = (4 - row) + (4 - col)
-  if (positionScore >= 7) return {
-    bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-900',
-    hover: 'hover:bg-red-100', badge: 'bg-red-600',
-    shadow: 'shadow-md shadow-red-200/50', level: 'veryHigh'
-  }
-  if (positionScore >= 5) return {
-    bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-900',
-    hover: 'hover:bg-amber-100', badge: 'bg-amber-600',
-    shadow: 'shadow-sm shadow-amber-200/50', level: 'high'
-  }
-  if (positionScore >= 3) return {
-    bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-800',
-    hover: 'hover:bg-yellow-100', badge: 'bg-yellow-500',
-    shadow: '', level: 'medium'
-  }
-  if (positionScore >= 1) return {
-    bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-800',
-    hover: 'hover:bg-emerald-100', badge: 'bg-emerald-500',
-    shadow: '', level: 'low'
-  }
-  return {
-    bg: 'bg-sky-50', border: 'border-sky-300', text: 'text-sky-800',
-    hover: 'hover:bg-sky-100', badge: 'bg-sky-500',
-    shadow: '', level: 'veryLow'
-  }
-}
-
-// ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
 
@@ -142,133 +52,6 @@ const TrendIndicator = ({ trend, size = 12 }) => {
   }
   return <Minus size={size} className="text-surface-400" strokeWidth={2} />
 }
-
-/**
- * SeverityDots - Shows small colored dots for incident types
- */
-const SeverityDots = ({ incidents }) => {
-  if (!incidents?.length) return null
-
-  // Count by severity type
-  const counts = { lti: 0, mti: 0, fac: 0, 'near-miss': 0 }
-  incidents.forEach(i => {
-    if (counts.hasOwnProperty(i.type)) counts[i.type]++
-  })
-
-  const hasRecordable = counts.lti > 0 || counts.mti > 0 || counts.fac > 0
-
-  if (!hasRecordable) return null
-
-  return (
-    <div className="absolute -top-1 -right-1 flex gap-0.5">
-      {counts.lti > 0 && (
-        <div className="w-2.5 h-2.5 rounded-full bg-red-600 ring-1 ring-white" title={`${counts.lti} LTI`} />
-      )}
-      {counts.mti > 0 && (
-        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-1 ring-white" title={`${counts.mti} MTI`} />
-      )}
-      {counts.fac > 0 && (
-        <div className="w-2 h-2 rounded-full bg-yellow-500 ring-1 ring-white" title={`${counts.fac} FAC`} />
-      )}
-    </div>
-  )
-}
-
-/**
- * MatrixCell - Wide aspect ratio cell (16:9-ish) with rank badge and severity indicators
- */
-const MatrixCell = ({ hazard, row, col, onClick, rank }) => {
-  const colors = getCellColor(row, col)
-  const isVeryHigh = colors.level === 'veryHigh'
-  const isHigh = colors.level === 'high'
-
-  if (!hazard) {
-    return (
-      <div className={`aspect-[16/10] w-full rounded-md ${colors.bg} ${colors.border} border opacity-20`} />
-    )
-  }
-
-  return (
-    <button
-      onClick={() => onClick(hazard, row, col)}
-      className={`aspect-[16/10] w-full rounded-md ${colors.bg} ${colors.border}
-                  ${isVeryHigh ? 'border-2' : 'border'}
-                  ${colors.shadow}
-                  px-2 py-1.5 relative
-                  flex flex-col items-center justify-center text-center
-                  transition-all duration-150 ${colors.hover}
-                  hover:scale-[1.01] hover:shadow-md
-                  cursor-pointer group`}
-      title={`#${rank} ${hazard.name} - ${hazard.totalCount} observations (Risk: ${hazard.riskScore || 0})`}
-    >
-      {/* Rank Badge - smaller */}
-      <div className={`absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full ${colors.badge}
-                       flex items-center justify-center shadow-sm
-                       ${isVeryHigh || isHigh ? 'ring-1 ring-white' : ''}`}>
-        <span className="text-[8px] sm:text-[9px] font-bold text-white">{rank}</span>
-      </div>
-
-      {/* Severity Dots - top right */}
-      <SeverityDots incidents={hazard.incidents} />
-
-      {/* Hazard Name - larger font */}
-      <span className={`text-sm sm:text-base font-semibold ${colors.text} leading-snug line-clamp-2`}>
-        {hazard.name}
-      </span>
-
-      {/* Risk Score and Trend - inline */}
-      <div className="flex items-center gap-1 mt-0.5">
-        <TrendIndicator trend={hazard.trendLevel} size={14} />
-        <span className={`text-lg sm:text-xl font-bold ${colors.text}`}>{hazard.riskScore || 0}</span>
-      </div>
-    </button>
-  )
-}
-
-const Legend = () => (
-  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-surface-600">
-    {/* Risk Level Legend */}
-    <div className="flex items-center gap-2 sm:gap-3">
-      <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-red-50 border-2 border-red-400 shadow-sm" />
-        <span className="font-medium text-red-700">V.High</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-amber-50 border border-amber-400" />
-        <span className="font-medium text-amber-700">High</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-yellow-50 border border-yellow-400" />
-        <span className="font-medium text-yellow-700">Medium</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300" />
-        <span className="font-medium text-emerald-700">Low</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded bg-sky-50 border border-sky-300" />
-        <span className="font-medium text-sky-700">V.Low</span>
-      </div>
-    </div>
-    {/* Severity Dots Legend */}
-    <div className="flex items-center gap-2 sm:gap-3 border-l border-surface-200 pl-3">
-      <span className="text-[10px] text-surface-400 uppercase tracking-wider">Severity:</span>
-      <div className="flex items-center gap-1">
-        <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-        <span className="text-red-700">LTI</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-        <span className="text-orange-700">MTI</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-yellow-500" />
-        <span className="text-yellow-700">FAC</span>
-      </div>
-    </div>
-  </div>
-)
 
 // ============================================================================
 // MODAL DETAIL COMPONENTS
@@ -374,129 +157,9 @@ const QuickActionButton = ({ label, icon: Icon, onClick, isActive, colorClass })
   </button>
 )
 
-/**
- * Get risk level from grid position (5 levels)
- */
-const getRiskLevel = (position) => {
-  if (position < 0) return { level: 'Very High', color: 'text-red-700', bg: 'bg-red-50' }
-  const row = Math.floor(position / 5)
-  const col = position % 5
-  const positionScore = (4 - row) + (4 - col)
-  if (positionScore >= 7) return { level: 'Very High', color: 'text-red-700', bg: 'bg-red-50' }
-  if (positionScore >= 5) return { level: 'High', color: 'text-amber-700', bg: 'bg-amber-50' }
-  if (positionScore >= 3) return { level: 'Medium', color: 'text-yellow-700', bg: 'bg-yellow-50' }
-  if (positionScore >= 1) return { level: 'Low', color: 'text-emerald-700', bg: 'bg-emerald-50' }
-  return { level: 'Very Low', color: 'text-sky-700', bg: 'bg-sky-50' }
-}
-
-/**
- * MiniMatrixComparison - Visual comparison of current vs projected position
- */
-const MiniMatrixComparison = ({ currentRank, projectedRank, impactScore }) => {
-  const currentPosition = currentRank - 1
-  const projectedPosition = projectedRank - 1
-  const improvement = currentRank - projectedRank
-  const currentLevel = getRiskLevel(currentPosition)
-  const projectedLevel = getRiskLevel(projectedPosition)
-  const hasChange = improvement !== 0 && impactScore > 0
-
-  // Generate cell colors for mini matrix (5 levels)
-  const getCellBg = (idx) => {
-    const row = Math.floor(idx / 5)
-    const col = idx % 5
-    const positionScore = (4 - row) + (4 - col)
-    if (positionScore >= 7) return 'bg-red-400'
-    if (positionScore >= 5) return 'bg-amber-400'
-    if (positionScore >= 3) return 'bg-yellow-400'
-    if (positionScore >= 1) return 'bg-emerald-400'
-    return 'bg-sky-400'
-  }
-
-  return (
-    <div className="bg-surface-50 rounded-lg p-4 mt-4">
-      <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-4 text-center">
-        Ranking Comparison
-      </h4>
-
-      <div className="flex items-center justify-center gap-4 sm:gap-6">
-        {/* Current Position Mini Matrix */}
-        <div className="text-center">
-          <p className="text-[10px] font-medium text-surface-500 mb-2 uppercase tracking-wider">Current</p>
-          <div className="grid grid-cols-5 gap-0.5 w-20 sm:w-24 mx-auto">
-            {Array.from({ length: 25 }).map((_, idx) => (
-              <div
-                key={`current-${idx}`}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm transition-all duration-300
-                  ${getCellBg(idx)}
-                  ${idx === currentPosition
-                    ? 'ring-2 ring-white shadow-lg scale-125 z-10'
-                    : 'opacity-30'
-                  }`}
-              />
-            ))}
-          </div>
-          <p className={`text-xs font-bold mt-2 ${currentLevel.color}`}>
-            #{currentRank} {currentLevel.level}
-          </p>
-        </div>
-
-        {/* Arrow */}
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-xl sm:text-2xl text-surface-300">→</span>
-        </div>
-
-        {/* Projected Position Mini Matrix */}
-        <div className="text-center">
-          <p className="text-[10px] font-medium text-surface-500 mb-2 uppercase tracking-wider">Projected</p>
-          <div className="grid grid-cols-5 gap-0.5 w-20 sm:w-24 mx-auto">
-            {Array.from({ length: 25 }).map((_, idx) => (
-              <div
-                key={`projected-${idx}`}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm transition-all duration-300
-                  ${getCellBg(idx)}
-                  ${hasChange && idx === projectedPosition
-                    ? 'ring-2 ring-white shadow-lg scale-125 z-10 animate-pulse'
-                    : hasChange
-                      ? 'opacity-30'
-                      : idx === currentPosition
-                        ? 'ring-2 ring-white shadow-lg scale-125 z-10'
-                        : 'opacity-30'
-                  }`}
-              />
-            ))}
-          </div>
-          <p className={`text-xs font-bold mt-2 ${hasChange ? projectedLevel.color : 'text-surface-400'}`}>
-            {hasChange ? `#${projectedRank} ${projectedLevel.level}` : '—'}
-          </p>
-        </div>
-      </div>
-
-      {/* Summary */}
-      {hasChange && (
-        <div className={`text-center mt-4 p-2 rounded-lg ${improvement > 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-          <span className={`text-sm font-semibold ${improvement > 0 ? 'text-green-700' : 'text-red-700'}`}>
-            {improvement > 0 ? '▼' : '▲'}{Math.abs(improvement)} position{Math.abs(improvement) > 1 ? 's' : ''} {improvement > 0 ? 'improvement' : 'worsening'}
-          </span>
-          {currentLevel.level !== projectedLevel.level && (
-            <p className="text-xs text-surface-500 mt-1">
-              {currentLevel.level} → {projectedLevel.level}
-            </p>
-          )}
-        </div>
-      )}
-
-      {!hasChange && (
-        <div className="text-center mt-4 p-2 bg-surface-100 rounded-lg">
-          <span className="text-sm text-surface-500">Adjust sliders to see projected impact</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 const ICON_MAP = { Settings, Shield, User, CheckCircle, HardHat }
 
-const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns, currentRank, allHazards }) => {
+const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns }) => {
   const [sliders, setSliders] = useState({})
   const [actionsToClose, setActionsToClose] = useState(0)
   const [activeQuickAction, setActiveQuickAction] = useState(null)
@@ -579,18 +242,6 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
       isCapped: engineResult.isCapped,
     }
   }, [sliders, actionsToClose, prevalence, openActionsCount, hazardIncidents])
-
-  // Calculate projected rank based on intervention impact
-  const projectedRank = useMemo(() => {
-    if (projection.impactScore === 0 || !allHazards?.length || !currentHazard) return currentRank
-    const currentScore = currentHazard.riskScore || 50
-    const projectedScore = currentScore * (1 - projection.impactScore / 100)
-    let newRank = 1
-    for (const h of allHazards) {
-      if (h.name !== currentHazard.name && (h.riskScore || 0) > projectedScore) newRank++
-    }
-    return Math.min(newRank, 25)
-  }, [projection.impactScore, allHazards, currentHazard, currentRank])
 
   const applyQuickAction = useCallback((presetId) => {
     if (activeQuickAction === presetId) {
@@ -720,12 +371,6 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
         confidence={confidence.pct}
       />
 
-      {/* Mini Matrix Comparison */}
-      <MiniMatrixComparison
-        currentRank={currentRank}
-        projectedRank={projectedRank}
-        impactScore={projection.impactScore}
-      />
     </div>
   )
 }
@@ -1241,8 +886,6 @@ const HazardDetailModal = ({
   factorData,
   siteClassifications,
   cellColor,
-  currentRank,
-  allHazards
 }) => {
   const modalRef = useRef(null)
   const previousActiveElement = useRef(null)
@@ -1308,8 +951,6 @@ const HazardDetailModal = ({
                 hazardIncidents={hazardIncidents}
                 factorData={factorData}
                 dayPatterns={dayPatterns}
-                currentRank={currentRank}
-                allHazards={allHazards}
               />
             </div>
           </div>
@@ -1523,29 +1164,6 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
   )
 }
 
-/**
- * ViewToggle - Switch between Risk Matrix and Risk Ranking
- */
-const ViewToggle = ({ view, onChange }) => (
-  <div className="flex items-center bg-surface-100 rounded-lg p-0.5">
-    <button
-      onClick={() => onChange('matrix')}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
-        ${view === 'matrix' ? 'bg-white text-surface-800 shadow-sm' : 'text-surface-500 hover:text-surface-700'}`}
-    >
-      <Grid3x3 size={14} />
-      Risk Matrix
-    </button>
-    <button
-      onClick={() => onChange('ranking')}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
-        ${view === 'ranking' ? 'bg-white text-surface-800 shadow-sm' : 'text-surface-500 hover:text-surface-700'}`}
-    >
-      <BarChart3 size={14} />
-      Risk Ranking
-    </button>
-  </div>
-)
 
 // ============================================================================
 // MAIN COMPONENT
@@ -1561,80 +1179,21 @@ const HazardRiskMatrix = ({
 }) => {
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedCellColor, setSelectedCellColor] = useState(null)
-  const [selectedRank, setSelectedRank] = useState(1)
-  const [viewMode, setViewMode] = useState('matrix') // 'matrix' | 'ranking'
 
   // True Risk Matrix data (L x C placement)
   const matrixData = useMemo(() => {
     return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
   }, [filteredIncidents, sortedHazards])
 
-  const rankedHazards = useMemo(() => {
-    if (!sortedHazards?.length) return []
-
-    // Step 1: Group incidents by hazard and calculate severity-weighted counts
-    const hazardIncidentMap = new Map()
-    if (negativeIncidents?.length) {
-      negativeIncidents.forEach(incident => {
-        const hazardName = incident.location
-        if (!hazardName) return
-        if (!hazardIncidentMap.has(hazardName)) {
-          hazardIncidentMap.set(hazardName, [])
-        }
-        hazardIncidentMap.get(hazardName).push(incident)
-      })
-    }
-
-    // Step 2: Enrich hazards with severity-weighted counts
-    const enrichedHazards = sortedHazards
-      .filter(h => !h.hasNoData && h.totalCount > 0)
-      .map(h => {
-        const incidents = hazardIncidentMap.get(h.name) || []
-        const severityWeightedCount = calculateSeverityWeightedCount(incidents)
-        return { ...h, severityWeightedCount, incidents }
-      })
-
-    // Step 3: Calculate max values for normalization
-    const maxWeightedCount = Math.max(...enrichedHazards.map(h => h.severityWeightedCount || 0), 1)
-    const maxRawCount = Math.max(...enrichedHazards.map(h => h.totalCount || 0), 1)
-
-    // Step 4: Calculate risk scores and rank
-    return enrichedHazards
-      .map(h => ({ ...h, riskScore: calculateRiskScore(h, maxWeightedCount, maxRawCount) }))
-      .sort((a, b) => b.riskScore - a.riskScore)
-      .slice(0, 25)
-  }, [sortedHazards, negativeIncidents])
-
-  const grid = useMemo(() => {
-    const rows = []
-    for (let r = 0; r < 5; r++) {
-      const row = []
-      for (let c = 0; c < 5; c++) row.push(rankedHazards[r * 5 + c] || null)
-      rows.push(row)
-    }
-    return rows
-  }, [rankedHazards])
-
-  const handleCellClick = useCallback((hazard, row, col) => {
-    setSelectedHazard(hazard)
-    setSelectedCellColor(getCellColor(row, col))
-    // Store the rank (position in rankedHazards + 1)
-    const rank = rankedHazards.findIndex(h => h.name === hazard.name) + 1
-    setSelectedRank(rank)
-  }, [rankedHazards])
-
   // Handle clicks from the true risk matrix view
   const handleMatrixHazardClick = useCallback((hazard) => {
     setSelectedHazard(hazard)
     setSelectedCellColor(hazard.zone || null)
-    const rank = rankedHazards.findIndex(h => h.name === hazard.name) + 1
-    setSelectedRank(rank || 1)
-  }, [rankedHazards])
+  }, [])
 
   const handleCloseModal = useCallback(() => {
     setSelectedHazard(null)
     setSelectedCellColor(null)
-    setSelectedRank(1)
   }, [])
 
   const hazardIncidents = useMemo(() => {
@@ -1660,9 +1219,8 @@ const HazardRiskMatrix = ({
   const hourPatterns = useMemo(() => hazardIncidents.length ? getHourlyPatterns(hazardIncidents) : null, [hazardIncidents])
 
   const hasMatrixData = matrixData?.hazards?.length > 0
-  const hasRankingData = rankedHazards.length > 0
 
-  if (!hasMatrixData && !hasRankingData) {
+  if (!hasMatrixData) {
     return (
       <div className="bg-white rounded-xl border border-surface-200 p-10 text-center">
         <div className="w-16 h-16 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-4">
@@ -1682,48 +1240,17 @@ const HazardRiskMatrix = ({
         <div>
           <h2 className="text-lg font-bold text-surface-800">Hazard Risk Matrix</h2>
           <p className="text-xs text-surface-500 mt-0.5">
-            {viewMode === 'matrix'
-              ? 'Hazards plotted by Likelihood × Impact. Score = L × C. Click any hazard for detailed analysis.'
-              : 'Top 25 hazards ranked by risk score. Click any cell for detailed analysis.'}
+            Hazards plotted by Likelihood × Impact. Score = L × C. Click any hazard for detailed analysis.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <ViewToggle view={viewMode} onChange={setViewMode} />
-          {viewMode === 'matrix' ? <RiskMatrixLegend /> : <Legend />}
-        </div>
+        <RiskMatrixLegend />
       </div>
 
-      {/* True Risk Matrix View */}
-      {viewMode === 'matrix' && (
-        <RiskMatrixView
-          matrixData={matrixData}
-          allIncidents={filteredIncidents}
-          onHazardClick={handleMatrixHazardClick}
-        />
-      )}
-
-      {/* Legacy Risk Ranking View */}
-      {viewMode === 'ranking' && (
-        <div className="bg-white rounded-xl border border-surface-200 p-3 sm:p-4">
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-            {grid.map((row, rowIdx) =>
-              row.map((hazard, colIdx) => {
-                const rank = rowIdx * 5 + colIdx + 1
-                return (
-                  <MatrixCell
-                    key={hazard?.name || `empty-${rowIdx}-${colIdx}`}
-                    hazard={hazard}
-                    row={rowIdx}
-                    col={colIdx}
-                    rank={rank}
-                    onClick={handleCellClick}
-                  />
-                )
-              })
-            )}
-          </div>
-        </div>
-      )}
+      <RiskMatrixView
+        matrixData={matrixData}
+        allIncidents={filteredIncidents}
+        onHazardClick={handleMatrixHazardClick}
+      />
 
       <HazardDetailModal
         isOpen={!!selectedHazard}
@@ -1736,8 +1263,6 @@ const HazardRiskMatrix = ({
         factorData={factorData}
         siteClassifications={siteClassifications}
         cellColor={selectedCellColor}
-        currentRank={selectedRank}
-        allHazards={rankedHazards}
       />
     </div>
   )
