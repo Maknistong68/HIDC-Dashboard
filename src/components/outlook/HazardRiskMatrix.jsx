@@ -1329,23 +1329,23 @@ const RiskMatrixLegend = () => (
     <div className="flex items-center gap-2 sm:gap-3">
       <span className="text-[10px] text-surface-400 uppercase tracking-wider">Risk:</span>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(0, 72%, 85%)', border: '2px solid hsl(0, 55%, 55%)' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fee2e2', border: '2px solid #f87171' }} />
         <span className="font-medium text-red-700">V.High <span className="text-[10px] text-surface-400">(20-25)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(35, 72%, 85%)', border: '1px solid hsl(35, 55%, 55%)' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ffedd5', border: '1px solid #fb923c' }} />
         <span className="font-medium text-amber-700">High <span className="text-[10px] text-surface-400">(15-19)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(70, 72%, 85%)', border: '1px solid hsl(70, 55%, 55%)' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fef9c3', border: '1px solid #facc15' }} />
         <span className="font-medium text-yellow-700">Medium <span className="text-[10px] text-surface-400">(8-14)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(95, 72%, 85%)', border: '1px solid hsl(95, 55%, 55%)' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#dcfce7', border: '1px solid #4ade80' }} />
         <span className="font-medium text-emerald-700">Low <span className="text-[10px] text-surface-400">(4-7)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(120, 72%, 85%)', border: '1px solid hsl(120, 55%, 55%)' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#d1fae5', border: '1px solid #34d399' }} />
         <span className="font-medium text-green-700">V.Low <span className="text-[10px] text-surface-400">(1-3)</span></span>
       </div>
     </div>

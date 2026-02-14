@@ -147,17 +147,16 @@ export const getCellRiskColor = (likelihood, consequence) => {
 }
 
 /**
- * Get inline HSL gradient color for a score (1-25).
- * Maps score to a smooth red↔green gradient for cell backgrounds.
+ * Get solid color for a score (1-25) based on its risk level.
+ * Each of the 5 levels gets a distinct, recognizable color.
  */
 export const getScoreColor = (score) => {
   const s = Math.max(1, Math.min(25, score))
-  const hue = 120 * (25 - s) / 24 // 120° (green) → 0° (red)
-  return {
-    backgroundColor: `hsl(${hue}, 72%, 85%)`,
-    color: `hsl(${hue}, 80%, 22%)`,
-    borderColor: `hsl(${hue}, 55%, 55%)`,
-  }
+  if (s >= 20) return { backgroundColor: '#fee2e2', color: '#991b1b', borderColor: '#f87171' } // Very High – red
+  if (s >= 15) return { backgroundColor: '#ffedd5', color: '#9a3412', borderColor: '#fb923c' } // High – orange
+  if (s >= 8) return { backgroundColor: '#fef9c3', color: '#854d0e', borderColor: '#facc15' } // Medium – yellow
+  if (s >= 4) return { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#4ade80' } // Low – green
+  return { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#34d399' } // Very Low – emerald
 }
 
 /**
