@@ -414,10 +414,10 @@ export const CLASSIFICATION_MAPPING = {
   'Safety Walk': { type: 'incident', incidentType: 'leadership' },
   'Safety Tour': { type: 'incident', incidentType: 'leadership' },
 
-  // Environment classification - maps to consolidated environmental type
-  'Environment': { type: 'incident', incidentType: 'environmental' },
-  'environment': { type: 'incident', incidentType: 'environmental' },
-  'ENVIRONMENT': { type: 'incident', incidentType: 'environmental' },
+  // Environment classification - defaults to env-minor (safe default, refined by Consequence column)
+  'Environment': { type: 'incident', incidentType: 'env-minor' },
+  'environment': { type: 'incident', incidentType: 'env-minor' },
+  'ENVIRONMENT': { type: 'incident', incidentType: 'env-minor' },
 
   // Emergency Drill - proactive safety engagement
   'Emergency Drill': { type: 'incident', incidentType: 'emergency-drill' },
@@ -449,26 +449,26 @@ export const CONSEQUENCE_TYPE_MAPPING = {
   'first aid': 'fac',
   'First Aid Case': 'fac',
 
-  // ENV: Environmental consequences → consolidated 'environmental'
-  'Major/Severe - P1': 'environmental',
-  'Major - P1': 'environmental',
-  'Severe - P1': 'environmental',
-  'Major/Severe': 'environmental',
-  'Moderate - P2': 'environmental',
-  'Moderate': 'environmental',
-  'Minor - P3': 'environmental',
-  'Minor': 'environmental',
+  // ENV: Environmental consequences → granular sub-types
+  'Major/Severe - P1': 'env-major',
+  'Major - P1': 'env-major',
+  'Severe - P1': 'env-major',
+  'Major/Severe': 'env-major',
+  'Moderate - P2': 'env-moderate',
+  'Moderate': 'env-moderate',
+  'Minor - P3': 'env-minor',
+  'Minor': 'env-minor',
 
-  // DMG: Property Damage consequences → consolidated 'damage-to-property'
-  'Light Vehicle / Motor Vehicle Incidents': 'damage-to-property',
-  'Light Vehicle': 'damage-to-property',
-  'Motor Vehicle': 'damage-to-property',
-  'Motor Vehicle Incidents': 'damage-to-property',
-  'Heavy Plant (excl Truck and Trailer)': 'damage-to-property',
-  'Heavy Plant': 'damage-to-property',
-  'Truck and Trailer': 'damage-to-property',
-  'Truck & Trailer': 'damage-to-property',
-  'Static Equipment': 'damage-to-property',
+  // DMG: Property Damage consequences → granular sub-types
+  'Light Vehicle / Motor Vehicle Incidents': 'dmg-light-vehicle',
+  'Light Vehicle': 'dmg-light-vehicle',
+  'Motor Vehicle': 'dmg-light-vehicle',
+  'Motor Vehicle Incidents': 'dmg-light-vehicle',
+  'Heavy Plant (excl Truck and Trailer)': 'dmg-heavy-plant',
+  'Heavy Plant': 'dmg-heavy-plant',
+  'Truck and Trailer': 'dmg-truck-trailer',
+  'Truck & Trailer': 'dmg-truck-trailer',
+  'Static Equipment': 'dmg-static-equipment',
 }
 
 /**
@@ -492,17 +492,13 @@ const findConsequenceMapping = (value) => {
   return substringKey ? CONSEQUENCE_TYPE_MAPPING[substringKey] : null
 }
 
-// Legacy type mapping - maps old generic types to new consequence-based types
-const LEGACY_TYPE_MAP = {
-  'property-damage': 'damage-to-property',
-  'env-major': 'environmental',
-  'env-moderate': 'environmental',
-  'env-minor': 'environmental',
-  'dmg-light-vehicle': 'damage-to-property',
-  'dmg-heavy-plant': 'damage-to-property',
-  'dmg-truck-trailer': 'damage-to-property',
-  'dmg-static-equipment': 'damage-to-property',
-}
+// Types that should NOT be overridden by Consequence column mapping
+// These are specific classifications that take precedence over consequence data
+const CONSEQUENCE_PROTECTED_TYPES = new Set([
+  'security', 'fire',
+  'near-miss', 'ncr', 'unsafe-act', 'unsafe-condition',
+  'positive', 'leadership', 'emergency-drill'
+])
 
 // ============================================
 // INCIDENT TYPE RECLASSIFICATION PATTERNS
@@ -510,7 +506,7 @@ const LEGACY_TYPE_MAP = {
 // ============================================
 
 export const INCIDENT_RECLASSIFY_PATTERNS = {
-  'environmental': {
+  'env-minor': {
     keywords: [
       // Core environmental keywords
       'spill', 'spillage', 'chemical spill', 'sewage', 'contamination',
@@ -526,7 +522,7 @@ export const INCIDENT_RECLASSIFY_PATTERNS = {
       'wastewater', 'overflowed', 'ground contamination',
       'soil contaminated', 'environmental impact'
     ],
-    priority: 1  // HIGHEST - most specific category
+    priority: 1  // HIGHEST - most specific category (defaults to env-minor, refined by Consequence column)
   },
   'security': {
     keywords: [
@@ -546,7 +542,7 @@ export const INCIDENT_RECLASSIFY_PATTERNS = {
     ],
     priority: 2  // MEDIUM - specific category
   },
-  'property-damage': {
+  'dmg-light-vehicle': {
     keywords: [
       'property damage', 'vehicle collision', 'collided', 'collision',
       'overturned', 'overturn', 'tipped over', 'crashed', 'crash',
@@ -557,7 +553,7 @@ export const INCIDENT_RECLASSIFY_PATTERNS = {
       'scraped', 'punctured tire', 'flat tire', 'vehicle damage',
       'machinery damage', 'tool damage', 'asset damage'
     ],
-    priority: 3  // LOWEST - generic fallback
+    priority: 3  // LOWEST - generic fallback (defaults to dmg-light-vehicle)
   }
 }
 
@@ -903,8 +899,8 @@ export const reclassifyIncidentType = (description, currentType) => {
     .sort((a, b) => a[1].priority - b[1].priority)
 
   for (const [newType, config] of sortedPatterns) {
-    // For property-damage, check if damage is explicitly negated
-    if (newType === 'property-damage') {
+    // For property-damage types, check if damage is explicitly negated
+    if (newType === 'dmg-light-vehicle') {
       if (hasPropertyDamageNegation(text)) {
         continue // Skip property-damage if negated (e.g., "no property damage")
       }
@@ -2397,17 +2393,13 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     // CONSEQUENCE-BASED REFINEMENT
     // If Consequence column is populated, use it to determine specific sub-type
     // This overrides generic injury/damage types with granular consequence types
+    // Protected types (security, fire, observation types) are NOT overridden
     // ============================================
-    if (rawConsequence) {
+    if (rawConsequence && !CONSEQUENCE_PROTECTED_TYPES.has(mapping.incidentType)) {
       const consequenceType = findConsequenceMapping(rawConsequence)
       if (consequenceType) {
         mapping = { ...mapping, incidentType: consequenceType, consequenceMapped: true }
       }
-    }
-
-    // Legacy type mapping: convert old generic types to new consequence-based types
-    if (LEGACY_TYPE_MAP[mapping.incidentType]) {
-      mapping = { ...mapping, incidentType: LEGACY_TYPE_MAP[mapping.incidentType] }
     }
 
     incidents.push({
