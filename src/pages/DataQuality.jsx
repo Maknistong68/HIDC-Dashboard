@@ -124,6 +124,12 @@ const DataQuality = () => {
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
 
+  // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
+  const activeFilters = useMemo(
+    () => ({ ...filters, period, customDateRange }),
+    [filters, period, customDateRange]
+  )
+
   // Handle period change
   const handlePeriodChange = useCallback((newPeriod) => {
     setPeriod(newPeriod)
@@ -155,7 +161,8 @@ const DataQuality = () => {
   )
 
   // Group 1: Core quality score metrics (depends on misclassification data)
-  const coreQualityMetrics = useMemo(() => {
+  // useDeferredMemo so hidden tabs skip this O(n) computation
+  const coreQualityMetrics = useDeferredMemo(() => {
     if (filteredIncidents.length === 0) return null
     return {
       quality: calculateQualityScore(filteredIncidents, misclassificationData),
@@ -654,7 +661,7 @@ const DataQuality = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={{ ...filters, period, customDateRange }}
+              activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
             />

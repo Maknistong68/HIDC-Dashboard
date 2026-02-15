@@ -126,6 +126,12 @@ const SafetyOutlook = () => {
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
 
+  // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
+  const activeFilters = useMemo(
+    () => ({ ...filters, period, customDateRange }),
+    [filters, period, customDateRange]
+  )
+
   // Local state
   const [activeMainTab, setActiveMainTab] = useState('correlations')
   const [activeSubTab, setActiveSubTab] = useState('hazards') // 'hazards' or 'factors'
@@ -221,7 +227,7 @@ const SafetyOutlook = () => {
   }, [negativeIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
-  const detectedIncidentsCount = useMemo(() => {
+  const detectedIncidentsCount = useDeferredMemo(() => {
     const incidentSet = new Set()
     factorData.byFactor.forEach(f => {
       // Exclude Unclassified from detected count - those are observations WITHOUT factors
@@ -350,7 +356,7 @@ const SafetyOutlook = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={{ ...filters, period, customDateRange }}
+              activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
             />
@@ -376,7 +382,7 @@ const SafetyOutlook = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={{ ...filters, period, customDateRange }}
+              activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
             />
@@ -401,7 +407,7 @@ const SafetyOutlook = () => {
         <div className="flex-1">
           <FilterBar
             filters={filterConfig}
-            activeFilters={{ ...filters, period, customDateRange }}
+            activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
           />

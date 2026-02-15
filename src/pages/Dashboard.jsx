@@ -29,10 +29,6 @@ import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
 import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS, NEGATIVE_OBSERVATION_TYPES, PROACTIVE_TYPES, INCIDENT_CATEGORY_TYPES } from '../utils/constants'
-import {
-  getIncidentCountsByType,
-  getOpenActionsCount,
-} from '../utils/calculations'
 import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
@@ -97,6 +93,12 @@ const Dashboard = () => {
   const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
   const heatmapIncidents = useDeferredValue(_hi)
+
+  // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
+  const activeFilters = useMemo(
+    () => ({ ...filters, period, customDateRange }),
+    [filters, period, customDateRange]
+  )
 
   // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({
@@ -308,165 +310,139 @@ const Dashboard = () => {
     })
   }, [heatmapDrillDown, heatmapIncidents])
 
-  const incidentCounts = useMemo(
-    () => getIncidentCountsByType(filteredIncidents),
-    [filteredIncidents]
-  )
+  // ── Single-pass KPI + chart aggregation ──────────────────────────────
+  // Replaces 8 separate O(n) useMemos with ONE pass through filteredIncidents.
+  // Hidden tabs skip this entirely thanks to useDeferredMemo.
+  const NEGATIVE_SET = new Set(NEGATIVE_OBSERVATION_TYPES)
+  const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
+  const INCIDENT_CAT_SET = new Set(INCIDENT_CATEGORY_TYPES)
 
-  // Pyramid data with open/closed breakdown - aggregates ENV/DMG sub-types into consolidated rows
-  const pyramidData = useDeferredMemo(() => {
-    const result = {}
+  const SUB_TYPE_TO_PYRAMID = {
+    'env-major': 'environmental',
+    'env-moderate': 'environmental',
+    'env-minor': 'environmental',
+    'dmg-light-vehicle': 'damage-to-property',
+    'dmg-heavy-plant': 'damage-to-property',
+    'dmg-truck-trailer': 'damage-to-property',
+    'dmg-static-equipment': 'damage-to-property',
+    'property-damage': 'damage-to-property',
+  }
 
-    // Sub-type to consolidated pyramid key mapping
-    const SUB_TYPE_TO_PYRAMID = {
-      'env-major': 'environmental',
-      'env-moderate': 'environmental',
-      'env-minor': 'environmental',
-      'dmg-light-vehicle': 'damage-to-property',
-      'dmg-heavy-plant': 'damage-to-property',
-      'dmg-truck-trailer': 'damage-to-property',
-      'dmg-static-equipment': 'damage-to-property',
-      'property-damage': 'damage-to-property',
+  const dashboardAggregates = useDeferredMemo(() => {
+    const total = filteredIncidents.length
+
+    // KPI accumulators
+    let closedCount = 0
+    let positiveTotal = 0
+    let overdueCount = 0
+    let negativeCount = 0
+    let proactiveCount = 0
+    let incidentCatCount = 0
+
+    // Approval accumulators
+    const approval = { closed: 0, contractorReview: 0, review: 0, contractorInvestigation: 0 }
+
+    // Pyramid accumulators
+    const pyramid = {}
+    PYRAMID_SECTIONS.forEach(section => {
+      section.types.forEach(t => { pyramid[t.key] = { open: 0, closed: 0 } })
+    })
+
+    // Incident counts by type (for getIncidentCountsByType replacement)
+    const typeCounts = {}
+    PYRAMID_SECTIONS.forEach(section => {
+      section.types.forEach(t => { typeCounts[t.key] = 0 })
+    })
+    typeCounts['incident'] = 0
+
+    // Observer + company accumulators
+    const observerMap = {}
+    const companyMap = {}
+
+    const overdue30 = cutoffDates.overdue30Days
+
+    for (let idx = 0; idx < total; idx++) {
+      const i = filteredIncidents[idx]
+      const isClosed = i.actionStatus === 'closed'
+      const type = i.type
+
+      // KPI: closed count
+      if (isClosed) closedCount++
+
+      // KPI: positive count
+      if (type === 'positive') positiveTotal++
+
+      // KPI: overdue > 30 days
+      if (!isClosed && i.date && i.date < overdue30) overdueCount++
+
+      // Pie chart: observation breakdown
+      if (NEGATIVE_SET.has(type)) negativeCount++
+      if (PROACTIVE_SET.has(type)) proactiveCount++
+      if (INCIDENT_CAT_SET.has(type)) incidentCatCount++
+
+      // Approval counts
+      const approvalVal = i.approvalStatus?.toLowerCase()?.trim() || ''
+      if (approvalVal === 'closed') approval.closed++
+      else if (approvalVal === 'contractor review') approval.contractorReview++
+      else if (approvalVal === 'review') approval.review++
+      else if (approvalVal === 'contractor investigation') approval.contractorInvestigation++
+
+      // Pyramid
+      const pyramidKey = SUB_TYPE_TO_PYRAMID[type] || type
+      if (pyramid[pyramidKey]) {
+        if (isClosed) pyramid[pyramidKey].closed++
+        else pyramid[pyramidKey].open++
+      }
+
+      // Incident counts by type (same logic as getIncidentCountsByType)
+      const typeCountKey = SUB_TYPE_TO_PYRAMID[type] || type
+      if (typeCounts[typeCountKey] !== undefined) typeCounts[typeCountKey]++
+      if (RECORDABLE_INCIDENT_TYPES.includes(type)) typeCounts['incident']++
+
+      // Observers
+      const reporter = i.reportedBy || 'Unknown'
+      if (!observerMap[reporter]) observerMap[reporter] = { open: 0, closed: 0 }
+      if (isClosed) observerMap[reporter].closed++
+      else observerMap[reporter].open++
+
+      // Companies
+      const company = i.contractor || 'Unknown'
+      if (!companyMap[company]) companyMap[company] = { name: company, open: 0, closed: 0, total: 0 }
+      companyMap[company].total++
+      if (isClosed) companyMap[company].closed++
+      else companyMap[company].open++
     }
 
-    // Initialize all pyramid types
-    PYRAMID_SECTIONS.forEach(section => {
-      section.types.forEach(t => {
-        result[t.key] = { open: 0, closed: 0 }
-      })
-    })
-
-    filteredIncidents.forEach(incident => {
-      const typeKey = SUB_TYPE_TO_PYRAMID[incident.type] || incident.type
-      if (result[typeKey]) {
-        if (incident.actionStatus === 'closed') {
-          result[typeKey].closed++
-        } else {
-          result[typeKey].open++
-        }
-      }
-    })
-
-    return result
-  }, [filteredIncidents])
-
-  // Close out percentage
-  const closeOutPercentage = useMemo(() => {
-    if (filteredIncidents.length === 0) return 0
-    const closed = filteredIncidents.filter(i => i.actionStatus === 'closed').length
-    return Math.round((closed / filteredIncidents.length) * 100)
-  }, [filteredIncidents])
-
-  // Open more than 1 month (30 days) - uses centralized cutoff date
-  const openMoreThanMonth = useMemo(() => {
-    return filteredIncidents.filter(i =>
-      i.actionStatus !== 'closed' &&
-      i.date &&
-      i.date < cutoffDates.overdue30Days
-    ).length
+    return {
+      incidentCounts: typeCounts,
+      pyramidData: pyramid,
+      closeOutPercentage: total === 0 ? 0 : Math.round((closedCount / total) * 100),
+      closedCount,
+      openMoreThanMonth: overdueCount,
+      positivePercentage: total === 0 ? 0 : Math.round((positiveTotal / total) * 100),
+      positiveCount: positiveTotal,
+      approvalCounts: approval,
+      observersData: Object.entries(observerMap)
+        .map(([name, data]) => ({ name, open: data.open, closed: data.closed, total: data.open + data.closed }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10),
+      companyData: Object.values(companyMap)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10),
+      positiveNegativeData: [
+        { name: 'Negative', value: negativeCount, color: '#ef4444' },
+        { name: 'Positive', value: proactiveCount, color: '#22c55e' },
+        { name: 'Incidents', value: incidentCatCount, color: '#f59e0b' }
+      ],
+    }
   }, [filteredIncidents, cutoffDates.overdue30Days])
 
-  // Positive observation percentage
-  const positivePercentage = useMemo(() => {
-    if (filteredIncidents.length === 0) return 0
-    const positiveCount = filteredIncidents.filter(i => i.type === 'positive').length
-    return Math.round((positiveCount / filteredIncidents.length) * 100)
-  }, [filteredIncidents])
-
-  const positiveCount = useMemo(() => {
-    return filteredIncidents.filter(i => i.type === 'positive').length
-  }, [filteredIncidents])
-
-  // Approval status counts (from original approval column)
-  const approvalCounts = useDeferredMemo(() => {
-    const counts = {
-      closed: 0,
-      contractorReview: 0,
-      review: 0,
-      contractorInvestigation: 0,
-    }
-
-    filteredIncidents.forEach(incident => {
-      const approval = incident.approvalStatus?.toLowerCase()?.trim() || ''
-      if (approval === 'closed') {
-        counts.closed++
-      } else if (approval === 'contractor review') {
-        counts.contractorReview++
-      } else if (approval === 'review') {
-        counts.review++
-      } else if (approval === 'contractor investigation') {
-        counts.contractorInvestigation++
-      }
-    })
-
-    return counts
-  }, [filteredIncidents])
-
-  // Observers data with open/closed breakdown
-  const observersData = useDeferredMemo(() => {
-    const counts = {}
-    filteredIncidents.forEach(incident => {
-      const reporter = incident.reportedBy || 'Unknown'
-      if (!counts[reporter]) {
-        counts[reporter] = { open: 0, closed: 0 }
-      }
-      if (incident.actionStatus === 'closed') {
-        counts[reporter].closed++
-      } else {
-        counts[reporter].open++
-      }
-    })
-    return Object.entries(counts)
-      .map(([name, data]) => ({
-        name,
-        open: data.open,
-        closed: data.closed,
-        total: data.open + data.closed
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10)
-  }, [filteredIncidents])
-
-  // Company data with open/closed breakdown (by contractor field)
-  const companyData = useDeferredMemo(() => {
-    const companyMap = {}
-    filteredIncidents.forEach(incident => {
-      const company = incident.contractor || 'Unknown'
-      if (!companyMap[company]) {
-        companyMap[company] = { name: company, open: 0, closed: 0, total: 0 }
-      }
-      companyMap[company].total++
-      if (incident.actionStatus === 'closed') {
-        companyMap[company].closed++
-      } else {
-        companyMap[company].open++
-      }
-    })
-    return Object.values(companyMap)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10)
-  }, [filteredIncidents])
-
-  // Observation breakdown: Negative / Positive / Incidents pie chart
-  const positiveNegativeData = useDeferredMemo(() => {
-    const negative = filteredIncidents.filter(i =>
-      NEGATIVE_OBSERVATION_TYPES.includes(i.type)
-    ).length
-
-    const positive = filteredIncidents.filter(i =>
-      PROACTIVE_TYPES.includes(i.type)
-    ).length
-
-    const incidentCount = filteredIncidents.filter(i =>
-      INCIDENT_CATEGORY_TYPES.includes(i.type)
-    ).length
-
-    return [
-      { name: 'Negative', value: negative, color: '#ef4444' },
-      { name: 'Positive', value: positive, color: '#22c55e' },
-      { name: 'Incidents', value: incidentCount, color: '#f59e0b' }
-    ]
-  }, [filteredIncidents])
+  // Destructure for easy access (stable refs while tab is hidden)
+  const {
+    incidentCounts, pyramidData, closeOutPercentage, closedCount,
+    openMoreThanMonth, positivePercentage, positiveCount,
+    approvalCounts, observersData, companyData, positiveNegativeData,
+  } = dashboardAggregates
 
   // Hazard Classification: Primary vs Other (excludes proactive types)
   const hazardClassificationData = useDeferredMemo(() => {
@@ -735,7 +711,7 @@ const Dashboard = () => {
         <div className="flex-1">
           <FilterBar
             filters={filterConfig}
-            activeFilters={{ ...filters, period, customDateRange }}
+            activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onClearFilters={clearFilters}
           />
@@ -766,7 +742,7 @@ const Dashboard = () => {
         <KPICard
           title="Close Out Rate"
           value={`${closeOutPercentage}%`}
-          subtitle={`${filteredIncidents.filter(i => i.actionStatus === 'closed').length} of ${filteredIncidents.length} closed`}
+          subtitle={`${closedCount} of ${filteredIncidents.length} closed`}
           icon={CheckCircle}
           color={closeOutPercentage >= 80 ? 'success' : closeOutPercentage >= 50 ? 'warning' : 'danger'}
           info="HOW THIS IS CALCULATED: We look at the 'Action Status' field in your data. If an observation is marked as 'Closed', it means someone has addressed the issue and completed any required actions. This percentage shows how many observations have been fully resolved compared to the total. GREEN (80%+): Excellent - your team is closing out issues quickly. YELLOW (50-79%): Needs attention - some issues are lingering. RED (below 50%): Urgent - too many open items need action."
