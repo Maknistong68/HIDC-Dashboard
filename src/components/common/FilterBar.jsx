@@ -1,16 +1,35 @@
-import React, { useState, useRef, useEffect, useTransition, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Filter, X, ChevronDown, ChevronUp, Check, Search } from 'lucide-react'
 import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
 
 /**
  * MultiSelectDropdown - Dropdown with checkboxes for multi-selection (inclusion mode)
+ * Uses optimistic local state so checkbox toggles are instant, with debounced onChange to FilterContext.
  */
 const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [, startTransition] = useTransition()
   const dropdownRef = useRef(null)
   const searchRef = useRef(null)
+
+  // Optimistic local state — drives all visual rendering
+  const [localValue, setLocalValue] = useState(value)
+  const debounceRef = useRef(null)
+  const lastEmittedRef = useRef(value)
+
+  // Sync localValue when value prop changes externally (Clear All, cascade resets)
+  useEffect(() => {
+    // Compare by reference first (fast path), then by content
+    if (lastEmittedRef.current !== value) {
+      setLocalValue(value)
+    }
+    lastEmittedRef.current = value
+  }, [value])
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current)
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,36 +56,49 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
     return filter.options.filter(o => o.label.toLowerCase().includes(term))
   }, [filter.options, searchTerm])
 
-  // Use startTransition for non-blocking updates
+  // Instant local toggle + debounced context update
   const toggleOption = useCallback((optionValue) => {
-    startTransition(() => {
-      const newValue = value.includes(optionValue)
-        ? value.filter(v => v !== optionValue)
-        : [...value, optionValue]
-      onChange(filter.key, newValue)
-    })
-  }, [value, onChange, filter.key])
-
-  const clearSelection = useCallback((e) => {
-    e.stopPropagation()
-    startTransition(() => {
-      onChange(filter.key, [])
+    setLocalValue(prev => {
+      const next = prev.includes(optionValue)
+        ? prev.filter(v => v !== optionValue)
+        : [...prev, optionValue]
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        lastEmittedRef.current = next
+        onChange(filter.key, next)
+      }, 150)
+      return next
     })
   }, [onChange, filter.key])
 
+  // Clear: instant local + immediate context update (no debounce)
+  const clearSelection = useCallback((e) => {
+    e.stopPropagation()
+    clearTimeout(debounceRef.current)
+    const next = []
+    setLocalValue(next)
+    lastEmittedRef.current = next
+    onChange(filter.key, next)
+  }, [onChange, filter.key])
+
+  // Select All: instant local + debounced context update
   const selectAll = useCallback(() => {
-    startTransition(() => {
-      onChange(filter.key, filteredOptions.map(o => o.value))
-    })
+    const next = filteredOptions.map(o => o.value)
+    setLocalValue(next)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      lastEmittedRef.current = next
+      onChange(filter.key, next)
+    }, 150)
   }, [onChange, filter.key, filteredOptions])
 
-  // Intersect value with available options to ignore stale selections
+  // Intersect localValue with available options to ignore stale selections
   const validValue = useMemo(() => {
-    if (value.length === 0 || filter.options.length === 0) return value
+    if (localValue.length === 0 || filter.options.length === 0) return localValue
     const optionSet = new Set(filter.options.map(o => o.value))
-    const filtered = value.filter(v => optionSet.has(v))
-    return filtered.length === value.length ? value : filtered
-  }, [value, filter.options])
+    const filtered = localValue.filter(v => optionSet.has(v))
+    return filtered.length === localValue.length ? localValue : filtered
+  }, [localValue, filter.options])
 
   const hasSelection = validValue.length > 0
 
