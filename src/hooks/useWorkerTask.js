@@ -117,7 +117,7 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   const [isPending, setIsPending] = useState(true)
   const latestIdRef = useRef(0)
   const mountedRef = useRef(true)
-  const prevHashRef = useRef(null)
+  const prevKeyRef = useRef(null) // tracks hash + params together
   const pendingArgsRef = useRef(null) // Layer 3: stash args when tab is hidden
 
   // Layer 3: visibility-aware gating — hidden tabs defer worker calls
@@ -131,15 +131,15 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   // Layer 3: When tab becomes visible, flush any stashed work
   useEffect(() => {
     if (isVisible && pendingArgsRef.current) {
-      const { stashedIncidents, stashedParams, stashedHash } = pendingArgsRef.current
+      const { stashedIncidents, stashedParams, stashedKey } = pendingArgsRef.current
       pendingArgsRef.current = null
 
-      // Check hash hasn't already been processed
-      if (stashedHash === prevHashRef.current) {
+      // Check key hasn't already been processed
+      if (stashedKey === prevKeyRef.current) {
         setIsPending(false)
         return
       }
-      prevHashRef.current = stashedHash
+      prevKeyRef.current = stashedKey
 
       setIsPending(true)
       const { promise, id } = postTask(taskName, stashedIncidents, stashedParams)
@@ -163,7 +163,7 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   useEffect(() => {
     // Don't send empty arrays to worker - return fallback immediately
     if (!incidents || incidents.length === 0) {
-      prevHashRef.current = null
+      prevKeyRef.current = null
       pendingArgsRef.current = null
       setResult(fallback)
       setIsPending(false)
@@ -171,19 +171,21 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
     }
 
     const hash = hashIncidents(incidents)
+    const paramsKey = params ? JSON.stringify(params) : ''
+    const fullKey = `${hash}|${paramsKey}`
 
     // Layer 3: If tab is hidden, stash args instead of firing worker
     if (!isVisible) {
-      pendingArgsRef.current = { stashedIncidents: incidents, stashedParams: params, stashedHash: hash }
+      pendingArgsRef.current = { stashedIncidents: incidents, stashedParams: params, stashedKey: fullKey }
       return
     }
 
-    // Skip postMessage if incidents hash is unchanged (avoids expensive structured clone)
-    if (hash === prevHashRef.current) {
+    // Skip postMessage if incidents hash AND params are unchanged
+    if (fullKey === prevKeyRef.current) {
       setIsPending(false)
       return
     }
-    prevHashRef.current = hash
+    prevKeyRef.current = fullKey
 
     setIsPending(true)
     const { promise, id } = postTask(taskName, incidents, params)
