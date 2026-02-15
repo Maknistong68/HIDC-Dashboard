@@ -336,10 +336,14 @@ export const DataProvider = ({ children }) => {
   }, [])
 
   // Batch reload - single cache clear + state update after batch import
+  // Wrapped in startTransition so React yields to user input (tab clicks, scrolling)
+  // during reconciliation of 60K+ records
   const batchReloadIncidents = useCallback(async () => {
     clearDataCaches()
     const records = await getAllRecords()
-    setIncidents(Array.isArray(records) ? records : [])
+    startTransition(() => {
+      setIncidents(Array.isArray(records) ? records : [])
+    })
   }, [])
 
   // Legacy addIncidents (without file tracking)

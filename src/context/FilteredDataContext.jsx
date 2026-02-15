@@ -38,27 +38,38 @@ export const FilteredDataProvider = ({ children }) => {
 
   // Pre-cache the "no filter" result — stable reference that only changes when incidents change.
   // When all filters are cleared, we return this instantly (zero iteration).
+  // Single O(n) pass computes base + workRelated variants together.
   const defaults = useMemo(() => {
     const heatmap = []
+    const wrFiltered = []
+    const wrHeatmap = []
     const sites = new Set()
     for (let idx = 0; idx < incidents.length; idx++) {
       const i = incidents[idx]
       if (i.site) sites.add(i.site)
-      if (!PROACTIVE_SET.has(i.type)) heatmap.push(i)
+      const isProactive = PROACTIVE_SET.has(i.type)
+      if (!isProactive) heatmap.push(i)
+      if (i.workRelated !== false) {
+        wrFiltered.push(i)
+        if (!isProactive) wrHeatmap.push(i)
+      }
     }
     return {
       baseFiltered: incidents,
       baseHeatmap: heatmap,
+      workRelatedFiltered: wrFiltered,
+      workRelatedHeatmap: wrHeatmap,
       siteOptions: Array.from(sites).sort().map(s => ({ value: s, label: s }))
     }
   }, [incidents])
 
   // Fast boolean check: are ALL filters in their default (cleared) state?
+  // Uses immediate `filters` (not debouncedFilters) so clear-all is detected in the SAME render
   const isAllCleared = useMemo(() => {
-    const { contractor: c, site: s, subRegion: sr } = debouncedFilters
+    const { contractor: c, site: s, subRegion: sr } = filters
     return period === null && customDateRange === null &&
       c.length === 0 && s.length === 0 && sr.length === 0
-  }, [debouncedFilters, period, customDateRange])
+  }, [filters, period, customDateRange])
 
   // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
   // Uses debounced filter values so rapid multi-select clicks batch into one computation
@@ -130,18 +141,20 @@ export const FilteredDataProvider = ({ children }) => {
     return { baseFiltered: filtered, baseHeatmap: heatmap, siteOptions: sites }
   }, [incidents, debouncedFilters, siteClassifications, period, customDateRange, getPeriodRange, isAllCleared, defaults])
 
-  // Pre-compute work-related variant (cheap .filter on already-filtered base)
+  // Pre-compute work-related variant — fast-path returns cached ref when all cleared
   const workRelatedFiltered = useMemo(() => {
+    if (isAllCleared) return defaults.workRelatedFiltered
     return baseFiltered.filter(i => i.workRelated !== false)
-  }, [baseFiltered])
+  }, [baseFiltered, isAllCleared, defaults])
 
   // Swap reference based on toggle — no recomputation
   const filteredIncidents = workRelatedOnly ? workRelatedFiltered : baseFiltered
 
-  // Pre-compute work-related heatmap variant
+  // Pre-compute work-related heatmap variant — fast-path returns cached ref when all cleared
   const workRelatedHeatmap = useMemo(() => {
+    if (isAllCleared) return defaults.workRelatedHeatmap
     return baseHeatmap.filter(i => i.workRelated !== false)
-  }, [baseHeatmap])
+  }, [baseHeatmap, isAllCleared, defaults])
 
   // Swap reference based on toggle — no recomputation
   const heatmapIncidents = workRelatedOnly ? workRelatedHeatmap : baseHeatmap

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useContext } from 'react'
+import { TabVisibilityContext } from './useDeferredMemo'
 
 // ─── Hash helper (copied from analyticsWorker.js) ───────────────────
 function hashIncidents(incidents) {
@@ -32,19 +33,27 @@ function getWorker() {
       { type: 'module' }
     )
     workerInstance.onmessage = (e) => {
-      const { id, success, result, error } = e.data
+      const { id, success, result, error, cacheMiss } = e.data
       const cb = pendingCallbacks.get(id)
       if (cb) {
-        pendingCallbacks.delete(id)
-        if (success) {
-          cb.resolve(result)
+        if (cacheMiss) {
+          // Worker lost the cached data — clear our hash so next send includes full data
+          pendingCallbacks.delete(id)
+          sentDataHashes.delete(e.data.dataHash)
+          cb.reject(new Error('DATA_CACHE_MISS'))
         } else {
-          cb.reject(new Error(error))
+          pendingCallbacks.delete(id)
+          if (success) {
+            cb.resolve(result)
+          } else {
+            cb.reject(new Error(error))
+          }
         }
       }
     }
     workerInstance.onerror = (err) => {
-      // Reject all pending on fatal worker error
+      // Reject all pending on fatal worker error and clear dedup state
+      sentDataHashes.clear()
       for (const [id, cb] of pendingCallbacks) {
         cb.reject(err)
         pendingCallbacks.delete(id)
@@ -54,8 +63,14 @@ function getWorker() {
   return workerInstance
 }
 
+// ─── Layer 4: Data dedup — track which incident hashes the worker already has ──
+const sentDataHashes = new Set()
+
 /**
  * Send a task to the worker and return a promise for the result.
+ * Uses data dedup: if the worker already has the incidents (same hash),
+ * send only the hash (~100 bytes) instead of the full array (~30MB).
+ *
  * @param {string} task - Task name (matches TASKS keys in analyticsWorker.js)
  * @param {Array} incidents - Incidents data to process
  * @param {Object|null} params - Additional params for the task
@@ -69,7 +84,15 @@ function postTask(task, incidents, params) {
     pendingCallbacks.set(id, { resolve, reject })
   })
 
-  worker.postMessage({ id, task, incidents, params })
+  const dataHash = hashIncidents(incidents)
+  if (sentDataHashes.has(dataHash)) {
+    // Worker already has this data — send lightweight message
+    worker.postMessage({ id, task, dataHash, params })
+  } else {
+    // First time — send full data + hash
+    sentDataHashes.add(dataHash)
+    worker.postMessage({ id, task, incidents, dataHash, params })
+  }
   return { promise, id }
 }
 
@@ -95,23 +118,67 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   const latestIdRef = useRef(0)
   const mountedRef = useRef(true)
   const prevHashRef = useRef(null)
+  const pendingArgsRef = useRef(null) // Layer 3: stash args when tab is hidden
+
+  // Layer 3: visibility-aware gating — hidden tabs defer worker calls
+  const isVisible = useContext(TabVisibilityContext)
 
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
+  // Layer 3: When tab becomes visible, flush any stashed work
+  useEffect(() => {
+    if (isVisible && pendingArgsRef.current) {
+      const { stashedIncidents, stashedParams, stashedHash } = pendingArgsRef.current
+      pendingArgsRef.current = null
+
+      // Check hash hasn't already been processed
+      if (stashedHash === prevHashRef.current) {
+        setIsPending(false)
+        return
+      }
+      prevHashRef.current = stashedHash
+
+      setIsPending(true)
+      const { promise, id } = postTask(taskName, stashedIncidents, stashedParams)
+      latestIdRef.current = id
+
+      promise
+        .then((workerResult) => {
+          if (latestIdRef.current === id && mountedRef.current) {
+            setResult(workerResult)
+            setIsPending(false)
+          }
+        })
+        .catch(() => {
+          if (latestIdRef.current === id && mountedRef.current) {
+            setIsPending(false)
+          }
+        })
+    }
+  }, [isVisible, taskName]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     // Don't send empty arrays to worker - return fallback immediately
     if (!incidents || incidents.length === 0) {
       prevHashRef.current = null
+      pendingArgsRef.current = null
       setResult(fallback)
       setIsPending(false)
       return
     }
 
-    // Skip postMessage if incidents hash is unchanged (avoids expensive structured clone)
     const hash = hashIncidents(incidents)
+
+    // Layer 3: If tab is hidden, stash args instead of firing worker
+    if (!isVisible) {
+      pendingArgsRef.current = { stashedIncidents: incidents, stashedParams: params, stashedHash: hash }
+      return
+    }
+
+    // Skip postMessage if incidents hash is unchanged (avoids expensive structured clone)
     if (hash === prevHashRef.current) {
       setIsPending(false)
       return

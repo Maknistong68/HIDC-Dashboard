@@ -102,10 +102,24 @@ const TASKS = {
   },
 }
 
+// ─── Layer 4: Data dedup cache — store incident arrays by hash ──────
+// Avoids re-cloning ~30MB when multiple tasks use the same data.
+const DATA_CACHE_MAX = 5
+const dataCache = new Map()
+
+function dataCacheSet(hash, incidents) {
+  if (dataCache.has(hash)) dataCache.delete(hash)
+  else if (dataCache.size >= DATA_CACHE_MAX) {
+    const first = dataCache.keys().next().value
+    dataCache.delete(first)
+  }
+  dataCache.set(hash, incidents)
+}
+
 // ─── Message Handler ────────────────────────────────────────────────
 
 self.onmessage = (e) => {
-  const { id, task, incidents, params } = e.data
+  const { id, task, incidents, dataHash, params } = e.data
 
   // Validate
   if (!TASKS[task]) {
@@ -113,12 +127,28 @@ self.onmessage = (e) => {
     return
   }
 
-  // Build cache key
-  const hash = hashIncidents(incidents)
+  // Resolve incidents: use provided data, or look up from data cache
+  let resolvedIncidents = incidents
+  if (!resolvedIncidents && dataHash) {
+    resolvedIncidents = dataCache.get(dataHash)
+    if (!resolvedIncidents) {
+      // Cache miss — ask main thread to resend full data
+      self.postMessage({ id, task, cacheMiss: true, dataHash })
+      return
+    }
+  }
+
+  // Store in data cache for future lightweight messages
+  if (resolvedIncidents && dataHash) {
+    dataCacheSet(dataHash, resolvedIncidents)
+  }
+
+  // Build result cache key
+  const hash = dataHash || hashIncidents(resolvedIncidents)
   const paramsKey = params ? JSON.stringify(params) : ''
   const cacheKey = `${task}:${hash}:${paramsKey}`
 
-  // Check cache
+  // Check result cache
   const cached = cacheGet(cacheKey)
   if (cached !== undefined) {
     self.postMessage({ id, task, success: true, result: cached })
@@ -127,7 +157,7 @@ self.onmessage = (e) => {
 
   // Execute
   try {
-    const result = TASKS[task](incidents, params)
+    const result = TASKS[task](resolvedIncidents, params)
     cacheSet(cacheKey, result)
     self.postMessage({ id, task, success: true, result })
   } catch (err) {
