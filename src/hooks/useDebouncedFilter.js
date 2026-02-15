@@ -27,16 +27,35 @@ export const useDebouncedFilter = (filterValues, delay = 150) => {
       clearTimeout(timeoutRef.current)
     }
 
-    // Check if values actually changed (shallow comparison)
-    const hasChanged = Object.keys(filterValues).some(
-      key => filterValues[key] !== prevFilterRef.current[key]
-    )
+    // Check if values actually changed (deep comparison for arrays)
+    const hasChanged = Object.keys(filterValues).some(key => {
+      const newVal = filterValues[key]
+      const oldVal = prevFilterRef.current[key]
+      if (newVal === oldVal) return false
+      // Compare arrays by content, not reference (handles deselect→reselect)
+      if (Array.isArray(newVal) && Array.isArray(oldVal)) {
+        if (newVal.length !== oldVal.length) return true
+        return newVal.some((v, i) => v !== oldVal[i])
+      }
+      return true
+    })
 
     if (!hasChanged) {
       return
     }
 
     prevFilterRef.current = filterValues
+
+    // Fast path: if all values are empty arrays (cleared state), flush immediately
+    // This bypasses the debounce so "Clear All" is instant
+    const allEmpty = Object.values(filterValues).every(v => Array.isArray(v) && v.length === 0)
+    if (allEmpty) {
+      clearTimeout(timeoutRef.current)
+      startTransition(() => {
+        setDebouncedValues(filterValues)
+      })
+      return
+    }
 
     // Set up debounce
     timeoutRef.current = setTimeout(() => {

@@ -120,7 +120,7 @@ const SafetyOutlook = () => {
   const { incidents, siteClassifications } = useData()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters } = useFilter()
+  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -302,8 +302,8 @@ const SafetyOutlook = () => {
   }, [setFilter])
 
   const handleClearFilters = useCallback(() => {
-    clearFilters()
     startTransition(() => {
+      clearFilters()
       setSelectedHazard(null)
     })
   }, [clearFilters])
@@ -350,7 +350,7 @@ const SafetyOutlook = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={filters}
+              activeFilters={{ ...filters, period, customDateRange }}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
             />
@@ -376,7 +376,7 @@ const SafetyOutlook = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={filters}
+              activeFilters={{ ...filters, period, customDateRange }}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
             />
@@ -401,7 +401,7 @@ const SafetyOutlook = () => {
         <div className="flex-1">
           <FilterBar
             filters={filterConfig}
-            activeFilters={filters}
+            activeFilters={{ ...filters, period, customDateRange }}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
           />

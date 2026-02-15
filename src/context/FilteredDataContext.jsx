@@ -29,17 +29,43 @@ const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
 export const FilteredDataProvider = ({ children }) => {
   const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
   const { getPeriodRange } = useDate()
-  const { period, contractor, site, subRegion, workRelatedOnly } = useFilter()
+  const { period, customDateRange, filters, workRelatedOnly } = useFilter()
 
   // Debounce multi-select filter arrays (100ms) so rapid checkbox clicks
   // don't trigger 5 consecutive O(n) filter passes
-  const { debounced: debouncedFilters } = useDebouncedFilter(
-    { contractor, site, subRegion }, 100
-  )
+  // `filters` is already memoized in FilterContext (line 83) — stable reference
+  const { debounced: debouncedFilters } = useDebouncedFilter(filters, 100)
+
+  // Pre-cache the "no filter" result — stable reference that only changes when incidents change.
+  // When all filters are cleared, we return this instantly (zero iteration).
+  const defaults = useMemo(() => {
+    const heatmap = []
+    const sites = new Set()
+    for (let idx = 0; idx < incidents.length; idx++) {
+      const i = incidents[idx]
+      if (i.site) sites.add(i.site)
+      if (!PROACTIVE_SET.has(i.type)) heatmap.push(i)
+    }
+    return {
+      baseFiltered: incidents,
+      baseHeatmap: heatmap,
+      siteOptions: Array.from(sites).sort().map(s => ({ value: s, label: s }))
+    }
+  }, [incidents])
+
+  // Fast boolean check: are ALL filters in their default (cleared) state?
+  const isAllCleared = useMemo(() => {
+    const { contractor: c, site: s, subRegion: sr } = debouncedFilters
+    return period === null && customDateRange === null &&
+      c.length === 0 && s.length === 0 && sr.length === 0
+  }, [debouncedFilters, period, customDateRange])
 
   // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
   // Uses debounced filter values so rapid multi-select clicks batch into one computation
   const { baseFiltered, baseHeatmap, siteOptions } = useMemo(() => {
+    // Fast path: all filters cleared → return pre-cached defaults (zero iteration)
+    if (isAllCleared) return defaults
+
     const { contractor: dContractor, site: dSite, subRegion: dSubRegion } = debouncedFilters
     const hasContractor = dContractor.length > 0
     const hasSite = dSite.length > 0
@@ -56,7 +82,10 @@ export const FilteredDataProvider = ({ children }) => {
 
     let dateFrom = null
     let dateTo = null
-    if (period !== null) {
+    if (customDateRange !== null) {
+      dateFrom = customDateRange.start
+      dateTo = customDateRange.end
+    } else if (period !== null) {
       const range = getPeriodRange(period)
       dateFrom = range.start
       dateTo = range.end
@@ -99,7 +128,7 @@ export const FilteredDataProvider = ({ children }) => {
       .map(s => ({ value: s, label: s }))
 
     return { baseFiltered: filtered, baseHeatmap: heatmap, siteOptions: sites }
-  }, [incidents, debouncedFilters, siteClassifications, period, getPeriodRange])
+  }, [incidents, debouncedFilters, siteClassifications, period, customDateRange, getPeriodRange, isAllCleared, defaults])
 
   // Pre-compute work-related variant (cheap .filter on already-filtered base)
   const workRelatedFiltered = useMemo(() => {

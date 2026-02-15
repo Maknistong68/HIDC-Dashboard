@@ -18,12 +18,25 @@ const FilterActionsContext = createContext(null)
  * - Components that read state re-render only when state they use changes
  */
 export const FilterProvider = ({ children }) => {
-  const [period, setPeriod] = useState(null)        // null = All
+  const [period, setPeriodState] = useState(null)        // null = All
+  const [customDateRange, setCustomDateRangeState] = useState(null) // {start, end} | null
   const [contractor, setContractorState] = useState([])
   const [site, setSiteState] = useState([])
   const [subRegion, setSubRegionState] = useState([])
   const [excludedReporters, setExcludedReportersState] = useState([])
   const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
+
+  // Mutual exclusion: setting period clears custom range
+  const setPeriod = useCallback((value) => {
+    setPeriodState(value)
+    setCustomDateRangeState(null)
+  }, [])
+
+  // Mutual exclusion: setting custom range clears period
+  const setCustomDateRange = useCallback((value) => {
+    setCustomDateRangeState(value)
+    setPeriodState(null)
+  }, [])
 
   // Load excluded reporters from IndexedDB on mount
   useEffect(() => {
@@ -71,7 +84,8 @@ export const FilterProvider = ({ children }) => {
 
   // Clear all filters (excludedReporters persists - it's a setting, not a temporary filter)
   const clearFilters = useCallback(() => {
-    setPeriod(null)
+    setPeriodState(null)
+    setCustomDateRangeState(null)
     setContractorState([])
     setSiteState([])
     setSubRegionState([])
@@ -85,17 +99,19 @@ export const FilterProvider = ({ children }) => {
   // State context value - will cause re-renders when state changes
   const stateValue = useMemo(() => ({
     period,
+    customDateRange,
     contractor,
     site,
     subRegion,
     excludedReporters,
     workRelatedOnly,
     filters
-  }), [period, contractor, site, subRegion, excludedReporters, workRelatedOnly, filters])
+  }), [period, customDateRange, contractor, site, subRegion, excludedReporters, workRelatedOnly, filters])
 
   // Actions context value - stable reference, won't cause re-renders
   const actionsValue = useMemo(() => ({
     setPeriod,
+    setCustomDateRange,
     setContractor,
     setSite,
     setSubRegion,
@@ -103,7 +119,7 @@ export const FilterProvider = ({ children }) => {
     setWorkRelatedOnly,
     setFilter,
     clearFilters
-  }), [setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters])
+  }), [setPeriod, setCustomDateRange, setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters])
 
   return (
     <FilterStateContext.Provider value={stateValue}>

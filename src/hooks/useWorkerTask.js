@@ -1,4 +1,21 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+// ─── Hash helper (copied from analyticsWorker.js) ───────────────────
+function hashIncidents(incidents) {
+  if (!incidents || incidents.length === 0) return 'empty'
+  const sampleSize = Math.min(10, incidents.length)
+  const step = Math.max(1, Math.floor(incidents.length / sampleSize))
+  const parts = []
+  for (let i = 0; i < incidents.length && parts.length < sampleSize; i += step) {
+    const r = incidents[i]
+    parts.push(`${r?.id || ''}|${r?.location || ''}|${r?.type || ''}|${r?.date || ''}`)
+  }
+  if (incidents.length > 1) {
+    const last = incidents[incidents.length - 1]
+    parts.push(`${last?.id || ''}|${last?.location || ''}|${last?.type || ''}`)
+  }
+  return `${incidents.length}:${parts.join(':')}`
+}
 
 /**
  * Singleton analytics worker instance.
@@ -77,6 +94,7 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   const [isPending, setIsPending] = useState(true)
   const latestIdRef = useRef(0)
   const mountedRef = useRef(true)
+  const prevHashRef = useRef(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -86,10 +104,19 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   useEffect(() => {
     // Don't send empty arrays to worker - return fallback immediately
     if (!incidents || incidents.length === 0) {
+      prevHashRef.current = null
       setResult(fallback)
       setIsPending(false)
       return
     }
+
+    // Skip postMessage if incidents hash is unchanged (avoids expensive structured clone)
+    const hash = hashIncidents(incidents)
+    if (hash === prevHashRef.current) {
+      setIsPending(false)
+      return
+    }
+    prevHashRef.current = hash
 
     setIsPending(true)
     const { promise, id } = postTask(taskName, incidents, params)

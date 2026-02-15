@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, startTransition, memo } from 'react'
 import {
   FileText,
   CheckCircle,
@@ -91,7 +91,7 @@ const Dashboard = () => {
   const { cutoffDates } = useDate()
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
+  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
@@ -164,7 +164,9 @@ const Dashboard = () => {
   }, [setFilter])
 
   const clearFilters = useCallback(() => {
-    contextClearFilters()
+    startTransition(() => {
+      contextClearFilters()
+    })
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }, [contextClearFilters])
@@ -733,7 +735,7 @@ const Dashboard = () => {
         <div className="flex-1">
           <FilterBar
             filters={filterConfig}
-            activeFilters={filters}
+            activeFilters={{ ...filters, period, customDateRange }}
             onFilterChange={handleFilterChange}
             onClearFilters={clearFilters}
           />

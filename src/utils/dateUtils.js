@@ -101,6 +101,27 @@ export const getPeriodRange = (months) => {
   }
 }
 
+/**
+ * Format a custom date range for display
+ * @param {{ start: string, end: string }} range - Date range with yyyy-MM-dd strings
+ * @returns {string} - e.g., "Jan 15 - Mar 30, 2025" or "Jan 15 - Mar 30" if same year as today
+ */
+export const formatDateRangeDisplay = (range) => {
+  if (!range || !range.start || !range.end) return ''
+  try {
+    const startDate = parseISO(range.start)
+    const endDate = parseISO(range.end)
+    const startYear = startDate.getFullYear()
+    const endYear = endDate.getFullYear()
+    if (startYear === endYear) {
+      return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`
+    }
+    return `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`
+  } catch {
+    return `${range.start} - ${range.end}`
+  }
+}
+
 // ============================================
 // AGE CALCULATIONS
 // ============================================

@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useCallback, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useCallback, startTransition, memo } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
@@ -118,7 +118,7 @@ const DataQuality = () => {
   })
 
   // Shared filter state from context
-  const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
+  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -133,6 +133,12 @@ const DataQuality = () => {
   const handleFilterChange = useCallback((key, value) => {
     setFilter(key, value)
   }, [setFilter])
+
+  const handleClearFilters = useCallback(() => {
+    startTransition(() => {
+      clearFilters()
+    })
+  }, [clearFilters])
 
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
@@ -648,9 +654,9 @@ const DataQuality = () => {
           <div className="flex-1">
             <FilterBar
               filters={filterConfig}
-              activeFilters={filters}
+              activeFilters={{ ...filters, period, customDateRange }}
               onFilterChange={handleFilterChange}
-              onClearFilters={clearFilters}
+              onClearFilters={handleClearFilters}
             />
           </div>
 
