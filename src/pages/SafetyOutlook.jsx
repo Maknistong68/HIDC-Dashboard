@@ -4,13 +4,13 @@ import { useData } from '../context/DataContext'
 import { useFilter } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
+import { useWorkerTask } from '../hooks/useWorkerTask'
 import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import { getHazardTrendingByPeriod, getHazardDailyData, forecastIncidents } from '../utils/insightsCalculations'
-import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
-import { getCachedAggregation } from '../utils/memoizedCalculations'
+import { getHazardDailyData, forecastIncidents } from '../utils/insightsCalculations'
+import { isPositiveType } from '../utils/rootCauseEngine'
 import { MethodologyExplorerModal } from '../components/methodology'
 import { plotHazardsOnMatrix } from '../utils/riskMatrix'
 
@@ -137,19 +137,17 @@ const SafetyOutlook = () => {
   // are now provided by FilteredDataContext (see useFilteredData() above)
 
   // Calculate hazard trends based on filtered incidents and period
-  const sortedHazards = useDeferredMemo(() => {
-    return getCachedAggregation(`outlook-hazardTrending-${period}`, filteredIncidents, (data) =>
-      getHazardTrendingByPeriod(data, period)
-    )
-  }, [filteredIncidents, period])
+  // Offloaded to Web Worker to keep main thread free
+  const { result: sortedHazards } = useWorkerTask(
+    'hazardTrending', filteredIncidents, { period }, [filteredIncidents, period], []
+  )
 
   // Calculate contributing factors (all observations including positive)
-  // Uses module-level cache so Dashboard hitting the same function gets a cache hit
-  const factorData = useDeferredMemo(() => {
-    return getCachedAggregation('outlook-factors-all', filteredIncidents, (data) =>
-      aggregateContributingFactors(data)
-    )
-  }, [filteredIncidents])
+  // Offloaded to Web Worker to keep main thread free
+  const { result: factorData } = useWorkerTask(
+    'aggregateFactors', filteredIncidents, null, [filteredIncidents],
+    { byFactor: [], bySeverity: {}, summary: {} }
+  )
 
   // Calculate hazard trend data for selected hazard
   const hazardTrendData = useDeferredMemo(() => {

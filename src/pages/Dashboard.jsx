@@ -15,6 +15,7 @@ import { useDate } from '../context/DateContext'
 import { useFilter } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
+import { useWorkerTask } from '../hooks/useWorkerTask'
 import KPICard from '../components/dashboard/KPICard'
 import IncidentTrendChart from '../components/dashboard/IncidentTrendChart'
 import IncidentPyramid from '../components/dashboard/IncidentPyramid'
@@ -32,14 +33,40 @@ import {
   getIncidentCountsByType,
   getOpenActionsCount,
 } from '../utils/calculations'
-import { aggregateContributingFactors } from '../utils/rootCauseEngine'
-import { memoize, getCachedAggregation, getCachedChartData } from '../utils/memoizedCalculations'
+import { memoize } from '../utils/memoizedCalculations'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { Link } from 'react-router-dom'
 
 const SUBREGION_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
 const SUBREGION_OTHERS_COLOR = '#94a3b8'
+
+// Stable Recharts props (hoisted to avoid re-renders from inline object/function recreation)
+const TOOLTIP_CONTENT_STYLE = {
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+}
+
+// Generic pie tooltip formatter - creates percent string from data array
+const makePieFormatter = (dataArray) => (value, name) => {
+  const total = dataArray.reduce((sum, d) => sum + d.value, 0)
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0
+  return [`${value} (${percent}%)`, name]
+}
+
+// Generic pie legend formatter - creates label with count and percent
+const makePieLegendFormatter = (dataArray) => (value) => {
+  const item = dataArray.find(d => d.name === value)
+  const total = dataArray.reduce((sum, d) => sum + d.value, 0)
+  const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
+  return (
+    <span className="text-xs text-surface-700">
+      {value}: {item?.value} ({percent}%)
+    </span>
+  )
+}
 
 // O(1) lookup maps for hazard sorting (avoids O(n) findIndex in sort comparator)
 const SIGNIFICANT_HAZARDS_MAP = new Map(SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
@@ -182,12 +209,11 @@ const Dashboard = () => {
   // are now provided by FilteredDataContext (see useFilteredData() above)
 
   // Calculate contributing factors for all observations (used for hazard insights drill-down)
-  // Uses module-level cache so SafetyOutlook hitting the same function gets a cache hit
-  const factorData = useDeferredMemo(() => {
-    return getCachedAggregation('dashboard-factors-all', heatmapIncidents, (data) =>
-      aggregateContributingFactors(data)
-    )
-  }, [heatmapIncidents])
+  // Offloaded to Web Worker to keep main thread free during tab switches
+  const { result: factorData } = useWorkerTask(
+    'aggregateFactors', heatmapIncidents, null, [heatmapIncidents],
+    { byFactor: [], bySeverity: {}, summary: {} }
+  )
 
   // Get filtered data based on drill-down selection
   const getFilteredBySelection = useMemo(() => {
@@ -661,6 +687,24 @@ const Dashboard = () => {
     return { bg: `rgb(${r}, ${g}, ${b})`, text: textColor }
   }
 
+  // Stable pie chart click handlers (avoid inline arrow functions that cause Recharts re-renders)
+  const handlePositiveNegativeClick = useCallback(
+    (data) => handleDrillDown('positiveNegative', data.name),
+    [handleDrillDown]
+  )
+  const handleSubRegionClick = useCallback(
+    (data) => { if (data.name !== 'Others') handleDrillDown('subRegion', data.name) },
+    [handleDrillDown]
+  )
+
+  // Stable tooltip/legend formatters per chart (re-create only when data changes)
+  const posNegFormatter = useMemo(() => makePieFormatter(positiveNegativeData), [positiveNegativeData])
+  const posNegLegendFormatter = useMemo(() => makePieLegendFormatter(positiveNegativeData), [positiveNegativeData])
+  const hazClassFormatter = useMemo(() => makePieFormatter(hazardClassificationData), [hazardClassificationData])
+  const hazClassLegendFormatter = useMemo(() => makePieLegendFormatter(hazardClassificationData), [hazardClassificationData])
+  const subRegFormatter = useMemo(() => makePieFormatter(subregionContributionData), [subregionContributionData])
+  const subRegLegendFormatter = useMemo(() => makePieLegendFormatter(subregionContributionData), [subregionContributionData])
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -1004,7 +1048,7 @@ const Dashboard = () => {
                     outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
-                    onClick={(data) => handleDrillDown('positiveNegative', data.name)}
+                    onClick={handlePositiveNegativeClick}
                     style={{ cursor: 'pointer' }}
                   >
                     {positiveNegativeData.map((entry, index) => (
@@ -1017,31 +1061,13 @@ const Dashboard = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value, name) => {
-                      const total = positiveNegativeData.reduce((sum, d) => sum + d.value, 0)
-                      const percent = total > 0 ? Math.round((value / total) * 100) : 0
-                      return [`${value} (${percent}%)`, name]
-                    }}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    }}
+                    formatter={posNegFormatter}
+                    contentStyle={TOOLTIP_CONTENT_STYLE}
                   />
                   <Legend
                     verticalAlign="bottom"
                     height={36}
-                    formatter={(value, entry) => {
-                      const item = positiveNegativeData.find(d => d.name === value)
-                      const total = positiveNegativeData.reduce((sum, d) => sum + d.value, 0)
-                      const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
-                      return (
-                        <span className="text-xs text-surface-700">
-                          {value}: {item?.value} ({percent}%)
-                        </span>
-                      )
-                    }}
+                    formatter={posNegLegendFormatter}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -1083,31 +1109,13 @@ const Dashboard = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value, name) => {
-                      const total = hazardClassificationData.reduce((sum, d) => sum + d.value, 0)
-                      const percent = total > 0 ? Math.round((value / total) * 100) : 0
-                      return [`${value} (${percent}%)`, name]
-                    }}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    }}
+                    formatter={hazClassFormatter}
+                    contentStyle={TOOLTIP_CONTENT_STYLE}
                   />
                   <Legend
                     verticalAlign="bottom"
                     height={36}
-                    formatter={(value) => {
-                      const item = hazardClassificationData.find(d => d.name === value)
-                      const total = hazardClassificationData.reduce((sum, d) => sum + d.value, 0)
-                      const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
-                      return (
-                        <span className="text-xs text-surface-700">
-                          {value}: {item?.value} ({percent}%)
-                        </span>
-                      )
-                    }}
+                    formatter={hazClassLegendFormatter}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -1139,11 +1147,7 @@ const Dashboard = () => {
                         outerRadius={80}
                         paddingAngle={2}
                         dataKey="value"
-                        onClick={(data) => {
-                          if (data.name !== 'Others') {
-                            handleDrillDown('subRegion', data.name)
-                          }
-                        }}
+                        onClick={handleSubRegionClick}
                         style={{ cursor: 'pointer' }}
                       >
                         {subregionContributionData.map((entry, index) => (
@@ -1156,31 +1160,13 @@ const Dashboard = () => {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value, name) => {
-                          const total = subregionContributionData.reduce((sum, d) => sum + d.value, 0)
-                          const percent = total > 0 ? Math.round((value / total) * 100) : 0
-                          return [`${value} (${percent}%)`, name]
-                        }}
-                        contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        }}
+                        formatter={subRegFormatter}
+                        contentStyle={TOOLTIP_CONTENT_STYLE}
                       />
                       <Legend
                         verticalAlign="bottom"
                         height={36}
-                        formatter={(value) => {
-                          const item = subregionContributionData.find(d => d.name === value)
-                          const total = subregionContributionData.reduce((sum, d) => sum + d.value, 0)
-                          const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
-                          return (
-                            <span className="text-xs text-surface-700">
-                              {value}: {item?.value} ({percent}%)
-                            </span>
-                          )
-                        }}
+                        formatter={subRegLegendFormatter}
                       />
                     </PieChart>
                   </ResponsiveContainer>

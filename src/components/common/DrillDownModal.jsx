@@ -1,12 +1,17 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet } from 'lucide-react'
+import { List as VirtualList } from 'react-window'
+import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { format, parseISO } from 'date-fns'
 import { useData } from '../../context/DataContext'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
 import { HazardInsightsTab, CategoryInsightsTab, ObserverInsightsTab } from '../drilldown'
+
+const VIRTUAL_ROW_HEIGHT = 110 // px per record row (matches padding + content)
+const VIRTUAL_THRESHOLD = 50  // only virtualize above this count
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -682,73 +687,115 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
           {copied ? 'Copied All!' : `Copy All (${data.length})`}
         </button>
       </div>
-      {data.map((record, idx) => (
-        <div
-          key={record.externalId || idx}
-          className={`
-            group rounded-xl bg-white/60 border border-surface-200/50
-            hover:bg-white/80 active:bg-white/90 hover:border-surface-300/50 active:border-surface-400/50
-            transition-all duration-200
-            ${isMobile ? 'p-3' : 'p-4'}
-          `}
-        >
-          {/* Mobile: Stack layout, Desktop: Side by side */}
-          <div className={`${isMobile ? 'space-y-3' : 'flex items-start justify-between gap-4'}`}>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className={`font-medium text-surface-900 ${isMobile ? 'text-sm' : 'text-sm'}`}>
-                  {record.date}
-                </span>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(record.actionStatus)}`}>
-                  {record.actionStatus || 'open'}
-                </span>
-              </div>
-              <p className={`text-surface-600 line-clamp-2 ${isMobile ? 'text-sm leading-relaxed' : 'text-sm'}`}>
-                {highlightKeywords.length > 0 ? (
-                  <HighlightedText
-                    text={record.description || 'No description'}
-                    keywords={highlightKeywords}
-                  />
-                ) : (
-                  record.description || 'No description'
-                )}
-              </p>
-              <div className={`flex items-center gap-3 sm:gap-4 mt-2 text-xs text-surface-500 flex-wrap`}>
-                {record.contractor && (
-                  <span className="flex items-center gap-1">
-                    <Building2 size={12} />
-                    <span className="truncate max-w-[120px]">{record.contractor}</span>
-                  </span>
-                )}
-                {record.site && (
-                  <span className="flex items-center gap-1">
-                    <MapPin size={12} />
-                    <span className="truncate max-w-[100px]">{record.site}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* View button */}
-            <button
-              onClick={() => onViewDetails(record)}
-              className={`
-                flex items-center justify-center gap-1.5 font-medium text-blue-600
-                hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
-                ${isMobile
-                  ? 'w-full h-11 text-sm bg-blue-50 mt-1'
-                  : 'px-3 py-1.5 text-sm'
-                }
-              `}
-            >
-              <Eye size={isMobile ? 18 : 14} />
-              View Details
-            </button>
-          </div>
+      {data.length > VIRTUAL_THRESHOLD ? (
+        /* Virtualized list for large datasets - smooth scrolling for 500+ records */
+        <div style={{ height: Math.min(data.length * VIRTUAL_ROW_HEIGHT, 600), width: '100%' }}>
+          <AutoSizer>
+            {({ height, width }) => (
+              <VirtualList
+                height={height}
+                width={width}
+                itemCount={data.length}
+                itemSize={VIRTUAL_ROW_HEIGHT}
+                overscanCount={5}
+              >
+                {({ index, style }) => {
+                  const record = data[index]
+                  return (
+                    <div style={{ ...style, paddingBottom: 8 }}>
+                      <RecordCard
+                        record={record}
+                        isMobile={isMobile}
+                        highlightKeywords={highlightKeywords}
+                        onViewDetails={onViewDetails}
+                      />
+                    </div>
+                  )
+                }}
+              </VirtualList>
+            )}
+          </AutoSizer>
         </div>
-      ))}
+      ) : (
+        /* Direct render for small datasets (no virtualization overhead) */
+        data.map((record, idx) => (
+          <RecordCard
+            key={record.externalId || idx}
+            record={record}
+            isMobile={isMobile}
+            highlightKeywords={highlightKeywords}
+            onViewDetails={onViewDetails}
+          />
+        ))
+      )}
     </div>
   )
 }
+
+/**
+ * Single record card - extracted for use in both virtualized and direct rendering
+ */
+const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onViewDetails }) => (
+  <div
+    className={`
+      group rounded-xl bg-white/60 border border-surface-200/50
+      hover:bg-white/80 active:bg-white/90 hover:border-surface-300/50 active:border-surface-400/50
+      transition-all duration-200
+      ${isMobile ? 'p-3' : 'p-4'}
+    `}
+  >
+    <div className={`${isMobile ? 'space-y-3' : 'flex items-start justify-between gap-4'}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className={`font-medium text-surface-900 ${isMobile ? 'text-sm' : 'text-sm'}`}>
+            {record.date}
+          </span>
+          <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(record.actionStatus)}`}>
+            {record.actionStatus || 'open'}
+          </span>
+        </div>
+        <p className={`text-surface-600 line-clamp-2 ${isMobile ? 'text-sm leading-relaxed' : 'text-sm'}`}>
+          {highlightKeywords.length > 0 ? (
+            <HighlightedText
+              text={record.description || 'No description'}
+              keywords={highlightKeywords}
+            />
+          ) : (
+            record.description || 'No description'
+          )}
+        </p>
+        <div className={`flex items-center gap-3 sm:gap-4 mt-2 text-xs text-surface-500 flex-wrap`}>
+          {record.contractor && (
+            <span className="flex items-center gap-1">
+              <Building2 size={12} />
+              <span className="truncate max-w-[120px]">{record.contractor}</span>
+            </span>
+          )}
+          {record.site && (
+            <span className="flex items-center gap-1">
+              <MapPin size={12} />
+              <span className="truncate max-w-[100px]">{record.site}</span>
+            </span>
+          )}
+        </div>
+      </div>
+      <button
+        onClick={() => onViewDetails(record)}
+        className={`
+          flex items-center justify-center gap-1.5 font-medium text-blue-600
+          hover:text-blue-700 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors
+          ${isMobile
+            ? 'w-full h-11 text-sm bg-blue-50 mt-1'
+            : 'px-3 py-1.5 text-sm'
+          }
+        `}
+      >
+        <Eye size={isMobile ? 18 : 14} />
+        View Details
+      </button>
+    </div>
+  </div>
+))
 
 /**
  * Record Details Modal (Glassmorphism)

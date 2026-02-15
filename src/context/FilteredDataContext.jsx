@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo, useEffect, useRef } from 're
 import { useData } from './DataContext'
 import { useDate } from './DateContext'
 import { useFilter } from './FilterContext'
+import { useDebouncedFilter } from '../hooks/useDebouncedFilter'
 import { PROACTIVE_TYPES } from '../utils/constants'
 
 const FilteredDataContext = createContext(null)
@@ -30,19 +31,27 @@ export const FilteredDataProvider = ({ children }) => {
   const { getPeriodRange } = useDate()
   const { period, contractor, site, subRegion, workRelatedOnly } = useFilter()
 
+  // Debounce multi-select filter arrays (100ms) so rapid checkbox clicks
+  // don't trigger 5 consecutive O(n) filter passes
+  const { debounced: debouncedFilters } = useDebouncedFilter(
+    { contractor, site, subRegion }, 100
+  )
+
   // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
+  // Uses debounced filter values so rapid multi-select clicks batch into one computation
   const { baseFiltered, baseHeatmap, siteOptions } = useMemo(() => {
-    const hasContractor = contractor.length > 0
-    const hasSite = site.length > 0
-    const hasSubRegion = subRegion.length > 0
-    const contractorSet = hasContractor ? new Set(contractor) : null
-    const subRegionSet = hasSubRegion ? new Set(subRegion) : null
+    const { contractor: dContractor, site: dSite, subRegion: dSubRegion } = debouncedFilters
+    const hasContractor = dContractor.length > 0
+    const hasSite = dSite.length > 0
+    const hasSubRegion = dSubRegion.length > 0
+    const contractorSet = hasContractor ? new Set(dContractor) : null
+    const subRegionSet = hasSubRegion ? new Set(dSubRegion) : null
 
     // For site filtering, intersect selected sites with valid options inline
     // (handles stale selections from contractor change without needing cleanup effects)
     let siteSet = null
     if (hasSite) {
-      siteSet = new Set(site)
+      siteSet = new Set(dSite)
     }
 
     let dateFrom = null
@@ -90,7 +99,7 @@ export const FilteredDataProvider = ({ children }) => {
       .map(s => ({ value: s, label: s }))
 
     return { baseFiltered: filtered, baseHeatmap: heatmap, siteOptions: sites }
-  }, [incidents, contractor, site, subRegion, siteClassifications, period, getPeriodRange])
+  }, [incidents, debouncedFilters, siteClassifications, period, getPeriodRange])
 
   // Pre-compute work-related variant (cheap .filter on already-filtered base)
   const workRelatedFiltered = useMemo(() => {

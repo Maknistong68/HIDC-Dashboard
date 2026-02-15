@@ -50,26 +50,16 @@ import { useData } from '../context/DataContext'
 import { useFilter } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
-import { getCachedAggregation } from '../utils/memoizedCalculations'
+import { useWorkerTask } from '../hooks/useWorkerTask'
 import {
   calculateQualityScore,
-  getDescriptionMetrics,
   getNearMissMetrics,
   getReporterMetrics,
   getContractorMetrics,
-  getDuplicateDescriptions,
-  getOtherHazardAnalysis,
   getReporterDeepDive,
   extractHour,
   getImportClassificationMetrics,
-  getMisclassificationAnalysis,
-  getAutoClassificationSummary,
-  getUnclassifiableRecords,
-  detectFoulWords,
-  detectVagueHazards,
-  getFlaggedRecords
 } from '../utils/dataQualityCalculations'
-import { detectMisspellings } from '../utils/spellChecker'
 import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
 import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
@@ -153,13 +143,10 @@ const DataQuality = () => {
   // ============================================
 
   // Misclassification analysis - detects records with wrong categories
-  // Must be defined before coreQualityMetrics and reporterContractorMetrics which depend on it
-  const misclassificationData = useDeferredMemo(() => {
-    if (filteredIncidents.length === 0) return null
-    return getCachedAggregation('dq-misclassification', filteredIncidents, (data) =>
-      getMisclassificationAnalysis(data)
-    )
-  }, [filteredIncidents])
+  // Offloaded to Web Worker to keep main thread free
+  const { result: misclassificationData } = useWorkerTask(
+    'misclassification', filteredIncidents, null, [filteredIncidents], null
+  )
 
   // Group 1: Core quality score metrics (depends on misclassification data)
   const coreQualityMetrics = useMemo(() => {
@@ -170,26 +157,15 @@ const DataQuality = () => {
     }
   }, [filteredIncidents, misclassificationData])
 
-  // Group 2: Categorization metrics
-  const categorizationMetrics = useDeferredMemo(() => {
-    if (filteredIncidents.length === 0) return null
-    return getCachedAggregation('dq-categorization', filteredIncidents, (data) => ({
-      autoClassification: getAutoClassificationSummary(data),
-      otherHazards: getOtherHazardAnalysis(data),
-    }))
-  }, [filteredIncidents])
+  // Group 2: Categorization metrics - offloaded to Web Worker
+  const { result: categorizationMetrics } = useWorkerTask(
+    'categorization', filteredIncidents, null, [filteredIncidents], null
+  )
 
-  // Group 3: Text analysis (spelling, duplicates, vague hazards) - can be expensive
-  const textAnalysisMetrics = useDeferredMemo(() => {
-    if (filteredIncidents.length === 0) return null
-    return getCachedAggregation('dq-textAnalysis', filteredIncidents, (data) => ({
-      description: getDescriptionMetrics(data),
-      duplicates: getDuplicateDescriptions(data),
-      spellingIssues: detectMisspellings(data),
-      foulWords: detectFoulWords(data),
-      vagueHazards: detectVagueHazards(data),
-    }))
-  }, [filteredIncidents])
+  // Group 3: Text analysis (spelling, duplicates, vague hazards) - offloaded to Web Worker
+  const { result: textAnalysisMetrics } = useWorkerTask(
+    'textAnalysis', filteredIncidents, null, [filteredIncidents], null
+  )
 
   // Group 4: Reporter and contractor metrics (includes classification accuracy)
   const reporterContractorMetrics = useDeferredMemo(() => {
@@ -200,14 +176,10 @@ const DataQuality = () => {
     }
   }, [filteredIncidents, misclassificationData])
 
-  // Group 5: Flagged records
-  const trendAndFlaggedMetrics = useDeferredMemo(() => {
-    if (filteredIncidents.length === 0) return null
-    return getCachedAggregation('dq-trendFlagged', filteredIncidents, (data) => ({
-      unclassifiableRecords: getUnclassifiableRecords(data),
-      flaggedRecords: getFlaggedRecords(data),
-    }))
-  }, [filteredIncidents])
+  // Group 5: Flagged records - offloaded to Web Worker
+  const { result: trendAndFlaggedMetrics } = useWorkerTask(
+    'trendFlagged', filteredIncidents, null, [filteredIncidents], null
+  )
 
   // Combined quality data object - only creates new reference when sub-memos change
   const qualityData = useMemo(() => {
