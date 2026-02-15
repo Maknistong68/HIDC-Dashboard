@@ -15,10 +15,10 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
   const pptx = new PptxGenJS()
 
   // Set presentation properties
-  pptx.author = 'HIDC'
-  pptx.title = 'HIDC - Hazard Identification and Data Control Report'
+  pptx.author = 'Event Dashboard'
+  pptx.title = 'Event Dashboard - HSE Analytics Report'
   pptx.subject = `Generated on ${format(new Date(), 'MMMM d, yyyy')}`
-  pptx.company = filterInfo.company || 'HIDC'
+  pptx.company = filterInfo.company || 'Event Dashboard'
 
   // Capture all charts
   const images = await captureAllCharts(chartRefs, onProgress)
@@ -64,7 +64,7 @@ export const exportToPPTX = async (chartRefs, filterInfo, incidents = [], onProg
 
   // Save PPTX
   onProgress?.('Saving PowerPoint...')
-  const filename = `HIDC-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pptx`
+  const filename = `Event-Dashboard-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pptx`
   await pptx.writeFile({ fileName: filename })
 
   onProgress?.(null)
@@ -89,7 +89,7 @@ const addTitleSlide = (pptx, filterInfo) => {
   })
 
   // Main title
-  slide.addText('HIDC Report', {
+  slide.addText('Event Dashboard Report', {
     x: 0.5,
     y: 1.8,
     w: '90%',
@@ -547,7 +547,7 @@ const addSlideFooter = (slide, pptx) => {
   })
 
   // Branding
-  slide.addText('HIDC - Hazard Identification and Data Control', {
+  slide.addText('Event Dashboard - HSE Analytics Platform', {
     x: 0.5,
     y: 5.15,
     w: 5,

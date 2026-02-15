@@ -1,7 +1,7 @@
 import React from 'react'
 
 /**
- * HIDC Logo - Oxagon-inspired hexagonal design with flowing curves
+ * Event Dashboard Logo - Oxagon-inspired hexagonal design with flowing curves
  * Represents: Innovation + Data flow + Modern analytics
  */
 const Logo = ({ size = 'default', showText = true, className = '' }) => {
@@ -25,7 +25,7 @@ const Logo = ({ size = 'default', showText = true, className = '' }) => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full"
-          aria-label="HIDC Logo"
+          aria-label="Event Dashboard Logo"
         >
           <defs>
             {/* Main gradient - blue tones */}
@@ -108,10 +108,10 @@ const Logo = ({ size = 'default', showText = true, className = '' }) => {
       {showText && (
         <div className="flex flex-col">
           <span className={`font-bold text-surface-800 ${textSize} leading-tight tracking-wide`}>
-            HIDC
+            Event Dashboard
           </span>
           <span className="text-[10px] text-surface-500 leading-tight max-w-[200px]">
-            Hazard Identification & Data Control
+            HSE Analytics Platform
           </span>
         </div>
       )}

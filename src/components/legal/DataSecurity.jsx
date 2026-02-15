@@ -63,7 +63,7 @@ const DataSecurity = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <p className="text-blue-800 font-medium mb-2">Step-by-Step Instructions:</p>
           <ol className="list-decimal pl-5 text-blue-700 space-y-2 text-sm">
-            <li>Open HIDC application in your browser</li>
+            <li>Open Event Dashboard application in your browser</li>
             <li>Press <kbd className="px-2 py-0.5 bg-blue-100 rounded text-blue-800 font-mono">F12</kbd> to open Developer Tools</li>
             <li>Click the <strong>"Network"</strong> tab</li>
             <li>Import an Excel file or use the app normally</li>
@@ -98,7 +98,7 @@ const DataSecurity = () => {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
           <p className="text-amber-800 font-medium mb-2">Step-by-Step Instructions:</p>
           <ol className="list-decimal pl-5 text-amber-700 space-y-2 text-sm">
-            <li>Open HIDC application in your browser</li>
+            <li>Open Event Dashboard application in your browser</li>
             <li>Press <kbd className="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-mono">F12</kbd> to open Developer Tools</li>
             <li>Click the <strong>"Application"</strong> tab (Chrome) or <strong>"Storage"</strong> tab (Firefox)</li>
             <li>In the left sidebar, expand <strong>"Local Storage"</strong></li>
@@ -162,7 +162,7 @@ const DataSecurity = () => {
                 </div>
                 <div className="text-center text-green-600">↓</div>
                 <div className="bg-white rounded p-2 border border-green-300 text-center text-sm">
-                  HIDC Application (JavaScript)
+                  Event Dashboard Application (JavaScript)
                 </div>
                 <div className="text-center text-green-600">↓</div>
                 <div className="bg-green-200 rounded p-2 border border-green-400 text-center text-sm font-medium">
@@ -307,7 +307,7 @@ const DataSecurity = () => {
             </li>
           </ul>
           <p className="mt-4 text-sm text-blue-200">
-            HIDC Team - December 2024
+            Event Dashboard Team - December 2024
           </p>
         </div>
       </section>

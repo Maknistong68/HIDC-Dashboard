@@ -37,7 +37,7 @@ const ServiceWorkerUpdatePrompt = () => {
               Update Available
             </h3>
             <p className="text-xs text-surface-400 leading-relaxed">
-              A new version of HIDC Dashboard is ready.
+              A new version of Event Dashboard is ready.
             </p>
           </div>
         </div>

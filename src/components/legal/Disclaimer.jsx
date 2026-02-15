@@ -11,7 +11,7 @@ const Disclaimer = () => {
         <div>
           <p className="text-amber-800 font-medium mb-1">Important Notice</p>
           <p className="text-amber-700 text-sm">
-            Please read this disclaimer carefully before using the HIDC application.
+            Please read this disclaimer carefully before using the Event Dashboard application.
           </p>
         </div>
       </div>
@@ -19,7 +19,7 @@ const Disclaimer = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">1. Not Professional HSE Advice</h3>
         <p className="text-surface-600 mb-3">
-          The HIDC application is a data management and visualization tool only. It is <strong>NOT</strong> a substitute for:
+          The Event Dashboard application is a data management and visualization tool only. It is <strong>NOT</strong> a substitute for:
         </p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Professional health and safety advice or consultancy</li>
@@ -82,7 +82,7 @@ const Disclaimer = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">6. No Liability for Decisions</h3>
         <p className="text-surface-600 mb-3">
-          HIDC Team shall not be held liable for any decisions, actions, or outcomes based on:
+          Event Dashboard Team shall not be held liable for any decisions, actions, or outcomes based on:
         </p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Data displayed or analyzed in this application</li>

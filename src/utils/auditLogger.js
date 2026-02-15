@@ -158,7 +158,7 @@ export const exportAuditLogs = async (options = {}) => {
 
   return {
     exportedAt: new Date().toISOString(),
-    exportedBy: 'HIDC Dashboard',
+    exportedBy: 'Event Dashboard',
     totalEntries: logs.length,
     filters: options,
     entries: logs

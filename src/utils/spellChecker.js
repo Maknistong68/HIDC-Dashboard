@@ -592,7 +592,7 @@ const COMMON_MISSPELLINGS = {
   'wonderfull': 'wonderful', 'wonderfil': 'wonderful',
   'worthewhile': 'worthwhile', 'worthwile': 'worthwhile',
 
-  // === MISSPELLINGS FROM HIDC EXCEL DATA ===
+  // === MISSPELLINGS FROM HSE EXCEL DATA ===
   'acrivity': 'activity', 'activitoes': 'activities', 'activty': 'activity',
   'airbone': 'airborne',
   'amergency': 'emergency',

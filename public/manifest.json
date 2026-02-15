@@ -1,6 +1,6 @@
 {
-  "name": "HIDC Dashboard",
-  "short_name": "HIDC",
+  "name": "Event Dashboard",
+  "short_name": "Event Dashboard",
   "description": "Hazard Identification & Data Control - HSE Analytics Platform",
   "start_url": "/",
   "display": "standalone",

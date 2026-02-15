@@ -4,10 +4,10 @@ import { captureElement, getImageDimensions } from './captureCharts'
 import { logAuditEvent, AUDIT_ACTIONS } from '../auditLogger'
 
 // Security disclaimer for all exported reports
-const DISCLAIMER_TEXT = 'CONFIDENTIAL: This report contains safety data. Please review all data before sharing. Data exported from HIDC Dashboard.'
+const DISCLAIMER_TEXT = 'CONFIDENTIAL: This report contains safety data. Please review all data before sharing. Data exported from Event Dashboard.'
 
 // Security watermark text
-const SECURITY_WATERMARK = 'HIDC Export - Handle as Confidential'
+const SECURITY_WATERMARK = 'Event Dashboard Export - Handle as Confidential'
 
 /**
  * Generates a PDF document by capturing the entire dashboard as one image
@@ -85,7 +85,7 @@ export const exportToPDF = async (dashboardRef, filterInfo, incidents = [], onPr
 
   // Save PDF
   onProgress?.('Saving PDF...')
-  const filename = `HIDC-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`
+  const filename = `Event-Dashboard-Report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`
   pdf.save(filename)
 
   // Log audit event for security compliance
@@ -301,7 +301,7 @@ const addFooter = (pdf, pageWidth, pageHeight, margin) => {
   pdf.setFont('helvetica', 'bold')
   pdf.setTextColor(107, 114, 128)
   pdf.text(
-    'HIDC',
+    'Event Dashboard',
     margin,
     pageHeight - 4
   )

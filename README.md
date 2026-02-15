@@ -1,8 +1,8 @@
-# HIDC - Hazard Identification and Data Control
+# Event Dashboard
 
 > **"Ensuring hazards are properly identified through data accuracy"**
 
-HIDC is an internal HSE (Health, Safety, and Environment) observation tracking tool with two core functions:
+Event Dashboard is an internal HSE (Health, Safety, and Environment) observation tracking tool with two core functions:
 
 1. **Hazard Identification** - Properly categorize and track safety observations
 2. **Data Control** - Ensure data quality and accuracy for meaningful insights
@@ -94,7 +94,7 @@ All data is stored locally in your browser's localStorage:
 
 ## Vision
 
-HIDC was built to solve a common problem in HSE management: poor data quality leads to poor insights. By combining hazard identification with data control, organizations can:
+Event Dashboard was built to solve a common problem in HSE management: poor data quality leads to poor insights. By combining hazard identification with data control, organizations can:
 
 1. Ensure every observation has proper categorization
 2. Identify patterns through quality data
@@ -123,4 +123,4 @@ Internal use only. All rights reserved.
 
 ## Support
 
-For questions or issues, contact the HIDC development team.
+For questions or issues, contact the Event Dashboard development team.

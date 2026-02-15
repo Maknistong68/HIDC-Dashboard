@@ -69,8 +69,8 @@ const InstallPrompt = () => {
     } else {
       // Show manual instructions for browsers without beforeinstallprompt
       alert(
-        'To install HIDC Dashboard:\n\n' +
-        'Edge/Chrome: Click the menu (⋮) → "Install HIDC Dashboard" or "Add to Home Screen"\n\n' +
+        'To install Event Dashboard:\n\n' +
+        'Edge/Chrome: Click the menu (⋮) → "Install Event Dashboard" or "Add to Home Screen"\n\n' +
         'The app will work offline once installed!'
       )
     }
@@ -116,7 +116,7 @@ const InstallPrompt = () => {
           {/* Text */}
           <div className="flex-1 min-w-0 pr-6">
             <h3 className="text-sm font-semibold text-surface-100 mb-1">
-              Install HIDC Dashboard
+              Install Event Dashboard
             </h3>
             <p className="text-xs text-surface-400 leading-relaxed">
               Add to your desktop for quick access. Works offline!

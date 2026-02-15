@@ -1,8 +1,8 @@
-# HIDC Dashboard Security Policy
+# Event Dashboard Security Policy
 
 ## Overview
 
-HIDC (Hazard Identification and Data Control) Dashboard is an offline-first web application designed for HSE (Health, Safety, Environment) data analysis. This document outlines security considerations, known issues, and deployment requirements.
+Event Dashboard is an offline-first web application designed for HSE (Health, Safety, Environment) data analysis. This document outlines security considerations, known issues, and deployment requirements.
 
 ## Security Architecture
 

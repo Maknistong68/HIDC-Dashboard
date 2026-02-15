@@ -8,14 +8,14 @@ const TermsOfUse = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">1. Acceptance of Terms</h3>
         <p className="text-surface-600">
-          By accessing and using the HIDC (Hazard Identification and Data Control) application, you accept and agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use this application.
+          By accessing and using the Event Dashboard application, you accept and agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use this application.
         </p>
       </section>
 
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">2. Description of Service</h3>
         <p className="text-surface-600 mb-3">
-          HIDC is an internal Health, Safety, and Environment (HSE) observation tracking tool designed to help organizations:
+          Event Dashboard is an internal Health, Safety, and Environment (HSE) observation tracking tool designed to help organizations:
         </p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Import and manage HSE observation data from Excel files</li>
@@ -68,7 +68,7 @@ const TermsOfUse = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">7. Limitation of Liability</h3>
         <p className="text-surface-600 mb-3">
-          To the maximum extent permitted by applicable law, HIDC Team shall not be liable for:
+          To the maximum extent permitted by applicable law, Event Dashboard Team shall not be liable for:
         </p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Any indirect, incidental, special, consequential, or punitive damages</li>

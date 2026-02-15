@@ -45,7 +45,7 @@ const Footer = () => {
           {/* Copyright */}
           <div className="flex items-center gap-1.5 text-surface-400">
             <Shield size={12} aria-hidden="true" />
-            <span>HIDC {currentYear}</span>
+            <span>Event Dashboard {currentYear}</span>
           </div>
         </div>
       </div>

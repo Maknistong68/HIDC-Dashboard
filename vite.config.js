@@ -10,8 +10,8 @@ export default defineConfig({
       devOptions: { enabled: false },
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'HIDC Dashboard',
-        short_name: 'HIDC',
+        name: 'Event Dashboard',
+        short_name: 'Event Dashboard',
         description: 'Hazard Identification & Data Control - HSE Analytics Platform',
         theme_color: '#3478f6',
         background_color: '#0f1117',

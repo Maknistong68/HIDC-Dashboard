@@ -31,7 +31,7 @@ const GlobalLoadingOverlay = () => {
           </svg>
         </div>
 
-        <h3 className="text-base font-semibold text-surface-900 mb-1">HIDC Dashboard</h3>
+        <h3 className="text-base font-semibold text-surface-900 mb-1">Event Dashboard</h3>
         <p className="text-sm text-surface-500 mb-5 min-h-[1.25rem]">{message || 'Loading...'}</p>
 
         {/* Progress bar */}
