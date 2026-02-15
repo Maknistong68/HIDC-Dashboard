@@ -152,16 +152,24 @@ const EntityDetailPanel = ({ entity, incidents, dimension, totalIncidents, ranki
   const radarContainerRef = useRef(null)
 
   // Responsive radar sizing via ResizeObserver on the radar container zone
+  // Debounced with requestAnimationFrame to avoid re-renders during resize
   useEffect(() => {
     const el = radarContainerRef.current
     if (!el) return
+    let rafId = null
     const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width
-      const h = entry.contentRect.height
-      setRadarSize(Math.max(257, Math.min(644, Math.min(w, h) * 1.05)))
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        const w = entry.contentRect.width
+        const h = entry.contentRect.height
+        setRadarSize(Math.max(257, Math.min(644, Math.min(w, h) * 1.05)))
+      })
     })
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      ro.disconnect()
+    }
   }, [])
 
   const benchmark = useMemo(() => {

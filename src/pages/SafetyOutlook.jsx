@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, startTransition, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useFilter } from '../context/FilterContext'
@@ -207,12 +207,12 @@ const SafetyOutlook = () => {
 
   // Negative incidents (for Tab 2 - Predictive & Simulation)
   // Use isPositiveType for consistent filtering across codebase
-  const negativeIncidents = useMemo(() => {
+  const negativeIncidents = useDeferredMemo(() => {
     return filteredIncidents.filter(i => !isPositiveType(i.type))
   }, [filteredIncidents])
 
   // Lifted matrixData for both HazardRiskMatrix and Methodology Guide
-  const matrixData = useMemo(() => {
+  const matrixData = useDeferredMemo(() => {
     return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
   }, [filteredIncidents, sortedHazards])
 
@@ -323,14 +323,20 @@ const SafetyOutlook = () => {
     })
   }, [])
 
+  // Track visited tabs for keep-alive rendering (mount once, hide with display:none)
+  const visitedTabsRef = useRef(new Set(['correlations']))
+
   const handleMainTabChange = useCallback((tab) => {
+    visitedTabsRef.current.add(tab)
     startTransition(() => {
       setActiveMainTab(tab)
     })
   }, [])
 
   const handleSubTabChange = useCallback((tab) => {
-    setActiveSubTab(tab)
+    startTransition(() => {
+      setActiveSubTab(tab)
+    })
   }, [])
 
 
@@ -445,10 +451,10 @@ const SafetyOutlook = () => {
         )}
       </div>
 
-      {/* ==================== TAB CONTENT ==================== */}
+      {/* ==================== TAB CONTENT (Keep-Alive: display:none + lazy mount) ==================== */}
 
-      {/* Tab 1: Correlations */}
-      {activeMainTab === 'correlations' && (
+      {/* Tab 1: Correlations (always mounted - default tab) */}
+      <div style={{ display: activeMainTab === 'correlations' ? 'block' : 'none' }}>
         <TabErrorBoundary label="Correlations">
         <div role="tabpanel" id="tabpanel-correlations" aria-labelledby="tab-correlations" className="flex flex-col gap-3 animate-fade-in">
           {/* Sub-tab Toggle (Hazards / Factors) + Summary */}
@@ -568,35 +574,39 @@ const SafetyOutlook = () => {
           </div>
         </div>
         </TabErrorBoundary>
+      </div>
+
+      {/* Tab 2: Predictive & Simulation (lazy mount + keep-alive) */}
+      {visitedTabsRef.current.has('predictive') && (
+        <div style={{ display: activeMainTab === 'predictive' ? 'block' : 'none' }}>
+          <TabErrorBoundary label="Predictive & Simulation">
+          <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
+            <HazardRiskMatrix
+              sortedHazards={sortedHazards}
+              negativeIncidents={negativeIncidents}
+              filteredIncidents={filteredIncidents}
+              factorData={factorData}
+              period={period}
+              siteClassifications={siteClassifications}
+              matrixData={matrixData}
+            />
+          </div>
+          </TabErrorBoundary>
+        </div>
       )}
 
-      {/* Tab 2: Predictive & Simulation */}
-      {activeMainTab === 'predictive' && (
-        <TabErrorBoundary label="Predictive & Simulation">
-        <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
-          <HazardRiskMatrix
-            sortedHazards={sortedHazards}
-            negativeIncidents={negativeIncidents}
-            filteredIncidents={filteredIncidents}
-            factorData={factorData}
-            period={period}
-            siteClassifications={siteClassifications}
-            matrixData={matrixData}
-          />
+      {/* Tab 3: Risk & Performance (lazy mount + keep-alive) */}
+      {visitedTabsRef.current.has('risk') && (
+        <div style={{ display: activeMainTab === 'risk' ? 'block' : 'none' }}>
+          <TabErrorBoundary label="Risk & Performance">
+          <div role="tabpanel" id="tabpanel-risk" aria-labelledby="tab-risk">
+            <RiskPerformanceTab
+              filteredIncidents={filteredIncidents}
+              siteClassifications={siteClassifications}
+            />
+          </div>
+          </TabErrorBoundary>
         </div>
-        </TabErrorBoundary>
-      )}
-
-      {/* Tab 3: Risk & Performance */}
-      {activeMainTab === 'risk' && (
-        <TabErrorBoundary label="Risk & Performance">
-        <div role="tabpanel" id="tabpanel-risk" aria-labelledby="tab-risk">
-          <RiskPerformanceTab
-            filteredIncidents={filteredIncidents}
-            siteClassifications={siteClassifications}
-          />
-        </div>
-        </TabErrorBoundary>
       )}
 
       {/* Methodology Guide */}

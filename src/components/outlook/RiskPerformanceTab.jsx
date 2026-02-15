@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, startTransition } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { calculateEntityRiskRanking } from '../../utils/insightsCalculations'
 import { DEFAULT_THRESHOLDS } from '../../utils/signalConstants'
@@ -47,17 +47,36 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
   const [presetProfile, setPresetProfile] = useState(() => loadWeights().preset)
   const [thresholds, setThresholds] = useState(() => loadThresholds())
 
-  // Persist weights
+  // Debounced weights for expensive ranking computation (300ms delay)
+  const [debouncedWeights, setDebouncedWeights] = useState(() => loadWeights().entity)
+  const weightsTimerRef = useRef(null)
+
   useEffect(() => {
-    localStorage.setItem(WEIGHTS_STORAGE_KEY, JSON.stringify({
-      entity: entityWeights,
-      preset: presetProfile
-    }))
+    weightsTimerRef.current = setTimeout(() => {
+      setDebouncedWeights(entityWeights)
+    }, 300)
+    return () => clearTimeout(weightsTimerRef.current)
+  }, [entityWeights])
+
+  // Persist weights (debounced 500ms to avoid writes every drag frame)
+  const persistTimerRef = useRef(null)
+  useEffect(() => {
+    persistTimerRef.current = setTimeout(() => {
+      localStorage.setItem(WEIGHTS_STORAGE_KEY, JSON.stringify({
+        entity: entityWeights,
+        preset: presetProfile
+      }))
+    }, 500)
+    return () => clearTimeout(persistTimerRef.current)
   }, [entityWeights, presetProfile])
 
-  // Persist thresholds
+  // Persist thresholds (debounced 500ms)
+  const thresholdTimerRef = useRef(null)
   useEffect(() => {
-    localStorage.setItem(THRESHOLDS_STORAGE_KEY, JSON.stringify(thresholds))
+    thresholdTimerRef.current = setTimeout(() => {
+      localStorage.setItem(THRESHOLDS_STORAGE_KEY, JSON.stringify(thresholds))
+    }, 500)
+    return () => clearTimeout(thresholdTimerRef.current)
   }, [thresholds])
 
   // Handler for updating individual threshold
@@ -65,11 +84,11 @@ const RiskPerformanceTab = ({ filteredIncidents, siteClassifications }) => {
     setThresholds(prev => ({ ...prev, [signalKey]: value }))
   }, [])
 
-  // Calculate rankings
+  // Calculate rankings using debounced weights (avoids recalc every drag frame)
   const rankings = useMemo(() => {
     if (!filteredIncidents?.length) return []
-    return calculateEntityRiskRanking(filteredIncidents, dimension, siteClassifications, entityWeights)
-  }, [filteredIncidents, dimension, siteClassifications, entityWeights])
+    return calculateEntityRiskRanking(filteredIncidents, dimension, siteClassifications, debouncedWeights)
+  }, [filteredIncidents, dimension, siteClassifications, debouncedWeights])
 
   // Risk summary counts
   const riskSummary = useMemo(() => {

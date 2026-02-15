@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState, startTransition } from 'react'
+import React, { useMemo, useRef, useEffect, useState, useCallback, startTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { Target, BarChart3, TrendingUp } from 'lucide-react'
 import {
@@ -11,7 +11,8 @@ import {
   Tooltip,
   Cell
 } from 'recharts'
-import { detectFactorsForHazard, detectContributingFactors, getKeywordsForFactor } from '../../utils/rootCauseEngine'
+import { detectFactorsForHazard, getIncidentsForHazardFactor, getKeywordsForFactor } from '../../utils/rootCauseEngine'
+import { getCachedAggregation } from '../../utils/memoizedCalculations'
 import HazardTrendChart from './HazardTrendChart'
 import DrillDownModal from '../common/DrillDownModal'
 
@@ -208,9 +209,15 @@ const HazardDetailPanelInner = ({ hazard, incidents, timePeriod, trendData, onOp
   const prevHazardRef = useRef(null)
 
   // Calculate contributing factors for this hazard
+  // Uses getCachedAggregation to avoid recomputation when incidents array reference
+  // changes but actual data is the same (sampled hash comparison)
   const contributingFactors = useMemo(() => {
     if (!hazard || !incidents) return []
-    return detectFactorsForHazard(incidents, hazard.name)
+    return getCachedAggregation(
+      `hazardDetail-factors-${hazard.name}`,
+      incidents,
+      (data) => detectFactorsForHazard(data, hazard.name)
+    )
   }, [hazard?.name, incidents])
 
   // Get hazard incidents for drill-down filtering
@@ -220,25 +227,28 @@ const HazardDetailPanelInner = ({ hazard, incidents, timePeriod, trendData, onOp
   }, [hazard?.name, incidents])
 
   // Handle factor bar click - filter observations and open drill-down
-  const handleFactorClick = (factorName) => {
+  // Uses getIncidentsForHazardFactor (LRU cached) instead of per-incident detectContributingFactors
+  const handleFactorClick = useCallback((factorName) => {
     if (!factorName || !hazardIncidents.length || !onOpenDrillDown) return
 
-    // Filter observations that have this factor detected
-    // Pass hazard name for hazard-specific validation rules
-    const factorObservations = hazardIncidents.filter(incident => {
-      const factors = detectContributingFactors(incident.description, hazard.name)
-      return factors.includes(factorName)
+    startTransition(() => {
+      // Uses internal LRU cache for factor detection per incident
+      const factorObservations = getIncidentsForHazardFactor(
+        hazardIncidents,
+        hazard.name,
+        factorName
+      )
+
+      // Get keywords for highlighting
+      const keywords = getKeywordsForFactor(factorName)
+
+      onOpenDrillDown(
+        factorObservations,
+        `${factorName} Observations in ${hazard.name}`,
+        keywords
+      )
     })
-
-    // Get keywords for highlighting
-    const keywords = getKeywordsForFactor(factorName)
-
-    onOpenDrillDown(
-      factorObservations,
-      `${factorName} Observations in ${hazard.name}`,
-      keywords
-    )
-  }
+  }, [hazardIncidents, hazard?.name, onOpenDrillDown])
 
   // Smooth transition effect when hazard changes
   useEffect(() => {

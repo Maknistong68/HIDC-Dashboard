@@ -3,7 +3,7 @@ import { getSortedDates } from './incidentHelpers'
 
 // ============================================================================
 // IMPACT AXIS - "What is the worst that has happened?"
-// NEOM Safety Risk Assessment Standard (NEOM-NLF-STD-002.01 Rev 0.3.00)
+// Safety Risk Assessment Standard
 // ============================================================================
 
 // Maps incident type → impact severity level (1-5)

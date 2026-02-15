@@ -6,6 +6,8 @@ import { PROACTIVE_TYPES } from '../utils/constants'
 
 const FilteredDataContext = createContext(null)
 
+const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
+
 /**
  * FilteredDataProvider - Centralizes filtered data computation shared across all 3 pages.
  *
@@ -28,28 +30,66 @@ export const FilteredDataProvider = ({ children }) => {
   const { getPeriodRange } = useDate()
   const { period, contractor, site, subRegion, workRelatedOnly } = useFilter()
 
-  // Base filtered set: all filters EXCEPT workRelated
-  // This does NOT recompute when workRelatedOnly toggles
-  const baseFiltered = useMemo(() => {
-    if (period === null) {
-      return incidents.filter(i => {
-        if (contractor && i.contractor !== contractor) return false
-        if (site && i.site !== site) return false
-        if (subRegion && siteClassifications[i.site] !== subRegion) return false
-        return true
-      })
+  // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
+  const { baseFiltered, baseHeatmap, siteOptions } = useMemo(() => {
+    const hasContractor = contractor.length > 0
+    const hasSite = site.length > 0
+    const hasSubRegion = subRegion.length > 0
+    const contractorSet = hasContractor ? new Set(contractor) : null
+    const subRegionSet = hasSubRegion ? new Set(subRegion) : null
+
+    // For site filtering, intersect selected sites with valid options inline
+    // (handles stale selections from contractor change without needing cleanup effects)
+    let siteSet = null
+    if (hasSite) {
+      siteSet = new Set(site)
     }
 
-    const { start: dateFrom, end: dateTo } = getPeriodRange(period)
+    let dateFrom = null
+    let dateTo = null
+    if (period !== null) {
+      const range = getPeriodRange(period)
+      dateFrom = range.start
+      dateTo = range.end
+    }
 
-    return incidents.filter(i => {
-      if (contractor && i.contractor !== contractor) return false
-      if (site && i.site !== site) return false
-      if (subRegion && siteClassifications[i.site] !== subRegion) return false
-      if (i.date < dateFrom) return false
-      if (i.date > dateTo) return false
-      return true
-    })
+    const filtered = []
+    const heatmap = []
+    const contractorSitesSet = new Set()
+
+    for (let idx = 0; idx < incidents.length; idx++) {
+      const i = incidents[idx]
+
+      // Collect sites scoped to selected contractors (for siteOptions dropdown)
+      if (i.site && (!hasContractor || contractorSet.has(i.contractor))) {
+        contractorSitesSet.add(i.site)
+      }
+
+      // Apply contractor filter
+      if (hasContractor && !contractorSet.has(i.contractor)) continue
+      // Apply site filter
+      if (siteSet && !siteSet.has(i.site)) continue
+      // Apply subRegion filter
+      if (hasSubRegion && !subRegionSet.has(siteClassifications[i.site])) continue
+
+      // Heatmap: no period filter, no proactive types
+      if (!PROACTIVE_SET.has(i.type)) {
+        heatmap.push(i)
+      }
+
+      // Filtered: with period filter
+      if (dateFrom !== null) {
+        if (i.date < dateFrom || i.date > dateTo) continue
+      }
+
+      filtered.push(i)
+    }
+
+    // Build siteOptions from the collected sites
+    const sites = Array.from(contractorSitesSet).sort()
+      .map(s => ({ value: s, label: s }))
+
+    return { baseFiltered: filtered, baseHeatmap: heatmap, siteOptions: sites }
   }, [incidents, contractor, site, subRegion, siteClassifications, period, getPeriodRange])
 
   // Pre-compute work-related variant (cheap .filter on already-filtered base)
@@ -59,17 +99,6 @@ export const FilteredDataProvider = ({ children }) => {
 
   // Swap reference based on toggle — no recomputation
   const filteredIncidents = workRelatedOnly ? workRelatedFiltered : baseFiltered
-
-  // Base heatmap: all filters EXCEPT workRelated and period, excludes proactive types
-  const baseHeatmap = useMemo(() => {
-    return incidents.filter(i => {
-      if (PROACTIVE_TYPES.includes(i.type)) return false
-      if (contractor && i.contractor !== contractor) return false
-      if (site && i.site !== site) return false
-      if (subRegion && siteClassifications[i.site] !== subRegion) return false
-      return true
-    })
-  }, [incidents, contractor, site, subRegion, siteClassifications])
 
   // Pre-compute work-related heatmap variant
   const workRelatedHeatmap = useMemo(() => {
@@ -122,29 +151,19 @@ export const FilteredDataProvider = ({ children }) => {
     return contractors.sort().map(c => ({ value: c, label: c }))
   }, [incidents])
 
-  // Sites filtered by selected contractor (parent-child relationship)
-  const siteOptions = useMemo(() => {
-    let relevantIncidents = incidents
-    if (contractor) {
-      relevantIncidents = incidents.filter(i => i.contractor === contractor)
-    }
-    const sites = [...new Set(relevantIncidents.map(i => i.site).filter(Boolean))]
-    return sites.sort().map(s => ({ value: s, label: s }))
-  }, [incidents, contractor])
-
   // Filter configuration array for FilterBar
   const filterConfig = useMemo(() => {
     const config = [
       {
         key: 'contractor',
-        type: 'select',
+        type: 'multiSelect',
         label: 'Contractor',
         placeholder: 'All Contractors',
         options: uniqueContractors
       },
       {
         key: 'site',
-        type: 'select',
+        type: 'multiSelect',
         label: 'Site',
         placeholder: 'All Sites',
         options: siteOptions
@@ -154,7 +173,7 @@ export const FilteredDataProvider = ({ children }) => {
     if (hasSubregionAssignments) {
       config.push({
         key: 'subRegion',
-        type: 'select',
+        type: 'multiSelect',
         label: 'Sub-Region',
         placeholder: 'All Sub-Regions',
         options: assignedSubRegions

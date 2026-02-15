@@ -260,7 +260,7 @@ export const mapExcelColumns = (headers) => {
 }
 
 /**
- * Footer metadata patterns - rows appended by NEOM export system
+ * Footer metadata patterns - rows appended by export system
  * that should be stripped before parsing data rows.
  */
 const FOOTER_MARKER_PATTERNS = [

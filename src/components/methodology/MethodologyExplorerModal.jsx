@@ -225,7 +225,7 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
       )}
 
       <p className="text-sm text-surface-600 leading-relaxed">
-        Based on the NEOM RAM Standard, each hazard is scored on a 5×5 grid of Likelihood × Consequence. Risk Score = L × C (range 1-25).
+        Based on the RAM Standard, each hazard is scored on a 5×5 grid of Likelihood × Consequence. Risk Score = L × C (range 1-25).
       </p>
 
       {/* Methodology bullets */}
@@ -234,7 +234,7 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
           { label: 'L × C Scoring', desc: 'Risk Score = Likelihood (1-5) × Consequence (1-5). Range: 1-25.' },
           { label: 'Time-Decay', desc: 'Recent incidents (90d) = 100% weight. 3-6mo = 60%. 6-12mo = 30%. >1yr = 10%.' },
           { label: 'Confidence Caps', desc: '<3 incidents → max Unlikely. <5 → max Possible. <14 days → max Unlikely. <30 days → max Possible.' },
-          { label: 'Adaptive Thresholds', desc: 'Datasets <90 days blend percentile-based with fixed NEOM thresholds for stability.' },
+          { label: 'Adaptive Thresholds', desc: 'Datasets <90 days blend percentile-based with fixed thresholds for stability.' },
         ].map(item => (
           <div key={item.label} className="flex items-start gap-2 bg-surface-50 border border-surface-100 rounded-lg p-3">
             <span className="text-xs font-semibold text-amber-700 w-28 flex-shrink-0">{item.label}</span>

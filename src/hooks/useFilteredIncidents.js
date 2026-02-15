@@ -13,9 +13,9 @@ import { useMemo } from 'react'
  *
  * @param {Object} options
  * @param {Array} options.incidents - All incidents
- * @param {string} options.contractor - Selected contractor filter ('' = all)
- * @param {string} options.site - Selected site filter ('' = all)
- * @param {string} options.subRegion - Selected sub-region filter ('' = all)
+ * @param {Array} options.contractor - Selected contractor filter ([] = all)
+ * @param {Array} options.site - Selected site filter ([] = all)
+ * @param {Array} options.subRegion - Selected sub-region filter ([] = all)
  * @param {Object} options.siteClassifications - Map of site to sub-region
  * @param {number|null} options.period - Time period filter (null = all, number = months)
  * @param {Function} options.getPeriodRange - Function to get date range from period
@@ -40,6 +40,14 @@ export const useFilteredIncidents = ({
       dateTo = range.end
     }
 
+    // Pre-compute filter sets for O(1) lookups
+    const hasContractor = contractor && contractor.length > 0
+    const hasSite = site && site.length > 0
+    const hasSubRegion = subRegion && subRegion.length > 0
+    const contractorFilter = hasContractor ? new Set(contractor) : null
+    const siteFilter = hasSite ? new Set(site) : null
+    const subRegionFilter = hasSubRegion ? new Set(subRegion) : null
+
     // Single iteration to collect all data
     const filtered = []
     const contractorSet = new Set()
@@ -54,18 +62,18 @@ export const useFilteredIncidents = ({
         contractorSet.add(incident.contractor)
       }
 
-      // Collect sites for selected contractor (or all if no contractor selected)
+      // Collect sites for selected contractors (or all if no contractor selected)
       if (incident.site) {
         allSitesSet.add(incident.site)
-        if (!contractor || incident.contractor === contractor) {
+        if (!hasContractor || contractorFilter.has(incident.contractor)) {
           contractorSitesSet.add(incident.site)
         }
       }
 
       // Apply filters for filteredIncidents
-      if (contractor && incident.contractor !== contractor) continue
-      if (site && incident.site !== site) continue
-      if (subRegion && siteClassifications[incident.site] !== subRegion) continue
+      if (hasContractor && !contractorFilter.has(incident.contractor)) continue
+      if (hasSite && !siteFilter.has(incident.site)) continue
+      if (hasSubRegion && !subRegionFilter.has(siteClassifications[incident.site])) continue
 
       // Date filtering
       if (dateFrom !== null && dateTo !== null) {
@@ -121,8 +129,14 @@ export const useFilteredIncidentsWithExclusions = ({
       dateTo = range.end
     }
 
-    // Create Set for faster lookups
+    // Create Sets for faster lookups
     const excludedSet = new Set(excludedReporters)
+    const hasContractor = contractor && contractor.length > 0
+    const hasSite = site && site.length > 0
+    const hasSubRegion = subRegion && subRegion.length > 0
+    const contractorFilter = hasContractor ? new Set(contractor) : null
+    const siteFilter = hasSite ? new Set(site) : null
+    const subRegionFilter = hasSubRegion ? new Set(subRegion) : null
 
     // Single iteration to collect all data
     const filtered = []
@@ -138,8 +152,8 @@ export const useFilteredIncidentsWithExclusions = ({
         contractorSet.add(incident.contractor)
       }
 
-      // Collect sites for selected contractor
-      if (incident.site && (!contractor || incident.contractor === contractor)) {
+      // Collect sites for selected contractors
+      if (incident.site && (!hasContractor || contractorFilter.has(incident.contractor))) {
         contractorSitesSet.add(incident.site)
       }
 
@@ -147,9 +161,9 @@ export const useFilteredIncidentsWithExclusions = ({
       if (incident.reportedBy) {
         // Only add to reporter options if it passes contractor/site/subRegion filters
         const passesFilters = (
-          (!contractor || incident.contractor === contractor) &&
-          (!site || incident.site === site) &&
-          (!subRegion || siteClassifications[incident.site] === subRegion)
+          (!hasContractor || contractorFilter.has(incident.contractor)) &&
+          (!hasSite || siteFilter.has(incident.site)) &&
+          (!hasSubRegion || subRegionFilter.has(siteClassifications[incident.site]))
         )
         if (passesFilters) {
           reporterSet.add(incident.reportedBy)
@@ -157,9 +171,9 @@ export const useFilteredIncidentsWithExclusions = ({
       }
 
       // Apply all filters for filteredIncidents
-      if (contractor && incident.contractor !== contractor) continue
-      if (site && incident.site !== site) continue
-      if (subRegion && siteClassifications[incident.site] !== subRegion) continue
+      if (hasContractor && !contractorFilter.has(incident.contractor)) continue
+      if (hasSite && !siteFilter.has(incident.site)) continue
+      if (hasSubRegion && !subRegionFilter.has(siteClassifications[incident.site])) continue
       if (excludedSet.size > 0 && excludedSet.has(incident.reportedBy)) continue
 
       // Date filtering

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Search, MapPin, ChevronLeft, ChevronRight, Filter, X, Check } from 'lucide-react'
+import { Search, MapPin, ChevronLeft, ChevronRight, Filter, X, Check, CheckSquare } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { Card } from '../ui'
 
@@ -63,10 +63,16 @@ const SiteClassificationPanel = () => {
     setCurrentPage(1)
   }, [searchTerm, filterMode])
 
-  // Clear selection when page changes or filters change
+  // Clear selection when filters/search change (but NOT on page change)
   useEffect(() => {
     setSelectedSites(new Set())
-  }, [currentPage, searchTerm, filterMode])
+  }, [searchTerm, filterMode])
+
+  // Select all unassigned sites across all pages
+  const handleSelectAllUnassigned = () => {
+    const allUnassigned = sites.filter(s => !s.subRegion).map(s => s.name)
+    setSelectedSites(new Set(allUnassigned))
+  }
 
   // Handle single site sub-region change (quick click)
   const handleSubRegionChange = async (siteName, newSubRegion) => {
@@ -214,6 +220,17 @@ const SiteClassificationPanel = () => {
               Unclassified ({stats.unclassified})
             </button>
           </div>
+
+          {/* Select All Unassigned button */}
+          {stats.unclassified > 0 && (
+            <button
+              onClick={handleSelectAllUnassigned}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-all"
+            >
+              <CheckSquare size={16} />
+              Select All {stats.unclassified} Unassigned
+            </button>
+          )}
         </div>
       </div>
 
@@ -221,7 +238,7 @@ const SiteClassificationPanel = () => {
       {selectedSites.size > 0 && (
         <div className="px-5 py-3 bg-primary-50 border-b border-primary-100 flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium text-primary-700">
-            {selectedSites.size} site{selectedSites.size !== 1 ? 's' : ''} selected:
+            {selectedSites.size} site{selectedSites.size !== 1 ? 's' : ''} selected{selectedSites.size === stats.unclassified && stats.unclassified > 0 ? ' (all unassigned)' : ''}:
           </span>
 
           {/* Quick assign buttons */}

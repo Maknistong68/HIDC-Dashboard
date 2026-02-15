@@ -19,9 +19,9 @@ const FilterActionsContext = createContext(null)
  */
 export const FilterProvider = ({ children }) => {
   const [period, setPeriod] = useState(null)        // null = All
-  const [contractor, setContractorState] = useState('')
-  const [site, setSiteState] = useState('')
-  const [subRegion, setSubRegionState] = useState('')
+  const [contractor, setContractorState] = useState([])
+  const [site, setSiteState] = useState([])
+  const [subRegion, setSubRegionState] = useState([])
   const [excludedReporters, setExcludedReportersState] = useState([])
   const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
 
@@ -35,13 +35,14 @@ export const FilterProvider = ({ children }) => {
   // Contractor change resets site and subRegion (parent-child relationship)
   const setContractor = useCallback((value) => {
     setContractorState(value)
-    setSiteState('')
-    setSubRegionState('')
+    setSiteState([])
+    setSubRegionState([])
   }, [])
 
-  // Direct site setter
+  // Site change resets subRegion (parent-child relationship)
   const setSite = useCallback((value) => {
     setSiteState(value)
+    setSubRegionState([])
   }, [])
 
   // Direct subRegion setter
@@ -71,14 +72,15 @@ export const FilterProvider = ({ children }) => {
   // Clear all filters (excludedReporters persists - it's a setting, not a temporary filter)
   const clearFilters = useCallback(() => {
     setPeriod(null)
-    setContractorState('')
-    setSiteState('')
-    setSubRegionState('')
+    setContractorState([])
+    setSiteState([])
+    setSubRegionState([])
     setWorkRelatedOnly(true)
   }, [])
 
   // Combined filters object for FilterBar compatibility
-  const filters = useMemo(() => ({ contractor, site, subRegion, excludedReporters, workRelatedOnly }), [contractor, site, subRegion, excludedReporters, workRelatedOnly])
+  // Only includes actual filters — workRelatedOnly and excludedReporters are settings, not filters
+  const filters = useMemo(() => ({ contractor, site, subRegion }), [contractor, site, subRegion])
 
   // State context value - will cause re-renders when state changes
   const stateValue = useMemo(() => ({

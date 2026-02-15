@@ -1,25 +1,41 @@
-import React, { useState, useRef, useEffect, useTransition, useCallback } from 'react'
-import { Filter, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import React, { useState, useRef, useEffect, useTransition, useCallback, useMemo } from 'react'
+import { Filter, X, ChevronDown, ChevronUp, Check, Search } from 'lucide-react'
 import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
 
 /**
- * MultiSelectDropdown - Dropdown with checkboxes for multi-selection
+ * MultiSelectDropdown - Dropdown with checkboxes for multi-selection (inclusion mode)
  */
 const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [, startTransition] = useTransition()
   const dropdownRef = useRef(null)
+  const searchRef = useRef(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false)
+        setSearchTerm('')
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchRef.current) {
+      searchRef.current.focus()
+    }
+  }, [isOpen])
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return filter.options
+    const term = searchTerm.toLowerCase()
+    return filter.options.filter(o => o.label.toLowerCase().includes(term))
+  }, [filter.options, searchTerm])
 
   // Use startTransition for non-blocking updates
   const toggleOption = useCallback((optionValue) => {
@@ -38,7 +54,34 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
     })
   }, [onChange, filter.key])
 
-  const hasSelection = value.length > 0
+  const selectAll = useCallback(() => {
+    startTransition(() => {
+      onChange(filter.key, filteredOptions.map(o => o.value))
+    })
+  }, [onChange, filter.key, filteredOptions])
+
+  // Intersect value with available options to ignore stale selections
+  const validValue = useMemo(() => {
+    if (value.length === 0 || filter.options.length === 0) return value
+    const optionSet = new Set(filter.options.map(o => o.value))
+    const filtered = value.filter(v => optionSet.has(v))
+    return filtered.length === value.length ? value : filtered
+  }, [value, filter.options])
+
+  const hasSelection = validValue.length > 0
+
+  // Display text logic
+  const displayText = useMemo(() => {
+    if (!hasSelection) return filter.placeholder || `All ${filter.label}`
+    if (validValue.length <= 2) {
+      const labels = validValue.map(v => {
+        const opt = filter.options.find(o => o.value === v)
+        return opt ? opt.label : v
+      })
+      return labels.join(', ')
+    }
+    return `${validValue.length} selected`
+  }, [hasSelection, validValue, filter.options, filter.placeholder, filter.label])
 
   return (
     <div ref={dropdownRef} className="relative">
@@ -49,7 +92,7 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
       )}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); if (isOpen) setSearchTerm('') }}
         className={`
           flex items-center justify-between gap-2
           appearance-none font-medium
@@ -66,10 +109,7 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
         aria-expanded={isOpen}
       >
         <span className="truncate">
-          {hasSelection
-            ? `${value.length} excluded`
-            : filter.placeholder || `All ${filter.label}`
-          }
+          {displayText}
         </span>
         <div className="flex items-center gap-1">
           {hasSelection && (
@@ -89,24 +129,54 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
       {isOpen && (
         <div className={`
           absolute z-50 mt-1 bg-white border border-surface-200 rounded-lg shadow-lg
-          max-h-60 overflow-y-auto
-          ${isMobile ? 'left-0 right-0' : 'min-w-[200px]'}
+          ${isMobile ? 'left-0 right-0' : 'min-w-[220px]'}
         `}>
-          {filter.options.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-surface-400">No options available</div>
-          ) : (
-            <>
-              {hasSelection && (
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 border-b border-surface-100"
-                >
-                  Clear selection ({value.length})
-                </button>
-              )}
-              {filter.options.map((option) => {
-                const isSelected = value.includes(option.value)
+          {/* Search input */}
+          {filter.options.length > 5 && (
+            <div className="p-2 border-b border-surface-100">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-400" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={`Search ${filter.label.toLowerCase()}...`}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-surface-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Select All / Deselect All */}
+          <div className="flex items-center gap-1 px-3 py-1.5 border-b border-surface-100">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+            >
+              Select All
+            </button>
+            <span className="text-surface-300">|</span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-xs text-surface-500 hover:text-surface-700 font-medium"
+            >
+              Deselect All
+            </button>
+            {hasSelection && (
+              <span className="ml-auto text-2xs text-surface-400">{validValue.length} selected</span>
+            )}
+          </div>
+
+          {/* Options list */}
+          <div className="max-h-52 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-surface-400">No matches</div>
+            ) : (
+              filteredOptions.map((option) => {
+                const isSelected = validValue.includes(option.value)
                 return (
                   <button
                     key={option.value}
@@ -130,9 +200,9 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
                     <span className="truncate">{option.label}</span>
                   </button>
                 )
-              })}
-            </>
-          )}
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -152,8 +222,6 @@ const FilterBarComponent = ({
 }) => {
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [, startFilterTransition] = useTransition()
-
   const hasActiveFilters = Object.values(activeFilters).some(
     (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
   )
@@ -248,43 +316,13 @@ const FilterBarComponent = ({
         >
           {filters.map((filter) => (
             <div key={filter.key} className={`relative ${isMobile ? 'w-full' : 'flex-shrink-0'}`}>
-              {filter.type === 'select' ? (
-                <div className="relative">
-                  {isMobile && (
-                    <label className="block text-xs font-medium text-surface-500 mb-1">
-                      {filter.label}
-                    </label>
-                  )}
-                  <select
-                    value={activeFilters[filter.key] || ''}
-                    onChange={(e) => { const v = e.target.value; startFilterTransition(() => onFilterChange(filter.key, v)) }}
-                    className={`
-                      appearance-none pr-8 font-medium
-                      bg-white border rounded-md cursor-pointer
-                      transition-all duration-200
-                      focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
-                      ${isMobile ? 'w-full pl-3 py-3 text-base h-12' : 'pl-3 py-1.5 text-xs'}
-                      ${activeFilters[filter.key]
-                        ? 'border-primary-300 bg-primary-50 text-primary-700'
-                        : 'border-surface-300 text-surface-700 hover:border-surface-400'
-                      }
-                    `}
-                    aria-label={filter.label}
-                  >
-                    <option value="">{filter.placeholder || `All ${filter.label}`}</option>
-                    {filter.options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={isMobile ? 18 : 14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none"
-                    style={isMobile ? { top: 'calc(50% + 10px)' } : undefined}
-                    aria-hidden="true"
-                  />
-                </div>
+              {filter.type === 'multiSelect' ? (
+                <MultiSelectDropdown
+                  filter={filter}
+                  value={activeFilters[filter.key] || []}
+                  onChange={onFilterChange}
+                  isMobile={isMobile}
+                />
               ) : filter.type === 'date' ? (
                 <div>
                   {isMobile && (
@@ -309,13 +347,6 @@ const FilterBarComponent = ({
                     aria-label={filter.label}
                   />
                 </div>
-              ) : filter.type === 'multiSelect' ? (
-                <MultiSelectDropdown
-                  filter={filter}
-                  value={activeFilters[filter.key] || []}
-                  onChange={onFilterChange}
-                  isMobile={isMobile}
-                />
               ) : null}
             </div>
           ))}

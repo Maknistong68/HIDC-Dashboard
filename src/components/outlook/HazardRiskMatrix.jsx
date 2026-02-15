@@ -59,7 +59,7 @@ const TrendIndicator = ({ trend, size = 12 }) => {
 // MODAL DETAIL COMPONENTS
 // ============================================================================
 
-const FactorSlider = ({ slider, value, onChange }) => {
+const FactorSlider = React.memo(({ slider, value, onChange }) => {
   const normalizedValue = ((value + 50) / 150) * 100
   const sources = slider.sources || {}
 
@@ -119,7 +119,9 @@ const FactorSlider = ({ slider, value, onChange }) => {
       </div>
     </div>
   )
-}
+})
+
+FactorSlider.displayName = 'FactorSlider'
 
 /**
  * Tiny 5×5 grid dot — one for "Current", one for "Projected".
@@ -205,11 +207,11 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
     return { level: 'Insufficient', pct: 25, color: 'text-red-500' }
   }, [hazardIncidents])
 
-  // Generate contextual sliders using engine (Expert 50% + Data 30% + Temporal 20%)
-  const contextualSliders = useMemo(() => {
+  // Shared computation: build hazard-specific factor data (used by both sliders and prevalence)
+  const hazardFactorData = useMemo(() => {
     if (!factorData?.byFactor || !hazardIncidents?.length) return []
     const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
-    const hazardFactors = factorData.byFactor
+    return factorData.byFactor
       .filter(f => !f.isUnclassified && f.name !== 'Unclassified')
       .map(factor => {
         const matchingIncidents = (factor.incidents || []).filter(inc => hazardIncidentIds.has(inc.id))
@@ -217,28 +219,25 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
       })
       .filter(f => f.count > 0)
       .sort((a, b) => b.count - a.count)
+  }, [factorData, currentHazard, hazardIncidents])
+
+  // Generate contextual sliders using engine (Expert 50% + Data 30% + Temporal 20%)
+  const contextualSliders = useMemo(() => {
+    if (!hazardFactorData.length || !hazardIncidents?.length) return []
     const result = generateContextualSliders(
-      { byFactor: hazardFactors },
+      { byFactor: hazardFactorData },
       currentHazard?.name,
       hazardIncidents.length,
       dayPatterns
     )
     return (result.sliders || result).slice(0, 8)
-  }, [factorData, currentHazard, hazardIncidents, dayPatterns])
+  }, [hazardFactorData, currentHazard, hazardIncidents, dayPatterns])
 
   // Calculate factor prevalence for engine projection
   const prevalence = useMemo(() => {
-    if (!factorData?.byFactor || !hazardIncidents?.length) return {}
-    const hazardIncidentIds = new Set(hazardIncidents.map(i => i.id))
-    const hazardFactors = factorData.byFactor
-      .filter(f => !f.isUnclassified && f.name !== 'Unclassified')
-      .map(factor => {
-        const matchingIncidents = (factor.incidents || []).filter(inc => hazardIncidentIds.has(inc.id))
-        return { name: factor.name, count: matchingIncidents.length }
-      })
-      .filter(f => f.count > 0)
-    return calculateFactorPrevalence({ byFactor: hazardFactors }, hazardIncidents.length)
-  }, [factorData, hazardIncidents, currentHazard])
+    if (!hazardFactorData.length || !hazardIncidents?.length) return {}
+    return calculateFactorPrevalence({ byFactor: hazardFactorData }, hazardIncidents.length)
+  }, [hazardFactorData, hazardIncidents])
 
   // Project change using engine (diminishing returns, -45% to +40% cap)
   const projection = useMemo(() => {
@@ -302,6 +301,15 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
     if (onProjectionChange) onProjectionChange(projection)
   }, [projection, onProjectionChange])
 
+  // Stable per-slider onChange callbacks (prevents FactorSlider re-renders from new closures)
+  const sliderCallbacksRef = useRef({})
+  const getSliderOnChange = useCallback((sliderId) => {
+    if (!sliderCallbacksRef.current[sliderId]) {
+      sliderCallbacksRef.current[sliderId] = (v) => setSliders(s => ({ ...s, [sliderId]: v }))
+    }
+    return sliderCallbacksRef.current[sliderId]
+  }, [])
+
   const presetColorMap = { blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200', indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', amber: 'bg-amber-100 text-amber-700 hover:bg-amber-200', green: 'bg-green-100 text-green-700 hover:bg-green-200' }
 
   const isInsufficient = (hazardIncidents?.length || 0) < 10
@@ -362,7 +370,7 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
                 key={slider.id}
                 slider={slider}
                 value={sliders[slider.id] || 0}
-                onChange={(v) => setSliders(s => ({ ...s, [slider.id]: v }))}
+                onChange={getSliderOnChange(slider.id)}
               />
             ))}
           </div>
