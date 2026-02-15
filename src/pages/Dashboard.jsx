@@ -212,7 +212,7 @@ const Dashboard = () => {
   // Offloaded to Web Worker to keep main thread free during tab switches
   const { result: factorData } = useWorkerTask(
     'aggregateFactors', heatmapIncidents, null, [heatmapIncidents],
-    { byFactor: [], bySeverity: {}, summary: {} }
+    { byFactor: [], analyzed: 0, total: 0 }
   )
 
   // Get filtered data based on drill-down selection

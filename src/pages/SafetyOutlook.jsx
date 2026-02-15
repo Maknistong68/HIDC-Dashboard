@@ -146,7 +146,7 @@ const SafetyOutlook = () => {
   // Offloaded to Web Worker to keep main thread free
   const { result: factorData } = useWorkerTask(
     'aggregateFactors', filteredIncidents, null, [filteredIncidents],
-    { byFactor: [], bySeverity: {}, summary: {} }
+    { byFactor: [], analyzed: 0, total: 0 }
   )
 
   // Calculate hazard trend data for selected hazard

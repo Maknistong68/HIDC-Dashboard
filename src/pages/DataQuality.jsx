@@ -182,6 +182,19 @@ const DataQuality = () => {
   )
 
   // Combined quality data object - only creates new reference when sub-memos change
+  // Safe defaults for worker-async fields (prevents undefined access while worker is computing)
+  const EMPTY_REASON = { count: 0, records: [], percentage: '0', label: '', description: '' }
+  const WORKER_DEFAULTS = {
+    description: { avgWords: 0, totalDescriptions: 0, percentEmpty: 0, emptyDescriptions: 0, distribution: { veryShort: 0, short: 0, good: 0, excellent: 0 } },
+    duplicates: { duplicateGroups: [], totalGroups: 0, totalDuplicates: 0, uniqueDescriptions: 0, duplicateRate: '0' },
+    spellingIssues: { count: 0, records: [], percentage: '0', isReady: true },
+    foulWords: { count: 0, records: [], percentage: '0', status: 'good', summary: { highSeverity: 0, mediumSeverity: 0, lowSeverity: 0 } },
+    vagueHazards: { count: 0, records: [], percentage: '0', status: 'good', summary: { shortDescriptions: 0, primaryDescriptor: 0, topVagueTerms: [] } },
+    autoClassification: { totalAutoClassified: 0, percentageOfTotal: '0.0', classifications: [] },
+    otherHazards: { totalOther: 0, categories: [] },
+    unclassifiableRecords: { total: 0, byReason: { noDescription: EMPTY_REASON, tooShort: EMPTY_REASON, unrecognizedCategory: EMPTY_REASON, lowConfidence: EMPTY_REASON, historicalPlaceholder: EMPTY_REASON, restrictedClassification: EMPTY_REASON }, summary: { actionable: 0, total: 0, percentage: '0', message: '' } },
+  }
+
   const qualityData = useMemo(() => {
     if (!coreQualityMetrics) return null
 
@@ -189,21 +202,21 @@ const DataQuality = () => {
       // Core quality
       quality: coreQualityMetrics.quality,
       nearMiss: coreQualityMetrics.nearMiss,
-      // Categorization
-      autoClassification: categorizationMetrics?.autoClassification,
-      otherHazards: categorizationMetrics?.otherHazards,
-      // Text analysis
-      description: textAnalysisMetrics?.description,
-      duplicates: textAnalysisMetrics?.duplicates,
-      spellingIssues: textAnalysisMetrics?.spellingIssues,
-      foulWords: textAnalysisMetrics?.foulWords,
-      vagueHazards: textAnalysisMetrics?.vagueHazards,
+      // Categorization (worker-async - provide defaults)
+      autoClassification: categorizationMetrics?.autoClassification ?? WORKER_DEFAULTS.autoClassification,
+      otherHazards: categorizationMetrics?.otherHazards ?? WORKER_DEFAULTS.otherHazards,
+      // Text analysis (worker-async - provide defaults)
+      description: textAnalysisMetrics?.description ?? WORKER_DEFAULTS.description,
+      duplicates: textAnalysisMetrics?.duplicates ?? WORKER_DEFAULTS.duplicates,
+      spellingIssues: textAnalysisMetrics?.spellingIssues ?? WORKER_DEFAULTS.spellingIssues,
+      foulWords: textAnalysisMetrics?.foulWords ?? WORKER_DEFAULTS.foulWords,
+      vagueHazards: textAnalysisMetrics?.vagueHazards ?? WORKER_DEFAULTS.vagueHazards,
       // Reporter/contractor
-      reporters: reporterContractorMetrics?.reporters,
-      contractors: reporterContractorMetrics?.contractors,
-      // Flagged
-      unclassifiableRecords: trendAndFlaggedMetrics?.unclassifiableRecords,
-      flaggedRecords: trendAndFlaggedMetrics?.flaggedRecords,
+      reporters: reporterContractorMetrics?.reporters ?? [],
+      contractors: reporterContractorMetrics?.contractors ?? [],
+      // Flagged (worker-async - provide defaults)
+      unclassifiableRecords: trendAndFlaggedMetrics?.unclassifiableRecords ?? WORKER_DEFAULTS.unclassifiableRecords,
+      flaggedRecords: trendAndFlaggedMetrics?.flaggedRecords ?? [],
       // Legacy empty array
       alerts: [],
     }
