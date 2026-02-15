@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, startTransition, memo } from 'react'
-import { Target, AlertTriangle, Layers, Zap, Shield } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useFilter } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
@@ -8,9 +8,11 @@ import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerfo
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
-import { getHazardTrendingByPeriod, getHazardDailyData } from '../utils/insightsCalculations'
+import { getHazardTrendingByPeriod, getHazardDailyData, forecastIncidents } from '../utils/insightsCalculations'
 import { aggregateContributingFactors, isPositiveType } from '../utils/rootCauseEngine'
 import { getCachedAggregation } from '../utils/memoizedCalculations'
+import { MethodologyExplorerModal } from '../components/methodology'
+import { plotHazardsOnMatrix } from '../utils/riskMatrix'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -128,6 +130,7 @@ const SafetyOutlook = () => {
   const [activeSubTab, setActiveSubTab] = useState('hazards') // 'hazards' or 'factors'
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
+  const [showGuide, setShowGuide] = useState(false)
 
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
@@ -206,6 +209,17 @@ const SafetyOutlook = () => {
   const negativeIncidents = useMemo(() => {
     return filteredIncidents.filter(i => !isPositiveType(i.type))
   }, [filteredIncidents])
+
+  // Lifted matrixData for both HazardRiskMatrix and Methodology Guide
+  const matrixData = useMemo(() => {
+    return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
+  }, [filteredIncidents, sortedHazards])
+
+  // Lifted forecastData for Methodology Guide
+  const forecastData = useDeferredMemo(() => {
+    if (!negativeIncidents.length) return null
+    return forecastIncidents(negativeIncidents)
+  }, [negativeIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
   const detectedIncidentsCount = useMemo(() => {
@@ -391,29 +405,43 @@ const SafetyOutlook = () => {
       </div>
 
       {/* ==================== 3 MAIN TABS ==================== */}
-      <div role="tablist" aria-label="Safety Outlook tabs" className="flex items-center gap-1 overflow-x-auto border-b border-surface-200 pb-0">
-        {MAIN_TABS.map(tab => {
-          const Icon = tab.icon
-          const isActive = activeMainTab === tab.id
-          return (
+      <div className="flex items-center justify-between border-b border-surface-200 pb-0">
+        <div role="tablist" aria-label="Safety Outlook tabs" className="flex items-center gap-1 overflow-x-auto">
+          {MAIN_TABS.map(tab => {
+            const Icon = tab.icon
+            const isActive = activeMainTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${tab.id}`}
+                id={`tab-${tab.id}`}
+                onClick={() => handleMainTabChange(tab.id)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 -mb-px ${
+                  isActive
+                    ? 'border-primary-600 text-primary-700'
+                    : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300'
+                }`}
+              >
+                <Icon size={15} />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        {activeMainTab === 'predictive' && (
+          <div className="flex items-center gap-1 pb-1">
             <button
-              key={tab.id}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`tabpanel-${tab.id}`}
-              id={`tab-${tab.id}`}
-              onClick={() => handleMainTabChange(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 -mb-px ${
-                isActive
-                  ? 'border-primary-600 text-primary-700'
-                  : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300'
-              }`}
+              onClick={() => setShowGuide(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary-600 hover:bg-primary-50 transition-colors"
+              title="How everything is calculated — with your data"
             >
-              <Icon size={15} />
-              {tab.label}
+              <HelpCircle size={14} />
+              <span className="hidden sm:inline">How it's Calculated?</span>
             </button>
-          )
-        })}
+          </div>
+        )}
       </div>
 
       {/* ==================== TAB CONTENT ==================== */}
@@ -552,6 +580,7 @@ const SafetyOutlook = () => {
             factorData={factorData}
             period={period}
             siteClassifications={siteClassifications}
+            matrixData={matrixData}
           />
         </div>
         </TabErrorBoundary>
@@ -568,6 +597,17 @@ const SafetyOutlook = () => {
         </div>
         </TabErrorBoundary>
       )}
+
+      {/* Methodology Guide */}
+      <MethodologyExplorerModal
+        isOpen={showGuide}
+        onClose={() => setShowGuide(false)}
+        matrixData={matrixData}
+        filteredIncidents={filteredIncidents}
+        sortedHazards={sortedHazards}
+        forecastData={forecastData}
+        negativeIncidents={negativeIncidents}
+      />
     </div>
   )
 }

@@ -18,9 +18,10 @@ import {
   User,
   AlertCircle,
 } from 'lucide-react'
-import { QUICK_ACTION_PRESETS } from '../../utils/constants'
+import { QUICK_ACTION_PRESETS, ENV_SUB_TYPES, DMG_SUB_TYPES } from '../../utils/constants'
 import { getDayOfWeekPatterns, getHourlyPatterns } from '../../utils/insightsCalculations'
 import {
+  CONTROL_HIERARCHY,
   generateContextualSliders,
   calculateProjectedChange,
   calculateFactorPrevalence,
@@ -34,6 +35,7 @@ import {
   getCellRiskColor,
   getScoreColor,
   getScoreLabel,
+  getRiskZone,
   CONSEQUENCE_LABELS,
   LIKELIHOOD_LABELS,
 } from '../../utils/riskMatrix'
@@ -119,29 +121,53 @@ const FactorSlider = ({ slider, value, onChange }) => {
   )
 }
 
-const ImpactScoreCard = ({ impactScore, factorsAddressed, confidence }) => {
-  const hasImpact = impactScore > 0
-  let impactLevel = 'none', impactColor = 'text-surface-500', impactBg = 'bg-surface-50 border-surface-200'
-  if (impactScore >= 40) { impactLevel = 'High'; impactColor = 'text-green-700'; impactBg = 'bg-green-50 border-green-200' }
-  else if (impactScore >= 20) { impactLevel = 'Moderate'; impactColor = 'text-blue-700'; impactBg = 'bg-blue-50 border-blue-200' }
-  else if (impactScore > 0) { impactLevel = 'Low'; impactColor = 'text-amber-700'; impactBg = 'bg-amber-50 border-amber-200' }
+/**
+ * Tiny 5×5 grid dot — one for "Current", one for "Projected".
+ * Orientation: red (high risk) top-left, green (low risk) bottom-right.
+ * Rows = Impact/Consequence (5→1 top→bottom), Cols = Likelihood (5→1 left→right).
+ */
+const MiniGrid = ({ likelihood, consequence, label, dotClass }) => {
+  const score = likelihood * consequence
+  const zone = getRiskZone(likelihood, consequence)
+  const scoreColor = getScoreColor(score)
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[10px] font-semibold text-surface-500">{label}</span>
+      <div className="grid grid-cols-5 gap-[2px]" style={{ width: 70, height: 70 }}>
+        {[5, 4, 3, 2, 1].map(c =>
+          [5, 4, 3, 2, 1].map(l => {
+            const s = l * c
+            const color = getScoreColor(s)
+            const isActive = l === likelihood && c === consequence
+            return (
+              <div
+                key={`${l}-${c}`}
+                className="relative flex items-center justify-center rounded-[2px]"
+                style={{ backgroundColor: color.backgroundColor, opacity: isActive ? 1 : 0.35 }}
+              >
+                {isActive && <div className={`w-[9px] h-[9px] rounded-full ${dotClass}`} />}
+              </div>
+            )
+          })
+        )}
+      </div>
+      <span className="text-[9px] text-surface-400">L{likelihood} × C{consequence} = {score}</span>
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: scoreColor.backgroundColor, color: scoreColor.color, fontSize: '8px' }}>
+        {zone.label}
+      </span>
+    </div>
+  )
+}
+
+const MiniRiskMatrix = ({ likelihood, consequence, projectedLikelihood }) => {
+  const pL = projectedLikelihood != null && projectedLikelihood !== likelihood ? projectedLikelihood : likelihood
 
   return (
-    <div className={`rounded-lg p-4 border ${impactBg}`}>
-      <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-3">Intervention Impact</h4>
-      <div className="space-y-3 text-center">
-        <div className={`text-3xl font-bold ${impactColor}`}>{hasImpact ? `${impactScore}%` : '—'}</div>
-        <div className={`text-xs font-medium ${impactColor}`}>{hasImpact ? `${impactLevel} Impact` : 'Adjust sliders'}</div>
-        {hasImpact && (
-          <div className="bg-white/60 rounded-lg p-2">
-            <div className="flex items-center justify-center gap-1">
-              <Shield size={14} className="text-green-600" />
-              <span className="text-xs font-medium text-green-700">Risk Reduction Potential</span>
-            </div>
-          </div>
-        )}
-        {factorsAddressed > 0 && <div className="text-xs text-surface-600"><span className="font-semibold">{factorsAddressed}</span> factor{factorsAddressed > 1 ? 's' : ''} addressed</div>}
-        {confidence && <div className="text-[10px] text-surface-400">Confidence: {confidence}%</div>}
+    <div className="bg-white rounded-lg border border-surface-200 px-3 py-2">
+      <div className="flex items-center justify-center gap-5">
+        <MiniGrid likelihood={likelihood} consequence={consequence} label="Current" dotClass="bg-white border-2 border-surface-800" />
+        <span className="text-surface-300 text-lg">&rarr;</span>
+        <MiniGrid likelihood={pL} consequence={consequence} label="Projected" dotClass="bg-green-400 border-2 border-white animate-pulse" />
       </div>
     </div>
   )
@@ -159,7 +185,7 @@ const QuickActionButton = ({ label, icon: Icon, onClick, isActive, colorClass })
 
 const ICON_MAP = { Settings, Shield, User, CheckCircle, HardHat }
 
-const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns }) => {
+const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns, onProjectionChange }) => {
   const [sliders, setSliders] = useState({})
   const [actionsToClose, setActionsToClose] = useState(0)
   const [activeQuickAction, setActiveQuickAction] = useState(null)
@@ -214,7 +240,7 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
     return calculateFactorPrevalence({ byFactor: hazardFactors }, hazardIncidents.length)
   }, [factorData, hazardIncidents, currentHazard])
 
-  // Project change using engine (diminishing returns, -60% to +40% cap)
+  // Project change using engine (diminishing returns, -45% to +40% cap)
   const projection = useMemo(() => {
     const hasSliders = Object.values(sliders).some(v => v !== 0)
     if (!hasSliders && actionsToClose === 0) return { totalEffect: 0, effects: {}, factorsAddressed: 0 }
@@ -228,8 +254,8 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
     }
 
     const combinedEffect = engineResult.totalEffect + actionEffect
-    // Clamp to engine bounds: -60% to +40%
-    const clampedEffect = Math.round(Math.min(40, Math.max(-60, combinedEffect)) * 10) / 10
+    // Clamp to engine bounds: -45% to +40%
+    const clampedEffect = Math.round(Math.min(40, Math.max(-45, combinedEffect)) * 10) / 10
 
     const factorsAddressed = Object.keys(engineResult.effects || {}).length + (actionsToClose > 0 ? 1 : 0)
 
@@ -240,6 +266,11 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
       effects: engineResult.effects,
       factorsAddressed,
       isCapped: engineResult.isCapped,
+      hasDisminishingReturns: engineResult.hasDisminishingReturns,
+      actionEffect: Math.round(actionEffect * 10) / 10,
+      actionsToClose,
+      openActionsCount,
+      prevalenceData: prevalence,
     }
   }, [sliders, actionsToClose, prevalence, openActionsCount, hazardIncidents])
 
@@ -265,6 +296,11 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
     setActionsToClose(result.actionsToClose || 0)
     setActiveQuickAction(presetId)
   }, [activeQuickAction, prevalence, openActionsCount, contextualSliders])
+
+  // Notify parent of projection changes for MiniRiskMatrix
+  useEffect(() => {
+    if (onProjectionChange) onProjectionChange(projection)
+  }, [projection, onProjectionChange])
 
   const presetColorMap = { blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200', indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200', amber: 'bg-amber-100 text-amber-700 hover:bg-amber-200', green: 'bg-green-100 text-green-700 hover:bg-green-200' }
 
@@ -364,17 +400,242 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
         </div>
       )}
 
-      {/* Impact Score Card */}
-      <ImpactScoreCard
-        impactScore={projection.impactScore}
-        factorsAddressed={projection.factorsAddressed}
-        confidence={confidence.pct}
-      />
+      {/* Intervention Impact Summary — immediate feedback */}
+      {projection.factorsAddressed > 0 && (
+        <InterventionImpactSummary projection={projection} />
+      )}
 
     </div>
   )
 }
 
+
+// ============================================================================
+// INTERVENTION IMPACT SUMMARY — immediate feedback when sliders move
+// ============================================================================
+
+/** Build a lookup: factorName → { categoryKey, effectiveness } */
+const FACTOR_CONTROL_MAP = (() => {
+  const map = {}
+  for (const [key, cat] of Object.entries(CONTROL_HIERARCHY)) {
+    for (const f of cat.factors) {
+      map[f] = { categoryKey: key, categoryName: cat.name, effectiveness: cat.effectiveness }
+    }
+  }
+  return map
+})()
+
+const InterventionImpactSummary = ({ projection }) => {
+  if (!projection || projection.factorsAddressed === 0) return null
+
+  const effect = projection.totalEffect
+  const isReduction = effect < 0
+  const absEffect = Math.abs(effect)
+
+  // Progress bar: map -45..+40 to 0..100
+  // Center (0%) is at position 52.9% (45/85)
+  const center = (45 / 85) * 100
+  const barPos = isReduction
+    ? center - (absEffect / 45) * center
+    : center + (absEffect / 40) * (100 - center)
+
+  // Color coding
+  const colorClass = isReduction
+    ? absEffect >= 30 ? 'text-green-700' : absEffect >= 15 ? 'text-green-600' : 'text-green-500'
+    : effect > 0 ? 'text-red-600' : 'text-surface-500'
+  const bgClass = isReduction ? 'bg-green-50 border-green-200' : effect > 0 ? 'bg-red-50 border-red-200' : 'bg-surface-50 border-surface-200'
+
+  return (
+    <div className={`rounded-lg border p-4 ${bgClass}`}>
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Projected Impact</h4>
+        <span className="text-[10px] text-surface-400">{projection.factorsAddressed} factor{projection.factorsAddressed !== 1 ? 's' : ''} addressed</span>
+      </div>
+
+      {/* Large % display */}
+      <div className="text-center mb-3">
+        <span className={`text-3xl font-black ${colorClass}`}>
+          {effect > 0 ? '+' : ''}{effect}%
+        </span>
+        <p className="text-xs text-surface-500 mt-0.5">
+          {isReduction ? 'Projected risk reduction' : effect > 0 ? 'Projected risk increase' : 'No change'}
+        </p>
+      </div>
+
+      {/* Progress bar: -45% to +40% scale */}
+      <div className="relative h-3 bg-surface-100 rounded-full overflow-hidden mb-1.5">
+        {/* Center line at 0% */}
+        <div className="absolute top-0 bottom-0 w-px bg-surface-400 z-10" style={{ left: `${center}%` }} />
+        {/* Effect bar */}
+        <div
+          className={`absolute top-0 bottom-0 rounded-full transition-all duration-300 ${isReduction ? 'bg-green-400' : effect > 0 ? 'bg-red-400' : ''}`}
+          style={{
+            left: isReduction ? `${barPos}%` : `${center}%`,
+            width: `${Math.abs(barPos - center)}%`,
+          }}
+        />
+      </div>
+      <div className="flex items-center justify-between text-[9px] text-surface-400 mb-3">
+        <span>-45%</span>
+        <span>0%</span>
+        <span>+40%</span>
+      </div>
+
+      {/* Capped indicator */}
+      {projection.isCapped && (
+        <div className="flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded mb-2">
+          <AlertCircle size={11} />
+          <span>Effect capped at conservative bounds</span>
+        </div>
+      )}
+
+      {/* Threshold explanation */}
+      <div className="flex items-start gap-1.5 text-[10px] text-surface-400">
+        <Info size={11} className="flex-shrink-0 mt-0.5" />
+        <span>Min 15% reduction needed to shift risk matrix position. 30% for 2 steps, 45% for 3.</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// CALCULATION BREAKDOWN PANEL — numerical risk detail below MiniRiskMatrix
+// ============================================================================
+
+const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) => {
+  if (!hazard?.likelihood || !hazard?.consequence) return null
+
+  const L = hazard.likelihood
+  const C = hazard.consequence
+  const currentScore = L * C
+  const currentColor = getScoreColor(currentScore)
+  const currentZone = getRiskZone(L, C)
+
+  const pL = projectedLikelihood ?? L
+  const projectedScore = pL * C
+  const projectedColor = getScoreColor(projectedScore)
+  const projectedZone = getRiskZone(pL, C)
+  const hasChange = pL !== L
+
+  // Build per-intervention breakdown from projection.effects
+  const effectRows = useMemo(() => {
+    if (!projection?.effects) return []
+    return Object.values(projection.effects)
+      .map(e => {
+        const ctrl = FACTOR_CONTROL_MAP[e.factor]
+        return {
+          factor: e.factor,
+          label: e.label,
+          sliderValue: e.sliderValue,
+          effect: e.effect,
+          effectiveness: ctrl?.effectiveness ?? 0,
+          category: e.category,
+        }
+      })
+      .sort((a, b) => a.effect - b.effect) // most negative (biggest reduction) first
+  }, [projection])
+
+  const hasEffects = effectRows.length > 0 || (projection?.totalEffect && projection.totalEffect !== 0)
+  if (!hasEffects && !hasChange) return null
+
+  return (
+    <div className="bg-white rounded-lg border border-surface-200 px-3 py-3 space-y-3">
+      <h4 className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">Risk Calculation</h4>
+
+      {/* Current → Projected scores */}
+      <div className="flex items-center justify-center gap-3">
+        {/* Current */}
+        <div className="text-center">
+          <p className="text-[9px] text-surface-400 mb-0.5">Current</p>
+          <div className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: currentColor.backgroundColor + '30', border: `1px solid ${currentColor.borderColor}` }}>
+            <span className="text-xs font-bold" style={{ color: currentColor.borderColor }}>
+              L{L} <span className="text-[9px] font-normal">"{LIKELIHOOD_LABELS[L]}"</span> × C{C} <span className="text-[9px] font-normal">"{CONSEQUENCE_LABELS[C]}"</span> = {currentScore}
+            </span>
+          </div>
+          <div className="mt-0.5">
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: currentColor.backgroundColor, color: currentColor.color }}>
+              {currentZone.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Arrow */}
+        {hasChange && (
+          <>
+            <span className="text-surface-300 text-lg">&rarr;</span>
+            {/* Projected */}
+            <div className="text-center">
+              <p className="text-[9px] text-surface-400 mb-0.5">Projected</p>
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: projectedColor.backgroundColor + '30', border: `1px solid ${projectedColor.borderColor}` }}>
+                <span className="text-xs font-bold" style={{ color: projectedColor.borderColor }}>
+                  L{pL} <span className="text-[9px] font-normal">"{LIKELIHOOD_LABELS[pL]}"</span> × C{C} = {projectedScore}
+                </span>
+              </div>
+              <div className="mt-0.5">
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: projectedColor.backgroundColor, color: projectedColor.color }}>
+                  {projectedZone.label}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Per-intervention breakdown table */}
+      {effectRows.length > 0 && (
+        <div>
+          <h5 className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider mb-1.5">Intervention Breakdown</h5>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="text-surface-400 border-b border-surface-100">
+                  <th className="text-left py-1 pr-2 font-semibold">Factor</th>
+                  <th className="text-right py-1 px-1 font-semibold">Prevalence</th>
+                  <th className="text-right py-1 px-1 font-semibold">Eff.</th>
+                  <th className="text-right py-1 px-1 font-semibold">Slider</th>
+                  <th className="text-right py-1 pl-1 font-semibold">= Effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                {effectRows.map(row => {
+                  const prev = projection?.prevalenceData?.[row.factor]
+                  const prevalencePct = prev?.percentage ?? '—'
+                  return (
+                    <tr key={row.factor} className="border-b border-surface-50">
+                      <td className="py-1 pr-2 text-surface-700 truncate max-w-[100px]" title={row.factor}>{row.factor}</td>
+                      <td className="py-1 px-1 text-right text-surface-500">{typeof prevalencePct === 'number' ? prevalencePct.toFixed(1) + '%' : prevalencePct}</td>
+                      <td className="py-1 px-1 text-right text-surface-500">×{Math.round(row.effectiveness * 100)}%</td>
+                      <td className="py-1 px-1 text-right text-surface-500">×{row.sliderValue}%</td>
+                      <td className={`py-1 pl-1 text-right font-semibold ${row.effect < 0 ? 'text-green-600' : row.effect > 0 ? 'text-red-600' : 'text-surface-500'}`}>
+                        {row.effect > 0 ? '+' : ''}{row.effect}%
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Action closure effect */}
+      {projection?.actionEffect !== 0 && projection?.actionEffect != null && (
+        <div className="flex items-center justify-between text-[10px] px-1 py-1 bg-green-50 rounded">
+          <span className="text-surface-600">Close {projection.actionsToClose} of {projection.openActionsCount} actions</span>
+          <span className="font-semibold text-green-600">{projection.actionEffect > 0 ? '+' : ''}{projection.actionEffect.toFixed(1)}%</span>
+        </div>
+      )}
+
+      {/* Diminishing returns note */}
+      {projection?.hasDisminishingReturns && effectRows.length > 1 && (
+        <div className="flex items-start gap-1.5 text-[9px] text-surface-400">
+          <Info size={10} className="flex-shrink-0 mt-0.5" />
+          <span>Diminishing returns applied: each subsequent intervention gets 70% of remaining effect capacity.</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ============================================================================
 // CENTER HAZARD CARD - Shows severity breakdown (Pyramid visualization)
@@ -397,10 +658,10 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
       else if (type === 'lti') counts.lti++
       else if (type === 'mti') counts.mti++
       else if (type === 'fac') counts.fac++
-      else if (type === 'environmental') counts.env++
+      else if (ENV_SUB_TYPES.has(type) || type === 'environmental') counts.env++
       else if (type === 'fire') counts.fire++
       else if (type === 'security') counts.security++
-      else if (type === 'damage-to-property') counts.dmg++
+      else if (DMG_SUB_TYPES.has(type) || type === 'damage-to-property') counts.dmg++
       else if (type === 'near-miss') counts.nearMiss++
       else counts.observations++
     })
@@ -589,11 +850,12 @@ const ConnectedHubDiagram = ({
   dayPatterns,
   hourPatterns,
   siteClassifications,
-  cellColor
+  cellColor,
+  projection
 }) => {
-  // Calculate WHERE data: top 2 sites/contractors
+  // Calculate WHERE data: top site + top 4 contractors (no duplication)
   const whereData = useMemo(() => {
-    if (!hazardIncidents?.length) return { sites: [], contractors: [] }
+    if (!hazardIncidents?.length) return { topSite: null, contractors: [] }
 
     const siteCounts = {}
     const contractorCounts = {}
@@ -604,38 +866,53 @@ const ConnectedHubDiagram = ({
       contractorCounts[contractor] = (contractorCounts[contractor] || 0) + 1
     })
 
-    const sites = Object.entries(siteCounts)
+    const sortedSites = Object.entries(siteCounts)
       .map(([name, count]) => ({ name, pct: Math.round((count / hazardIncidents.length) * 100) }))
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, 2)
+    const topSite = sortedSites[0] || null
 
     const contractors = Object.entries(contractorCounts)
       .map(([name, count]) => ({ name, pct: Math.round((count / hazardIncidents.length) * 100) }))
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, 2)
+      .slice(0, 4)
 
-    return { sites, contractors }
+    return { topSite, contractors }
   }, [hazardIncidents])
 
-  // Calculate WHEN data: peak day and shift with deviation %
+  // Calculate WHEN data: peak/lowest day and shift with deviation %
   const whenData = useMemo(() => {
-    const result = { day: null, shift: null }
+    const result = { day: null, shift: null, lowestDay: null, lowestShift: null }
 
     if (dayPatterns?.hasData && dayPatterns.patterns?.length > 0) {
-      const sortedDays = [...dayPatterns.patterns].sort((a, b) => b.count - a.count)
-      const peakDay = sortedDays[0]
+      const sortedDaysDesc = [...dayPatterns.patterns].sort((a, b) => b.count - a.count)
+      const peakDay = sortedDaysDesc[0]
       if (peakDay && peakDay.count > 0) {
         result.day = { label: peakDay.day, deviation: Math.round(peakDay.riskIndex - 100) }
+      }
+      // Lowest day: pick lowest count > 0
+      const sortedDaysAsc = [...dayPatterns.patterns].filter(p => p.count > 0).sort((a, b) => a.count - b.count)
+      const lowestDay = sortedDaysAsc[0]
+      if (lowestDay && lowestDay.day !== peakDay?.day) {
+        result.lowestDay = { label: lowestDay.day, deviation: Math.round(lowestDay.riskIndex - 100) }
       }
     }
 
     if (hourPatterns?.hasData && hourPatterns.shifts?.length > 0) {
-      const sortedShifts = [...hourPatterns.shifts].sort((a, b) => b.count - a.count)
-      const peakShift = sortedShifts[0]
+      const sortedShiftsDesc = [...hourPatterns.shifts].sort((a, b) => b.count - a.count)
+      const peakShift = sortedShiftsDesc[0]
       if (peakShift && peakShift.count > 0) {
         result.shift = {
           label: peakShift.key.charAt(0).toUpperCase() + peakShift.key.slice(1),
           deviation: Math.round(peakShift.riskIndex - 100)
+        }
+      }
+      // Lowest shift: pick lowest count > 0
+      const sortedShiftsAsc = [...hourPatterns.shifts].filter(s => s.count > 0).sort((a, b) => a.count - b.count)
+      const lowestShift = sortedShiftsAsc[0]
+      if (lowestShift && lowestShift.key !== peakShift?.key) {
+        result.lowestShift = {
+          label: lowestShift.key.charAt(0).toUpperCase() + lowestShift.key.slice(1),
+          deviation: Math.round(lowestShift.riskIndex - 100)
         }
       }
     }
@@ -654,8 +931,23 @@ const ConnectedHubDiagram = ({
   }
   const trend = trendConfig[hazard?.trendLevel?.level] || trendConfig.stable
 
-  const hasWhenData = whenData.day || whenData.shift
-  const hasWhereData = whereData.sites.length > 0 || whereData.contractors.length > 0
+  // Calculate projected likelihood from simulation totalEffect
+  // Movement is ONLY downward (lower likelihood = lower risk), max 3 steps
+  const projectedLikelihood = useMemo(() => {
+    if (!projection || !hazard?.likelihood) return null
+    const reductionPct = projection.totalEffect < 0 ? Math.abs(projection.totalEffect) : 0
+    if (reductionPct < 15) return null // need at least 15% to move one step
+    // Conservative step mapping: 15-29% → -1, 30-44% → -2, 45%+ → -3
+    let steps = 0
+    if (reductionPct >= 45) steps = 3
+    else if (reductionPct >= 30) steps = 2
+    else steps = 1
+    const projected = Math.max(1, hazard.likelihood - steps)
+    return projected === hazard.likelihood ? null : projected
+  }, [projection, hazard])
+
+  const hasWhenData = whenData.day || whenData.shift || whenData.lowestDay || whenData.lowestShift
+  const hasWhereData = whereData.topSite || whereData.contractors.length > 0
 
   // Calculate trend details for bottom card
   const trendDetails = useMemo(() => {
@@ -684,7 +976,7 @@ const ConnectedHubDiagram = ({
             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">When</p>
           </div>
           {hasWhenData ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {whenData.day && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-surface-500">Peak Day</span>
@@ -707,6 +999,31 @@ const ConnectedHubDiagram = ({
                   </div>
                 </div>
               )}
+              {(whenData.lowestDay || whenData.lowestShift) && (
+                <div className="border-t border-blue-200 my-1" />
+              )}
+              {whenData.lowestDay && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-surface-500">Lowest Day</span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-surface-800">{whenData.lowestDay.label}</p>
+                    <p className={`text-[10px] font-semibold ${whenData.lowestDay.deviation > 0 ? 'text-red-500' : whenData.lowestDay.deviation < 0 ? 'text-green-500' : 'text-surface-400'}`}>
+                      {whenData.lowestDay.deviation > 0 ? '+' : ''}{whenData.lowestDay.deviation}% vs avg
+                    </p>
+                  </div>
+                </div>
+              )}
+              {whenData.lowestShift && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-surface-500">Lowest Shift</span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-surface-800">{whenData.lowestShift.label}</p>
+                    <p className={`text-[10px] font-semibold ${whenData.lowestShift.deviation > 0 ? 'text-red-500' : whenData.lowestShift.deviation < 0 ? 'text-green-500' : 'text-surface-400'}`}>
+                      {whenData.lowestShift.deviation > 0 ? '+' : ''}{whenData.lowestShift.deviation}% vs avg
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-xs text-surface-400 italic text-center py-2">No temporal data</p>
@@ -722,49 +1039,26 @@ const ConnectedHubDiagram = ({
             <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Where</p>
           </div>
           {hasWhereData ? (
-            <div className="space-y-2">
-              {whereData.sites.slice(0, 2).map((site, idx) => {
-                const isUnknown = site.name === 'Unknown'
-                return (
-                  <div key={`site-${idx}`} className="flex items-center justify-between">
-                    <span
-                      className={`text-xs truncate max-w-[60%] ${isUnknown ? 'text-surface-400 italic' : 'text-surface-600'}`}
-                      title={site.name}
-                    >
-                      {site.name}
+            <div className="space-y-1.5">
+              {whereData.topSite && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-surface-400">Site</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs truncate max-w-[90px] ${whereData.topSite.name === 'Unknown' ? 'text-surface-400 italic' : 'text-surface-700 font-medium'}`} title={whereData.topSite.name}>
+                      {whereData.topSite.name}
                     </span>
-                    <span className={`text-sm font-semibold ${isUnknown ? 'text-surface-400' : 'text-purple-600'}`}>
-                      {site.pct}%
-                    </span>
+                    <span className="text-xs font-semibold text-purple-600">{whereData.topSite.pct}%</span>
                   </div>
-                )
-              })}
-
-              {/* Divider if both sites and contractors exist */}
-              {whereData.sites.length > 0 && whereData.contractors.length > 0 && (
-                <div className="border-t border-purple-200 my-2" />
+                </div>
               )}
-
-              {/* Top Contractor */}
-              {whereData.contractors.slice(0, 1).map((contractor, idx) => {
-                const isUnknown = contractor.name === 'Unknown'
-                return (
-                  <div key={`contractor-${idx}`} className="flex items-center justify-between">
-                    <span className="text-xs text-surface-500">Top Contractor</span>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs truncate max-w-[80px] ${isUnknown ? 'text-surface-400 italic' : 'text-surface-600'}`}
-                        title={contractor.name}
-                      >
-                        {contractor.name}
-                      </span>
-                      <span className={`text-sm font-semibold ${isUnknown ? 'text-surface-400' : 'text-purple-600'}`}>
-                        {contractor.pct}%
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+              {whereData.contractors.map((c, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className={`text-xs truncate max-w-[60%] ${c.name === 'Unknown' ? 'text-surface-400 italic' : 'text-surface-600'}`} title={c.name}>
+                    {c.name}
+                  </span>
+                  <span className={`text-xs font-semibold ${c.name === 'Unknown' ? 'text-surface-400' : 'text-purple-600'}`}>{c.pct}%</span>
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-xs text-surface-400 italic text-center py-2">No location data</p>
@@ -867,6 +1161,22 @@ const ConnectedHubDiagram = ({
           </div>
         </div>
       </div>
+
+      {/* MINI RISK MATRIX + CALCULATION BREAKDOWN */}
+      {hazard?.likelihood && hazard?.consequence && (
+        <div className="space-y-3">
+          <MiniRiskMatrix
+            likelihood={hazard.likelihood}
+            consequence={hazard.consequence}
+            projectedLikelihood={projectedLikelihood}
+          />
+          <CalculationBreakdownPanel
+            hazard={hazard}
+            projectedLikelihood={projectedLikelihood}
+            projection={projection}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -889,6 +1199,11 @@ const HazardDetailModal = ({
 }) => {
   const modalRef = useRef(null)
   const previousActiveElement = useRef(null)
+  const [projection, setProjection] = useState(null)
+
+  const handleProjectionChange = useCallback((proj) => {
+    setProjection(proj)
+  }, [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -914,15 +1229,17 @@ const HazardDetailModal = ({
         tabIndex={-1}
         className="relative w-full max-w-[1600px] max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col animate-fade-in"
       >
-        {/* Minimal Header - Close button only */}
-        <div className="flex-shrink-0 bg-surface-50 border-b border-surface-200 px-4 py-3 rounded-t-2xl flex items-center justify-end">
-          <button onClick={onClose} className="p-2 hover:bg-surface-200 rounded-lg transition-colors" aria-label="Close modal">
-            <X size={20} className="text-surface-600" />
-          </button>
-        </div>
+        {/* Floating close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 p-2 bg-white/80 hover:bg-surface-100 rounded-lg transition-colors shadow-sm border border-surface-200"
+          aria-label="Close modal"
+        >
+          <X size={18} className="text-surface-600" />
+        </button>
 
         {/* Content - Horizontal 2-Section Split */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 pt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* LEFT COLUMN: Connected Hub Diagram (Diamond Layout) */}
             <div className="space-y-4">
@@ -937,6 +1254,7 @@ const HazardDetailModal = ({
                 hourPatterns={hourPatterns}
                 siteClassifications={siteClassifications}
                 cellColor={cellColor}
+                projection={projection}
               />
             </div>
 
@@ -951,6 +1269,7 @@ const HazardDetailModal = ({
                 hazardIncidents={hazardIncidents}
                 factorData={factorData}
                 dayPatterns={dayPatterns}
+                onProjectionChange={handleProjectionChange}
               />
             </div>
           </div>
@@ -974,7 +1293,7 @@ const RiskMatrixLegend = () => (
         <span className="font-medium text-red-700">V.High <span className="text-[10px] text-surface-400">(20-25)</span></span>
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444', border: '1px solid #dc2626' }} />
+        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f87171', border: '1px solid #ef4444' }} />
         <span className="font-medium text-red-600">High <span className="text-[10px] text-surface-400">(10-19)</span></span>
       </div>
       <div className="flex items-center gap-1">
@@ -1175,15 +1494,19 @@ const HazardRiskMatrix = ({
   filteredIncidents,
   factorData,
   period,
-  siteClassifications = {}
+  siteClassifications = {},
+  matrixData: matrixDataProp,
 }) => {
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedCellColor, setSelectedCellColor] = useState(null)
 
   // True Risk Matrix data (L x C placement)
-  const matrixData = useMemo(() => {
+  // Use prop if provided, otherwise compute internally (backward compat)
+  const matrixDataInternal = useMemo(() => {
+    if (matrixDataProp) return matrixDataProp
     return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
-  }, [filteredIncidents, sortedHazards])
+  }, [matrixDataProp, filteredIncidents, sortedHazards])
+  const matrixData = matrixDataInternal
 
   // Handle clicks from the true risk matrix view
   const handleMatrixHazardClick = useCallback((hazard) => {

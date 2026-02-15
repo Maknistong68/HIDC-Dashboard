@@ -2,7 +2,7 @@ import React, { useState, useMemo, useTransition, useCallback } from 'react'
 import DrillDownModal from '../common/DrillDownModal'
 import { InfoTooltip } from '../ui/Tooltip'
 import { Card } from '../ui'
-import { PYRAMID_SECTIONS } from '../../utils/constants'
+import { PYRAMID_SECTIONS, ENV_SUB_TYPES, DMG_SUB_TYPES } from '../../utils/constants'
 
 /**
  * IncidentPyramid - Safety pyramid visualization as a true centered triangle
@@ -36,8 +36,15 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   }, [])
 
   // Get all incidents for selected type (incidents are already globally filtered by work-related toggle)
+  // For consolidated types, include all sub-types (e.g. environmental → env-major/moderate/minor)
   const filteredIncidents = useMemo(() => {
     if (!selectedType || !incidents.length) return []
+    if (selectedType === 'environmental') {
+      return incidents.filter(i => ENV_SUB_TYPES.has(i.type) || i.type === 'environmental')
+    }
+    if (selectedType === 'damage-to-property') {
+      return incidents.filter(i => DMG_SUB_TYPES.has(i.type) || i.type === 'damage-to-property' || i.type === 'property-damage')
+    }
     return incidents.filter(i => i.type === selectedType)
   }, [selectedType, incidents])
 

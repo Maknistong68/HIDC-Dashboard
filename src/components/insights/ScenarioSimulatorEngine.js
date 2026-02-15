@@ -15,14 +15,14 @@
  * Map factors to HSE Hierarchy of Controls
  * Effectiveness ranges based on NIOSH/HSE research:
  * - Engineering: 60-90% effectiveness at addressing root cause
- * - Administrative: 40-60% effectiveness
+ * - Administrative: 25-45% effectiveness
  * - PPE: 20-40% effectiveness (last line of defense)
  */
 export const CONTROL_HIERARCHY = {
   // Engineering Controls - Physical changes that isolate people from hazards
   engineering: {
     name: 'Engineering Controls',
-    effectiveness: 0.75, // 75% average effectiveness
+    effectiveness: 0.55, // 55% average effectiveness (conservative)
     factors: ['Barriers', 'Safety Devices', 'Machine Guarding', 'Signage'],
     description: 'Physical barriers, guards, and engineering solutions',
     interventions: [
@@ -36,10 +36,10 @@ export const CONTROL_HIERARCHY = {
   // Administrative Controls - Change how people work
   administrative: {
     name: 'Administrative Controls',
-    effectiveness: 0.50, // 50% average effectiveness
+    effectiveness: 0.35, // 35% average effectiveness (conservative)
     factors: [
       'Training', 'Competency', 'Documentations', 'Permit', 'Supervision',
-      'Planning', 'Communication', 'Inspections', 'Interfaces', 'Housekeeping', 'Behavioural'
+      'Planning', 'Communication', 'Inspections', 'Interfaces', 'Orderliness', 'Behavioural'
     ],
     description: 'Procedures, training, supervision, and work practices',
     interventions: [
@@ -52,14 +52,14 @@ export const CONTROL_HIERARCHY = {
       { id: 'communication', label: 'Communication/Briefings', factor: 'Communication' },
       { id: 'inspections', label: 'Inspection Frequency', factor: 'Inspections' },
       { id: 'interfaces', label: 'Handover Procedures', factor: 'Interfaces' },
-      { id: 'housekeeping', label: 'Housekeeping Standards', factor: 'Housekeeping' }
+      { id: 'orderliness', label: 'Orderliness Standards', factor: 'Orderliness' }
     ]
   },
 
   // PPE - Last line of defense
   ppe: {
     name: 'Personal Protective Equipment',
-    effectiveness: 0.30, // 30% average effectiveness (protects worker, doesn't eliminate hazard)
+    effectiveness: 0.20, // 20% average effectiveness (protects worker, doesn't eliminate hazard)
     factors: ['PPE'],
     description: 'Personal protective equipment compliance',
     interventions: [
@@ -70,7 +70,7 @@ export const CONTROL_HIERARCHY = {
   // Environmental Controls
   environmental: {
     name: 'Environmental Controls',
-    effectiveness: 0.55, // 55% average effectiveness
+    effectiveness: 0.40, // 40% average effectiveness (conservative)
     factors: ['Environment', 'Emergency Preparedness'],
     description: 'Workplace conditions and emergency readiness',
     interventions: [
@@ -223,29 +223,32 @@ export const calculateProjectedChange = (sliders, prevalence) => {
     }
   }
 
-  // Fix 1.5: Apply diminishing returns for multiple interventions
+  // Apply diminishing returns for multiple interventions
   // Sort effects by absolute value (most impactful first)
-  // Each subsequent intervention has reduced effect on remaining risk
+  // Each subsequent intervention gets only 70% of remaining risk (stronger decay)
   let totalEffect = 0
   if (individualEffects.length > 0) {
     // Sort by absolute value descending
     const sortedEffects = [...individualEffects].sort((a, b) => Math.abs(b) - Math.abs(a))
 
     // Apply diminishing returns: each effect applies to remaining risk
+    // with a 70% decay factor per subsequent intervention
     let remainingRisk = 100
-    for (const effect of sortedEffects) {
-      // Actual effect = effect * (remaining risk / 100)
-      const actualEffect = effect * (remainingRisk / 100)
+    for (let idx = 0; idx < sortedEffects.length; idx++) {
+      const effect = sortedEffects[idx]
+      // Each subsequent intervention only gets 70% of remaining capacity
+      const decayFactor = idx === 0 ? 1 : Math.pow(0.7, idx)
+      const actualEffect = effect * (remainingRisk / 100) * decayFactor
       totalEffect += actualEffect
       // Reduce remaining risk for next intervention (only for risk-reducing effects)
       if (effect < 0) {
-        remainingRisk = Math.max(0, remainingRisk + effect) // effect is negative
+        remainingRisk = Math.max(0, remainingRisk + actualEffect) // actualEffect is negative
       }
     }
   }
 
-  // Cap total effect at reasonable bounds (-60% to +40%)
-  const cappedEffect = Math.max(-60, Math.min(40, totalEffect))
+  // Cap total effect at conservative bounds (-45% to +40%)
+  const cappedEffect = Math.max(-45, Math.min(40, totalEffect))
 
   return {
     totalEffect: Math.round(cappedEffect * 10) / 10,
@@ -354,7 +357,7 @@ const extractMeaningfulPhrases = (text, factorName) => {
       'supervision', 'unsupervised', 'supervisor', 'no supervision', 'lack of supervision',
       'foreman', 'overseer', 'monitoring', 'not monitored', 'left alone'
     ],
-    'Housekeeping': [
+    'Orderliness': [
       'housekeeping', 'messy', 'untidy', 'clutter', 'debris', 'waste', 'spillage',
       'tools lying', 'materials scattered', 'not cleaned', 'dirty', 'disorganized'
     ],
@@ -611,13 +614,12 @@ export const generateContextualSliders = (factorData, hazardName, totalNegativeI
     }
   }
 
-  // Process data-detected factors not in expert recommendations (30% weight only)
-  const topFactors = getTopFactorsForHazard(factorData, hazardName, 10)
-  for (const factor of topFactors) {
+  // Also include data-detected factors not in expert recommendations
+  const topDataFactors = getTopFactorsForHazard(factorData, hazardName, 12)
+  for (const factor of topDataFactors) {
     if (factor.isUnclassified || factor.name === 'Unclassified') continue
-    if (scoredFactors[factor.name]) continue // Already processed from expert recs
+    if (scoredFactors[factor.name]) continue // Already scored via expert
 
-    // Find control category mapping
     let category = null
     let intervention = null
     for (const [categoryKey, cat] of Object.entries(CONTROL_HIERARCHY)) {
@@ -641,11 +643,9 @@ export const generateContextualSliders = (factorData, hazardName, totalNegativeI
 
     const temporal = temporalCorrelations[factor.name]
 
-    // Data-only score (no expert contribution)
+    // Data + temporal only (no expert component)
     const dataScore = factorPrevalence
     const temporalScore = temporal ? temporal.boost * 50 : 0
-
-    // 30% data + 20% temporal (expert is 0)
     const compositeScore = (dataScore * 0.3) + (temporalScore * 0.2)
 
     scoredFactors[factor.name] = {
@@ -657,7 +657,7 @@ export const generateContextualSliders = (factorData, hazardName, totalNegativeI
       effectiveness: category.effectiveness,
       prevalence: factorPrevalence,
       maxReduction: factorPrevalence * category.effectiveness,
-      count: factor.count,
+      count: prevalence[factor.name]?.count || 0,
       sublabel: `${factorPrevalence.toFixed(1)}% of incidents involve ${factor.name.toLowerCase()}`,
       score: compositeScore,
       sources: {
@@ -828,7 +828,7 @@ export const calculateFullProjection = ({
   )
 
   // Total combined effect
-  const combinedEffect = Math.max(-60, Math.min(40, totalEffect + actionEffect))
+  const combinedEffect = Math.max(-45, Math.min(40, totalEffect + actionEffect))
 
   // Calculate projected value
   const projected = Math.round(basePrediction * (1 + combinedEffect / 100))

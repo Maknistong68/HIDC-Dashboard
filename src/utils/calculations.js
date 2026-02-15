@@ -3,7 +3,7 @@ import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, PYRAMID_SECTIONS
 import { getCurrentDate } from './dateUtils'
 import { isOpenAction } from './incidentHelpers'
 
-// Get incident counts by type - counts each specific sub-type individually
+// Get incident counts by type - aggregates ENV/DMG sub-types into consolidated pyramid rows
 export const getIncidentCountsByType = (incidents) => {
   // Initialize counts for all pyramid types
   const counts = {}
@@ -15,11 +15,25 @@ export const getIncidentCountsByType = (incidents) => {
   // Keep legacy aggregate 'incident' count for backward compatibility
   counts['incident'] = 0
 
+  // Map granular sub-types to consolidated pyramid keys
+  const SUB_TYPE_TO_PYRAMID = {
+    'env-major': 'environmental',
+    'env-moderate': 'environmental',
+    'env-minor': 'environmental',
+    'dmg-light-vehicle': 'damage-to-property',
+    'dmg-heavy-plant': 'damage-to-property',
+    'dmg-truck-trailer': 'damage-to-property',
+    'dmg-static-equipment': 'damage-to-property',
+    'property-damage': 'damage-to-property',
+  }
+
   incidents.forEach(incident => {
     const type = incident.type
-    // Count in specific sub-type bucket
-    if (counts.hasOwnProperty(type)) {
-      counts[type]++
+    // Map sub-types to consolidated pyramid key
+    const pyramidKey = SUB_TYPE_TO_PYRAMID[type] || type
+    // Count in pyramid bucket
+    if (counts.hasOwnProperty(pyramidKey)) {
+      counts[pyramidKey]++
     }
     // Also maintain aggregate 'incident' count for backward compat
     if (RECORDABLE_INCIDENT_TYPES.includes(type)) {
@@ -262,9 +276,17 @@ export const SEVERITY_WEIGHTS = {
   lti: 1000,
   mti: 500,
   fac: 100,
-  'environmental': 200,
+  'env-major': 400,
+  'env-moderate': 200,
+  'env-minor': 100,
   'fire': 500,
   'security': 100,
+  'dmg-light-vehicle': 150,
+  'dmg-heavy-plant': 250,
+  'dmg-truck-trailer': 200,
+  'dmg-static-equipment': 150,
+  // Legacy consolidated types (for backward compat with existing data)
+  'environmental': 200,
   'damage-to-property': 200,
   'near-miss': 50,
   ncr: 20,

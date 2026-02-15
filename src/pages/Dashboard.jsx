@@ -283,9 +283,21 @@ const Dashboard = () => {
     [filteredIncidents]
   )
 
-  // Pyramid data with open/closed breakdown - counts each specific sub-type
+  // Pyramid data with open/closed breakdown - aggregates ENV/DMG sub-types into consolidated rows
   const pyramidData = useDeferredMemo(() => {
     const result = {}
+
+    // Sub-type to consolidated pyramid key mapping
+    const SUB_TYPE_TO_PYRAMID = {
+      'env-major': 'environmental',
+      'env-moderate': 'environmental',
+      'env-minor': 'environmental',
+      'dmg-light-vehicle': 'damage-to-property',
+      'dmg-heavy-plant': 'damage-to-property',
+      'dmg-truck-trailer': 'damage-to-property',
+      'dmg-static-equipment': 'damage-to-property',
+      'property-damage': 'damage-to-property',
+    }
 
     // Initialize all pyramid types
     PYRAMID_SECTIONS.forEach(section => {
@@ -295,7 +307,7 @@ const Dashboard = () => {
     })
 
     filteredIncidents.forEach(incident => {
-      const typeKey = incident.type
+      const typeKey = SUB_TYPE_TO_PYRAMID[incident.type] || incident.type
       if (result[typeKey]) {
         if (incident.actionStatus === 'closed') {
           result[typeKey].closed++

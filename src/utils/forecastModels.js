@@ -79,12 +79,13 @@ export const holtWintersAdditive = (
     const prevLevel = level
     const prevTrend = trend
 
+    // Fitted value BEFORE update (avoids peeking at current observation)
+    fitted[t] = prevLevel + prevTrend + seasonal[sIdx]
+
     // Update equations
     level = alpha * (values[t] - seasonal[sIdx]) + (1 - alpha) * (prevLevel + prevTrend)
     trend = beta * (level - prevLevel) + (1 - beta) * prevTrend
     seasonal[sIdx] = gamma * (values[t] - level) + (1 - gamma) * seasonal[sIdx]
-
-    fitted[t] = level + trend + seasonal[sIdx]
   }
 
   // Generate forecast

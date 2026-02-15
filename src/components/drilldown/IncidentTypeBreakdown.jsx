@@ -4,28 +4,34 @@ import { INCIDENT_SUB_TYPES } from '../../utils/constants'
 
 /**
  * IncidentTypeBreakdown - Shows breakdown of incident sub-types
- * LTI, MTI, FAC, Property Damage, Environmental, Security
+ * Accepts optional subTypes prop to show specific breakdown (e.g., ENV or DMG sub-types)
  */
-const IncidentTypeBreakdown = ({ incidents = [], onTypeClick, isMobile = false }) => {
+const IncidentTypeBreakdown = ({ incidents = [], onTypeClick, isMobile = false, subTypes = null, title = null }) => {
+  // Use provided subTypes or fall back to full INCIDENT_SUB_TYPES
+  const displayTypes = subTypes || INCIDENT_SUB_TYPES
+
   // Calculate counts for each sub-type
   const breakdown = useMemo(() => {
     const counts = {}
-    INCIDENT_SUB_TYPES.forEach(({ key }) => {
+    displayTypes.forEach(({ key }) => {
       counts[key] = 0
     })
+    // Legacy type aliases that should merge into a display key
+    const typeAliases = { 'property-damage': 'damage-to-property' }
     incidents.forEach(i => {
-      if (counts[i.type] !== undefined) {
-        counts[i.type]++
+      const type = typeAliases[i.type] || i.type
+      if (counts[type] !== undefined) {
+        counts[type]++
       }
     })
     return counts
-  }, [incidents])
+  }, [incidents, displayTypes])
 
   // Total incidents
   const total = incidents.length
 
   // Get sub-types that have data
-  const activeTypes = INCIDENT_SUB_TYPES.filter(({ key }) => breakdown[key] > 0)
+  const activeTypes = displayTypes.filter(({ key }) => breakdown[key] > 0)
 
   if (activeTypes.length === 0) {
     return null
@@ -36,13 +42,14 @@ const IncidentTypeBreakdown = ({ incidents = [], onTypeClick, isMobile = false }
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle size={16} className="text-red-500" />
-        <h4 className="text-sm font-semibold text-surface-800">Incident Type Breakdown</h4>
+        <h4 className="text-sm font-semibold text-surface-800">{title || 'Incident Type Breakdown'}</h4>
         <span className="text-xs text-surface-500 ml-auto">{total} total</span>
       </div>
 
       {/* Breakdown Grid */}
-      <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        {INCIDENT_SUB_TYPES.map(({ key, label, color }) => {
+      {/* grid-cols-3 grid-cols-4 - ensure Tailwind sees these classes */}
+      <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : displayTypes.length === 3 ? 'grid-cols-3' : displayTypes.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        {displayTypes.map(({ key, label, color }) => {
           const count = breakdown[key]
           const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : 0
 

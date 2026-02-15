@@ -12,9 +12,19 @@ export const CONSEQUENCE_TYPE_MAP = {
   lti: 3,
   fire: 4,
   mti: 2,
-  environmental: 3,
+  // ENV sub-types
+  'env-major': 4,
+  'env-moderate': 3,
+  'env-minor': 2,
   security: 3,
   fac: 2,
+  // DMG sub-types
+  'dmg-light-vehicle': 2,
+  'dmg-heavy-plant': 3,
+  'dmg-truck-trailer': 3,
+  'dmg-static-equipment': 2,
+  // Legacy consolidated types (backward compat)
+  environmental: 3,
   'damage-to-property': 2,
   'property-damage': 2,
   'near-miss': 1,
@@ -153,7 +163,7 @@ export const getCellRiskColor = (likelihood, consequence) => {
 export const getScoreColor = (score) => {
   const s = Math.max(1, Math.min(25, score))
   if (s >= 20) return { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#991b1b' } // Very High – dark red
-  if (s >= 10) return { backgroundColor: '#ef4444', color: '#450a0a', borderColor: '#dc2626' } // High – red
+  if (s >= 10) return { backgroundColor: '#f87171', color: '#450a0a', borderColor: '#ef4444' } // High – red
   if (s >= 5) return { backgroundColor: '#eab308', color: '#422006', borderColor: '#ca8a04' } // Medium – yellow
   if (s >= 3) return { backgroundColor: '#84cc16', color: '#1a2e05', borderColor: '#65a30d' } // Low – lime
   return { backgroundColor: '#22c55e', color: '#052e16', borderColor: '#16a34a' } // Very Low – green
@@ -173,27 +183,61 @@ export const getScoreLabel = (likelihood, consequence) => {
 // ============================================================================
 
 /**
- * Calculate consequence level for a hazard based on worst recorded incident type
- * @param {Array} incidents - Incidents for this hazard
+ * Time-decay weights for consequence calculation.
+ * Recent incidents have full weight; older incidents decay to avoid
+ * permanently locking consequence at a historical worst-case level.
+ */
+const CONSEQUENCE_DECAY_BANDS = [
+  { maxDaysAgo: 90, weight: 1.0 },   // Last 3 months: full weight
+  { maxDaysAgo: 180, weight: 0.6 },  // 3-6 months: moderate decay
+  { maxDaysAgo: 365, weight: 0.3 },  // 6-12 months: significant decay
+  { maxDaysAgo: Infinity, weight: 0.1 }, // >1 year: minimal weight
+]
+
+/**
+ * Calculate consequence level for a hazard using time-decayed worst severity.
+ * Instead of a permanent max, recent severe incidents weigh more than old ones.
+ * @param {Array} incidents - Negative incidents for this hazard
+ * @param {Date} [referenceDate] - Date to measure recency from (defaults to now)
  * @returns {number} Consequence level 1-5
  */
-export const calculateConsequenceLevel = (incidents) => {
+export const calculateConsequenceLevel = (incidents, referenceDate) => {
   if (!incidents?.length) return 1
-  let maxLevel = 0
+  const now = referenceDate || new Date()
+  let maxWeighted = 0
+
   for (const incident of incidents) {
     const type = incident.type?.toLowerCase()
     if (!type) continue
-    const level = CONSEQUENCE_TYPE_MAP[type] || 0
-    if (level > maxLevel) maxLevel = level
+    const severity = CONSEQUENCE_TYPE_MAP[type] || 0
+    if (severity === 0) continue
+
+    // Calculate days ago for this incident
+    const incDate = incident.date ? new Date(incident.date) : null
+    let weight = 1.0
+    if (incDate && !isNaN(incDate)) {
+      const daysAgo = Math.max(0, (now - incDate) / (1000 * 60 * 60 * 24))
+      for (const band of CONSEQUENCE_DECAY_BANDS) {
+        if (daysAgo <= band.maxDaysAgo) {
+          weight = band.weight
+          break
+        }
+      }
+    }
+    // No valid date → full weight (conservative: treat as recent)
+
+    const weighted = severity * weight
+    if (weighted > maxWeighted) maxWeighted = weighted
   }
-  return maxLevel || 1
+
+  return Math.max(1, Math.round(maxWeighted))
 }
 
 /**
  * Get adaptive thresholds when dataset is small (<90 days)
  * Uses percentile distribution of hazard rates
  */
-export const getAdaptiveThresholds = (hazardRates) => {
+const getAdaptiveThresholds = (hazardRates) => {
   if (!hazardRates.length) return DEFAULT_LIKELIHOOD_THRESHOLDS
 
   const sorted = [...hazardRates].sort((a, b) => a - b)
@@ -209,7 +253,32 @@ export const getAdaptiveThresholds = (hazardRates) => {
 }
 
 /**
- * Calculate likelihood level for a hazard based on incident frequency
+ * Fix 5: Get blended thresholds for medium-sized datasets (30-90 days).
+ * Linearly blends between adaptive (relative) and fixed (absolute) thresholds
+ * so that rankings transition smoothly as dataset grows.
+ * @param {Array} hazardRates - Array of rate values per hazard
+ * @param {number} totalDays - Total days in the dataset
+ * @returns {Array} Blended threshold array
+ */
+export const getBlendedThresholds = (hazardRates, totalDays) => {
+  if (!hazardRates.length) return DEFAULT_LIKELIHOOD_THRESHOLDS
+  if (totalDays >= 90) return DEFAULT_LIKELIHOOD_THRESHOLDS
+  if (totalDays < 30) return getAdaptiveThresholds(hazardRates)
+
+  // Blend: at 30 days weight=0.33 (mostly adaptive), at 90 days weight=1.0 (fully fixed)
+  const weight = totalDays / 90
+  const adaptive = getAdaptiveThresholds(hazardRates)
+
+  return DEFAULT_LIKELIHOOD_THRESHOLDS.map((fixed, idx) => ({
+    level: fixed.level,
+    min: weight * fixed.min + (1 - weight) * adaptive[idx].min,
+  }))
+}
+
+/**
+ * Calculate likelihood level for a hazard based on incident frequency.
+ * Applies confidence caps for small sample sizes and short dataset spans
+ * to prevent statistical noise from inflating likelihood.
  * @param {number} negativeCount - Number of negative incidents for this hazard
  * @param {number} totalDays - Total days in the dataset
  * @param {Array} thresholds - Likelihood thresholds to use
@@ -219,10 +288,25 @@ export const calculateLikelihoodLevel = (negativeCount, totalDays, thresholds) =
   if (totalDays <= 0 || negativeCount <= 0) return 1
   const rate = negativeCount / totalDays
   const levels = thresholds || DEFAULT_LIKELIHOOD_THRESHOLDS
+  let calculated = 1
   for (const { level, min } of levels) {
-    if (rate >= min) return level
+    if (rate >= min) {
+      calculated = level
+      break
+    }
   }
-  return 1
+
+  // Fix 2: Minimum sample size guard
+  // Small incident counts are statistically unreliable for high likelihood
+  if (negativeCount < 3) calculated = Math.min(calculated, 2)       // <3 incidents → cap at Unlikely
+  else if (negativeCount < 5) calculated = Math.min(calculated, 3)  // <5 incidents → cap at Possible
+
+  // Fix 3: Minimum dataset span guard
+  // Short observation windows inflate frequency rates
+  if (totalDays < 14) calculated = Math.min(calculated, 2)       // <2 weeks → cap at Unlikely
+  else if (totalDays < 30) calculated = Math.min(calculated, 3)  // <1 month → cap at Possible
+
+  return calculated
 }
 
 /**
@@ -274,9 +358,10 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
     hazardRates.push(incidents.length / totalDays)
   }
 
-  // Use adaptive thresholds for small datasets (<90 days)
+  // Fix 5: Blended thresholds for datasets <90 days
+  // <30 days: fully adaptive, 30-90 days: blended, >=90 days: fixed
   const isAdaptive = totalDays < 90
-  const thresholds = isAdaptive ? getAdaptiveThresholds(hazardRates) : DEFAULT_LIKELIHOOD_THRESHOLDS
+  const thresholds = getBlendedThresholds(hazardRates, totalDays)
 
   // Calculate L x C for each hazard
   const hazards = sortedHazards
@@ -285,10 +370,8 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
       const incidents = hazardIncidentMap.get(h.name) || []
       if (incidents.length === 0) return null
 
-      // All incidents (including positive) for the hazard - for consequence calculation
-      const allHazardIncidents = allIncidents.filter(i => i.location === h.name)
-
-      const consequence = calculateConsequenceLevel(allHazardIncidents)
+      // Fix 4: Use only negative incidents for consequence (consistent with likelihood)
+      const consequence = calculateConsequenceLevel(incidents, lastDate)
       const likelihood = calculateLikelihoodLevel(incidents.length, totalDays, thresholds)
       const riskScore = calculateMatrixRiskScore(likelihood, consequence)
       const rate = incidents.length / totalDays
@@ -302,7 +385,7 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
         rate: Math.round(rate * 1000) / 1000,
         zone,
         negativeCount: incidents.length,
-        incidents: allHazardIncidents,
+        incidents,
       }
     })
     .filter(Boolean)

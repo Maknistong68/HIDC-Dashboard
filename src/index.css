@@ -1108,6 +1108,11 @@ button:not(:disabled):active,
 .sim-slider.actions::-moz-range-thumb,
 .unified-slider.actions::-moz-range-thumb { background: #f59e0b; }
 
+/* Variant: Threshold (red) */
+.unified-slider.threshold { background: linear-gradient(to right, #fecaca 0%, #fee2e2 50%, #fef2f2 100%); }
+.unified-slider.threshold::-webkit-slider-thumb { background: #ef4444; }
+.unified-slider.threshold::-moz-range-thumb { background: #ef4444; }
+
 /* Disabled state */
 .unified-slider:disabled {
   opacity: 0.5;

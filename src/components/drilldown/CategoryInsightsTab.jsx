@@ -1,13 +1,12 @@
 import React, { useMemo, useState, useCallback } from 'react'
-import { Eye, ChevronRight, Info } from 'lucide-react'
+import { ChevronRight, Info } from 'lucide-react'
 import { getCategoryInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
-import { RECORDABLE_INCIDENT_TYPES } from '../../utils/constants'
+import { RECORDABLE_INCIDENT_TYPES, ENV_BREAKDOWN_TYPES, DMG_BREAKDOWN_TYPES } from '../../utils/constants'
 import CategoryTopHazards from './CategoryTopHazards'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
 import HazardContractorBreakdown from './HazardContractorBreakdown'
-import HazardRecommendations from './HazardRecommendations'
 import IncidentTypeBreakdown from './IncidentTypeBreakdown'
 
 /**
@@ -21,8 +20,6 @@ import IncidentTypeBreakdown from './IncidentTypeBreakdown'
  * +-------------------------------------------------------+
  * |   HazardRootCauseChart  |  HazardContractorBreakdown  |
  * +---------------------------+---------------------------+
- * |         HazardRecommendations (Full Width)            |
- * +-------------------------------------------------------+
  */
 const CategoryInsightsTab = ({
   categoryType,
@@ -37,6 +34,17 @@ const CategoryInsightsTab = ({
 
   // Check if this is the "incident" aggregate type
   const isIncidentAggregate = categoryType === 'incident'
+  // Check if this is a consolidated type with sub-type breakdown
+  const isEnvCategory = categoryType === 'environmental'
+  const isDmgCategory = categoryType === 'damage-to-property'
+  const hasSubTypeBreakdown = isIncidentAggregate || isEnvCategory || isDmgCategory
+
+  // Get the sub-type breakdown config
+  const subTypeBreakdownConfig = isEnvCategory
+    ? { subTypes: ENV_BREAKDOWN_TYPES, title: 'Environmental Breakdown' }
+    : isDmgCategory
+      ? { subTypes: DMG_BREAKDOWN_TYPES, title: 'Damage Breakdown' }
+      : null
 
   // Handle incident sub-type click - filter to that specific type
   const handleIncidentTypeClick = useCallback((typeKey, typeLabel) => {
@@ -85,9 +93,16 @@ const CategoryInsightsTab = ({
       'lti': 'Lost Time Injury',
       'mti': 'Medical Treatment Injury',
       'fac': 'First Aid Case',
-      'environmental': 'Environmental',
+      'env-major': 'ENV Major/Severe (P1)',
+      'env-moderate': 'ENV Moderate (P2)',
+      'env-minor': 'ENV Minor (P3)',
       'fire': 'Fire',
       'security': 'Security',
+      'dmg-light-vehicle': 'Light Vehicle / MV',
+      'dmg-heavy-plant': 'Heavy Plant',
+      'dmg-truck-trailer': 'Truck & Trailer',
+      'dmg-static-equipment': 'Static Equipment',
+      'environmental': 'Environmental',
       'damage-to-property': 'Damage to Property',
       'leadership': 'Leadership Event',
       'emergency-drill': 'Emergency Drill',
@@ -111,25 +126,27 @@ const CategoryInsightsTab = ({
           Not enough data to generate insights for "{getCategoryLabel(categoryType)}".
           {categoryIncidents.length === 0 && ' No observations found for this category.'}
         </p>
-        {categoryIncidents.length > 0 && (
-          <button
-            onClick={() => onViewRecords && onViewRecords()}
-            className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
-          >
-            <Eye size={16} />
-            View {categoryIncidents.length} Record{categoryIncidents.length !== 1 ? 's' : ''}
-          </button>
-        )}
       </div>
     )
   }
 
   return (
     <div className={`space-y-3 ${isMobile ? '' : ''}`}>
-      {/* Incident Type Breakdown - Only for "incident" aggregate type */}
+      {/* Incident Type Breakdown - for aggregate "incident" type */}
       {isIncidentAggregate && (
         <IncidentTypeBreakdown
           incidents={categoryIncidents}
+          onTypeClick={handleIncidentTypeClick}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Sub-type Breakdown - for Environmental / Damage to Property categories */}
+      {subTypeBreakdownConfig && (
+        <IncidentTypeBreakdown
+          incidents={categoryIncidents}
+          subTypes={subTypeBreakdownConfig.subTypes}
+          title={subTypeBreakdownConfig.title}
           onTypeClick={handleIncidentTypeClick}
           isMobile={isMobile}
         />
@@ -168,26 +185,6 @@ const CategoryInsightsTab = ({
             isMobile={isMobile}
           />
         </div>
-      )}
-
-      {/* Row 4: Recommendations (Full Width) - hide for positive types */}
-      {!isPositiveCategory && (
-        <HazardRecommendations
-          recommendations={insights.recommendations}
-          isMobile={isMobile}
-        />
-      )}
-
-      {/* View All Records Button */}
-      {onViewRecords && categoryIncidents.length > 0 && (
-        <button
-          onClick={onViewRecords}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
-        >
-          <Eye size={18} />
-          View All {insights.totalCount} Records
-          <ChevronRight size={16} />
-        </button>
       )}
 
       {/* Data Source Info (collapsible) */}

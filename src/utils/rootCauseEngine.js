@@ -116,6 +116,28 @@ export const FACTOR_PHRASE_CONFIG = {
       'updated scaffold tag', 'valid scaffold tag', 'scaffold tag updated',
       'tag has been updated', 'scaff tag updated', 'scaff tag valid',
 
+      // === LADDER TAGS & COLOR CODING (inspection/authorization) ===
+      'ladder tag', 'ladder tag not', 'ladder tag missing', 'ladder tag expired',
+      'ladder tag update', 'ladder tag not updated', 'ladder tag was not',
+      'no ladder tag', 'without ladder tag', 'ladder tag was not updated',
+      'ladder color coding', 'ladder colour coding',
+      'ladder without color', 'ladder without colour',
+      'ladder exposed without color', 'exposed without color coding',
+      'without color coding', 'without colour coding',
+      'no color coding', 'no colour coding', 'color coding missing',
+
+      // Cable color code / electrical inspections (Energized System)
+      'cables without monthly color-code', 'cables without monthly color code',
+      'without monthly color-code', 'without monthly color code',
+      'cable monthly color', 'cable color code', 'cable colour code',
+      'ac inspections overdue', 'inspections overdue for the month',
+      'ac inspection overdue', 'quarterly integrity inspections',
+      'integrity inspections of power generator',
+      // Scaffold tag extensions (Temporary Works)
+      'outdated scaffolding tags', 'outdated scaffolding tag',
+      'scaffolding tags outdated', 'scaffolding tag outdated',
+      'scaffold tagged red', 'scaffold tag red', 'tagged red',
+
       // Positive inspection observations
       'inspection conducted', 'inspection carried out', 'inspection performed',
       'inspection completed', 'inspected and found', 'inspection found',
@@ -257,7 +279,14 @@ export const FACTOR_PHRASE_CONFIG = {
       'mepi hazard', 'positioned directly beneath', 'beneath suspended load',
       'beneath the suspended', 'underneath suspended', 'directly beneath',
       'working near roller', 'near roller compactor', 'red zone of compactor',
-      'red zone of excavator', 'inside red zone'
+      'red zone of excavator', 'inside red zone',
+
+      // === LOAD SECURING / UNSECURED LOADS (MP&E) ===
+      'load unsecured', 'load was unsecured', 'unsecured load',
+      'not properly tied down', 'not tied down', 'load not tied',
+      'cargo not secured', 'cargo unsecured', 'materials not secured on truck',
+      'materials not tied', 'without proper load securing', 'load shifted',
+      'load shifting', 'protruding load', 'protruding materials'
     ],
     moderatePatterns: [
       'hoist', 'hoisting', 'sling', 'shackle', 'rigging gear',
@@ -406,6 +435,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'not using a seat belt while', 'not using seat belt while driving',
       'operator not using a seat belt', 'driver not using a seat belt',
       'truck operator not using', 'tipper truck operator not using',
+      'not using the seatbelt', 'not using the seat belt', 'was not using the seatbelt',
+      'was not using the seat belt', 'not using his seatbelt', 'not using his seat belt',
       // PPE storage
       'ppe improper storage', 'improper storage of face', 'storage of face shield',
 
@@ -706,6 +737,10 @@ export const FACTOR_PHRASE_CONFIG = {
       'flagman assigned', 'flagman provided', 'flagman present',
       'flagman available', 'flagman at site', 'trained flagman',
       'flagman has been assigned', 'with flagman',
+      // Flag man (with space) variants
+      'flag man assigned', 'flag man provided', 'flag man present',
+      'flag man available', 'flag man at site', 'flag man was',
+      'flag man not', 'no flag man', 'without flag man',
       'banksman assigned', 'banksman provided', 'banksman present',
       'spotter assigned', 'spotter provided', 'spotter present',
       'ground guide assigned', 'signal man assigned', 'signalman assigned',
@@ -720,12 +755,18 @@ export const FACTOR_PHRASE_CONFIG = {
       'availability of safety team', 'safety officer not available',
       // === NEGATION PATTERNS ===
       'supervisor left the area', 'supervisor was not supervising',
-      'supervisor available but not'
+      'supervisor available but not',
+
+      // === LONE WORKING (Worker Welfare) ===
+      'lone working', 'no lone working', 'lone working policy',
+      'violating the lone working', 'violating lone working',
+      'sitting alone', 'working alone', 'found alone',
+      'worker sitting alone', 'worker was sitting alone'
     ],
     moderatePatterns: [
       'supervision', 'supervisor', 'supervised', 'supervising',
       'foreman', 'overseer', 'oversight', 'charge hand',
-      'flagman', 'flagmen', 'banksman', 'banksmen',
+      'flagman', 'flagmen', 'flag man', 'banksman', 'banksmen',
       'spotter', 'spotters', 'ground guide', 'signal man', 'signalman'
     ],
     exclusionPatterns: [
@@ -770,7 +811,7 @@ export const FACTOR_PHRASE_CONFIG = {
     minimumScore: 5
   },
 
-  'Housekeeping': {
+  'Orderliness': {
     strongPatterns: [
       // === POOR HOUSEKEEPING PHRASES ===
       'poor housekeeping', 'bad housekeeping', 'housekeeping issue',
@@ -975,6 +1016,12 @@ export const FACTOR_PHRASE_CONFIG = {
       // Cable on floor/pathway
       'cable on floor', 'cables on floor', 'cable on the floor',
       'cables on the floor', 'cable found on floor', 'cables found on floor',
+      // Cable found on ground (Energized System Round 2)
+      'cable found on the ground', 'cable found on ground',
+      'cables found on the ground', 'cables found on ground',
+      'cable were found on', 'cables were found on',
+      'cable has been observed on', 'cable observed on',
+      'cable found directly on', 'cables found directly on',
       'cable across pathway', 'cables across pathway', 'cable in pathway',
       'cables in pathway', 'cable lying across', 'cables lying across',
       'cable across the access', 'cables across access', 'cables coiled',
@@ -1007,6 +1054,7 @@ export const FACTOR_PHRASE_CONFIG = {
       'improper materials arrangement', 'improperly placed on ground',
       'poor materials arrangement', 'poor material arrangement',
       'poor materials arrangements', 'poor material management',
+      'poor storage management', 'poor management of',
       'found poor materials', 'found poor material', 'properly arranging materials',
       'not a designated storage area', 'not designated storage area',
       'not in designated area', 'not in the designated area',
@@ -1016,7 +1064,19 @@ export const FACTOR_PHRASE_CONFIG = {
       'material improperly placed', 'cement bags placed directly',
       'cement bags stacked on ground', 'cement bags on ground',
       'cement bags without protection', 'bags without protective',
-      'empty cement bag', 'empty water bottles', 'bottles scattered',
+      'empty cement bag', 'empty cement bags', 'found empty cement bags',
+      'empty water bottles', 'bottles scattered',
+      // Insecure/unsafe stacking (BG&E Round 2)
+      'insecurely stacked', 'insecurely stacked on', 'stacked on the shoulder',
+      'left uncollected', 'materials left uncollected', 'left uncollected on site',
+      'chipped concrete left', 'chipped concrete materials',
+      'left in an unsafe manner', 'left in unsafe', 'in an unsafe and careless',
+      'unstacked wood', 'unstacked materials', 'observe unstacked',
+      // Jerry can on ground (Housekeeping / Worker Welfare)
+      'jerry can on ground', 'jerry can on the ground',
+      'jerry can placed directly', 'jerry cane on ground',
+      'jerry can was placed directly', 'jerry cane placed directly',
+      'diesel jerry can', 'jerry can without drip',
       // Scaffold materials scattering (extended)
       'scattered scaffold material', 'scatted materials on access',
       'scaffold scattered material', 'scaffolders may trip',
@@ -1042,6 +1102,43 @@ export const FACTOR_PHRASE_CONFIG = {
       'stored on the incomplete', 'lifting crew were loaded',
       'lifting crew loaded',
 
+      // === HARNESS / FBH STORAGE ON GROUND ===
+      'harness lying', 'harness on ground', 'harness on the ground',
+      'harnesses stored on ground', 'harnesses stored directly',
+      'harness stored directly', 'harness stored on the bare',
+      'fbh scattered', 'fbh on ground', 'fbh lying', 'fbh on the ground',
+      'safety harness lying', 'safety harness on ground', 'safety harness unattended',
+      'unattended safety harness', 'unattended harness', 'harness unattended',
+      'harness found lying', 'harness on a box', 'harness lying on a box',
+      'unwanted harness', 'found unwanted harness', 'unwanted harness at',
+      'harness at the non designated', 'harness at non designated',
+      'found fall body harness', 'fall body harness lying',
+      'found fbh scattered', 'observed fbh scattered',
+      'harness should be hanged', 'harness off the ground',
+
+      // === MATERIALS AT EDGE / FALLING OBJECT RISK ===
+      'material at the edge', 'material near the edge', 'material on the edge',
+      'materials at the edge', 'materials near the edge', 'materials on the edge',
+      'material stored at height', 'materials stored at height',
+      'stored at elevated position', 'stored at an elevated',
+      'loosely placed on top', 'loosely placed creating',
+      'material left on the edge', 'material was left on the edge',
+      'concrete block material on the edge', 'block material on edge',
+      'at the edge of the building', 'edge of building',
+
+      // === MATERIALS ON MANLIFT / MEWP PLATFORM ===
+      'materials inside man lift', 'inside the man lift cage',
+      'inside man lift cage', 'unwanted materials inside',
+      'loose materials inside', 'congesting the manlift',
+      'congesting manlift', 'tools and equipment congesting',
+      'manlift platform congesting', 'potential falling objects',
+
+      // === UNWANTED ITEMS AT WORK AREA ===
+      'found unwanted ladder', 'unwanted ladder', 'unwanted ladders',
+      'unwanted pipes', 'unwanted ladder and pipes',
+      'abandoned scaffolding material', 'abandoned scaffold',
+      'found abandoned scaffolding', 'scaffolding materials found',
+
       // === WIRE/BINDING MATERIAL ON SITE ===
       'binding wire scattered', 'binding wire was scattered',
       // Positive material storage
@@ -1059,6 +1156,26 @@ export const FACTOR_PHRASE_CONFIG = {
       // === BIN ISSUES ===
       'bin overfilled', 'bin on site overfilled', 'overfilled bin',
       'exceeding its capacity', 'bin exceeding', 'overflowing bin',
+      'skip bin overflowing', 'skip bin overflow', 'skip bin maximum capacity',
+      'skip bin reached', 'reached its maximum capacity', 'maximum capacity',
+      'materials being stacked outside the bin', 'stacked outside the bin',
+
+      // === WATER ACCUMULATION (Housekeeping / BG&E) ===
+      'water accumulated', 'water had accumulated', 'accumulated with water',
+      'water accumulation', 'water accumulating', 'area accumulated with water',
+      'chambers accumulated with water', 'accumulated on the floor',
+      'water had accumulated on the floor', 'filled with water and not properly',
+
+      // === WATER FILTER / COOLER MAINTENANCE ===
+      'water filter not replaced', 'filter had not been replaced',
+      'filter not replaced', 'water filter had not been',
+      'water filter not changed', 'filter not changed',
+
+      // === REST SHELTER SUN PROTECTION (Worker Welfare) ===
+      'rest shelter without sun protection', 'without sun protection',
+      'without any sun protection', 'no protection from the sun',
+      'no sun protection', 'rest shelter had no protection from the sun',
+      'rest shelter no protection', 'shade not provided',
 
       // === TOILET/WELFARE WATER ISSUES ===
       'water was unavailable in toilet', 'water unavailable in toilet',
@@ -1107,7 +1224,50 @@ export const FACTOR_PHRASE_CONFIG = {
       'site inspection, it was observed that water was unavailable',
       'toilet found in used', 'no daily checklist for ensure', 'but no daily checklist',
       'maintained properly', 'unhygienic toilet as not clean', 'not clean',
-      'after inspecting the', 'inspecting the crusher', 'crusher area\'s toilet'
+      'after inspecting the', 'inspecting the crusher', 'crusher area\'s toilet',
+
+      // === WASHROOM / RESTROOM CLEANLINESS ===
+      'washroom not', 'washroom unclean', 'washroom dirty', 'washroom uncleaned',
+      'washrooms not', 'washrooms unclean', 'washrooms dirty',
+      'washroom facility', 'washroom facilities', 'washrooms weren\'t clean',
+      'washroom weren\'t clean', 'washroom facility aren\'t clean',
+      'unclean washroom', 'dirty washroom', 'standing water on the floor',
+      'no tissue', 'tissue not available', 'tissue paper not available',
+      'no tissue in washroom', 'no tissue in washrooms', 'there\'s no tissue',
+      'lacking liquid soap', 'lacking toilet tissue',
+      'lacking essential amenities', 'essential amenities',
+
+      // === CONTAINERS / BASKETS / BUCKETS IN WORK AREA ===
+      'painting basket', 'painting baskets', 'painting bucket', 'painting buckets',
+      'empty painting buckets', 'painting baskets placed',
+      'chemical bucket', 'chemical buckets', 'chemical basket', 'chemical baskets',
+      'chemical buckets left', 'chemical basket placed',
+      'chemical basket without proper', 'without proper containment',
+      'skip bin not available', 'skip bin is not', 'no skip bin',
+      'skip box overfilled', 'skip box was found',
+
+      // === SURPLUS / EXCESS MATERIALS ===
+      'surplus materials', 'surplus material', 'surplus materials near',
+      'drums not covered', 'drums are not covered', 'drum not covered',
+      'drums without labelling', 'drums not covered properly',
+      'used tires and scraps', 'tires and scraps left',
+      'different drum working place', 'drum at working place',
+
+      // === CULVERT / TRENCH HOUSEKEEPING (BG&E / Confined Spaces) ===
+      'materials inside culvert', 'materials inside the culvert',
+      'steel on culvert walkway', 'steel kept on top of the culvert',
+      'found steel kept on top', 'wood pieces inside the trench',
+      'wood pieces found inside', 'empty container on culvert',
+      'empty bitumen container on culvert', 'material on culvert',
+      'construction materials in tunnel', 'materials in section tunnel',
+      'improper material arrangements', 'materials inside and outside the culvert',
+
+      // === ROADSIDE / ACCESS MATERIALS (Driving) ===
+      'materials stored along the roadside', 'materials found stored along',
+      'stored along the roadside', 'materials on the main walkway',
+      'kept materials on the main walkway', 'scaffolding materials stored at',
+      'obstruction like stones spreads', 'timbers left in access way',
+      'glass shards scattered', 'glass shards are scattered'
     ],
     moderatePatterns: [
       'housekeeping', 'house keeping', 'cleaned', 'cleaning', 'cleanliness',
@@ -1175,6 +1335,24 @@ export const FACTOR_PHRASE_CONFIG = {
       'on top of the pillars', 'falling object hazard', 'serious falling object',
       'potential injury hazard', 'posing a potential injury',
 
+      // === FALLING / DROPPED OBJECTS (Working at Height) ===
+      'falling object', 'falling objects', 'falling-object',
+      'dropped object', 'dropped objects', 'dropped tool', 'dropped tools',
+      'tool dropped', 'tool fell', 'fell to the ground',
+      'falling tool', 'falling tools', 'drill slipped',
+      'struck by falling', 'struck by hazard', 'struck by object',
+      'falling material', 'fall material', 'material falling',
+      'material fell', 'materials falling from',
+      'falling hazard for lower', 'hazard for lower level',
+      'hazard for the lower level', 'falling on underneath',
+      'above workers head', 'above workers performing',
+      'loose hanging', 'loose hanging filler', 'filler board above',
+      'falling sparks', 'falling slag', 'sparks slag or tools',
+      'tools not tethered', 'not properly tethered', 'not tethered',
+      'tools in use were not', 'exclusion zones were not clearly',
+      'concrete falling', 'concrete piece on scaffold',
+      'loose concrete piece', 'loose concrete on scaffold',
+
       // === PWAS (Proximity Warning Alert System) ===
       'no pwas', 'without pwas', 'pwas not', 'pwas missing',
       'pwas not installed', 'pwas not available', 'pwas not fitted',
@@ -1241,7 +1419,11 @@ export const FACTOR_PHRASE_CONFIG = {
 
       // === GFCI ===
       'gfci not installed', 'gfci was not', 'no gfci', 'without gfci',
-      'gfci missing', 'gfci not provided',
+      'gfci missing', 'gfci not provided', 'gfcis not provided',
+      // RCD (Residual Current Device) - equivalent of GFCI
+      'rcd not installed', 'rcd was not', 'no rcd', 'without rcd',
+      'rcd missing', 'rcd not provided', 'rcds not provided',
+      'no gfcis', 'no rcds', 'gfcis were not', 'rcds were not',
 
       // === SMOKE DETECTOR / FIRE SAFETY ===
       'smoke detector', 'smoke detector not', 'no smoke detector',
@@ -1320,7 +1502,12 @@ export const FACTOR_PHRASE_CONFIG = {
       'worn out', 'worn tyres', 'worn tires', 'poor tyres', 'poor tires',
       'tyre condition', 'tire condition', 'bald tyres', 'bald tires',
       'flat tyre', 'flat tire', 'punctured tyre', 'punctured tire',
+      'flattened tyre', 'flattened tire', 'flatted tyre', 'flatted tire',
+      'tyre is flat', 'tire is flat', 'tyre flat', 'tire flat',
+      'air pressure low', 'air pressure very low', 'low air pressure',
+      'low tire pressure', 'low tyre pressure', 'tire pressure low',
       'tyre damage', 'tire damage', 'wheel damage',
+      'tires need to be replaced', 'tyres need to be replaced',
       // Misspellings
       'tyres worn', 'tires worn', 'tyer', 'tier',
 
@@ -1361,9 +1548,52 @@ export const FACTOR_PHRASE_CONFIG = {
       'not properly shaded', 'can lead to overheating', 'potential equipment damage',
       'generator without drip tray', 'drip tray not placed', 'no drip tray',
       'without drip tray', 'drip tray missing', 'drip tray underneath',
+      'drip tray with oil', 'drip tray with water', 'oil accumulation in drip',
+      'water accumulation in drip', 'drip tray accumulation',
+      'oil accumulation', 'water accumulation',
+      'generator placed directly', 'generator placed directly on ground',
+      'generator placed on ground', 'generator on the ground without',
+      'generator enclosure', 'generator enclosure open', 'generator enclosure was found',
+      // Generator/tower light door (Energized System)
+      'generator door left open', 'generator door was left open',
+      'generator door was not isolated', 'generator door open',
+      'tower light door left open', 'tower light door was observed',
+      'tower light door was observed left open', 'tower light door open',
+      'tower light not protected', 'tower light unprotected',
+      'damage tower light', 'damaged tower light', 'damage tower light door',
+      'tower lights not switched on', 'tower lights found not switched',
+      // Cable drum storage (Energized System)
+      'cable drum stored', 'cable drums stored', 'cable drum unsecured',
+      'cable drums unsecured', 'substandard cable drum',
+      'cable drums in unsecured position', 'cable drums without stoppers',
+      // Generator diesel/power supply (Energized System R2)
+      'diesel was finished', 'diesel finished', 'diesel had finished',
+      'power supply turned off', 'power supply to stop',
+      // Air conditioning / AC issues
+      'air conditioning not', 'without air conditioning', 'air conditioning out of',
+      'air-condition out of', 'non-functional air conditioning',
+      'air conditioning system not', 'without air condition',
+      'out of service air-condition', 'out of service air condition',
+      'cabin without air conditioning', 'without air conditioning system',
+      // Seat belt missing from equipment
+      'seat belt is missing', 'seatbelt is missing', 'seatbelt missing',
+      'seat belt missing', 'no seat belt for', 'no seatbelt for',
+      'no seat belts for passengers',
       'exposed live electrical', 'exposed electrical cable', 'exposed cable',
       'electrical cable exposed', 'cable without gland', 'without cable gland',
       'without double insulation', 'cable coming from generator',
+
+      // === WIRE EXPOSURE / HANGING CABLES (Energized System R2) ===
+      'wire found laid', 'wire found exposed', 'wire exposed', 'exposed wire',
+      'exposed wiring', 'hanging electric wire', 'hanging electrical wire',
+      'cable hanging at', 'wire passing through', 'wire in contact with',
+      'cable laid directly on', 'laid directly on the ground',
+      'laid on the ground', 'laid on wet ground',
+      'laying of electrical cable', 'laying of cable',
+      // === CABLE WITHOUT PROTECTION / CONDUIT ===
+      'without conduit', 'without electrical conduit', 'without protective cover',
+      'cables not protected', 'cable not protected', 'cable without protection',
+      'without cable protection', 'cable without conduit', 'cables without conduit',
 
       // === TOOL CONDITION ISSUES ===
       'grinding machine without handle', 'grinder without handle',
@@ -1522,6 +1752,143 @@ export const FACTOR_PHRASE_CONFIG = {
       'support of ladder', 'ladder for support', 'ladder purpose',
       'scaffold steel ladder', 'steel ladder during',
 
+      // === LADDER TYPES & CONDITIONS (Extended) ===
+      'substandard ladder', 'substandard ladders', 'sub standard ladder',
+      'fabricated ladder', 'modified ladder', 'fabricated items on scaffold',
+      'fabricated items installed', 'erected using fabricated',
+      'type a ladder', 'a type ladder', 'a-type ladder', 'type-a ladder',
+      'stepladder', 'step ladder used', 'step ladder as access',
+      'using stepladder', 'work using stepladder', 'stepladder alone',
+      'home made ladder', 'man-made ladder',
+      'ladder foot', 'rubber foot', 'foot rubber', 'missing the rubber',
+      'rubber missing', 'ladder foot rubber', 'one ladder foot',
+      'ladder not stored', 'ladder stored unsafely', 'ladder lying',
+      'ladder left standing', 'left standing upright', 'left standing vertically',
+      'ladder placed upright', 'ladder placed against', 'ladder left upright',
+      'ladder without support', 'without stabilizing', 'without proper support',
+      'no helper', 'no second person', 'no person to hold',
+      'nobody to hold', 'without a second person', 'without someone to hold',
+      'ladder at incorrect angle', 'incorrect angle', '75-degree',
+      'ladder positioned unsafely', 'improper position',
+      'ladder without color', 'without colour coding', 'without color coding',
+      'ladder exposed without color', 'ladder exposed without colour',
+      'ladder not compliant', 'straight ladder without',
+      '6-meter straight ladder', '6 meter straight ladder',
+      'intermediate rest platform', 'rest platform mitigation',
+
+      // === WORKING PLATFORM ISSUES (Working at Height) ===
+      'without proper working platform', 'without working platform',
+      'no proper working platform', 'no working platform',
+      'without safe working platform', 'no safe working platform',
+      'safe working platform not', 'safe working platform in place',
+      'unsafe working platform', 'improper working platform',
+      'substandard working platform', 'without proper platform',
+      'no proper platform', 'proper platform not',
+      'temporary platform', 'temporary working platform',
+      'non-working platform', 'not properly platform',
+      'without a proper scaffolding working platform',
+      'without a proper scaffolding', 'without proper scaffolding',
+      'use of plywood for access', 'plywood for access',
+      'using plywood for access', 'plywood instead of planks',
+      'only using two boards', 'using two boards',
+      'adequate platform', 'without adequate platform',
+      'without an adequate platform', 'inadequate platform',
+      'standing on a scaffold horizontal pipe',
+      'standing on a non-working platform',
+
+      // === MOBILE SCAFFOLD (Working at Height) ===
+      'mobile scaffold', 'mobile scaffolding', 'mob scaffolding',
+      'tyre not locked', 'tyres not locked', 'tire not locked', 'tires not locked',
+      'wheel not locked', 'wheels not locked', 'wheel lock not',
+      'castor not locked', 'castors not locked', 'caster not locked',
+      'casters not locked', 'caster wheel not', 'castor wheel not',
+      'incomplete mobile scaffold', 'mobile scaffold incomplete',
+      'incomplete mobile', 'mobile scaffold erected',
+      'mobile scaffold using fabricated', 'mobile scaffold component',
+      'did not provide sufficient height',
+
+      // === MEWP / MANLIFT / ELEVATED PLATFORMS ===
+      'mewp', 'man lift', 'manlift', 'man-lift',
+      'cherry picker', 'boom lift', 'scissor lift',
+      'elevated work platform', 'ewp', 'aerial platform', 'aerial lift',
+      'manlift cage', 'man lift cage', 'manlift platform', 'man lift platform',
+      'manlift operator', 'man lift operator',
+      'telehandler bucket', 'telehandler bucket at height',
+
+      // === COUPLER/CLAMP EXTENDED ===
+      'coupler missing', 'missing coupler', 'couplers missing', 'missing couplers',
+      'tie tube', 'tie tube with coupler', 'tie tube missing',
+      'board retaining coupler', 'retaining coupler', 'retaining couplers',
+      'board retaining couplers', 'no board retaining',
+
+      // === SCAFFOLD CONDITION EXTENDED ===
+      'scaffolding not in safe', 'not in safe condition', 'not in safe or acceptable',
+      'scaffold access without tag', 'scaffold without a tag',
+      'scaffold access found without a tag', 'no indications whether',
+      'scaffolding railing lacks', 'railing lacks diagonal',
+      'lacks diagonal support', 'railing lacks support',
+      'support bracing', 'lacks support bracing',
+      'distance between its hangers', 'distance between hangers',
+      'span between hangers', 'maximum distance for',
+
+      // === FORMWORK / SHUTTERING (Temporary Works) ===
+      'formwork activity', 'formwork activities', 'formwork area',
+      'formwork materials', 'formwork material', 'formworks materials',
+      'form work materials', 'form work material',
+      'slab formwork', 'slab formwork area', 'concrete formwork',
+      'formwork work', 'during formwork', 'formwork tasks',
+      'shuttering installation', 'shuttering material',
+      'de-shuttering', 'deshuttering', 'de shuttering',
+      'dismantling the shutter', 'shutter dismantling',
+      'removal of formwork', 'removal of formworks',
+      'wooden forms', 'dismantled wooden forms',
+      'unsafe work methodology', 'unsafe methodology',
+      'formwork without safe access', 'formwork without adequate',
+      'timber fabricated access', 'fabricated access',
+      'unsafe timber fabricated', 'fabricated wooden frame',
+
+      // === SCAFFOLD STRUCTURAL EXTENDED (Temporary Works) ===
+      'screw jack', 'screw jack overextension', 'overextension of screw jack',
+      'screw jack was found', 'screw jack extended',
+      'unsafe planks', 'unsafe plank', 'unsafe planks at',
+      'gaps in the boards', 'gaps in boards', 'gaps in the board',
+      'scaffold left unsecured', 'scaffold not dismantled',
+      'scaffold not in use', 'scaffolding component missing',
+      'component missing for the scaffolding', 'component missing for scaffolding',
+      'unstable scaffolding', 'unstable scaffold', 'unstable scaffold access',
+      'unstable scaffolding access', 'unstable work platform',
+      'without temporary bracing', 'temporary bracing',
+      'without temporary bracing', 'installing without bracing',
+      'ground soil eroded', 'soil is eroded', 'soil eroded',
+      'ground soil is substantially', 'soil substantially eroded',
+      'scaffolding erected in the uneven', 'erected in uneven',
+      'uneven surface without support', 'without support nor connected',
+
+      // === SHORING (Breaking Ground & Excavation) ===
+      'temporary shoring', 'shoring improperly installed', 'shoring improper',
+      'shoring not installed', 'without shoring', 'shoring not provided',
+      'improper shoring', 'inadequate shoring', 'shoring improperly',
+      'shoring installed improperly', 'shoring due to soil',
+
+      // === TRAFFIC SIGNAL MAINTENANCE (Driving) ===
+      'traffic signals out of service', 'traffic signal out of service',
+      'traffic signals not working', 'traffic signal not working',
+      'traffic light out of service', 'traffic lights not working',
+
+      // === TEMPORARY STRUCTURES (Temporary Works) ===
+      'temporary structure', 'temporary structure roof',
+      'temporary structure unsecured', 'temporary structure was unsecured',
+      'temporary floodlight', 'temporary floodlights',
+      'counterweight provisions', 'counterweight inadequate',
+      'counterweight provisions were', 'light poles fell',
+      'stacked at unsafe height', 'stacked at an unsafe',
+      'piling height', 'unsafe piling height',
+      'anchor bolts', 'exposed anchor bolts',
+      'anchor bolts on the concrete', 'anchor bolts posing',
+      'ceiling access panel', 'access panel left open',
+      'sign-post', 'signpost falling', 'signpost loosely',
+      'substandard mounting', 'safety awareness board',
+
       // === CABIN/STRUCTURE ISSUES ===
       'step not safe', 'step of the security cabin', 'cabin is not safe',
       'not according to the standard', 'not according to standard',
@@ -1561,6 +1928,14 @@ export const FACTOR_PHRASE_CONFIG = {
       'improper cable connection', 'improper cable joint', 'improper splicing',
       'improperly spliced', 'improper splice', 'unsafe cable splicing',
       'cable splicing', 'spliced cable', 'spliced cables', 'spliced power cable',
+      // Additional joint/splicing patterns (Energized System R2)
+      'cable joint', 'cable joints', 'joint in the cable', 'cable splicings',
+      'replaced with electrical tape', 'connected using electrical tape',
+      // Additional unsafe connection patterns
+      'unsafe connection', 'unsafe connections',
+      'substandard electrical connection', 'substandard connection',
+      'not properly connected', 'loosely tied', 'loosely connected',
+      'improper management of electrical',
 
       // === TAPED JOINTS / INSULATION TAPE ===
       'taped joint', 'taped joints', 'cable with taped', 'cables with taped',
@@ -1577,6 +1952,10 @@ export const FACTOR_PHRASE_CONFIG = {
       'directly inserted', 'directly connected to power', 'inserted into power',
       'wire directly inserted', 'wires directly inserted', 'strand directly',
       'strands directly', 'prong wire directly', 'directly connected with',
+      // Missing electrical components (Energized System R2)
+      'without end caps', 'end cap missing', 'end caps missing',
+      'without mcb', 'panel without mcb', 'mcb not',
+      'earth pin missing', 'earth pin broken',
 
       // === ELECTRICAL DB / DISTRIBUTION BOARD ===
       'electrical db', 'electrical db damaged', 'db damaged', 'damaged db',
@@ -1585,6 +1964,10 @@ export const FACTOR_PHRASE_CONFIG = {
       'temporary db', 'temporary electrical db', 'unserviceable elcb',
       'elcb not operational', 'elcb not', 'db not inspected', 'db without protection',
       'electrical db for the', 'live electric circuits exposed',
+      // DB/switch open patterns (Energized System R2)
+      'distribution board open', 'distribution board was found open',
+      'distribution board found open', 'db found open', 'db was found open',
+      'electric switch exposed', 'switch exposed', 'switch box exposed',
 
       // === ELECTRICAL INSPECTION / COLOR CODE ===
       'cable without inspection', 'cables without inspection',
@@ -1679,6 +2062,12 @@ export const FACTOR_PHRASE_CONFIG = {
       'whip lash arrestor was not', 'whip lash arrestor not', 'whiplash not',
       'without whip lash', 'without whiplash', 'whip lash not attached',
       'whip lash arrestor not attached', 'air hose joints found without',
+      // Misspellings and extended whip check patterns
+      'wipe arrest', 'wipe check', 'whip arrest', 'without wipe arrest',
+      'without whip arrest', 'hose without wipe', 'hose without whip',
+      'pneumatic hose', 'pneumatic hoses', 'hose connections without',
+      'hose connection without', 'hose whip', 'risk of hose whip',
+      'compressor hose', 'compressor hose without',
 
       // === BLACK SMOKE / EMISSIONS ===
       'black smoke', 'emitting black smoke', 'was emitting black smoke',
@@ -1787,6 +2176,16 @@ export const FACTOR_PHRASE_CONFIG = {
       'poor cables management', 'cables management', 'electrical management',
       'cable distributed', 'cables distributed', 'cable scattered',
       'cables scattered', 'cable without any inspection',
+      // Cable arrangement/routing (Energized System)
+      'cable arrangement', 'poor cable arrangement', 'poor cables arrangement',
+      'no proper cable arrangements', 'no proper cable arrangement',
+      'cable routing', 'improper cable routing', 'proper cable routing',
+      // Multi-socket / octopus connections (Energized System)
+      'octopus socket', 'octopus connection', 'multi socket connector',
+      'multi-socket connector', 'multi socket', 'multi-socket',
+      'multi-plug circuit', 'multi-plug', 'multi plug',
+      'multiple connections in one cable', 'multiple connections in one',
+      'non-industrial plugs', 'non-industrial plug',
       // Short circuit
       'short circuit', 'risk of short',
       // Misspellings
@@ -1956,6 +2355,9 @@ export const FACTOR_PHRASE_CONFIG = {
       'no berm', 'without berm', 'berm not', 'berm missing', 'berms not',
       'berms missing', 'no berms', 'berm not installed', 'berm not provided',
       'sand berm not', 'sand berm missing', 'sand berms not', 'no sand berm',
+      'incomplete sand berm', 'incomplete sand berms', 'incomplete berms',
+      'improper sand berm', 'improper sand berms', 'improper berms',
+      'low height soil berm', 'not up to safe level',
       'soil berm not', 'soil berm missing', 'soil berms not', 'no soil berm',
       'earth berm not', 'earth berm missing', 'earthen berm not',
       'no stop block', 'stop block not', 'stop block missing', 'stop blocks not',
@@ -1969,6 +2371,61 @@ export const FACTOR_PHRASE_CONFIG = {
       'excavation not secured', 'excavation not protected', 'excavation unbarricaded',
       'trench not secured', 'trench not protected', 'unsecured trench',
 
+      // === CAVE-IN / COLLAPSE (Breaking Ground & Excavation) ===
+      'cave in', 'cave-in', 'cave-ins', 'obvious cave-ins',
+      'potential for cave in', 'risk of cave in', 'sign of cave in',
+      'sign of potential cave in', 'can cause cave-in', 'cause cave in',
+      'stockpile collapse', 'material collapse', 'risk of collapse',
+      'risk of stockpile collapse', 'material collapse or cave-in',
+      'stockpile collapse/cave-in', 'collapse/cave-in',
+
+      // === BARRICADE MISSPELLINGS (BG&E) ===
+      'barrication', 'without barrication', 'without any barrication',
+      'without proper barrication', 'proper barrication',
+
+      // === EXCAVATION PROTECTION EXTENDED (BG&E) ===
+      'found excavation not protection', 'excavation not protection',
+      'excavation open falling hazard', 'found excavation open',
+      'excavation left unsecured', 'excavation was found left',
+      'excavated area without any protective', 'without any protective measures',
+      'excavation edges unprotected', 'excavation edges inadequately',
+      'excavation edges are unprotected', 'excavation edges are inadequately',
+      'no physical protection around the excavation', 'no physical protection was provided',
+      'trench left unsecured', 'electrical trench left unsecured',
+      'unprotected open trench', 'open trench edge',
+      'ramp not protected', 'ramp was found not protected',
+
+      // === ELEVATOR PIT / CATCH BASIN / CHAMBER (BG&E) ===
+      'elevator pit', 'elevator pit left unsecured', 'elevator pit was left',
+      'catch basin', 'catch basin left unbarricaded', 'catch basin unprotected',
+      'chamber left exposed', 'open chambers', 'chambers unprotected',
+      'chamber edges unprotected', 'chamber edges were found',
+      'multiple chamber edges', 'chamber hole unprotected',
+      'chamber hole is unprotected', 'chambers are exposing',
+      'manholes unattended', 'manholes left unattended', 'manhole left unattended',
+      'left the manholes unattended',
+      // Manhole cover issues (Confined Spaces)
+      'manhole cover not installed', 'manhole cover not properly',
+      'manhole cover not', 'man hole is open', 'main hole is open',
+      'man hole didn\'t cover', 'main hole didn\'t cover',
+      'manhole opening', 'improperly cover of manhole',
+      'manhole cover was placed on the edge', 'cover placed on the edge',
+
+      // === EXCAVATION ACCESS/EGRESS (BG&E) ===
+      'no safe access for the excavation', 'no safe access provided for the excavation',
+      'no sufficient access provided to', 'no sufficient access for the excavation',
+      'no sufficient access has been provided', 'insufficient access to the excavation',
+      'inadequate access for the excavation', 'inadequate access for the trench',
+      'no proper access to the trench', 'no proper access to the hv trench',
+      'trench without a proper access', 'access/entry path to the excavation',
+      'no safe access provided for the excavation trench',
+      'access and egress were provided to the excavation',
+      'access for the trench', 'access to the excavation area',
+      'no proper access to the excavation',
+      // Generic access patterns (BG&E Round 2)
+      'no proper access', 'observe no proper access', 'no proper access at',
+      'trench without a proper access provision', 'without a proper access provision',
+
       // === SEGREGATION ===
       'no segregation', 'without segregation', 'not segregated',
       'segregation not', 'segregation missing', 'no separation',
@@ -1978,6 +2435,21 @@ export const FACTOR_PHRASE_CONFIG = {
       'man machine segregation not', 'people plant segregation not',
       'inadequate segregation', 'poor segregation', 'lack of segregation',
       'worker segregation not', 'work area segregation not',
+
+      // === EQUIPMENT ISOLATION / PEDESTRIAN MP&E ===
+      'not properly isolated', 'area not properly isolated',
+      'properly isolated', 'should be properly isolated',
+      'compaction area', 'dynamic compaction', 'ric compaction',
+      'compaction area not', 'compaction work area',
+      'no pedestrian walkway', 'pedestrian walkway for',
+      'pedestrian walkway to segregate', 'segregate the workers and',
+      'segregate workers and moving', 'workers and moving equipment',
+      'no clear road crossing', 'road crossing points',
+      'no designated crossing', 'crossing points clearly',
+      'no designated pick-up', 'pick-up and drop-off',
+      'pickup and dropoff', 'pick up and drop off',
+      'access route shared by pedestrians', 'shared by pedestrians and vehicles',
+      'pedestrians and vehicles', 'pedestrian and vehicle',
 
       // === DELINEATORS ===
       'no delineator', 'delineator not', 'delineator missing', 'delineators not',
@@ -2064,6 +2536,50 @@ export const FACTOR_PHRASE_CONFIG = {
       'without fall protection', 'improper fall protection', 'inadequate fall protection',
       'fall protection to be provided', 'fall protection is missing',
       'no fall protection of worker', 'fall protection - no means',
+      // Fall protection system (ineffective/incomplete)
+      'fall protection system', 'fall protection system incomplete',
+      'fall protection system found', 'fall protection found ineffective',
+      'fall protection system was found', 'fall protection system ineffective',
+      'fall prevention measures', 'without fall prevention',
+      'manholes without fall prevention', 'without fall prevention measures',
+
+      // === OPEN MANHOLES / STAKKABOX (Working at Height) ===
+      'open manhole', 'open manholes', 'manhole open', 'manhole left open',
+      'manholes left open', 'unprotected manhole', 'manhole unprotected',
+      'unprotected open manhole', 'manhole is unprotected',
+      'manhole without protection', 'manholes without protection',
+      'manhole lacks protection', 'manhole lacks physical protection',
+      'temporary manhole protection', 'manhole protection to prevent',
+      'manhole cover missing', 'missing manhole cover',
+      'stakkabox', 'stakka box', 'stakka boxes',
+      'open stakkabox', 'uncovered stakkabox', 'uncovered stakka',
+      'unprotected stakkabox', 'stakkabox without',
+      'stakkabox manhole', 'stakkabox was observed',
+      'chamber opening', 'chamber openings', 'chamber left uncovered',
+      'chamber uncovered', 'chamber opening was left',
+      'opening was left uncovered', 'opening left uncovered',
+
+      // === UNSECURED EDGES (Working at Height) ===
+      'edges left unsecured', 'edges left unattended', 'edges left open',
+      'unsecured edges', 'edges unsecured', 'edge left unsecured',
+      'edge left unattended', 'edge was left unattended',
+      'edges after backfilling', 'edges after the completion',
+      'edges along the vehicle', 'edges available at section',
+
+      // === MEWP/MANLIFT EXCLUSION (Working at Height) ===
+      'manlift without exclusion', 'manlift without proper exclusion',
+      'mewp without exclusion', 'manlift operating above',
+      'operating directly above workers', 'operating above workers',
+      'manlift was operating directly above', 'directly above workers',
+
+      // === ACCESS OBSTRUCTION EXTENDED (Working at Height) ===
+      'access is blocked with', 'access blocked with material',
+      'access has been obstructed', 'obstruction at the platform',
+      'platform access obstructed', 'access route blocked',
+      'scaffold access obstructed', 'scaffold access has been',
+      'scaffold access is obstructed', 'access obstructed by',
+      'scaffold access unbarricaded', 'access was unbarricaded',
+      'access provided to the section', 'pedestrian access obstructed',
 
       // === EXCLUSION ZONE ===
       'no exclusive zone', 'no exclusion zone', 'exclusive zone not',
@@ -2077,6 +2593,28 @@ export const FACTOR_PHRASE_CONFIG = {
       'access close with materials', 'access closed', 'access found unsafe',
       'loose steps', 'loose step', 'steps that may lead', 'steps that my lead',
       'unprotected ramp access', 'unprotected ramp', 'ramp access along',
+
+      // === ACCESS/EGRESS EXTENDED (Temporary Works) ===
+      'improper access', 'improper access and egress', 'improper access egress',
+      'improper steps', 'improper steps for', 'no appropriate step',
+      'no step access', 'step access not', 'step access was not',
+      'without proper access', 'without proper access arrangements',
+      'access walkway not', 'walkway not secured', 'walkway not properly secured',
+      'temporary access unsecured', 'temporary access to scaffolding',
+      'temporary access to the scaffolding', 'access to work area blocked',
+      'access was not safe', 'not safe and secure',
+      'trench left unprotected', 'trench was left unprotected',
+      'partially blocked', 'way partially blocked', 'way was partially blocked',
+      'designated access', 'designated access blocked', 'designated access obstructed',
+      'egress way was partially', 'access/egress way',
+      'access at building', 'main access at building',
+      'access obstructed by cladding', 'obstructed by cladding',
+      'obstruction to pedestrian', 'obstruction to pedestrian access',
+      'no walking platform', 'no walking platform were',
+      'access for dismantling', 'safe means of access for',
+      'materials shifting without proper access', 'without proper access arrangements',
+      'drainage channel', 'drainage channel not secured', 'drainage channel inadequately',
+      'access walkway in the trench', 'walkway in the trench',
 
       // === SCAFFOLD WITHOUT TAG ===
       'scaffolding at septic without', 'scaffold without any tag',
@@ -2293,6 +2831,14 @@ export const FACTOR_PHRASE_CONFIG = {
       // === BARRIER/EDGE SIGNAGE ===
       'edge protection signage', 'fall hazard signage', 'fall protection signage',
       'excavation signage', 'trench signage', 'deep excavation signage',
+      'excavation was not clearly signed', 'not clearly signed to warn',
+      'excavation not signed', 'excavation not clearly signed',
+      // Traffic sign extensions (Driving)
+      'traffic sign boards not available', 'traffic sign board not available',
+      'traffic sign was fallen', 'traffic sign fallen down',
+      'traffic sign was fallen down', 'stop sign improperly installed',
+      'stop sign is improperly', 'flashing lights are missing',
+      'safety poles and flashing lights',
       'unprotected edge signage', 'leading edge signage',
       'barriers or warning signages', 'barriers and warning signages',
       'barricade and signage', 'barricades and signages',
@@ -2344,10 +2890,45 @@ export const FACTOR_PHRASE_CONFIG = {
       'adrenaline is not available', 'adrenaline not available', 'epinephrine not available',
       'airway kit are not available', 'airway kit not available', 'oral and nasal airway',
       'nasal airway kit', 'medical supplies not available', 'medication not available',
+
+      // === AMBULANCE AVAILABILITY (Worker Welfare) ===
+      'ambulance not available', 'ambulance was not available',
+      'no ambulance', 'no ambulance on site', 'no ambulance at site',
+      'ambulance not on site', 'ambulance not on-site',
+      'ambulance not present', 'ambulance was not present',
+      // Positive ambulance
+      'ambulance available', 'ambulance was available', 'ambulance on-site',
+      'ambulance on site', 'ambulance was found', 'ambulance present',
+      'ambulance site patrolling', 'ambulance parking',
+
+      // === AED (Automated External Defibrillator) ===
+      'non-functional aed', 'non functional aed', 'aed not functional',
+      'aed spare battery', 'aed battery not', 'aed not available',
+      'no aed', 'without aed', 'aed missing',
+
+      // === CLINIC / MEDICAL TEAM AVAILABILITY ===
+      'clinic not available', 'clinic are not available',
+      'medical team not available', 'medical team are not available',
+      'no medical team', 'no clinic', 'clinic not on site',
+      'medical coverage', 'medical team not on-site',
+
+      // === MEDICAL SUPPLIES EXTENDED (Worker Welfare) ===
+      'burn bandages not available', 'burn bandages are not available',
+      'not available at clinic', 'not available at medical',
+      'no glucose', 'glucose not available', 'glucose 50% not',
+      'no panadol', 'panadol not available', 'panadol was not available',
+      'mattress not found', 'not found at ambulance', 'mattress were not found',
+
       // Positive emergency preparedness
       'fire extinguisher available', 'fire extinguisher inspected',
       'first aid kit available', 'first aid kit inspected',
       'emergency equipment available', 'emergency kit provided',
+
+      // === RESCUE EQUIPMENT (Working at Height) ===
+      'basket stretcher', 'basket stretchers', 'lifting sling',
+      'lifting slings not available', 'lifting slings are not',
+      'rescue equipment', 'rescue equipment not',
+      'rescue plan not', 'rescue plan missing',
 
       // === FIRE HAZARDS / FLAMMABLE MATERIALS ===
       'fire hazard', 'fire hazards', 'potential fire hazard',
@@ -2431,6 +3012,13 @@ export const FACTOR_PHRASE_CONFIG = {
       'method statement available', 'risk assessment available',
       'rams available', 'jsa completed', 'procedure followed',
 
+      // === GEOTECHNICAL / UTILITY DOCUMENTS (BG&E) ===
+      'expired geotechnical report', 'geotechnical report expired',
+      'geotechnical report not', 'no geotechnical report',
+      'utility layout not available', 'unavailability of utility layout',
+      'without the availability of layout', 'utility drawings not available',
+      'layout utility drawings', 'without layout utility',
+
       // === MSDS / COSHH DOCUMENTATION (paperwork only — physical storage → Environment) ===
       'msds', 'material safety data sheet', 'safety data sheet', 'sds',
       'msds requirements', 'following the msds', 'not following msds',
@@ -2474,9 +3062,43 @@ export const FACTOR_PHRASE_CONFIG = {
       'inside crane exclusion', 'within crane radius', 'inside lifting zone',
       'inside the crane exclusion', 'inside crane zone', 'parked in exclusion',
       'standing very close', 'dangerously close to', 'positioned too close',
+      // Man-Machine Interface / Close proximity extended
+      'close proximity to', 'close proximity to moving', 'close proximity to operating',
+      'in close proximity', 'in close proximity to', 'working in close proximity',
+      'operating in close proximity', 'dangerously close proximity',
+      'working near operational', 'working near operating', 'working near operational equipment',
+      'near operating equipment', 'near moving equipment', 'near heavy machinery',
+      'standing near operating', 'standing near an operating',
+      'standing near the equipment', 'stand near the heavy',
+      'near to moveable equipment', 'near operational equipment',
+      'roaming close to', 'moving near operational',
       'sitting on the edge', 'sitting at the edge', 'sitting next to',
+      // BG&E edge / trench proximity
+      'standing at the edge of the excavation', 'at the edge of an excavation',
+      'standing at the edge of an excavated', 'standing on the sand berm',
+      'sitting beneath the unsupported wall', 'beneath the unsupported wall',
+      'sitting beneath unsupported', 'sitting inside the trench',
+      'sitting along culvert wall', 'crew sit along culvert',
+      'workers sitting beneath', 'operative standing at the edge',
       'standing on the outrigger', 'standing on scaffold', 'standing on platform',
       'climbing on top', 'climbing onto top', 'on top of the truck',
+      // Walking on reinforcement / rebar (Slip and Trip)
+      'walking on reinforcement', 'walking directly on exposed reinforcement',
+      'walking directly on reinforcement', 'walking on rebar',
+      'walking on exposed reinforcement bars', 'walking directly on exposed',
+      // Sitting inside pipe/confined space (Confined Spaces)
+      'sitting inside a pipe', 'sitting inside pipe',
+      'observed sitting inside a pipe', 'worker sitting inside',
+
+      // === OVERREACHING / UNSAFE HEIGHT PRACTICES ===
+      'overreaching', 'over reaching', 'over-reaching',
+      'body outside the ladder', 'outside the side rails',
+      'outside side rails', 'extended body outside',
+      'outside protective railings', 'working outside protective',
+      'working outside railings', 'outside the railings',
+      'carpenters dismantling scaffolding', 'instead of approved scaffolders',
+      'instead of approved', 'not approved scaffolder',
+      'dismantling scaffolding instead', 'instead of scaffolders',
 
       // === UNDESIGNATED ACCESS/ROUTE VIOLATIONS ===
       'undesignated walkway', 'undesignated walkways', 'undesignated area',
@@ -2500,16 +3122,59 @@ export const FACTOR_PHRASE_CONFIG = {
 
       // === DRIVING VIOLATIONS ===
       'over speeding', 'overspeeding', 'found over speeding', 'found overspeeding',
+      'over-speeding', 'observed over-speeding', 'observed speeding',
+      'exceeding the speed limit', 'exceeded the speed limit', 'exceeding speed limit',
+      'speed limit violation', 'driving at excessive speed', 'at excessive speed',
+      'driving carelessly', 'carelessly and at excessive',
       'counter-flowing', 'counterflowing', 'counterflow', 'wrong direction',
       'driven in the wrong direction', 'in no entry route', 'blind crash',
       'over taking', 'overtaking', 'doing over taking', 'over taking on work',
       'dumping very closely', 'trucks were dumping very closely',
       'not following safe distance', 'not maintaining safe distance',
       'wrong parking', 'not in reverse parking', 'reverse parking of vehicles',
+      // Reverse parking extensions (Driving)
+      'not parked on reverse', 'not parked in reverse', 'not in reverse position',
+      'vehicles not parked in reverse', 'parked in reverse position',
+      'parking was not reversed', 'car parking was not reversed',
+      'vehicle aren\'t parked in reverse', 'vehicles aren\'t parked on reverse',
+      // Vehicle parking violations (Driving)
+      'parked in a non-designated area', 'parked in non-designated',
+      'parked incorrectly at the site', 'parked incorrectly',
+      'parked at the work area', 'duplicate parking',
+      'unauthorised vehicle parked', 'unauthorized vehicle parked',
+      'randomly parking', 'random parking', 'light cars randomly parking',
+      'vehicle parked in a non-designated', 'car was parked incorrectly',
+      // Entering active work zones (Driving)
+      'light vehicles entering', 'light vehicles observed entering',
+      'light vehicles were observed entering', 'vehicles entering the equipment',
+      'entering where heavy equipment', 'entering the equipment operation area',
+      'entering the new crusher area', 'vehicles entering active',
+      // Worker drop-off violations (Driving)
+      'dropping workers off', 'dropping off workers', 'dropping workers',
+      'bus driver dropping', 'bus drivers dropping', 'bus drivers were observed dropping',
+      'dropping off workers within', 'bus driver has been observed dropping',
+      'observed dropping workers off',
       'driving without seatbelt', 'driving without seat belt', 'driving on site without',
       'driver driving without', 'without using seat belt', 'without using seatbelt',
       'reversing without watchman', 'reversing without a watchman',
       'tanker reversing without', 'truck reversing without',
+
+      // === EQUIPMENT PARKING / STOWAGE (MP&E) ===
+      'bucket not lowered', 'bucket not fully lowered', 'bucket not grounded',
+      'bed not lowered', 'without lowering bed', 'without lowering its bed',
+      'moving without lowering', 'speeding without lowering',
+      'not properly parked', 'not properly park', 'equipment not properly parked',
+      'parked improperly', 'parked outside designated', 'parked outside the designated',
+      'no designated parking', 'no designated car parking', 'no designated parking area',
+      'designated parking area', 'designated parking not',
+      'not following reverse parking', 'not following the reverse parking',
+      'boom was not fully lowered', 'mast was not fully lowered',
+      'boom not fully lowered', 'mast not lowered',
+      // Safe tipping distance
+      'safe tipping distance', 'tipping distance', 'not maintaining safe tipping',
+      'not maintaining the safe tipping', 'tipping at the same time',
+      'tipping while not maintaining', 'dumping near the edge',
+      'dumping near edge', 'dumping at the edge',
 
       // === VEHICLE LEFT RUNNING / PARKED ISSUES ===
       'leave his vehicle without', 'without switched off', 'engine running',
@@ -2530,6 +3195,11 @@ export const FACTOR_PHRASE_CONFIG = {
       'covered his wind screeen', 'excavator covered wind',
       'rear view glass of dozer', 'glass of dozer covered', 'dozer covered by curtain',
       'rear view glass covered by', 'rear view covered by',
+      // Cabin cover/tint blind spots
+      'glass tinted', 'tinted glass', 'cover on the back window',
+      'cover on back window', 'back window cover', 'blind spot',
+      'creating a blind spot', 'curtain inside the driver',
+      'curtain inside driver', 'curtain in the cabin',
 
       // === PASSENGERS IN EQUIPMENT CABIN ===
       'transport another worker', 'transporting worker on', 'transporting workers',
@@ -2576,6 +3246,34 @@ export const FACTOR_PHRASE_CONFIG = {
       'without proper rigging', 'riding the crane hook',
       'standing on chain slings', 'standing on suspended',
       'holding onto suspended load', 'unsafe use of', 'improper use of',
+      // Improper equipment use extended (MP&E)
+      'wheel loader to lift and transport', 'skid loader used to lift',
+      'skid loader being used to lift', 'not designed or rated for lifting',
+
+      // === TOOL LEFT PLUGGED IN / UNATTENDED (Energized System) ===
+      'left without disconnecting', 'without disconnecting from power',
+      'without disconnecting it from', 'left unattended and still plugged',
+      'unattended without disconnecting', 'leaving a power tool unattended',
+      'power tool unattended', 'left on the ground without disconnecting',
+      'grinder left on the ground', 'coring machine left unattended',
+      'left unattended and still plugged into',
+
+      // === PUMP BOOM / CONCRETE PUMP AT UNSAFE ANGLE (MP&E) ===
+      'pump crete boom', 'pump crete boom in unsafe', 'concrete pump boom',
+      'concrete pump boom at unsafe', 'boom at unsafe angle',
+      'boom in unsafe angle', 'boom fully extended at unsafe',
+      'boom fully extended in a straight', 'pump boom extended',
+
+      // === ENTERING DANGER ZONE (MP&E) ===
+      'entering the danger zone', 'entered the danger zone',
+      'entering danger zone of other', 'entering danger zone of equipment',
+      'found entering the danger zone',
+
+      // === WALKING BETWEEN EQUIPMENT (MP&E) ===
+      'randomly walking between equipment', 'randomly walking between multiple',
+      'walking between multiple equipment', 'walking between equipment',
+      'workers randomly walking', 'sitting in the shade of trailers',
+      'found sitting in the shade of trailers',
 
       // === OVERREACHING/BALANCE RISKS ===
       'overreaching at height', 'overreaching while', 'risk of loss of balance',
@@ -2760,6 +3458,25 @@ export const FACTOR_PHRASE_CONFIG = {
       'coordinated', 'coordination in place', 'scheduled',
       'prepared', 'preparation completed',
 
+      // === TEMPORARY WORKS COORDINATOR ===
+      'temporary work coordinator', 'temporary works coordinator',
+      'temp work coordinator', 'tw coordinator', 'twc not on site',
+      'absence of temporary work', 'absence of the temporary works',
+      'absence of tw coordinator', 'no tw coordinator',
+      'tw coordinator absent', 'tw coordinator not',
+      'improper design of temporary works', 'incorrect calculations',
+
+      // === OVERLAPPING SWING / SIMULTANEOUS EQUIPMENT (MP&E) ===
+      'overlapping swing radius', 'shared working range', 'swing radius overlap',
+      'operating close to each other', 'equipment operating close to each other',
+      'cross-working hazards', 'cross working hazards',
+      'two cranes operating', 'two excavators operating', 'two machines operating',
+      'operating simultaneously', 'simultaneous equipment', 'simultaneous lifting',
+      'equipment too close', 'machines too close', 'crane too close',
+      'minimum separation distance', 'no separation distance',
+      'operating within swing radius', 'within the swing radius',
+      'shared workspace between equipment', 'shared workspace between',
+
       // === EXCAVATION/GEOTECHNICAL PLANNING ===
       'geotechnical report not', 'geotechnical report missing', 'no geotechnical report',
       'geotechnical survey not', 'geotechnical assessment not', 'no geotechnical',
@@ -2782,7 +3499,46 @@ export const FACTOR_PHRASE_CONFIG = {
       'missing document', 'missing documents', 'document missing',
       'documents missing', 'documentation missing', 'missing documentation',
       'safe distance not', 'safe distance missing', 'no safe distance',
+      'without safe distance', 'without a safe distance',
       'minimum distance not', 'clearance distance not', 'distance not maintained',
+
+      // === SLOPE / SLOPING (Breaking Ground & Excavation) ===
+      'incorrect slope angle', 'wrong slope angle', 'improper sloping',
+      'no proper slopes', 'with no proper slopes', 'not proper slopping',
+      'excavation incorrect slope', 'incorrect slope for',
+      'excavation without proper slopes', 'without proper slopes',
+      'slope angle for specific soil', 'slope not matching soil',
+
+      // === STOCKPILE SAFETY (BG&E) ===
+      'stockpile undercut', 'undercut stockpile', 'stockpile was observed to be undercut',
+      'undercutting was observed', 'undercutting of stockpile',
+      'creating vertical faces', 'vertical faces without',
+      'without maintaining proper sloping', 'collected from the bottom of the stockpiles',
+      'from the bottom of the stockpiles', 'soil stockpile behind',
+      'stockpile height exceeding', 'height exceeding safe limits',
+
+      // === LOADING/UNLOADING ZONES (Driving) ===
+      'undesignated loading', 'undesignated unloading',
+      'undesignated loading and unloading zone', 'not in the specific loading',
+      'loading and unloading zone no control', 'no designated pick-up and drop-off',
+      'pick-up and drop-off point not', 'drop-off point not rectified',
+      'designated pick-up', 'designated drop-off',
+      // Bus/passenger unloading (MP&E Round 3)
+      'buses unload workers', 'bus unload workers', 'buses unloading workers',
+      'bus unloading workers', 'buses unload near', 'bus unload near',
+
+      // === TMP / TRAFFIC MANAGEMENT PLAN (Driving) ===
+      'not included in the approved tmp', 'tmp not approved',
+      'not included in the approved', 'approved tmp',
+      'traffic management plan not', 'traffic management plan missing',
+
+      // === SIMULTANEOUS OPERATIONS / CONGESTION (MP&E) ===
+      'pushing and loading at the same time', 'pushing and loading are happening',
+      'material pushing and loading', 'loading and pushing at the same',
+      'haul route congested', 'congested single lane',
+      'congested due to equipment', 'equipment units parked along',
+      'lacking separate exit road', 'lacking separate exit route',
+      'no separate exit road', 'roundabout inaccessible',
 
       // === ELECTRICIAN / PERSONNEL AVAILABILITY ===
       'no electrician available', 'electrician not available', 'electrician was not',
@@ -2941,6 +3697,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'slip, trip and fall', 'excessive water sprinkling', 'overwatered',
       'making the ground', 'making ground muddy', 'uneven ground',
       'ground surface not level', 'surface is not level', 'ground not level',
+      'uneven surface', 'uneven and unstable surface',
+      'uneven and unstable', 'unstable surface',
 
       // === LOOSE SOIL / TERRAIN ===
       'loose soil', 'loose soil used', 'soil collapse', 'soil instability',
@@ -2953,6 +3711,8 @@ export const FACTOR_PHRASE_CONFIG = {
       'loose rocks are evident', 'loose rocks in this area',
       'significant number of loose rocks', 'remove all loose rocks',
       'remove loose rocks', 'falling rocks', 'rock fall', 'rockfall',
+      'rolling stones', 'rolling stone', 'loose rolling stones',
+      'rolling stones scattered', 'rolling stones and large boulders',
       // Extended loose rocks patterns
       'poses a serious threat', 'serious threat to safety', 'threat to safety',
       'critical issue at zone', 'inspection revealed', 'inspection revealed a significant',
@@ -3035,7 +3795,15 @@ export const FACTOR_PHRASE_CONFIG = {
       'flammable properties', 'having flammable properties', 'containers having flammable',
       'flammable containers', 'chemical used containers', 'used containers',
       'containers disposed on ground', 'disposed on the ground',
-      'disposed on ground', 'chemical containers disposed', 'flammable disposed'
+      'disposed on ground', 'chemical containers disposed', 'flammable disposed',
+
+      // === SECONDARY CONTAINMENT (Mobile Plant & Equipment) ===
+      'secondary containment', 'without secondary containment', 'no secondary containment',
+      'generator without secondary', 'portable generator without secondary',
+      'secondary containment not', 'secondary containment missing',
+      'without containment', 'no containment provided', 'fuel without containment',
+      'diesel without secondary', 'diesel without containment',
+      'refueling without containment', 'refuelling without containment'
     ],
     moderatePatterns: [
       'lighting', 'illumination', 'visibility', 'ventilation',
@@ -3907,7 +4675,6 @@ export const detectFactorsForHazard = (incidents, hazardName, options = {}) => {
     }
   }
 
-  // Convert to array and sort by count
   return Object.entries(factorCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)

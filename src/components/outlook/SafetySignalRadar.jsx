@@ -23,10 +23,10 @@ export const SIGNAL_CONFIG = [
 ]
 
 // Get angle for axis i (starting at top, clockwise) - 72° per axis (360/5)
-const getAngle = (i) => (i * 72 - 90) * (Math.PI / 180)
+export const getAngle = (i) => (i * 72 - 90) * (Math.PI / 180)
 
 // Get point coordinates at distance from center
-const getPoint = (i, value, cx, cy, radius) => {
+export const getPoint = (i, value, cx, cy, radius) => {
   const angle = getAngle(i)
   const r = (value / 100) * radius
   return {
@@ -55,7 +55,7 @@ const SafetySignalRadar = ({
   const [hoveredAxis, setHoveredAxis] = useState(null)
 
   // Layout calculations
-  const padding = 55 // Space for labels (increased from 45 for label room)
+  const padding = 45 // Space for labels
   const cx = size / 2
   const cy = size / 2
   const radius = (size - padding * 2) / 2

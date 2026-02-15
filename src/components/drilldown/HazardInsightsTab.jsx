@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Eye, Info, ChevronRight } from 'lucide-react'
+import { Info, ChevronRight } from 'lucide-react'
 import { getHazardInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
 import HazardRootCauseChart from './HazardRootCauseChart'
@@ -79,15 +79,6 @@ const HazardInsightsTab = ({
           Not enough data to generate insights for "{hazardName}".
           {hazardIncidents.length === 0 && ' No observations found for this hazard.'}
         </p>
-        {hazardIncidents.length > 0 && (
-          <button
-            onClick={() => onViewRecords && onViewRecords()}
-            className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
-          >
-            <Eye size={16} />
-            View {hazardIncidents.length} Record{hazardIncidents.length !== 1 ? 's' : ''}
-          </button>
-        )}
       </div>
     )
   }

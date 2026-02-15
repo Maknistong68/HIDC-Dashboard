@@ -580,8 +580,12 @@ export const getTrendDirection = (dataPoints, field = 'value', periods = 3) => {
 
   const denominator = n * sumX2 - sumX * sumX
   const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
-  const avgValue = sumY / n
-  const percentChange = avgValue !== 0 ? (slope / avgValue) * 100 : 0
+  const intercept = (sumY - slope * sumX) / n
+  const firstPrediction = intercept
+  const lastPrediction = slope * (n - 1) + intercept
+  const percentChange = firstPrediction !== 0
+    ? ((lastPrediction - firstPrediction) / Math.abs(firstPrediction)) * 100
+    : (lastPrediction > 0 ? 100 : 0)
 
   let direction = 'stable'
   if (percentChange > 5) direction = 'worsening'
@@ -2051,10 +2055,13 @@ export const detectChangePoints = (incidents, windowDays = 7) => {
     const after = afterSum / windowDays
     const change = before > 0 ? ((after - before) / before) * 100 : (after > 0 ? 100 : 0)
 
-    // Chi-square significance: (observed - expected)^2 / expected
-    // Use before-window average as expected value
-    const expected = before > 0 ? before : 0.5
-    const chiSquare = Math.pow(after - expected, 2) / expected
+    // Chi-square goodness-of-fit on counts (not means) for valid test
+    const totalAll = beforeSum + afterSum
+    const expectedHalf = totalAll / 2
+    const chiSquare = expectedHalf > 0
+      ? Math.pow(beforeSum - expectedHalf, 2) / expectedHalf
+        + Math.pow(afterSum - expectedHalf, 2) / expectedHalf
+      : 0
     // Chi-square critical value for 1 df, p<0.01 = 6.63
     const isSignificant = chiSquare >= 6.63 && Math.abs(change) >= 30
 
@@ -3708,7 +3715,8 @@ export const getDayOfWeekPatterns = (incidents) => {
   const chiSquare = counts.reduce((sum, observed) => {
     return sum + Math.pow(observed - expectedPerDay, 2) / expectedPerDay
   }, 0)
-  const isSignificant = chiSquare > 12.59 // p < 0.05 with df=6
+  // Chi-square requires minimum expected frequency of 5 per cell
+  const isSignificant = expectedPerDay >= 5 ? chiSquare > 12.59 : false // p < 0.05 with df=6
 
   const patterns = dayNames.map((day, index) => {
     const count = counts[index]
@@ -4208,7 +4216,7 @@ export const predictSeasonalRisk = (incidents, daysAhead = 7) => {
     const monthRisk = monthPattern?.riskIndex || 100
 
     // Combined risk
-    const combinedRisk = Math.round(Math.sqrt(dayRisk * monthRisk))
+    const combinedRisk = Math.round(0.7 * dayRisk + 0.3 * monthRisk)
 
     let riskLevel = 'normal'
     if (combinedRisk > 125) riskLevel = 'high'
@@ -5005,7 +5013,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
     'Inspections': '#ef4444',
     'PPE': '#f97316',
     'Training': '#eab308',
-    'Housekeeping': '#22c55e',
+    'Orderliness': '#22c55e',
     'Supervision': '#3b82f6',
     'Communication': '#8b5cf6',
     'Procedures': '#ec4899',
@@ -5281,7 +5289,7 @@ export const getCategoryInsights = (incidents, categoryType, allIncidents = null
     'Inspections': '#ef4444',
     'PPE': '#f97316',
     'Training': '#eab308',
-    'Housekeeping': '#22c55e',
+    'Orderliness': '#22c55e',
     'Supervision': '#3b82f6',
     'Communication': '#8b5cf6',
     'Procedures': '#ec4899',
@@ -5446,9 +5454,17 @@ export const getObserverInsights = (incidents, observerName, allIncidents = null
     'lti': '#dc2626',
     'mti': '#ea580c',
     'fac': '#f59e0b',
-    'environmental': '#d97706',
+    'env-major': '#b45309',
+    'env-moderate': '#d97706',
+    'env-minor': '#f59e0b',
     'fire': '#ef4444',
     'security': '#78716c',
+    'dmg-light-vehicle': '#4d7c0f',
+    'dmg-heavy-plant': '#65a30d',
+    'dmg-truck-trailer': '#84cc16',
+    'dmg-static-equipment': '#a3e635',
+    // Legacy consolidated types
+    'environmental': '#d97706',
     'damage-to-property': '#65a30d',
     'near-miss': '#059669',
     'ncr': '#0d9488',
@@ -5469,9 +5485,17 @@ export const getObserverInsights = (incidents, observerName, allIncidents = null
     'lti': 'LTI',
     'mti': 'MTI',
     'fac': 'FAC',
-    'environmental': 'Environmental',
+    'env-major': 'ENV Major/Severe (P1)',
+    'env-moderate': 'ENV Moderate (P2)',
+    'env-minor': 'ENV Minor (P3)',
     'fire': 'Fire',
     'security': 'Security',
+    'dmg-light-vehicle': 'Light Vehicle / MV',
+    'dmg-heavy-plant': 'Heavy Plant',
+    'dmg-truck-trailer': 'Truck & Trailer',
+    'dmg-static-equipment': 'Static Equipment',
+    // Legacy consolidated types
+    'environmental': 'Environmental',
     'damage-to-property': 'Damage to Property',
     'leadership': 'Leadership',
     'emergency-drill': 'Emergency Drill'

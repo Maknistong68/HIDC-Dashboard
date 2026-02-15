@@ -96,7 +96,7 @@ const RiskExplanationModal = ({
       'Communication': 'Administrative',
       'Awareness': 'Administrative',
       'Equipment': 'Engineering',
-      'Housekeeping': 'Engineering',
+      'Orderliness': 'Engineering',
       'Environment': 'Environmental',
       'PPE': 'PPE',
       'Fatigue': 'Human',
