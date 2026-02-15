@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   FileText,
   CheckCircle,
@@ -67,7 +67,9 @@ const Dashboard = () => {
   const { period, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents, heatmapIncidents, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
+  const filteredIncidents = useDeferredValue(_fi)
+  const heatmapIncidents = useDeferredValue(_hi)
 
   // Drill-down state with 3 levels + modal open state
   const [drillDown, setDrillDown] = useState({

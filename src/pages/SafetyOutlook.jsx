@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, startTransition, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useFilter } from '../context/FilterContext'
@@ -123,7 +123,8 @@ const SafetyOutlook = () => {
   const { period, setPeriod, filters, setFilter, clearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, filterConfig } = useFilteredData()
+  const filteredIncidents = useDeferredValue(_fi)
 
   // Local state
   const [activeMainTab, setActiveMainTab] = useState('correlations')

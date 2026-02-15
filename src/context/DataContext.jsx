@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react'
 import {
   loadIncidentsChunked,
   saveIncidentsWithFile,
@@ -214,8 +214,12 @@ export const DataProvider = ({ children }) => {
         (result) => {
           if (result.updated > 0) {
             // Reload incidents to get updated categories (silent - no overlay)
+            // Wrapped in startTransition so the UI stays responsive during refresh
             getAllRecords().then(records => {
-              setIncidents(Array.isArray(records) ? records : [])
+              startTransition(() => {
+                clearDataCaches()
+                setIncidents(Array.isArray(records) ? records : [])
+              })
             }).catch(err => {
               if (import.meta.env.DEV) console.error('[DataContext] Error reloading after categorization:', err)
             })
@@ -295,15 +299,19 @@ export const DataProvider = ({ children }) => {
         fileHash: fileInfo.fileHash || null
       })
 
-      // Clear data caches since data changed (keep normalization caches)
-      clearDataCaches()
+      // When skipStateUpdate is true (batch import), skip cache clearing and state updates
+      // The caller will do a single batchReloadIncidents() after all files are processed
+      if (!importOptions.skipStateUpdate) {
+        // Clear data caches since data changed (keep normalization caches)
+        clearDataCaches()
 
-      // Incremental state update: merge new records directly instead of full reload
-      const incidentsWithFileId = incidentsWithIds.map(incident => ({
-        ...incident,
-        fileId: result.fileId
-      }))
-      setIncidents(prev => [...prev, ...incidentsWithFileId])
+        // Incremental state update: merge new records directly instead of full reload
+        const incidentsWithFileId = incidentsWithIds.map(incident => ({
+          ...incident,
+          fileId: result.fileId
+        }))
+        setIncidents(prev => [...prev, ...incidentsWithFileId])
+      }
 
       // Skip reload during batch operations to prevent overlapping IndexedDB transactions
       if (!importOptions.skipReload) {
@@ -325,6 +333,13 @@ export const DataProvider = ({ children }) => {
       if (import.meta.env.DEV) console.error('[DataContext] CRITICAL ERROR in addIncidentsWithFile:', error)
       throw error
     }
+  }, [])
+
+  // Batch reload - single cache clear + state update after batch import
+  const batchReloadIncidents = useCallback(async () => {
+    clearDataCaches()
+    const records = await getAllRecords()
+    setIncidents(Array.isArray(records) ? records : [])
   }, [])
 
   // Legacy addIncidents (without file tracking)
@@ -681,6 +696,7 @@ export const DataProvider = ({ children }) => {
     loadData,
     reloadIncidents,
     reloadFiles,
+    batchReloadIncidents,
 
     // Site classification
     updateSiteClassification,
@@ -712,6 +728,7 @@ export const DataProvider = ({ children }) => {
     loadData,
     reloadIncidents,
     reloadFiles,
+    batchReloadIncidents,
     updateSiteClassification,
     updateSiteClassificationsBatch,
     getEnrichedSites,

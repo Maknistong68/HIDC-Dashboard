@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen, MapPin } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import {
@@ -8,6 +8,7 @@ import {
   transformRows,
   checkDuplicates,
 } from '../../utils/excelParser'
+import { parseExcelFileAsync } from '../../utils/excelParserAsync'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
 import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
@@ -25,7 +26,7 @@ import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
  * - Data reload happens only after user clicks Done
  */
 const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
+  const { addIncidentsWithFile, batchReloadIncidents, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -44,6 +45,28 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
   const isProcessingRef = useRef(false)
+
+  // Throttled progress UI updates via requestAnimationFrame
+  const processingDetailsRef = useRef({ step: '', progress: 0 })
+  const rafIdRef = useRef(null)
+  const updateProcessingDetails = useCallback((details) => {
+    processingDetailsRef.current = details
+    if (!rafIdRef.current) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        setProcessingDetails({ ...processingDetailsRef.current })
+        rafIdRef.current = null
+      })
+    }
+  }, [])
+
+  // Cleanup rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current)
+      }
+    }
+  }, [])
 
   // Check if folder selection is supported (Chrome/Edge only)
   const isFolderSelectSupported = useMemo(() => {
@@ -140,11 +163,11 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
 
       try {
         // Step 1: Calculate file hash
-        setProcessingDetails({ step: 'Calculating file hash...', progress: 5 })
+        updateProcessingDetails({ step: 'Calculating file hash...', progress: 5 })
         const fileHash = await calculateFileHash(file)
 
         // Step 2: Check for duplicate files
-        setProcessingDetails({ step: 'Checking if file already imported...', progress: 10 })
+        updateProcessingDetails({ step: 'Checking if file already imported...', progress: 10 })
         const existingFile = await checkFileHashExists(fileHash)
 
         if (existingFile) {
@@ -172,23 +195,29 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
           continue
         }
 
-        // Step 3: Parse Excel file
-        setProcessingDetails({ step: 'Reading Excel file...', progress: 20 })
-        const data = await parseExcelFile(file)
+        // Step 3: Parse Excel file (via Web Worker to keep UI responsive)
+        updateProcessingDetails({ step: 'Reading Excel file...', progress: 20 })
+        let data
+        try {
+          data = await parseExcelFileAsync(file)
+        } catch {
+          // Fallback to main-thread parsing if worker fails
+          data = await parseExcelFile(file)
+        }
 
         // Step 4: Validate format
-        setProcessingDetails({ step: 'Validating Excel format...', progress: 30 })
+        updateProcessingDetails({ step: 'Validating Excel format...', progress: 30 })
         const validation = validateExcelFormat(data.headers)
         if (!validation.valid) {
           throw new Error(`Invalid format: missing ${validation.missing.join(', ')}`)
         }
 
         // Step 5: Map columns
-        setProcessingDetails({ step: 'Mapping columns...', progress: 35 })
+        updateProcessingDetails({ step: 'Mapping columns...', progress: 35 })
         const mappings = mapExcelColumns(data.headers)
 
         // Step 6: Transform rows
-        setProcessingDetails({ step: 'Cleaning and categorizing data...', progress: 50 })
+        updateProcessingDetails({ step: 'Cleaning and categorizing data...', progress: 50 })
         const { incidents: transformedIncidents, warnings } = transformRows(
           data.rows,
           data.headers,
@@ -199,7 +228,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
         )
 
         // Step 7: Check for duplicates within batch
-        setProcessingDetails({ step: 'Checking for duplicate records...', progress: 90 })
+        updateProcessingDetails({ step: 'Checking for duplicate records...', progress: 90 })
         const withinBatchSkipped = []
         const filteredIncidents = transformedIncidents.filter(item => {
           if (item.externalId && batchImportedIds.has(item.externalId)) {
@@ -221,13 +250,13 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
         )
 
         // Step 8: Save to database
-        setProcessingDetails({ step: 'Saving to database...', progress: 95 })
+        updateProcessingDetails({ step: 'Saving to database...', progress: 95 })
         let result = { recordCount: 0 }
         if (duplicateResults.newRecords.length > 0) {
           result = await addIncidentsWithFile(
             duplicateResults.newRecords,
             { fileName: file.name, fileSize: file.size, fileHash },
-            { classificationMode: 'trust-excel', skipReload: true }
+            { classificationMode: 'trust-excel', skipReload: true, skipStateUpdate: true }
           )
 
           duplicateResults.newRecords.forEach(record => {
@@ -236,7 +265,8 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
             }
           })
 
-          batchAccumulatedIncidents = [...batchAccumulatedIncidents, ...duplicateResults.newRecords]
+          // Use push instead of spread to avoid O(n^2) array copies
+          batchAccumulatedIncidents.push(...duplicateResults.newRecords)
         }
 
         const withinBatchSkippedCount = withinBatchSkipped.length
@@ -286,7 +316,11 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
       }
     }
 
-    // ALL files processed - now mark complete
+    // ALL files processed - single batch reload instead of N individual state updates
+    updateProcessingDetails({ step: 'Finalizing import...', progress: 100 })
+    await batchReloadIncidents()
+
+    // Now mark complete
     const successCount = newResults.filter(r => r.success).length
     const totalRecords = newResults.reduce((sum, r) => sum + (r.recordCount || 0), 0)
 
@@ -316,7 +350,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
 
     // DON'T reload files here - wait for user to click Done
     // This prevents IndexedDB transaction conflicts
-  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, onProcessingStart, siteClassifications])
+  }, [addIncidentsWithFile, batchReloadIncidents, setIsImporting, setIsProcessingBatch, onProcessingStart, siteClassifications, updateProcessingDetails])
 
   // Handle Done button - reload data THEN unlock
   const handleDone = useCallback(async () => {

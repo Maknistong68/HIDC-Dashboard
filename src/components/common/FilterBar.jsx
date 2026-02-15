@@ -152,6 +152,7 @@ const FilterBarComponent = ({
 }) => {
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [, startFilterTransition] = useTransition()
 
   const hasActiveFilters = Object.values(activeFilters).some(
     (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
@@ -256,7 +257,7 @@ const FilterBarComponent = ({
                   )}
                   <select
                     value={activeFilters[filter.key] || ''}
-                    onChange={(e) => onFilterChange(filter.key, e.target.value)}
+                    onChange={(e) => { const v = e.target.value; startFilterTransition(() => onFilterChange(filter.key, v)) }}
                     className={`
                       appearance-none pr-8 font-medium
                       bg-white border rounded-md cursor-pointer

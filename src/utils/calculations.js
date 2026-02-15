@@ -71,9 +71,9 @@ export const getIncidentDataRange = (incidents) => {
 // Excludes the current month if less than 80% of it has elapsed to avoid
 // misleading drops from incomplete data.
 // When months is not specified, auto-detects range from incident data.
+// Optimized: single O(n) pass over incidents instead of O(months*n) nested filtering.
 export const getIncidentsByMonth = (incidents, months) => {
   const now = getCurrentDate()
-  const result = []
 
   // Auto-detect range from data if months not specified
   if (!months && incidents && incidents.length > 0) {
@@ -94,29 +94,47 @@ export const getIncidentsByMonth = (incidents, months) => {
   const monthProgress = dayOfMonth / totalDaysInMonth
   const includeCurrentMonth = monthProgress >= 0.8
 
+  // Pre-build month buckets with O(1) lookup keys
+  const bucketMap = new Map()
+  const orderedKeys = []
+
   for (let i = months - 1; i >= 0; i--) {
-    // Skip the current month (i === 0) if it's too immature
     if (i === 0 && !includeCurrentMonth) continue
-
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
-
-    const monthIncidents = incidents.filter(incident => {
-      const incidentDate = parseISO(incident.date)
-      return isWithinInterval(incidentDate, { start: monthStart, end: monthEnd })
-    })
-
-    result.push({
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const key = `${y}-${m}`
+    const bucket = {
       label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      negative: monthIncidents.filter(i => NEGATIVE_OBSERVATION_TYPES.includes(i.type)).length,
-      incidents: monthIncidents.filter(i => RECORDABLE_INCIDENT_TYPES.includes(i.type)).length,
-      positive: monthIncidents.filter(i => i.type === 'positive').length,
-      total: monthIncidents.length,
-    })
+      negative: 0,
+      incidents: 0,
+      positive: 0,
+      total: 0,
+    }
+    bucketMap.set(key, bucket)
+    orderedKeys.push(key)
   }
 
-  return result
+  // Sets for O(1) type lookups
+  const negativeSet = new Set(NEGATIVE_OBSERVATION_TYPES)
+  const recordableSet = new Set(RECORDABLE_INCIDENT_TYPES)
+
+  // Single pass over all incidents
+  for (let i = 0; i < incidents.length; i++) {
+    const incident = incidents[i]
+    if (!incident.date) continue
+    const monthKey = incident.date.substring(0, 7)
+    const bucket = bucketMap.get(monthKey)
+    if (!bucket) continue
+
+    bucket.total++
+    const type = incident.type
+    if (negativeSet.has(type)) bucket.negative++
+    if (recordableSet.has(type)) bucket.incidents++
+    if (type === 'positive') bucket.positive++
+  }
+
+  return orderedKeys.map(key => bucketMap.get(key))
 }
 
 /**

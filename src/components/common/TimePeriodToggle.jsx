@@ -60,7 +60,7 @@ const TimePeriodToggle = ({ period, onPeriodChange, periods: customPeriods, show
         {periods.map((p) => (
           <button
             key={p.value}
-            onClick={() => onPeriodChange(p.value)}
+            onClick={() => startTransition(() => onPeriodChange(p.value))}
             className={`
               px-2.5 py-1 text-xs font-medium transition-all duration-150
               ${period === p.value

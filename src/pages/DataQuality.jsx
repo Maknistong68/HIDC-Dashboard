@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useCallback, memo } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
@@ -131,7 +131,8 @@ const DataQuality = () => {
   const { period, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, filterConfig } = useFilteredData()
+  const filteredIncidents = useDeferredValue(_fi)
 
   // Handle period change
   const handlePeriodChange = useCallback((newPeriod) => {
