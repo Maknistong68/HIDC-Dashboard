@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useCallback, startTransition, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useCallback, memo } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
@@ -141,9 +141,7 @@ const DataQuality = () => {
   }, [setFilter])
 
   const handleClearFilters = useCallback(() => {
-    startTransition(() => {
-      clearFilters()
-    })
+    clearFilters()
   }, [clearFilters])
 
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents

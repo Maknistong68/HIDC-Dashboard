@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, startTransition, memo } from 'react'
+import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   FileText,
   CheckCircle,
@@ -166,9 +166,7 @@ const Dashboard = () => {
   }, [setFilter])
 
   const clearFilters = useCallback(() => {
-    startTransition(() => {
-      contextClearFilters()
-    })
+    contextClearFilters()
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
   }, [contextClearFilters])

@@ -66,7 +66,7 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
       debounceRef.current = setTimeout(() => {
         lastEmittedRef.current = next
         onChange(filter.key, next)
-      }, 150)
+      }, 60)
       return next
     })
   }, [onChange, filter.key])

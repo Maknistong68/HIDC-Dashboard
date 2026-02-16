@@ -24,7 +24,7 @@ import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
  * Once import completes and data exists, this screen is replaced by the normal Layout.
  */
 const OnboardingScreen = () => {
-  const { addIncidentsWithFile, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
+  const { addIncidentsWithFile, incidents, reloadFiles, batchReloadIncidents, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -257,7 +257,7 @@ const OnboardingScreen = () => {
           result = await addIncidentsWithFile(
             duplicateResults.newRecords,
             { fileName: file.name, fileSize: file.size, fileHash },
-            { classificationMode: 'trust-excel', skipReload: true }
+            { classificationMode: 'trust-excel', skipReload: true, skipStateUpdate: true }
           )
 
           duplicateResults.newRecords.forEach(record => {
@@ -315,6 +315,9 @@ const OnboardingScreen = () => {
       }
     }
 
+    // Single batch reload after all files - clears caches once + pre-warms worker
+    await batchReloadIncidents()
+
     // Collect unique sites from all successfully imported records
     const importedSites = new Set()
     newResults.forEach(r => {
@@ -335,7 +338,7 @@ const OnboardingScreen = () => {
     // NOTE: Don't clear isProcessingBatch here - wait for handleDone
     setIsComplete(true)
     setCurrentFileIndex(-1)
-  }, [addIncidentsWithFile, setIsImporting, setIsProcessingBatch, siteClassifications])
+  }, [addIncidentsWithFile, batchReloadIncidents, setIsImporting, setIsProcessingBatch, siteClassifications])
 
   // Handle Done button - reload data to trigger transition to main app
   const handleDone = useCallback(async () => {

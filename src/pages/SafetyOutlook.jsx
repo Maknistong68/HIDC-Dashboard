@@ -308,10 +308,8 @@ const SafetyOutlook = () => {
   }, [setFilter])
 
   const handleClearFilters = useCallback(() => {
-    startTransition(() => {
-      clearFilters()
-      setSelectedHazard(null)
-    })
+    clearFilters()
+    setSelectedHazard(null)
   }, [clearFilters])
 
   // CRITICAL: Use startTransition for selection to prevent lag

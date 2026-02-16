@@ -51,9 +51,7 @@ export const useDebouncedFilter = (filterValues, delay = 150) => {
     const allEmpty = Object.values(filterValues).every(v => Array.isArray(v) && v.length === 0)
     if (allEmpty) {
       clearTimeout(timeoutRef.current)
-      startTransition(() => {
-        setDebouncedValues(filterValues)
-      })
+      setDebouncedValues(filterValues)
       return
     }
 

@@ -64,3 +64,45 @@ export function warmCaches(inactiveFiltered, inactiveHeatmap, period) {
 
   return ids
 }
+
+/**
+ * Warm all 7 worker caches immediately after batch import.
+ *
+ * Called from batchReloadIncidents() so that by the time the user clicks
+ * "Go to Dashboard" (2-5s later), the worker cache is hot and charts
+ * render instantly with no cold-start delay.
+ *
+ * Computes workRelated + heatmap subsets inline (same logic as
+ * FilteredDataContext `defaults` useMemo) then fires all 7 tasks.
+ *
+ * @param {Array} records - All incident records from IndexedDB
+ */
+export function warmInitialDashboardCaches(records) {
+  if (!records || records.length === 0) return
+
+  const PROACTIVE_SET = new Set(['positive', 'leadership', 'emergency-drill'])
+
+  // Compute the two default datasets (mirrors FilteredDataContext defaults)
+  const wrFiltered = []
+  const wrHeatmap = []
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]
+    if (r.workRelated !== false) {
+      wrFiltered.push(r)
+      if (!PROACTIVE_SET.has(r.type)) wrHeatmap.push(r)
+    }
+  }
+
+  // Use workRelated variants since workRelatedOnly defaults to true
+  const filtered = wrFiltered
+  const heatmap = wrHeatmap
+
+  // Fire all 7 tasks immediately (no scheduleIdle - time-critical)
+  warmWorkerCache('aggregateFactors', heatmap, null)     // Dashboard factors
+  warmWorkerCache('aggregateFactors', filtered, null)     // Outlook factors
+  warmWorkerCache('hazardTrending', filtered, { period: null }) // Default period
+  warmWorkerCache('misclassification', filtered, null)
+  warmWorkerCache('textAnalysis', filtered, null)
+  warmWorkerCache('categorization', filtered, null)
+  warmWorkerCache('trendFlagged', filtered, null)
+}
