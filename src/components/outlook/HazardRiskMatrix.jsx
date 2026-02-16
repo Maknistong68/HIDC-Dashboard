@@ -560,21 +560,21 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
   if (!hasEffects && !hasChange) return null
 
   return (
-    <div className="bg-white rounded-lg border border-surface-200 px-3 py-3 space-y-3">
-      <h4 className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">Risk Calculation</h4>
+    <div className="bg-white rounded-lg border border-surface-200 px-4 py-4 space-y-3">
+      <h4 className="text-xs font-semibold text-surface-500 uppercase tracking-wider">Risk Calculation</h4>
 
       {/* Current → Projected scores */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-4">
         {/* Current */}
         <div className="text-center">
-          <p className="text-[9px] text-surface-400 mb-0.5">Current</p>
-          <div className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: currentColor.backgroundColor + '30', border: `1px solid ${currentColor.borderColor}` }}>
-            <span className="text-xs font-bold" style={{ color: currentColor.borderColor }}>
-              L{L} <span className="text-[9px] font-normal">"{LIKELIHOOD_LABELS[L]}"</span> × C{C} <span className="text-[9px] font-normal">"{CONSEQUENCE_LABELS[C]}"</span> = {currentScore}
+          <p className="text-[11px] text-surface-400 mb-1">Current</p>
+          <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded" style={{ backgroundColor: currentColor.backgroundColor + '30', border: `1px solid ${currentColor.borderColor}` }}>
+            <span className="text-sm font-bold" style={{ color: currentColor.borderColor }}>
+              L{L} <span className="text-xs font-normal">"{LIKELIHOOD_LABELS[L]}"</span> × C{C} <span className="text-xs font-normal">"{CONSEQUENCE_LABELS[C]}"</span> = {currentScore}
             </span>
           </div>
-          <div className="mt-0.5">
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: currentColor.backgroundColor, color: currentColor.color }}>
+          <div className="mt-1">
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: currentColor.backgroundColor, color: currentColor.color }}>
               {currentZone.label}
             </span>
           </div>
@@ -583,17 +583,17 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
         {/* Arrow */}
         {hasChange && (
           <>
-            <span className="text-surface-300 text-lg">&rarr;</span>
+            <span className="text-surface-300 text-xl">&rarr;</span>
             {/* Projected */}
             <div className="text-center">
-              <p className="text-[9px] text-surface-400 mb-0.5">Projected</p>
-              <div className="inline-flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: projectedColor.backgroundColor + '30', border: `1px solid ${projectedColor.borderColor}` }}>
-                <span className="text-xs font-bold" style={{ color: projectedColor.borderColor }}>
-                  L{pL} <span className="text-[9px] font-normal">"{LIKELIHOOD_LABELS[pL]}"</span> × C{C} = {projectedScore}
+              <p className="text-[11px] text-surface-400 mb-1">Projected</p>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded" style={{ backgroundColor: projectedColor.backgroundColor + '30', border: `1px solid ${projectedColor.borderColor}` }}>
+                <span className="text-sm font-bold" style={{ color: projectedColor.borderColor }}>
+                  L{pL} <span className="text-xs font-normal">"{LIKELIHOOD_LABELS[pL]}"</span> × C{C} = {projectedScore}
                 </span>
               </div>
-              <div className="mt-0.5">
-                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: projectedColor.backgroundColor, color: projectedColor.color }}>
+              <div className="mt-1">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: projectedColor.backgroundColor, color: projectedColor.color }}>
                   {projectedZone.label}
                 </span>
               </div>
@@ -605,16 +605,16 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
       {/* Per-intervention breakdown table */}
       {effectRows.length > 0 && (
         <div>
-          <h5 className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider mb-1.5">Intervention Breakdown</h5>
+          <h5 className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider mb-2">Intervention Breakdown</h5>
           <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="text-surface-400 border-b border-surface-100">
-                  <th className="text-left py-1 pr-2 font-semibold">Factor</th>
-                  <th className="text-right py-1 px-1 font-semibold">Prevalence</th>
-                  <th className="text-right py-1 px-1 font-semibold">Eff.</th>
-                  <th className="text-right py-1 px-1 font-semibold">Slider</th>
-                  <th className="text-right py-1 pl-1 font-semibold">= Effect</th>
+                  <th className="text-left py-1.5 pr-2 font-semibold">Factor</th>
+                  <th className="text-right py-1.5 px-1 font-semibold">Prevalence</th>
+                  <th className="text-right py-1.5 px-1 font-semibold">Eff.</th>
+                  <th className="text-right py-1.5 px-1 font-semibold">Slider</th>
+                  <th className="text-right py-1.5 pl-1 font-semibold">= Effect</th>
                 </tr>
               </thead>
               <tbody>
@@ -623,11 +623,11 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
                   const prevalencePct = prev?.percentage ?? '—'
                   return (
                     <tr key={row.factor} className="border-b border-surface-50">
-                      <td className="py-1 pr-2 text-surface-700 truncate max-w-[100px]" title={row.factor}>{row.factor}</td>
-                      <td className="py-1 px-1 text-right text-surface-500">{typeof prevalencePct === 'number' ? prevalencePct.toFixed(1) + '%' : prevalencePct}</td>
-                      <td className="py-1 px-1 text-right text-surface-500">×{Math.round(row.effectiveness * 100)}%</td>
-                      <td className="py-1 px-1 text-right text-surface-500">×{row.sliderValue}%</td>
-                      <td className={`py-1 pl-1 text-right font-semibold ${row.effect < 0 ? 'text-green-600' : row.effect > 0 ? 'text-red-600' : 'text-surface-500'}`}>
+                      <td className="py-1.5 pr-2 text-surface-700 truncate max-w-[120px]" title={row.factor}>{row.factor}</td>
+                      <td className="py-1.5 px-1 text-right text-surface-500">{typeof prevalencePct === 'number' ? prevalencePct.toFixed(1) + '%' : prevalencePct}</td>
+                      <td className="py-1.5 px-1 text-right text-surface-500">×{Math.round(row.effectiveness * 100)}%</td>
+                      <td className="py-1.5 px-1 text-right text-surface-500">×{row.sliderValue}%</td>
+                      <td className={`py-1.5 pl-1 text-right font-semibold ${row.effect < 0 ? 'text-green-600' : row.effect > 0 ? 'text-red-600' : 'text-surface-500'}`}>
                         {row.effect > 0 ? '+' : ''}{row.effect}%
                       </td>
                     </tr>
@@ -641,7 +641,7 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
 
       {/* Action closure effect */}
       {projection?.actionEffect !== 0 && projection?.actionEffect != null && (
-        <div className="flex items-center justify-between text-[10px] px-1 py-1 bg-green-50 rounded">
+        <div className="flex items-center justify-between text-xs px-2 py-1.5 bg-green-50 rounded">
           <span className="text-surface-600">Close {projection.actionsToClose} of {projection.openActionsCount} actions</span>
           <span className="font-semibold text-green-600">{projection.actionEffect > 0 ? '+' : ''}{projection.actionEffect.toFixed(1)}%</span>
         </div>
@@ -649,8 +649,8 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
 
       {/* Diminishing returns note */}
       {projection?.hasDisminishingReturns && effectRows.length > 1 && (
-        <div className="flex items-start gap-1.5 text-[9px] text-surface-400">
-          <Info size={10} className="flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-1.5 text-[11px] text-surface-400">
+          <Info size={12} className="flex-shrink-0 mt-0.5" />
           <span>Diminishing returns applied: each subsequent intervention gets 70% of remaining effect capacity.</span>
         </div>
       )}
