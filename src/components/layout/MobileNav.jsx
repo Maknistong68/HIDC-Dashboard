@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, Target, ShieldCheck, Eye, EyeOff, Trash2, FileText, FolderOpen, Gauge } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useUIState } from '../../context/DataContext'
 import { Logo } from '../ui'
 
 /**
@@ -16,7 +16,8 @@ import { Logo } from '../ui'
 const MobileNav = ({ onClearDataClick }) => {
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
-  const { showOpenClosed, setShowOpenClosed, incidents } = useData()
+  const { incidents } = useDataState()
+  const { showOpenClosed, setShowOpenClosed } = useUIState()
 
   const hasData = incidents.length > 0
 

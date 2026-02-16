@@ -375,7 +375,7 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
             ))}
 
             {/* Action Closure — inline within sliders card */}
-            {openActionsCount > 0 && (
+            {openActionsCount > 0 ? (
               <div className="border-t border-surface-100 pt-2 mt-1 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-surface-700">Close Actions</span>
@@ -394,6 +394,13 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
                 <div className="flex items-center justify-between text-[10px] text-surface-400">
                   <span>0</span>
                   <span>{openActionsCount} open</span>
+                </div>
+              </div>
+            ) : (
+              <div className="border-t border-surface-100 pt-2 mt-1">
+                <div className="flex items-center gap-1.5 text-xs text-surface-400">
+                  <CheckCircle size={12} />
+                  <span>No open actions to close</span>
                 </div>
               </div>
             )}

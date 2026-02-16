@@ -17,7 +17,9 @@ class TabErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error(`[TabErrorBoundary${this.props.label ? ` - ${this.props.label}` : ''}]`, error, errorInfo)
+    if (import.meta.env.DEV) {
+      console.error(`[TabErrorBoundary${this.props.label ? ` - ${this.props.label}` : ''}]`, error, errorInfo)
+    }
   }
 
   handleRetry = () => {

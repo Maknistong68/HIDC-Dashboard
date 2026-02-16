@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen, MapPin } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useDataActions, useUIState } from '../../context/DataContext'
 import {
   parseExcelFile,
   validateExcelFormat,
@@ -26,7 +26,9 @@ import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
  * - Data reload happens only after user clicks Done
  */
 const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
-  const { addIncidentsWithFile, batchReloadIncidents, incidents, reloadFiles, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
+  const { incidents, siteClassifications } = useDataState()
+  const { addIncidentsWithFile, batchReloadIncidents, reloadFiles, updateSiteClassificationsBatch } = useDataActions()
+  const { setIsImporting, setIsProcessingBatch } = useUIState()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)

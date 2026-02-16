@@ -46,9 +46,11 @@ export const useDebouncedFilter = (filterValues, delay = 150) => {
 
     prevFilterRef.current = filterValues
 
-    // Fast path: if all values are empty arrays (cleared state), flush immediately
+    // Fast path: if all values are in their cleared state, flush immediately
     // This bypasses the debounce so "Clear All" is instant
-    const allEmpty = Object.values(filterValues).every(v => Array.isArray(v) && v.length === 0)
+    const allEmpty = Object.values(filterValues).every(v =>
+      (Array.isArray(v) && v.length === 0) || v === '' || v === null || v === undefined
+    )
     if (allEmpty) {
       clearTimeout(timeoutRef.current)
       setDebouncedValues(filterValues)

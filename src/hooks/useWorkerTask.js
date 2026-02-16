@@ -38,6 +38,7 @@ function getWorker() {
       if (cb) {
         if (cacheMiss) {
           // Worker lost the cached data — clear our hash so next send includes full data
+          if (import.meta.env.DEV) console.warn('[useWorkerTask] DATA_CACHE_MISS for task', e.data.task || 'unknown', 'hash:', e.data.dataHash)
           pendingCallbacks.delete(id)
           sentDataHashes.delete(e.data.dataHash)
           cb.reject(new Error('DATA_CACHE_MISS'))
@@ -46,6 +47,7 @@ function getWorker() {
           if (success) {
             cb.resolve(result)
           } else {
+            if (import.meta.env.DEV) console.warn('[useWorkerTask] task error:', e.data.task, error)
             cb.reject(new Error(error))
           }
         }
@@ -152,7 +154,8 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
             setIsPending(false)
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          if (import.meta.env.DEV) console.warn(`[useWorkerTask] ${taskName} flush failed:`, err.message)
           if (latestIdRef.current === id && mountedRef.current) {
             setIsPending(false)
           }
@@ -199,8 +202,9 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
           setIsPending(false)
         }
       })
-      .catch(() => {
+      .catch((err) => {
         // On error, keep stale result, just clear pending
+        if (import.meta.env.DEV) console.warn(`[useWorkerTask] ${taskName} failed:`, err.message)
         if (latestIdRef.current === id && mountedRef.current) {
           setIsPending(false)
         }

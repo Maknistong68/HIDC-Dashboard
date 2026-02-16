@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -116,11 +116,11 @@ export const ImportLockProvider = ({ children }) => {
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [isLocked])
 
-  const value = {
+  const value = useMemo(() => ({
     isLocked,
     lockImport,
     unlockImport
-  }
+  }), [isLocked, lockImport, unlockImport])
 
   return (
     <ImportLockContext.Provider value={value}>

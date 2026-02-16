@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import ModalPortal from './ModalPortal'
 import { X, Calendar, MapPin, User, Building2, AlertCircle, CheckCircle, Clock, AlertTriangle, FileText, Briefcase, FileSpreadsheet } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -230,4 +230,4 @@ const ReportModal = ({ record, onClose }) => {
   )
 }
 
-export default ReportModal
+export default memo(ReportModal)

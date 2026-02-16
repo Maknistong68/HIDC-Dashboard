@@ -44,8 +44,19 @@ export { default as PredictionTrendChart } from './PredictionTrendChart'
 export { default as RiskGauge } from './RiskGauge'
 export { default as InterventionComparison } from './InterventionComparison'
 
-// Data-Driven Scenario Engine
-export * from './ScenarioSimulatorEngine'
+// Data-Driven Scenario Engine — explicit exports to enable tree-shaking
+export {
+  CONTROL_HIERARCHY,
+  calculateFactorPrevalence,
+  generateDynamicSliders,
+  generateContextualSliders,
+  calculateProjectedChange,
+  calculateFullProjection,
+  calculateMultiHazardProjection,
+  calculateThreeFixedScenarios,
+  getTopKeywordsForFactor,
+  getRecommendedActionsForHazard,
+} from './ScenarioSimulatorEngine'
 
 // Seasonal Pattern Detection
 export { default as SeasonalPatternChart } from './SeasonalPatternChart'

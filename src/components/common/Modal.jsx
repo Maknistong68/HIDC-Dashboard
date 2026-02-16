@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef, useCallback, useId } from 'react'
 import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
@@ -20,6 +20,7 @@ const Modal = ({
   const modalRef = useRef(null)
   const previousFocusRef = useRef(null)
   const firstFocusableRef = useRef(null)
+  const titleId = useId()
 
   const sizeClasses = {
     sm: 'max-w-md',
@@ -125,7 +126,7 @@ const Modal = ({
       className="fixed inset-0 z-50 overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
     >
       {/* Backdrop */}
       <div
@@ -156,7 +157,7 @@ const Modal = ({
             <div className="flex items-center justify-between px-5 py-4 border-b border-surface-200">
               {title && (
                 <h2
-                  id="modal-title"
+                  id={titleId}
                   className="text-lg font-semibold text-surface-800"
                 >
                   {title}

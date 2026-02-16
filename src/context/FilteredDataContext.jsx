@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react'
-import { useData } from './DataContext'
+import { useDataState } from './DataContext'
 import { useDate } from './DateContext'
-import { useFilter } from './FilterContext'
+import { useFilterState } from './FilterContext'
 import { useDebouncedFilter } from '../hooks/useDebouncedFilter'
 import { PROACTIVE_TYPES } from '../utils/constants'
 
@@ -27,9 +27,9 @@ const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
  * - filterConfig: complete filter configuration array for FilterBar
  */
 export const FilteredDataProvider = ({ children }) => {
-  const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useData()
+  const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useDataState()
   const { getPeriodRange } = useDate()
-  const { period, customDateRange, filters, workRelatedOnly } = useFilter()
+  const { period, customDateRange, filters, workRelatedOnly } = useFilterState()
 
   // Debounce multi-select filter arrays (100ms) so rapid checkbox clicks
   // don't trigger 5 consecutive O(n) filter passes
@@ -235,12 +235,6 @@ export const FilteredDataProvider = ({ children }) => {
   }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
 
   const value = useMemo(() => {
-    console.log('[FilteredDataContext] value updated', {
-      filteredIncidents: filteredIncidents.length,
-      heatmapIncidents: heatmapIncidents.length,
-      workRelatedOnly,
-      isAllCleared
-    })
     return {
       filteredIncidents,
       heatmapIncidents,

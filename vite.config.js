@@ -47,14 +47,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    target: 'es2020',
     sourcemap: false,
     minify: 'esbuild',
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           charts: ['recharts'],
-          utils: ['date-fns', 'xlsx']
+          utils: ['date-fns']
         }
       }
     }

@@ -1,7 +1,7 @@
 import React, { useMemo, memo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bell, Download } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useDataActions } from '../../context/DataContext'
 import { useDate } from '../../context/DateContext'
 import { downloadJSON, exportAllData } from '../../utils/storage'
 import { format } from 'date-fns'
@@ -19,7 +19,8 @@ const pageTitles = {
 
 const Header = memo(() => {
   const location = useLocation()
-  const { incidents, exportData } = useData()
+  const { incidents } = useDataState()
+  const { exportData } = useDataActions()
   const { formatCurrentDate, getCurrentDate } = useDate()
 
   const title = pageTitles[location.pathname] || 'HSE Dashboard'

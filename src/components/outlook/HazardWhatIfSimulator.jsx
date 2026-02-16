@@ -10,55 +10,6 @@ import {
 } from 'lucide-react'
 import { NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
 
-// Custom slider styles for better visibility
-const sliderStyles = `
-  .whatif-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-  }
-  .whatif-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  }
-  .whatif-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  }
-  .whatif-slider.amber {
-    background: linear-gradient(to right, #fef3c7, #fbbf24);
-  }
-  .whatif-slider.amber::-webkit-slider-thumb {
-    background: #f59e0b;
-  }
-  .whatif-slider.amber::-moz-range-thumb {
-    background: #f59e0b;
-  }
-  .whatif-slider.emerald {
-    background: linear-gradient(to right, #d1fae5, #34d399);
-  }
-  .whatif-slider.emerald::-webkit-slider-thumb {
-    background: #10b981;
-  }
-  .whatif-slider.emerald::-moz-range-thumb {
-    background: #10b981;
-  }
-`
-
 /**
  * HazardWhatIfSimulator - Compact simulation controls for a selected hazard
  * Horizontal layout with sliders and impact gauge
@@ -134,9 +85,6 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
 
   return (
     <div className="space-y-3">
-      {/* Inject slider styles */}
-      <style>{sliderStyles}</style>
-
       {/* Compact Sliders Row */}
       <div className="grid grid-cols-2 gap-4">
         {/* Close Actions */}
@@ -156,7 +104,7 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
             max={10}
             value={params.actionsToClose}
             onChange={(e) => handleChange('actionsToClose', parseInt(e.target.value))}
-            className="whatif-slider amber"
+            className="unified-slider engineering"
           />
           <div className="flex justify-between text-[10px] text-surface-400 mt-1">
             <span>0</span>
@@ -183,7 +131,7 @@ const HazardWhatIfSimulator = ({ hazard, incidents }) => {
             step={10}
             value={params.trainingIncrease}
             onChange={(e) => handleChange('trainingIncrease', parseInt(e.target.value))}
-            className="whatif-slider emerald"
+            className="unified-slider ppe"
           />
           <div className="flex justify-between text-[10px] text-surface-400 mt-1">
             <span>0%</span>

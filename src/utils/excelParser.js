@@ -1,5 +1,11 @@
-import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
+
+// Lazy-load xlsx (~1.2MB) — only needed during import
+let _XLSX = null
+export async function getXLSX() {
+  if (!_XLSX) _XLSX = await import('xlsx')
+  return _XLSX
+}
 import {
   HAZARD_PATTERNS,
   HAZARD_CATEGORIES,
@@ -1775,7 +1781,8 @@ const detectHeaderRow = (rows, maxRowsToCheck = 15) => {
  * Parse Excel file and return raw data
  * Auto-detects header row even if not on first row
  */
-export const parseExcelFile = (file) => {
+export const parseExcelFile = async (file) => {
+  const XLSX = await getXLSX()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 

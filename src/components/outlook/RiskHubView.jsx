@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -915,6 +915,7 @@ const RiskHubView = ({
     setCurrentIndex(initialIndex)
   }, [initialIndex])
   const [isAnimating, setIsAnimating] = useState(false)
+  const animationTimerRef = useRef(null)
   // Default: expanded on desktop, collapsed on mobile
   const [whereExpanded, setWhereExpanded] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth >= 768
@@ -1041,11 +1042,17 @@ const RiskHubView = ({
     return cards.slice(0, 4) // Max 4 time cards
   }, [dayPatterns, hourPatterns])
 
+  // Clean up animation timer on unmount
+  useEffect(() => {
+    return () => { clearTimeout(animationTimerRef.current) }
+  }, [])
+
   // Navigation handlers with animation
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
       setIsAnimating(true)
-      setTimeout(() => {
+      clearTimeout(animationTimerRef.current)
+      animationTimerRef.current = setTimeout(() => {
         setCurrentIndex(i => i - 1)
         setIsAnimating(false)
       }, 150)
@@ -1055,7 +1062,8 @@ const RiskHubView = ({
   const handleNext = useCallback(() => {
     if (currentIndex < hazards.length - 1) {
       setIsAnimating(true)
-      setTimeout(() => {
+      clearTimeout(animationTimerRef.current)
+      animationTimerRef.current = setTimeout(() => {
         setCurrentIndex(i => i + 1)
         setIsAnimating(false)
       }, 150)

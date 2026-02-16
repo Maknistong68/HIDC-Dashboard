@@ -1,7 +1,7 @@
 import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle } from 'lucide-react'
-import { useData } from '../context/DataContext'
-import { useFilter } from '../context/FilterContext'
+import { useDataState } from '../context/DataContext'
+import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
@@ -117,10 +117,11 @@ const MAIN_TABS = [
  * Tab 3: Risk & Performance
  */
 const SafetyOutlook = () => {
-  const { incidents, siteClassifications } = useData()
+  const { incidents, siteClassifications } = useDataState()
 
   // Shared filter state from context
-  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters } = useFilter()
+  const { period, customDateRange, filters } = useFilterState()
+  const { setPeriod, setFilter, clearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -154,16 +155,6 @@ const SafetyOutlook = () => {
     'aggregateFactors', filteredIncidents, null, [filteredIncidents],
     { byFactor: [], analyzed: 0, total: 0 }
   )
-
-  // Diagnostic logging for data flow debugging
-  console.log('[SafetyOutlook] data status', {
-    filteredIncidents: filteredIncidents.length,
-    sortedHazards: sortedHazards?.length,
-    sortedHazardsPending,
-    factorByFactor: factorData?.byFactor?.length,
-    factorDataPending,
-    period
-  })
 
   // Calculate hazard trend data for selected hazard
   const hazardTrendData = useDeferredMemo(() => {

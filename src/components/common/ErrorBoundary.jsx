@@ -1,5 +1,6 @@
 import React from 'react'
 import { AlertTriangle, RefreshCw, Home, Database } from 'lucide-react'
+import { reportError } from '../../utils/errorReporter'
 
 // Categorize errors for better user messaging
 const getErrorInfo = (error) => {
@@ -56,7 +57,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Only log errors in development to prevent information disclosure
+    reportError(error, { context: 'ErrorBoundary', componentStack: errorInfo?.componentStack })
     if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo)
     }
@@ -133,7 +134,7 @@ class ErrorBoundary extends React.Component {
               </div>
             )}
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="mt-6 p-4 bg-surface-100 rounded-lg text-left">
                 <p className="text-xs font-semibold text-surface-700 mb-1">Error Details (Development Only):</p>
                 <p className="text-xs font-mono text-red-600 break-all">

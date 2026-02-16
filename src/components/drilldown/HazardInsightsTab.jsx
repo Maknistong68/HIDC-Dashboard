@@ -34,7 +34,8 @@ const HazardInsightsTab = ({
 
   // Calculate insights for this hazard, using pre-calculated factorData if available
   const insights = useMemo(() => {
-    return getHazardInsights(allIncidents, hazardName, factorData, { filterMonth })
+    const result = getHazardInsights(allIncidents, hazardName, factorData, { filterMonth })
+    return result
   }, [allIncidents, hazardName, factorData, filterMonth])
 
   // Handle root cause bar click - filter observations and callback

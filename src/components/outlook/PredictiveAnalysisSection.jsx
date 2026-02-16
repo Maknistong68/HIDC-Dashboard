@@ -2,55 +2,6 @@ import React, { useState, useMemo, useCallback } from 'react'
 import { Sparkles, Info, ChevronDown, ChevronUp, TrendingDown, TrendingUp, Minus, RefreshCw } from 'lucide-react'
 import { NEGATIVE_TYPES } from '../../utils/rootCauseEngine'
 
-// Bidirectional slider styles with center at 0
-const sliderStyles = `
-  .predictive-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 10px;
-    border-radius: 5px;
-    outline: none;
-    cursor: pointer;
-  }
-  .predictive-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  }
-  .predictive-slider::-moz-range-thumb {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  }
-  .predictive-slider.actions {
-    background: linear-gradient(to right, #fecaca 0%, #fef3c7 50%, #d1fae5 100%);
-  }
-  .predictive-slider.actions::-webkit-slider-thumb {
-    background: #f59e0b;
-  }
-  .predictive-slider.actions::-moz-range-thumb {
-    background: #f59e0b;
-  }
-  .predictive-slider.training {
-    background: linear-gradient(to right, #fecaca 0%, #cffafe 50%, #d1fae5 100%);
-  }
-  .predictive-slider.training::-webkit-slider-thumb {
-    background: #10b981;
-  }
-  .predictive-slider.training::-moz-range-thumb {
-    background: #10b981;
-  }
-`
-
 /**
  * InterventionSlider - Bidirectional slider centered at 0
  */
@@ -77,7 +28,7 @@ const InterventionSlider = ({ id, label, value, min, max, step = 1, unit = '', o
           step={step}
           value={value}
           onChange={(e) => onChange(id, parseInt(e.target.value))}
-          className={`predictive-slider ${colorClass}`}
+          className={`unified-slider ${colorClass}`}
         />
         {/* Center marker */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-surface-400 pointer-events-none" />
@@ -250,9 +201,6 @@ const PredictiveAnalysisSection = ({ incidents, incidentPrediction, selectedHaza
 
   return (
     <div className="mt-4 bg-white rounded-lg border-2 border-dashed border-primary-200 overflow-hidden">
-      {/* Inject slider styles */}
-      <style>{sliderStyles}</style>
-
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-50 to-emerald-50 border-b border-primary-100">
         <div className="flex items-center gap-2">

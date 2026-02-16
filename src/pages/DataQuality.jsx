@@ -46,8 +46,8 @@ import {
   Line,
   ReferenceLine
 } from 'recharts'
-import { useData } from '../context/DataContext'
-import { useFilter } from '../context/FilterContext'
+import { useDataState, useDataActions } from '../context/DataContext'
+import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
@@ -81,7 +81,8 @@ const getStatusBubbleColors = (status) => {
 }
 
 const DataQuality = () => {
-  const { incidents, isLoading, importWarnings, updateIncident } = useData()
+  const { incidents, isLoading, importWarnings } = useDataState()
+  const { updateIncident } = useDataActions()
   const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
   const [expandedSection, setExpandedSection] = useState(null)
   const [reporterSort, setReporterSort] = useState('total')
@@ -102,10 +103,6 @@ const DataQuality = () => {
   const [reporterSearch, setReporterSearch] = useState('')
   const [contractorSearch, setContractorSearch] = useState('')
 
-  // Spell checker is always ready (hybrid approach - no async loading)
-  const spellCheckerReady = true
-  const spellCheckerLoading = false
-
   // Drill-down state
   const [drillDown, setDrillDown] = useState({
     isOpen: false,
@@ -118,7 +115,8 @@ const DataQuality = () => {
   })
 
   // Shared filter state from context
-  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
+  const { period, customDateRange, filters, contractor, site, subRegion, excludedReporters } = useFilterState()
+  const { setPeriod, setFilter, clearFilters, setExcludedReporters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -157,14 +155,6 @@ const DataQuality = () => {
   const { result: misclassificationData, isPending: misclassificationPending } = useWorkerTask(
     'misclassification', filteredIncidents, null, [filteredIncidents], null
   )
-
-  console.log('[DataQuality] data status', {
-    filteredIncidents: filteredIncidents.length,
-    incidentsTotal: incidents.length,
-    hasMisclassification: !!misclassificationData,
-    misclassificationPending,
-    isLoading
-  })
 
   // Group 1: Core quality score metrics (depends on misclassification data)
   // useDeferredMemo so hidden tabs skip this O(n) computation
@@ -279,14 +269,7 @@ const DataQuality = () => {
   // Reporter deep dive data
   const reporterDeepDive = useMemo(() => {
     if (!selectedReporter) return null
-    console.log('[DataQuality] computing reporterDeepDive', {
-      selectedReporter,
-      filteredIncidentsLen: filteredIncidents.length,
-      incidentsLen: incidents.length,
-      hasMisclassification: !!misclassificationData
-    })
     const result = getReporterDeepDive(filteredIncidents, selectedReporter, incidents, misclassificationData)
-    console.log('[DataQuality] reporterDeepDive result', result ? { name: result.name, total: result.total } : 'null')
     return result
   }, [selectedReporter, filteredIncidents, incidents, misclassificationData])
 
@@ -305,7 +288,6 @@ const DataQuality = () => {
 
   // Drill-down handlers - memoized to prevent child re-renders
   const openDrillDown = useCallback((title, records, breadcrumb = [], context = {}) => {
-    console.log('[DataQuality] openDrillDown', { title, recordsLength: records?.length, breadcrumb })
     setDrillDown({
       isOpen: true,
       type: 'records',
@@ -1148,36 +1130,14 @@ const DataQuality = () => {
               <InfoTooltip text="HOW MISSPELLINGS ARE DETECTED: We run every description through a spell checker that compares words against a large dictionary. Words not found in the dictionary are flagged as potential misspellings. The system is smart enough to ignore proper nouns, technical terms, and common abbreviations. WHY THIS MATTERS: Excessive spelling errors can indicate rushed data entry, which often correlates with poor overall quality. They can also make it harder to search for specific terms later. Consider this as one indicator of data entry care, not as a criticism of individual reporters." />
             </div>
             <div className="text-right">
-              {spellCheckerReady ? (
-                <>
-                  <div className={`text-3xl font-bold ${spellingIssues.count > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {spellingIssues.count}
-                  </div>
-                  <div className="text-xs text-surface-500">records</div>
-                </>
-              ) : spellCheckerLoading ? (
-                <div className="animate-spin h-6 w-6 border-2 border-surface-300 border-t-surface-500 rounded-full"></div>
-              ) : (
-                <span className="text-xs text-surface-400">N/A</span>
-              )}
+              <div className={`text-3xl font-bold ${spellingIssues.count > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {spellingIssues.count}
+              </div>
+              <div className="text-xs text-surface-500">records</div>
             </div>
           </div>
 
-          {spellCheckerLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin h-8 w-8 border-3 border-surface-200 border-t-surface-500 rounded-full mx-auto mb-2"></div>
-                <span className="text-xs text-surface-500">Loading dictionary...</span>
-              </div>
-            </div>
-          ) : !spellCheckerReady ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-surface-400">
-                <AlertCircle size={32} className="mx-auto mb-2 opacity-50" />
-                <span className="text-sm">Unavailable</span>
-              </div>
-            </div>
-          ) : spellingIssues.count === 0 ? (
+          {spellingIssues.count === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <CheckCircle size={32} className="text-green-500 mx-auto mb-2" />

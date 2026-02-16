@@ -4,7 +4,7 @@ import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, A
 import { List as VirtualList } from 'react-window'
 import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { format, parseISO } from 'date-fns'
-import { useData } from '../../context/DataContext'
+import { useDataActions } from '../../context/DataContext'
 import { getStatusColor } from '../../utils/statusColors'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
@@ -802,7 +802,7 @@ const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onVie
  */
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
-  const { updateIncident } = useData()
+  const { updateIncident } = useDataActions()
   const copyTimerRef = useRef(null)
 
   // Cleanup timer on unmount

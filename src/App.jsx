@@ -9,8 +9,9 @@ import { LoadingSpinner } from './components/ui'
 import GlobalLoadingOverlay from './components/ui/GlobalLoadingOverlay'
 import { ImportLockProvider } from './context/ImportLockContext'
 import { FilteredDataProvider } from './context/FilteredDataContext'
-import { useData } from './context/DataContext'
+import { useDataState, useUIState } from './context/DataContext'
 import { OnboardingScreen, InitialLoadingScreen } from './components/onboarding'
+import useDocumentTitle from './hooks/useDocumentTitle'
 
 // Lazy-loaded for less frequent pages
 const FileManagement = lazy(() => import('./pages/FileManagement'))
@@ -25,7 +26,9 @@ const PageLoadingFallback = () => (
 
 // Inner component that uses the import lock for route blocking
 function AppContent() {
-  const { incidents, isLoading, isProcessingBatch } = useData()
+  const { incidents } = useDataState()
+  const { isLoading, isProcessingBatch } = useUIState()
+  useDocumentTitle()
 
   // Show minimal loading screen while data loads from IndexedDB
   if (isLoading) {
@@ -56,16 +59,20 @@ function AppContent() {
             <Route path="/data-control" element={null} />
             <Route path="/outlook" element={null} />
 
-            {/* Lazy-loaded secondary pages */}
+            {/* Lazy-loaded secondary pages — ErrorBoundary catches chunk load failures */}
             <Route path="/files" element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <FileManagement />
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <FileManagement />
+                </Suspense>
+              </ErrorBoundary>
             } />
             <Route path="/legal" element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <Legal />
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <Legal />
+                </Suspense>
+              </ErrorBoundary>
             } />
 
             {/* Legacy redirects */}
@@ -74,6 +81,9 @@ function AppContent() {
             <Route path="/import" element={<Navigate to="/data-control" replace />} />
             <Route path="/settings" element={<Navigate to="/" replace />} />
             <Route path="/predictive" element={<Navigate to="/outlook" replace />} />
+
+            {/* Catch-all: redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
       </FilteredDataProvider>

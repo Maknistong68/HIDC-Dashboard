@@ -39,103 +39,6 @@ import {
 } from './ScenarioSimulatorEngine'
 import { ScenarioSimulatorCompact } from '../outlook'
 
-// Slider styles for scenario simulator
-const sliderStyles = `
-  .unified-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-    margin: 0;
-    padding: 0;
-  }
-  .unified-slider::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .unified-slider::-moz-range-track {
-    width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .unified-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    margin-top: -6px;
-  }
-  .unified-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  }
-  .unified-slider:focus {
-    outline: none;
-  }
-  .unified-slider:focus::-webkit-slider-thumb {
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 6px rgba(0,0,0,0.3);
-  }
-  .unified-slider.engineering {
-    background: linear-gradient(to right, #fecaca 0%, #bfdbfe 50%, #d1fae5 100%);
-  }
-  .unified-slider.engineering::-webkit-slider-thumb {
-    background: #3b82f6;
-  }
-  .unified-slider.engineering::-moz-range-thumb {
-    background: #3b82f6;
-  }
-  .unified-slider.administrative {
-    background: linear-gradient(to right, #fecaca 0%, #e0e7ff 50%, #d1fae5 100%);
-  }
-  .unified-slider.administrative::-webkit-slider-thumb {
-    background: #6366f1;
-  }
-  .unified-slider.administrative::-moz-range-thumb {
-    background: #6366f1;
-  }
-  .unified-slider.ppe {
-    background: linear-gradient(to right, #fecaca 0%, #fef3c7 50%, #d1fae5 100%);
-  }
-  .unified-slider.ppe::-webkit-slider-thumb {
-    background: #f59e0b;
-  }
-  .unified-slider.ppe::-moz-range-thumb {
-    background: #f59e0b;
-  }
-  .unified-slider.environmental {
-    background: linear-gradient(to right, #fecaca 0%, #d1fae5 50%, #d1fae5 100%);
-  }
-  .unified-slider.environmental::-webkit-slider-thumb {
-    background: #10b981;
-  }
-  .unified-slider.environmental::-moz-range-thumb {
-    background: #10b981;
-  }
-  .unified-slider.actions {
-    background: linear-gradient(to right, #fef3c7 0%, #d1fae5 100%);
-  }
-  .unified-slider.actions::-webkit-slider-thumb {
-    background: #f59e0b;
-  }
-  .unified-slider.actions::-moz-range-thumb {
-    background: #f59e0b;
-  }
-`
-
 // Category icons and colors
 const CATEGORY_CONFIG = {
   engineering: {
@@ -462,8 +365,6 @@ const UnifiedPredictivePanel = ({
 
   return (
     <div className="bg-white border border-surface-200 rounded-lg overflow-hidden shadow-soft">
-      <style>{sliderStyles}</style>
-
       {/* Collapsible Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

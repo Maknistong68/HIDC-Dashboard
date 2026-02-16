@@ -173,6 +173,7 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={`Search ${filter.label.toLowerCase()}...`}
+                  aria-label={`Search ${filter.label.toLowerCase()}`}
                   className="w-full pl-8 pr-3 py-1.5 text-sm border border-surface-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>

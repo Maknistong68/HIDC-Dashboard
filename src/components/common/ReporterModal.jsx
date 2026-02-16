@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import ModalPortal from './ModalPortal'
 import {
   X,
@@ -59,7 +59,9 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
     maxHeightPercent: 95
   })
 
-  if (!isOpen || !data) return null
+  if (!isOpen || !data) {
+    return null
+  }
 
   const pieData = [
     { name: 'Near Miss', value: data.typeBreakdown.nearMiss, color: COLORS.nearMiss },
@@ -508,4 +510,4 @@ const ComparisonRow = ({ label, reporter, team, better }) => (
   </div>
 )
 
-export default ReporterModal
+export default memo(ReporterModal)

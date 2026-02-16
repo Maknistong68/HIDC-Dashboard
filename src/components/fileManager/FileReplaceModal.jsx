@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react'
 import ModalPortal from '../common/ModalPortal'
 import { RefreshCw, FileSpreadsheet, Upload, X, Check, AlertTriangle } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useDataActions } from '../../context/DataContext'
 import {
   parseExcelFile,
   validateExcelFormat,
@@ -17,7 +17,8 @@ import {
  * - Importing newer exports from the source system
  */
 const FileReplaceModal = ({ file, onClose }) => {
-  const { replaceFile, incidents } = useData()
+  const { incidents } = useDataState()
+  const { replaceFile } = useDataActions()
 
   const [step, setStep] = useState('upload') // upload | confirm | complete
   const [newFile, setNewFile] = useState(null)

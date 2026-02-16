@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react'
 import { Upload, FileSpreadsheet, FolderOpen, Check, AlertTriangle, Play, CheckCircle2, X, MapPin } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useDataActions, useUIState } from '../../context/DataContext'
 import Logo from '../ui/Logo'
 import Footer from '../layout/Footer'
 import {
@@ -24,7 +24,9 @@ import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
  * Once import completes and data exists, this screen is replaced by the normal Layout.
  */
 const OnboardingScreen = () => {
-  const { addIncidentsWithFile, incidents, reloadFiles, batchReloadIncidents, setIsImporting, setIsProcessingBatch, siteClassifications, updateSiteClassificationsBatch } = useData()
+  const { incidents, siteClassifications } = useDataState()
+  const { addIncidentsWithFile, reloadFiles, batchReloadIncidents, updateSiteClassificationsBatch } = useDataActions()
+  const { setIsImporting, setIsProcessingBatch } = useUIState()
 
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)

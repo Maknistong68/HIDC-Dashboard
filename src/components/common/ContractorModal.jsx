@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, memo } from 'react'
 import ModalPortal from './ModalPortal'
 import {
   X,
@@ -90,8 +90,11 @@ const ContractorModal = ({
 
   // Calculate contractor deep dive with exclusions applied
   const data = useMemo(() => {
-    if (!contractorName || !filteredForContractor || filteredForContractor.length === 0) return null
-    return getContractorDeepDive(filteredForContractor, contractorName, allIncidents, misclassificationData)
+    if (!contractorName || !filteredForContractor || filteredForContractor.length === 0) {
+      return null
+    }
+    const result = getContractorDeepDive(filteredForContractor, contractorName, allIncidents, misclassificationData)
+    return result
   }, [contractorName, filteredForContractor, allIncidents, misclassificationData])
 
   // Toggle reporter exclusion
@@ -682,4 +685,4 @@ const ComparisonRow = ({ label, value, avg, better }) => (
   </div>
 )
 
-export default ContractorModal
+export default memo(ContractorModal)

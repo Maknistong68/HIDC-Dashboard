@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, MapPin, ChevronLeft, ChevronRight, Filter, X, Check, CheckSquare } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataActions } from '../../context/DataContext'
 import { Card } from '../ui'
 
 const SUB_REGIONS = [
@@ -14,7 +14,7 @@ const SUB_REGIONS = [
 const ITEMS_PER_PAGE = 25
 
 const SiteClassificationPanel = () => {
-  const { getEnrichedSites, updateSiteClassification, updateSiteClassificationsBatch } = useData()
+  const { getEnrichedSites, updateSiteClassification, updateSiteClassificationsBatch } = useDataActions()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterMode, setFilterMode] = useState('all') // 'all', 'classified', 'unclassified'

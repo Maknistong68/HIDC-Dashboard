@@ -51,7 +51,7 @@ export const CONTROL_HIERARCHY = {
       { id: 'planning', label: 'Work Planning', factor: 'Planning' },
       { id: 'communication', label: 'Communication/Briefings', factor: 'Communication' },
       { id: 'inspections', label: 'Inspection Frequency', factor: 'Inspections' },
-      { id: 'interfaces', label: 'Handover Procedures', factor: 'Interfaces' },
+      { id: 'interfaces', label: 'Interface Management', factor: 'Interfaces' },
       { id: 'orderliness', label: 'Orderliness Standards', factor: 'Orderliness' }
     ]
   },
@@ -670,8 +670,9 @@ export const generateContextualSliders = (factorData, hazardName, totalNegativeI
     }
   }
 
-  // Sort by score and return top 8
+  // Sort by score, require data backing (skip expert-only with zero incidents), return top 8
   const sliders = Object.values(scoredFactors)
+    .filter(s => s.count > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
 

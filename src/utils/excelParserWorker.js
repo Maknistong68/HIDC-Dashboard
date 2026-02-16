@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx'
 
 /**
  * Web Worker for XLSX parsing - moves the expensive XLSX.read() off the main thread.
+ * Worker is bundled separately by Vite, so xlsx is NOT in the main bundle.
  *
  * Receives: ArrayBuffer of the Excel file
  * Returns: { sheetName, jsonData } - raw parsed data for the main thread to process

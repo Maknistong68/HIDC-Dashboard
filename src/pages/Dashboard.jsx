@@ -10,9 +10,9 @@ import {
   Search,
   Database,
 } from 'lucide-react'
-import { useData } from '../context/DataContext'
+import { useDataState, useUIState } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
-import { useFilter } from '../context/FilterContext'
+import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
@@ -68,6 +68,21 @@ const makePieLegendFormatter = (dataArray) => (value) => {
 const SIGNIFICANT_HAZARDS_MAP = new Map(SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
 const SUB_SIGNIFICANT_HAZARDS_MAP = new Map(SUB_SIGNIFICANT_HAZARDS.map((h, i) => [h.toLowerCase(), i]))
 
+// Hoisted from inside component — these use imported constants and never change
+const NEGATIVE_SET = new Set(NEGATIVE_OBSERVATION_TYPES)
+const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
+const INCIDENT_CAT_SET = new Set(INCIDENT_CATEGORY_TYPES)
+const SUB_TYPE_TO_PYRAMID = {
+  'env-major': 'environmental',
+  'env-moderate': 'environmental',
+  'env-minor': 'environmental',
+  'dmg-light-vehicle': 'damage-to-property',
+  'dmg-heavy-plant': 'damage-to-property',
+  'dmg-truck-trailer': 'damage-to-property',
+  'dmg-static-equipment': 'damage-to-property',
+  'property-damage': 'damage-to-property',
+}
+
 // Normalize hazard name for consistent grouping (fixes duplicates)
 // Memoized to prevent redundant string operations on filter changes
 const normalizeHazard = memoize((hazard) => {
@@ -83,11 +98,13 @@ const normalizeHazard = memoize((hazard) => {
 
 
 const Dashboard = () => {
-  const { incidents, isLoading, showOpenClosed, siteClassifications, hasSubregionAssignments } = useData()
+  const { incidents, isLoading, siteClassifications, hasSubregionAssignments } = useDataState()
+  const { showOpenClosed } = useUIState()
   const { cutoffDates } = useDate()
 
   // Shared filter state from context
-  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
+  const { period, customDateRange, filters } = useFilterState()
+  const { setPeriod, setFilter, clearFilters: contextClearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
@@ -317,21 +334,6 @@ const Dashboard = () => {
   // ── Single-pass KPI + chart aggregation ──────────────────────────────
   // Replaces 8 separate O(n) useMemos with ONE pass through filteredIncidents.
   // Hidden tabs skip this entirely thanks to useDeferredMemo.
-  const NEGATIVE_SET = new Set(NEGATIVE_OBSERVATION_TYPES)
-  const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
-  const INCIDENT_CAT_SET = new Set(INCIDENT_CATEGORY_TYPES)
-
-  const SUB_TYPE_TO_PYRAMID = {
-    'env-major': 'environmental',
-    'env-moderate': 'environmental',
-    'env-minor': 'environmental',
-    'dmg-light-vehicle': 'damage-to-property',
-    'dmg-heavy-plant': 'damage-to-property',
-    'dmg-truck-trailer': 'damage-to-property',
-    'dmg-static-equipment': 'damage-to-property',
-    'property-damage': 'damage-to-property',
-  }
-
   const dashboardAggregates = useDeferredMemo(() => {
     const total = filteredIncidents.length
 

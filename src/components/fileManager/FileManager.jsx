@@ -15,9 +15,10 @@ import {
   HardDrive,
   TrendingUp,
   Clock,
-  MapPin
+  MapPin,
+  Table2,
 } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useDataState, useDataActions } from '../../context/DataContext'
 import { useImportLock } from '../../context/ImportLockContext'
 import { Card } from '../ui'
 import FileDeleteConfirm from './FileDeleteConfirm'
@@ -25,6 +26,7 @@ import FileReplaceModal from './FileReplaceModal'
 import BatchImportModal from './BatchImportModal'
 import DataTimeline from './DataTimeline'
 import SiteClassificationPanel from './SiteClassificationPanel'
+import DataExplorer from './DataExplorer'
 
 /**
  * FileManager - Enterprise file management for imported data
@@ -37,7 +39,8 @@ import SiteClassificationPanel from './SiteClassificationPanel'
  * - Data timeline visualization
  */
 const FileManager = () => {
-  const { files, incidents, deleteFile, isLoading } = useData()
+  const { files, incidents, isLoading } = useDataState()
+  const { deleteFile } = useDataActions()
   const { lockImport, unlockImport } = useImportLock()
 
   const [activeTab, setActiveTab] = useState('files')
@@ -184,7 +187,8 @@ const FileManager = () => {
   const tabs = [
     { id: 'files', label: 'Files', icon: List },
     { id: 'timeline', label: 'Timeline', icon: Calendar },
-    { id: 'sites', label: 'Sites', icon: MapPin }
+    { id: 'sites', label: 'Sites', icon: MapPin },
+    { id: 'explorer', label: 'Data Explorer', icon: Table2 },
   ]
 
   // Show loading state
@@ -485,6 +489,10 @@ const FileManager = () => {
         <SiteClassificationPanel />
       )}
 
+      {activeTab === 'explorer' && (
+        <DataExplorer incidents={incidents} files={files} />
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteModalFile && (
         <FileDeleteConfirm
@@ -506,4 +514,4 @@ const FileManager = () => {
   )
 }
 
-export default FileManager
+export default React.memo(FileManager)
