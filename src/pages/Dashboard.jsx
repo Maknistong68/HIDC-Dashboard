@@ -87,7 +87,7 @@ const Dashboard = () => {
   const { cutoffDates } = useDate()
 
   // Shared filter state from context
-  const { period, customDateRange, searchQuery, setPeriod, setSearchQuery, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
+  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters: contextClearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
@@ -711,8 +711,6 @@ const Dashboard = () => {
             activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onClearFilters={clearFilters}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
           />
         </div>
 

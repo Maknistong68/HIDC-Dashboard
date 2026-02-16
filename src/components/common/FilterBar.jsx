@@ -164,8 +164,7 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
           ${isMobile ? 'left-0 right-0' : 'min-w-[220px]'}
         `}>
           {/* Search input */}
-          {filter.options.length > 5 && (
-            <div className="p-2 border-b border-surface-100">
+          <div className="p-2 border-b border-surface-100">
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-400" />
                 <input
@@ -178,7 +177,6 @@ const MultiSelectDropdown = ({ filter, value = [], onChange, isMobile }) => {
                 />
               </div>
             </div>
-          )}
 
           {/* Select All / Deselect All */}
           <div className="flex items-center gap-1 px-3 py-1.5 border-b border-surface-100">
@@ -250,19 +248,17 @@ const FilterBarComponent = ({
   activeFilters,
   onFilterChange,
   onClearFilters,
-  searchQuery = '',
-  onSearchChange,
   className = '',
 }) => {
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const [isExpanded, setIsExpanded] = useState(false)
   const hasActiveFilters = Object.values(activeFilters).some(
     (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
-  ) || (searchQuery && searchQuery.trim().length > 0)
+  )
 
   const activeCount = Object.values(activeFilters).filter(
     (v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0)
-  ).length + (searchQuery && searchQuery.trim().length > 0 ? 1 : 0)
+  ).length
 
   // On mobile, show collapsed by default unless there are active filters
   const showFilters = isMobile ? (isExpanded || hasActiveFilters) : true
@@ -348,45 +344,6 @@ const FilterBarComponent = ({
             ${isMobile ? 'flex-col p-3' : 'flex-wrap items-center px-2.5 pb-2.5'}
           `}
         >
-          {/* Search input */}
-          {onSearchChange && (
-            <div className={`relative ${isMobile ? 'w-full' : 'flex-shrink-0'}`}>
-              {isMobile && (
-                <label className="block text-xs font-medium text-surface-500 mb-1">
-                  Search
-                </label>
-              )}
-              <div className="relative">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search records..."
-                  className={`
-                    pl-8 pr-3 font-medium bg-white border rounded-md
-                    transition-all duration-200
-                    focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
-                    ${isMobile ? 'w-full py-3 text-base h-12' : 'py-1.5 text-xs min-w-[200px]'}
-                    ${searchQuery && searchQuery.trim().length > 0
-                      ? 'border-primary-300 bg-primary-50 text-primary-700'
-                      : 'border-surface-300 text-surface-700 hover:border-surface-400'
-                    }
-                  `}
-                  aria-label="Search records"
-                />
-                {searchQuery && searchQuery.trim().length > 0 && (
-                  <button
-                    onClick={() => onSearchChange('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    aria-label="Clear search"
-                  >
-                    <X size={14} className="text-primary-500 hover:text-primary-700" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
           {filters.map((filter) => (
             <div key={filter.key} className={`relative ${isMobile ? 'w-full' : 'flex-shrink-0'}`}>
               {filter.type === 'multiSelect' ? (

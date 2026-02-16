@@ -24,7 +24,6 @@ export const FilterProvider = ({ children }) => {
   const [site, setSiteState] = useState([])
   const [subRegion, setSubRegionState] = useState([])
   const [excludedReporters, setExcludedReportersState] = useState([])
-  const [searchQuery, setSearchQueryState] = useState('')
   const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
 
   // Mutual exclusion: setting period clears custom range
@@ -83,10 +82,6 @@ export const FilterProvider = ({ children }) => {
     }
   }, [setContractor, setExcludedReporters])
 
-  const setSearchQuery = useCallback((value) => {
-    setSearchQueryState(value)
-  }, [])
-
   // Clear all filters (excludedReporters persists - it's a setting, not a temporary filter)
   const clearFilters = useCallback(() => {
     setPeriodState(null)
@@ -94,13 +89,12 @@ export const FilterProvider = ({ children }) => {
     setContractorState([])
     setSiteState([])
     setSubRegionState([])
-    setSearchQueryState('')
     setWorkRelatedOnly(true)
   }, [])
 
   // Combined filters object for FilterBar compatibility
   // Only includes actual filters — workRelatedOnly and excludedReporters are settings, not filters
-  const filters = useMemo(() => ({ contractor, site, subRegion, searchQuery }), [contractor, site, subRegion, searchQuery])
+  const filters = useMemo(() => ({ contractor, site, subRegion }), [contractor, site, subRegion])
 
   // State context value - will cause re-renders when state changes
   const stateValue = useMemo(() => ({
@@ -109,11 +103,10 @@ export const FilterProvider = ({ children }) => {
     contractor,
     site,
     subRegion,
-    searchQuery,
     excludedReporters,
     workRelatedOnly,
     filters
-  }), [period, customDateRange, contractor, site, subRegion, searchQuery, excludedReporters, workRelatedOnly, filters])
+  }), [period, customDateRange, contractor, site, subRegion, excludedReporters, workRelatedOnly, filters])
 
   // Actions context value - stable reference, won't cause re-renders
   const actionsValue = useMemo(() => ({
@@ -122,12 +115,11 @@ export const FilterProvider = ({ children }) => {
     setContractor,
     setSite,
     setSubRegion,
-    setSearchQuery,
     setExcludedReporters,
     setWorkRelatedOnly,
     setFilter,
     clearFilters
-  }), [setPeriod, setCustomDateRange, setContractor, setSite, setSubRegion, setSearchQuery, setExcludedReporters, setFilter, clearFilters])
+  }), [setPeriod, setCustomDateRange, setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters])
 
   return (
     <FilterStateContext.Provider value={stateValue}>

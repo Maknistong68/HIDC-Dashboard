@@ -118,7 +118,7 @@ const DataQuality = () => {
   })
 
   // Shared filter state from context
-  const { period, customDateRange, searchQuery, setPeriod, setSearchQuery, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
+  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -679,8 +679,6 @@ const DataQuality = () => {
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
             />
           </div>
 
@@ -708,8 +706,6 @@ const DataQuality = () => {
             activeFilters={filters}
             onFilterChange={handleFilterChange}
             onClearFilters={clearFilters}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
           />
         </div>
 
