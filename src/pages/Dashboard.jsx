@@ -261,6 +261,12 @@ const Dashboard = () => {
       filtered = filteredIncidents.filter(i =>
         (siteClassifications[i.site] || 'Unassigned') === drillDown.filter
       )
+    } else if (drillDown.chart === 'observationStatus') {
+      const STATUS_NAME_MAP = { 'Open': 'open', 'In Progress': 'in-progress', 'Closed': 'closed' }
+      const statusValue = STATUS_NAME_MAP[drillDown.filter]
+      if (statusValue) {
+        filtered = filteredIncidents.filter(i => i.actionStatus === statusValue)
+      }
     }
     return filtered
   }, [drillDown.chart, drillDown.filter, filteredIncidents])
@@ -331,6 +337,8 @@ const Dashboard = () => {
 
     // KPI accumulators
     let closedCount = 0
+    let openCount = 0
+    let inProgressCount = 0
     let positiveTotal = 0
     let overdueCount = 0
     let negativeCount = 0
@@ -364,8 +372,10 @@ const Dashboard = () => {
       const isClosed = i.actionStatus === 'closed'
       const type = i.type
 
-      // KPI: closed count
+      // KPI: closed/open/in-progress counts
       if (isClosed) closedCount++
+      else if (i.actionStatus === 'in-progress') inProgressCount++
+      else openCount++
 
       // KPI: positive count
       if (type === 'positive') positiveTotal++
@@ -432,6 +442,11 @@ const Dashboard = () => {
         { name: 'Positive', value: proactiveCount, color: '#22c55e' },
         { name: 'Incidents', value: incidentCatCount, color: '#f59e0b' }
       ],
+      observationStatusData: [
+        { name: 'Open', value: openCount, color: '#f97316' },
+        { name: 'In Progress', value: inProgressCount, color: '#3b82f6' },
+        { name: 'Closed', value: closedCount, color: '#22c55e' },
+      ],
     }
   }, [filteredIncidents, cutoffDates.overdue30Days])
 
@@ -440,28 +455,8 @@ const Dashboard = () => {
     incidentCounts, pyramidData, closeOutPercentage, closedCount,
     openMoreThanMonth, positivePercentage, positiveCount,
     approvalCounts, observersData, companyData, positiveNegativeData,
+    observationStatusData,
   } = dashboardAggregates
-
-  // Hazard Classification: Primary vs Other (excludes proactive types)
-  const hazardClassificationData = useDeferredMemo(() => {
-    const nonPositive = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
-    let primary = 0
-    let other = 0
-    nonPositive.forEach(i => {
-      const normalized = normalizeHazard(i.location)
-      if (normalized && normalized !== 'Not Specified') {
-        if (SIGNIFICANT_HAZARDS_MAP.has(normalized.toLowerCase())) {
-          primary++
-        } else {
-          other++
-        }
-      }
-    })
-    return [
-      { name: 'Primary Hazards', value: primary, color: '#eab308' },
-      { name: 'Other Hazards', value: other, color: '#8b5cf6' },
-    ]
-  }, [filteredIncidents])
 
   // Subregion Contribution: top 6 subregions + Others
   const subregionContributionData = useDeferredMemo(() => {
@@ -672,12 +667,16 @@ const Dashboard = () => {
     (data) => { if (data.name !== 'Others') handleDrillDown('subRegion', data.name) },
     [handleDrillDown]
   )
+  const handleObservationStatusClick = useCallback(
+    (data) => handleDrillDown('observationStatus', data.name),
+    [handleDrillDown]
+  )
 
   // Stable tooltip/legend formatters per chart (re-create only when data changes)
   const posNegFormatter = useMemo(() => makePieFormatter(positiveNegativeData), [positiveNegativeData])
   const posNegLegendFormatter = useMemo(() => makePieLegendFormatter(positiveNegativeData), [positiveNegativeData])
-  const hazClassFormatter = useMemo(() => makePieFormatter(hazardClassificationData), [hazardClassificationData])
-  const hazClassLegendFormatter = useMemo(() => makePieLegendFormatter(hazardClassificationData), [hazardClassificationData])
+  const obsStatusFormatter = useMemo(() => makePieFormatter(observationStatusData), [observationStatusData])
+  const obsStatusLegendFormatter = useMemo(() => makePieLegendFormatter(observationStatusData), [observationStatusData])
   const subRegFormatter = useMemo(() => makePieFormatter(subregionContributionData), [subregionContributionData])
   const subRegLegendFormatter = useMemo(() => makePieLegendFormatter(subregionContributionData), [subregionContributionData])
 
@@ -1061,44 +1060,52 @@ const Dashboard = () => {
 
       {/* Hazard Distribution Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Donut 1: Hazard Classification */}
+        {/* Donut 1: Open vs Closed Observations */}
         <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
           <h3 className="text-xs font-semibold text-surface-700 mb-2 uppercase tracking-wide flex items-center">
-            Hazard Classification
-            <InfoTooltip text="Breakdown of observations by hazard classification. Primary Hazards are the 14 significant hazard categories. Other Hazards are all remaining hazard types. Source: observations, inspections, incidents (excludes positive observations)." />
+            Open vs Closed Observations
+            <InfoTooltip text="HOW THIS IS CALCULATED: Every observation has an 'Action Status' field showing its current state. OPEN (orange) = the observation needs action and hasn't been addressed yet. IN PROGRESS (blue) = someone is actively working on resolving the issue. CLOSED (green) = the observation has been fully resolved and all actions completed. Click any segment to see the individual observations in that status category." />
           </h3>
-          {hazardClassificationData.some(d => d.value > 0) ? (
+          {observationStatusData.some(d => d.value > 0) ? (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={hazardClassificationData}
+                    data={observationStatusData}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
                     outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
+                    onClick={handleObservationStatusClick}
+                    style={{ cursor: 'pointer' }}
                   >
-                    {hazardClassificationData.map((entry, index) => (
-                      <Cell key={`hazclass-${index}`} fill={entry.color} />
+                    {observationStatusData.map((entry, index) => (
+                      <Cell
+                        key={`obsstatus-${index}`}
+                        fill={entry.color}
+                        stroke={drillDown.chart === 'observationStatus' && drillDown.filter === entry.name ? '#1f2937' : 'none'}
+                        strokeWidth={drillDown.chart === 'observationStatus' && drillDown.filter === entry.name ? 3 : 0}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={hazClassFormatter}
+                    formatter={obsStatusFormatter}
                     contentStyle={TOOLTIP_CONTENT_STYLE}
                   />
                   <Legend
                     verticalAlign="bottom"
                     height={36}
-                    formatter={hazClassLegendFormatter}
+                    formatter={obsStatusLegendFormatter}
                   />
                 </PieChart>
               </ResponsiveContainer>
+              <p className="text-xs text-surface-400 text-center opacity-60">Click a segment to explore</p>
             </div>
           ) : (
             <div className="h-64 flex items-center justify-center">
-              <p className="text-xs text-surface-400">No hazard data available</p>
+              <p className="text-xs text-surface-400">No observation data available</p>
             </div>
           )}
         </div>
@@ -1301,7 +1308,7 @@ const Dashboard = () => {
 
       {/* Drill-Down Modal for Hazards, Observers, Companies, and Positive/Negative */}
       <DrillDownModal
-        isOpen={drillDown.modalOpen && ['hazards', 'observers', 'company', 'positiveNegative', 'subRegion'].includes(drillDown.chart)}
+        isOpen={drillDown.modalOpen && ['hazards', 'observers', 'company', 'positiveNegative', 'subRegion', 'observationStatus'].includes(drillDown.chart)}
         onClose={closeDrillDownModal}
         title={
           drillDown.level === 3 && drillDown.period
@@ -1320,7 +1327,8 @@ const Dashboard = () => {
           drillDown.chart === 'observers' ? 'Top Observers' :
           drillDown.chart === 'company' ? 'Companies' :
           drillDown.chart === 'positiveNegative' ? 'Positive vs Negative' :
-          drillDown.chart === 'subRegion' ? 'Sub-Regions' : '',
+          drillDown.chart === 'subRegion' ? 'Sub-Regions' :
+          drillDown.chart === 'observationStatus' ? 'Observation Status' : '',
           drillDown.filter,
           ...(drillDown.level === 3 && drillDown.period ? [format(parseISO(drillDown.period + '-01'), 'MMM yyyy')] : [])
         ].filter(Boolean)}
@@ -1329,7 +1337,8 @@ const Dashboard = () => {
           drillDown.chart === 'observers' ? 'Observer Analytics' :
           drillDown.chart === 'company' ? 'Company Analytics' :
           drillDown.chart === 'positiveNegative' ? 'Observation Type Analytics' :
-          drillDown.chart === 'subRegion' ? 'Sub-Region Analytics' : 'Analytics'
+          drillDown.chart === 'subRegion' ? 'Sub-Region Analytics' :
+          drillDown.chart === 'observationStatus' ? 'Action Status Analytics' : 'Analytics'
         }
         showInsights={(drillDown.chart === 'hazards' || drillDown.chart === 'observers') && drillDown.level === 2}
         insightsMode={drillDown.chart === 'observers' ? 'observer' : 'hazard'}
