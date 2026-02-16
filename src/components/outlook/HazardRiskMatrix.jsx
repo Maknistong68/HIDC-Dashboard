@@ -360,7 +360,7 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
         </div>
       </div>
 
-      {/* Intervention Sliders */}
+      {/* Intervention Sliders + Action Closure (merged) */}
       {contextualSliders.length > 0 ? (
         <div className="bg-white rounded-lg border border-surface-200 p-4">
           <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-3">Intervention Sliders</h4>
@@ -373,21 +373,38 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
                 onChange={getSliderOnChange(slider.id)}
               />
             ))}
+
+            {/* Action Closure — inline within sliders card */}
+            {openActionsCount > 0 && (
+              <div className="border-t border-surface-100 pt-2 mt-1 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-surface-700">Close Actions</span>
+                  <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                    {actionsToClose} / {openActionsCount}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={openActionsCount}
+                  value={actionsToClose}
+                  onChange={(e) => setActionsToClose(parseInt(e.target.value, 10))}
+                  className="w-full h-6 appearance-none bg-transparent cursor-pointer"
+                />
+                <div className="flex items-center justify-between text-[10px] text-surface-400">
+                  <span>0</span>
+                  <span>{openActionsCount} open</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="bg-surface-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-surface-500">No controllable factors detected for this hazard.</p>
-        </div>
-      )}
-
-      {/* Action Closure Slider */}
-      {openActionsCount > 0 && (
+      ) : openActionsCount > 0 ? (
         <div className="bg-white rounded-lg border border-surface-200 p-4">
           <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider mb-3">Action Closure</h4>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-surface-700">Close Open Actions</span>
+              <span className="text-sm font-medium text-surface-700">Close Actions</span>
               <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
                 {actionsToClose} / {openActionsCount}
               </span>
@@ -405,6 +422,10 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
               <span>{openActionsCount} open</span>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="bg-surface-50 rounded-lg p-4 text-center">
+          <p className="text-sm text-surface-500">No controllable factors detected for this hazard.</p>
         </div>
       )}
 
@@ -686,47 +707,57 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
   ]
 
   return (
-    <div className={`${cellColor?.bg || 'bg-primary-50'} ${cellColor?.border || 'border-primary-300'} border-2 rounded-2xl p-3 shadow-md`}>
-      {/* Header: Trend + Name + Count + Risk Score — single compact row */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${trend.bg} flex-shrink-0`}>
-          <TrendIndicator trend={hazard?.trendLevel} size={12} />
-          <span className={`text-[10px] font-semibold ${trend.color}`}>{trend.label}</span>
+    <div className={`${cellColor?.bg || 'bg-primary-50'} ${cellColor?.border || 'border-primary-300'} border-2 rounded-2xl p-5 shadow-md`}>
+      {/* Top row: Trend Badge + Risk Score */}
+      <div className="flex items-center justify-between mb-3">
+        <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${trend.bg}`}>
+          <TrendIndicator trend={hazard?.trendLevel} size={13} />
+          <span className={`text-[11px] font-semibold ${trend.color}`}>{trend.label}</span>
           {trendDetails.changePercent !== 0 && (
-            <span className={`text-[10px] ${trend.color}`}>
+            <span className={`text-[11px] ${trend.color}`}>
               {trendDetails.changePercent > 0 ? '+' : ''}{trendDetails.changePercent}%
             </span>
           )}
         </div>
-        <h2 className={`text-base font-bold leading-tight truncate ${cellColor?.text || 'text-primary-800'}`} title={hazard?.name}>
-          {hazard?.name}
-        </h2>
-        <span className="text-sm font-black text-surface-700 flex-shrink-0">&middot; {severityBreakdown.total} obs</span>
-        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
-          <span className="text-[9px] text-surface-400 uppercase">Score</span>
-          <span className={`text-sm font-bold ${cellColor?.text || 'text-primary-700'}`}>{hazard?.riskScore || 0}</span>
-          {hasRecordable && (
-            <span className={`text-sm font-bold ${hasRecordable ? 'text-red-600' : 'text-surface-700'}`}>
-              (W:{severityBreakdown.weightedScore})
-            </span>
-          )}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-surface-400 uppercase">Risk Score</span>
+          <span className={`text-lg font-bold ${cellColor?.text || 'text-primary-700'}`}>{hazard?.riskScore || 0}</span>
         </div>
       </div>
 
-      {/* Severity pills — horizontal wrap */}
-      <div className="flex flex-wrap gap-1.5 justify-center">
+      {/* Hazard Name — centered heading */}
+      <h2 className={`text-xl font-bold text-center leading-tight mb-2 ${cellColor?.text || 'text-primary-800'}`} title={hazard?.name}>
+        {hazard?.name}
+      </h2>
+
+      {/* Large total count */}
+      <div className="text-center mb-4">
+        <span className="text-3xl font-black text-surface-800">{severityBreakdown.total}</span>
+        <p className="text-xs text-surface-500 mt-0.5">total observations</p>
+      </div>
+
+      {/* Severity pills — vertical pyramid */}
+      <div className="space-y-1.5 mb-3">
         {SEVERITY_PILLS.map(pill => {
           const count = severityBreakdown[pill.key]
           if (!count) return null
           return (
-            <div key={pill.key} className={`inline-flex items-center gap-1 ${pill.bg} px-2 py-0.5 rounded-full`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${pill.dot}`} />
-              <span className={`text-[10px] font-semibold ${pill.text}`}>{count} {pill.label}</span>
-              <span className={`text-[9px] ${pill.wsub}`}>{pill.weight}</span>
+            <div key={pill.key} className={`flex items-center justify-center gap-1.5 ${pill.bg} px-3 py-1 rounded-full mx-auto`} style={{ width: 'fit-content', minWidth: '60%' }}>
+              <div className={`w-2 h-2 rounded-full ${pill.dot}`} />
+              <span className={`text-xs font-semibold ${pill.text}`}>{count} {pill.label}</span>
+              <span className={`text-[10px] ${pill.wsub}`}>{pill.weight}</span>
             </div>
           )
         })}
       </div>
+
+      {/* Weighted Score summary */}
+      {hasRecordable && (
+        <div className="border-t border-surface-200/50 pt-2 text-center">
+          <span className="text-xs text-surface-500">Weighted Score: </span>
+          <span className="text-sm font-bold text-red-600">{severityBreakdown.weightedScore}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -850,10 +881,10 @@ const ConnectedHubDiagram = ({
       {/* TOP ROW: WHEN + WHERE side by side */}
       <div className="grid grid-cols-2 gap-4">
         {/* WHEN Card */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Calendar size={14} className="text-blue-600" />
+            <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Calendar size={15} className="text-blue-600" />
             </div>
             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">When</p>
           </div>
@@ -913,10 +944,10 @@ const ConnectedHubDiagram = ({
         </div>
 
         {/* WHERE Card */}
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center">
-              <MapPin size={14} className="text-purple-600" />
+            <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center">
+              <MapPin size={15} className="text-purple-600" />
             </div>
             <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Where</p>
           </div>
@@ -1111,7 +1142,7 @@ const HazardDetailModal = ({
 
         {/* Content - 3-Column Layout */}
         <div className="flex-1 overflow-y-auto p-6 pt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(280px,1.3fr)_minmax(260px,1.2fr)] gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* LEFT COLUMN: Connected Hub Diagram */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wider border-b border-surface-200 pb-2">
