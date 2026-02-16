@@ -13,6 +13,8 @@ import {
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
 import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
+import { precomputeDashboardData } from '../../utils/dashboardPrecompute'
+import { getPrecomputeStatus, waitForPrecompute } from '../../utils/dashboardCache'
 
 /**
  * OnboardingScreen - Full-page import UI for first-time users
@@ -41,6 +43,8 @@ const OnboardingScreen = () => {
   const [unassignedSites, setUnassignedSites] = useState([])
   const [assignedRegion, setAssignedRegion] = useState(null)
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isPreparingDashboard, setIsPreparingDashboard] = useState(false)
+  const [prepProgress, setPrepProgress] = useState({ step: '', percent: 0 })
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -318,7 +322,15 @@ const OnboardingScreen = () => {
     }
 
     // Single batch reload after all files - clears caches once + pre-warms worker
-    await batchReloadIncidents()
+    const records = await batchReloadIncidents()
+
+    // Fire off dashboard pre-computation in background
+    if (records && records.length > 0) {
+      setIsPreparingDashboard(true)
+      precomputeDashboardData(records, siteClassifications, (step, percent) => {
+        setPrepProgress({ step, percent })
+      }).finally(() => setIsPreparingDashboard(false))
+    }
 
     // Collect unique sites from all successfully imported records
     const importedSites = new Set()
@@ -346,6 +358,10 @@ const OnboardingScreen = () => {
   const handleDone = useCallback(async () => {
     setIsReloading(true)
     try {
+      // Wait for dashboard pre-computation to finish before transitioning
+      if (getPrecomputeStatus() === 'running') {
+        await waitForPrecompute()
+      }
       await reloadFiles({ silent: true })
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -684,6 +700,25 @@ const OnboardingScreen = () => {
                         </p>
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* Dashboard preparation progress */}
+                {isPreparingDashboard && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      <span className="text-sm font-medium text-blue-700">
+                        Preparing Dashboard...
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden mb-1">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                        style={{ width: `${prepProgress.percent}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-blue-600">{prepProgress.step}</p>
                   </div>
                 )}
 

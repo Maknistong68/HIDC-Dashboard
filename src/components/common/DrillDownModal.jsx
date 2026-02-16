@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet } from 'lucide-react'
 import { List as VirtualList } from 'react-window'
-import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { format, parseISO } from 'date-fns'
 import { useDataActions } from '../../context/DataContext'
 import { getStatusColor } from '../../utils/statusColors'
@@ -12,6 +11,25 @@ import { HazardInsightsTab, CategoryInsightsTab, ObserverInsightsTab } from '../
 
 const VIRTUAL_ROW_HEIGHT = 110 // px per record row (matches padding + content)
 const VIRTUAL_THRESHOLD = 50  // only virtualize above this count
+
+/**
+ * Row component for react-window v2 VirtualList.
+ * Receives { index, style, ariaAttributes } from the List + custom rowProps.
+ */
+const VirtualRow = ({ index, style, data, isMobile, highlightKeywords, onViewDetails }) => {
+  const record = data[index]
+  if (!record) return null
+  return (
+    <div style={{ ...style, paddingBottom: 8 }}>
+      <RecordCard
+        record={record}
+        isMobile={isMobile}
+        highlightKeywords={highlightKeywords}
+        onViewDetails={onViewDetails}
+      />
+    </div>
+  )
+}
 
 /**
  * Glassmorphism Drill-Down Modal
@@ -125,12 +143,12 @@ const DrillDownModal = ({
 
         {/* Glass Card */}
         <div className={`
-          bg-white/95 sm:bg-white/80 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden h-full flex flex-col
+          bg-white backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden h-full flex flex-col
           ${isMobile ? 'border-0 rounded-t-2xl' : 'border rounded-2xl'}
         `}>
           {/* Header - Larger touch targets on mobile */}
           <div className={`
-            border-b border-surface-200/50 bg-white/50 safe-area-top
+            border-b border-surface-200/50 bg-white safe-area-top
             ${isMobile ? 'px-4 py-3' : 'px-6 py-4'}
           `}>
             <div className="flex items-center justify-between">
@@ -175,7 +193,7 @@ const DrillDownModal = ({
 
           {/* Tab Bar for Insights/Records - Only when showInsights is true */}
           {showInsights && type === 'records' && (
-            <div className={`border-b border-surface-200/50 bg-surface-50/80 ${isMobile ? 'px-4 py-2' : 'px-6 py-2'}`}>
+            <div className={`border-b border-surface-200/50 bg-surface-50 ${isMobile ? 'px-4 py-2' : 'px-6 py-2'}`}>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
@@ -310,7 +328,7 @@ const DrillDownModal = ({
 
           {/* Footer hint - Safe area for mobile */}
           <div className={`
-            border-t border-surface-200/50 bg-white/30 safe-area-bottom
+            border-t border-surface-200/50 bg-white safe-area-bottom
             ${isMobile ? 'px-4 py-2' : 'px-6 py-3'}
           `}>
             <p className={`text-surface-400 text-center ${isMobile ? 'text-xs' : 'text-xs'}`}>
@@ -688,33 +706,20 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
         </button>
       </div>
       {data.length > VIRTUAL_THRESHOLD ? (
-        /* Virtualized list for large datasets - smooth scrolling for 500+ records */
-        <div style={{ height: Math.min(data.length * VIRTUAL_ROW_HEIGHT, 600), width: '100%' }}>
-          <AutoSizer>
-            {({ height, width }) => (
-              <VirtualList
-                height={height}
-                width={width}
-                itemCount={data.length}
-                itemSize={VIRTUAL_ROW_HEIGHT}
-                overscanCount={5}
-              >
-                {({ index, style }) => {
-                  const record = data[index]
-                  return (
-                    <div style={{ ...style, paddingBottom: 8 }}>
-                      <RecordCard
-                        record={record}
-                        isMobile={isMobile}
-                        highlightKeywords={highlightKeywords}
-                        onViewDetails={onViewDetails}
-                      />
-                    </div>
-                  )
-                }}
-              </VirtualList>
-            )}
-          </AutoSizer>
+        /* Virtualized list for large datasets - react-window v2 API */
+        <div style={{ height: Math.min(data.length * VIRTUAL_ROW_HEIGHT, 600) }}>
+          <VirtualList
+            rowCount={data.length}
+            rowHeight={VIRTUAL_ROW_HEIGHT}
+            overscanCount={5}
+            rowComponent={VirtualRow}
+            rowProps={{
+              data,
+              isMobile,
+              highlightKeywords,
+              onViewDetails,
+            }}
+          />
         </div>
       ) : (
         /* Direct render for small datasets (no virtualization overhead) */
@@ -738,8 +743,8 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
 const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onViewDetails }) => (
   <div
     className={`
-      group rounded-xl bg-white/60 border border-surface-200/50
-      hover:bg-white/80 active:bg-white/90 hover:border-surface-300/50 active:border-surface-400/50
+      group rounded-xl bg-white border border-surface-200/50
+      hover:bg-surface-50 active:bg-surface-100 hover:border-surface-300/50 active:border-surface-400/50
       transition-all duration-200
       ${isMobile ? 'p-3' : 'p-4'}
     `}

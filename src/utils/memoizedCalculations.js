@@ -9,6 +9,8 @@
  * This prevents redundant recalculation when data hasn't changed.
  */
 
+import { clearDashboardCache } from './dashboardCache'
+
 /**
  * Simple LRU (Least Recently Used) Cache
  * Automatically evicts oldest items when max size is reached
@@ -398,6 +400,7 @@ export const clearAllCaches = () => {
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
+  clearDashboardCache()
 }
 
 /**
@@ -410,6 +413,7 @@ export const clearDataCaches = () => {
   chartDataCache.clear()
   aggregationCache.clear()
   clearFilterCache()
+  clearDashboardCache()
 }
 
 /**

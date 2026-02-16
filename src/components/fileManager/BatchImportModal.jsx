@@ -12,6 +12,7 @@ import { parseExcelFileAsync } from '../../utils/excelParserAsync'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
 import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
+import { precomputeDashboardData } from '../../utils/dashboardPrecompute'
 
 /**
  * BatchImportModal - Import multiple files at once with GUARANTEED completion
@@ -320,7 +321,12 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
 
     // ALL files processed - single batch reload instead of N individual state updates
     updateProcessingDetails({ step: 'Finalizing import...', progress: 100 })
-    await batchReloadIncidents()
+    const records = await batchReloadIncidents()
+
+    // Fire-and-forget dashboard pre-computation for instant navigation
+    if (records && records.length > 0) {
+      precomputeDashboardData(records, siteClassifications, () => {}).catch(() => {})
+    }
 
     // Now mark complete
     const successCount = newResults.filter(r => r.success).length

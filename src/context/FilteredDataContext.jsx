@@ -4,6 +4,7 @@ import { useDate } from './DateContext'
 import { useFilterState } from './FilterContext'
 import { useDebouncedFilter } from '../hooks/useDebouncedFilter'
 import { PROACTIVE_TYPES } from '../utils/constants'
+import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
 
 const FilteredDataContext = createContext(null)
 
@@ -40,6 +41,10 @@ export const FilteredDataProvider = ({ children }) => {
   // When all filters are cleared, we return this instantly (zero iteration).
   // Single O(n) pass computes base + workRelated variants together.
   const defaults = useMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.FILTERED_DEFAULTS)
+    if (cached && cached.incidents === incidents) return cached.result
+
     const heatmap = []
     const wrFiltered = []
     const wrHeatmap = []
@@ -198,6 +203,10 @@ export const FilteredDataProvider = ({ children }) => {
 
   // Unique contractors from all incidents (not filtered)
   const uniqueContractors = useMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.UNIQUE_CONTRACTORS)
+    if (cached && cached.incidents === incidents) return cached.result
+
     const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
     return contractors.sort().map(c => ({ value: c, label: c }))
   }, [incidents])

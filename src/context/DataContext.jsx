@@ -342,15 +342,18 @@ export const DataProvider = ({ children }) => {
   const batchReloadIncidents = useCallback(async () => {
     clearDataCaches()
     const records = await getAllRecords()
-    setIncidents(Array.isArray(records) ? records : [])
+    const validRecords = Array.isArray(records) ? records : []
+    setIncidents(validRecords)
 
     // Pre-warm worker caches so dashboard renders instantly when user navigates
     // Dynamic import avoids adding cacheWarmer to DataContext's initial bundle
-    if (Array.isArray(records) && records.length > 0) {
+    if (validRecords.length > 0) {
       import('../utils/cacheWarmer').then(({ warmInitialDashboardCaches }) => {
-        warmInitialDashboardCaches(records)
+        warmInitialDashboardCaches(validRecords)
       }).catch(() => {})
     }
+
+    return validRecords
   }, [])
 
   // Legacy addIncidents (without file tracking)

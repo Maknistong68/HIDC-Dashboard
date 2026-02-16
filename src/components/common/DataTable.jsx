@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react'
 import { useDebounce } from '../../hooks/useDebounce'
 import { List } from 'react-window'
-import { AutoSizer } from 'react-virtualized-auto-sizer'
 import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Eye, ChevronsLeft, ChevronsRight, Building2, MapPin, Calendar } from 'lucide-react'
 import { IconButton } from '../ui'
 import useIsMobile, { MOBILE_BREAKPOINT } from '../../hooks/useIsMobile'
@@ -18,6 +17,41 @@ import { getStatusColor, getTypeColor } from '../../utils/statusColors'
 
 // Row height for virtual scrolling
 const ROW_HEIGHT = 48
+
+/**
+ * Row component for react-window v2 List.
+ * Receives { index, style, ariaAttributes } from List + custom rowProps.
+ */
+const DataTableVirtualRow = ({ index, style, sortedData, displayColumns, onRowClick }) => {
+  const row = sortedData[index]
+  if (!row) return null
+  return (
+    <div
+      style={style}
+      className={`
+        flex items-center border-b border-surface-100 hover:bg-surface-50 transition-colors
+        ${onRowClick ? 'cursor-pointer' : ''}
+      `}
+      onClick={() => onRowClick && onRowClick(row)}
+      role="row"
+    >
+      {displayColumns.map((column) => (
+        <div
+          key={column.key}
+          className="px-3 py-2 text-sm text-surface-700 truncate"
+          style={{
+            width: column.width || 'auto',
+            flex: column.width ? 'none' : 1,
+            minWidth: column.minWidth || 80
+          }}
+          role="cell"
+        >
+          {column.render ? column.render(row) : column.accessor(row)}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // Threshold for enabling virtual scrolling
 const VIRTUALIZATION_THRESHOLD = 100
@@ -129,38 +163,12 @@ const DataTable = ({
     ]
   }, [columns, onViewClick])
 
-  // Virtual row renderer
-  const VirtualRow = useCallback(({ index, style }) => {
-    const row = sortedData[index]
-    if (!row) return null
-
-    return (
-      <div
-        style={style}
-        className={`
-          flex items-center border-b border-surface-100 hover:bg-surface-50 transition-colors
-          ${onRowClick ? 'cursor-pointer' : ''}
-        `}
-        onClick={() => onRowClick && onRowClick(row)}
-        role="row"
-      >
-        {displayColumns.map((column) => (
-          <div
-            key={column.key}
-            className="px-3 py-2 text-sm text-surface-700 truncate"
-            style={{
-              width: column.width || 'auto',
-              flex: column.width ? 'none' : 1,
-              minWidth: column.minWidth || 80
-            }}
-            role="cell"
-          >
-            {column.render ? column.render(row) : column.accessor(row)}
-          </div>
-        ))}
-      </div>
-    )
-  }, [sortedData, displayColumns, onRowClick])
+  // rowProps for react-window v2 List (passed to DataTableVirtualRow)
+  const virtualRowProps = useMemo(() => ({
+    sortedData,
+    displayColumns,
+    onRowClick,
+  }), [sortedData, displayColumns, onRowClick])
 
   // Mobile Card View
   const MobileCardView = () => (
@@ -313,19 +321,13 @@ const DataTable = ({
         ) : shouldVirtualize ? (
           /* Virtualized Body */
           <div style={{ height: Math.min(sortedData.length * ROW_HEIGHT, 600) }}>
-            <AutoSizer>
-              {({ height, width }) => (
-                <List
-                  height={height}
-                  width={width}
-                  itemCount={sortedData.length}
-                  itemSize={ROW_HEIGHT}
-                  overscanCount={10}
-                >
-                  {VirtualRow}
-                </List>
-              )}
-            </AutoSizer>
+            <List
+              rowCount={sortedData.length}
+              rowHeight={ROW_HEIGHT}
+              overscanCount={10}
+              rowComponent={DataTableVirtualRow}
+              rowProps={virtualRowProps}
+            />
           </div>
         ) : (
           /* Standard Body */

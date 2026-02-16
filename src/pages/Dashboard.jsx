@@ -30,6 +30,7 @@ import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
 import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS, NEGATIVE_OBSERVATION_TYPES, PROACTIVE_TYPES, INCIDENT_CATEGORY_TYPES } from '../utils/constants'
 import { memoize } from '../utils/memoizedCalculations'
+import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { Link } from 'react-router-dom'
@@ -335,6 +336,10 @@ const Dashboard = () => {
   // Replaces 8 separate O(n) useMemos with ONE pass through filteredIncidents.
   // Hidden tabs skip this entirely thanks to useDeferredMemo.
   const dashboardAggregates = useDeferredMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.DASHBOARD_AGGREGATES)
+    if (cached && cached.incidents === filteredIncidents) return cached.result
+
     const total = filteredIncidents.length
 
     // KPI accumulators
@@ -462,6 +467,10 @@ const Dashboard = () => {
 
   // Subregion Contribution: top 6 subregions + Others
   const subregionContributionData = useDeferredMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.SUBREGION_CONTRIBUTION)
+    if (cached && cached.incidents === filteredIncidents) return cached.result
+
     const counts = {}
     filteredIncidents.forEach(i => {
       const site = i.site || 'Unknown'
@@ -489,6 +498,10 @@ const Dashboard = () => {
   // Top Hazards data - EXCLUDES proactive types (only counts non-proactive)
   // Significant Hazards (13 official categories) are prioritized first
   const topHazards = useDeferredMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.TOP_HAZARDS)
+    if (cached && cached.incidents === filteredIncidents) return cached.result
+
     const counts = {}
     // Filter out proactive types - Top Hazards should only show non-proactive observations
     const nonPositiveIncidents = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
@@ -533,6 +546,10 @@ const Dashboard = () => {
   // Hazards Heatmap data (uses heatmapIncidents - not affected by "This Month")
   // Always shows all 14 Significant Hazards + any additional hazards with data
   const hazardsHeatmap = useDeferredMemo(() => {
+    // Check pre-computation cache (populated during import phase)
+    const cached = getCached(CACHE_KEYS.HAZARDS_HEATMAP)
+    if (cached && cached.incidents === heatmapIncidents) return cached.result
+
     // Start with all 14 Significant Hazards - use canonical names
     const hazardSet = new Set(SIGNIFICANT_HAZARDS)
 
