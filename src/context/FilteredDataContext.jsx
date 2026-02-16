@@ -66,9 +66,9 @@ export const FilteredDataProvider = ({ children }) => {
   // Fast boolean check: are ALL filters in their default (cleared) state?
   // Uses immediate `filters` (not debouncedFilters) so clear-all is detected in the SAME render
   const isAllCleared = useMemo(() => {
-    const { contractor: c, site: s, subRegion: sr } = filters
+    const { contractor: c, site: s, subRegion: sr, searchQuery: sq } = filters
     return period === null && customDateRange === null &&
-      c.length === 0 && s.length === 0 && sr.length === 0
+      c.length === 0 && s.length === 0 && sr.length === 0 && (!sq || sq.trim().length === 0)
   }, [filters, period, customDateRange])
 
   // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
@@ -77,10 +77,12 @@ export const FilteredDataProvider = ({ children }) => {
     // Fast path: all filters cleared → return pre-cached defaults (zero iteration)
     if (isAllCleared) return defaults
 
-    const { contractor: dContractor, site: dSite, subRegion: dSubRegion } = debouncedFilters
+    const { contractor: dContractor, site: dSite, subRegion: dSubRegion, searchQuery: dSearchQuery } = debouncedFilters
     const hasContractor = dContractor.length > 0
     const hasSite = dSite.length > 0
     const hasSubRegion = dSubRegion.length > 0
+    const hasSearch = dSearchQuery && dSearchQuery.trim().length > 0
+    const searchLower = hasSearch ? dSearchQuery.trim().toLowerCase() : ''
     const contractorSet = hasContractor ? new Set(dContractor) : null
     const subRegionSet = hasSubRegion ? new Set(dSubRegion) : null
 
@@ -120,6 +122,17 @@ export const FilteredDataProvider = ({ children }) => {
       if (siteSet && !siteSet.has(i.site)) continue
       // Apply subRegion filter
       if (hasSubRegion && !subRegionSet.has(siteClassifications[i.site])) continue
+
+      // Apply text search filter
+      if (hasSearch) {
+        const desc = (i.description || '').toLowerCase()
+        const loc = (i.location || '').toLowerCase()
+        const cont = (i.contractor || '').toLowerCase()
+        const site = (i.site || '').toLowerCase()
+        const reporter = (i.reportedBy || '').toLowerCase()
+        const type = (i.type || '').toLowerCase()
+        if (!desc.includes(searchLower) && !loc.includes(searchLower) && !cont.includes(searchLower) && !site.includes(searchLower) && !reporter.includes(searchLower) && !type.includes(searchLower)) continue
+      }
 
       // Heatmap: no period filter, no proactive types
       if (!PROACTIVE_SET.has(i.type)) {
@@ -234,13 +247,21 @@ export const FilteredDataProvider = ({ children }) => {
     return config
   }, [uniqueContractors, siteOptions, hasSubregionAssignments, assignedSubRegions])
 
-  const value = useMemo(() => ({
-    filteredIncidents,
-    heatmapIncidents,
-    uniqueContractors,
-    siteOptions,
-    filterConfig,
-  }), [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig])
+  const value = useMemo(() => {
+    console.log('[FilteredDataContext] value updated', {
+      filteredIncidents: filteredIncidents.length,
+      heatmapIncidents: heatmapIncidents.length,
+      workRelatedOnly,
+      isAllCleared
+    })
+    return {
+      filteredIncidents,
+      heatmapIncidents,
+      uniqueContractors,
+      siteOptions,
+      filterConfig,
+    }
+  }, [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig])
 
   return (
     <FilteredDataContext.Provider value={value}>

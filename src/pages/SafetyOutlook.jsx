@@ -120,7 +120,7 @@ const SafetyOutlook = () => {
   const { incidents, siteClassifications } = useData()
 
   // Shared filter state from context
-  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters } = useFilter()
+  const { period, customDateRange, searchQuery, setPeriod, setSearchQuery, filters, setFilter, clearFilters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -144,16 +144,26 @@ const SafetyOutlook = () => {
 
   // Calculate hazard trends based on filtered incidents and period
   // Offloaded to Web Worker to keep main thread free
-  const { result: sortedHazards } = useWorkerTask(
+  const { result: sortedHazards, isPending: sortedHazardsPending } = useWorkerTask(
     'hazardTrending', filteredIncidents, { period }, [filteredIncidents, period], []
   )
 
   // Calculate contributing factors (all observations including positive)
   // Offloaded to Web Worker to keep main thread free
-  const { result: factorData } = useWorkerTask(
+  const { result: factorData, isPending: factorDataPending } = useWorkerTask(
     'aggregateFactors', filteredIncidents, null, [filteredIncidents],
     { byFactor: [], analyzed: 0, total: 0 }
   )
+
+  // Diagnostic logging for data flow debugging
+  console.log('[SafetyOutlook] data status', {
+    filteredIncidents: filteredIncidents.length,
+    sortedHazards: sortedHazards?.length,
+    sortedHazardsPending,
+    factorByFactor: factorData?.byFactor?.length,
+    factorDataPending,
+    period
+  })
 
   // Calculate hazard trend data for selected hazard
   const hazardTrendData = useDeferredMemo(() => {
@@ -357,6 +367,8 @@ const SafetyOutlook = () => {
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
             />
           </div>
           <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
@@ -383,6 +395,8 @@ const SafetyOutlook = () => {
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
             />
           </div>
           <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
@@ -408,6 +422,8 @@ const SafetyOutlook = () => {
             activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         </div>
         <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />

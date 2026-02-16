@@ -118,7 +118,7 @@ const DataQuality = () => {
   })
 
   // Shared filter state from context
-  const { period, customDateRange, setPeriod, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
+  const { period, customDateRange, searchQuery, setPeriod, setSearchQuery, filters, setFilter, clearFilters, contractor, site, subRegion, excludedReporters, setExcludedReporters } = useFilter()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
   const { filteredIncidents: _fi, filterConfig } = useFilteredData()
@@ -154,9 +154,17 @@ const DataQuality = () => {
 
   // Misclassification analysis - detects records with wrong categories
   // Offloaded to Web Worker to keep main thread free
-  const { result: misclassificationData } = useWorkerTask(
+  const { result: misclassificationData, isPending: misclassificationPending } = useWorkerTask(
     'misclassification', filteredIncidents, null, [filteredIncidents], null
   )
+
+  console.log('[DataQuality] data status', {
+    filteredIncidents: filteredIncidents.length,
+    incidentsTotal: incidents.length,
+    hasMisclassification: !!misclassificationData,
+    misclassificationPending,
+    isLoading
+  })
 
   // Group 1: Core quality score metrics (depends on misclassification data)
   // useDeferredMemo so hidden tabs skip this O(n) computation
@@ -271,7 +279,15 @@ const DataQuality = () => {
   // Reporter deep dive data
   const reporterDeepDive = useMemo(() => {
     if (!selectedReporter) return null
-    return getReporterDeepDive(filteredIncidents, selectedReporter, incidents, misclassificationData)
+    console.log('[DataQuality] computing reporterDeepDive', {
+      selectedReporter,
+      filteredIncidentsLen: filteredIncidents.length,
+      incidentsLen: incidents.length,
+      hasMisclassification: !!misclassificationData
+    })
+    const result = getReporterDeepDive(filteredIncidents, selectedReporter, incidents, misclassificationData)
+    console.log('[DataQuality] reporterDeepDive result', result ? { name: result.name, total: result.total } : 'null')
+    return result
   }, [selectedReporter, filteredIncidents, incidents, misclassificationData])
 
   // Import classification review data
@@ -289,6 +305,7 @@ const DataQuality = () => {
 
   // Drill-down handlers - memoized to prevent child re-renders
   const openDrillDown = useCallback((title, records, breadcrumb = [], context = {}) => {
+    console.log('[DataQuality] openDrillDown', { title, recordsLength: records?.length, breadcrumb })
     setDrillDown({
       isOpen: true,
       type: 'records',
@@ -662,6 +679,8 @@ const DataQuality = () => {
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
             />
           </div>
 
@@ -689,6 +708,8 @@ const DataQuality = () => {
             activeFilters={filters}
             onFilterChange={handleFilterChange}
             onClearFilters={clearFilters}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         </div>
 
