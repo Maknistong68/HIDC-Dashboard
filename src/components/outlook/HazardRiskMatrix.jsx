@@ -187,7 +187,7 @@ const QuickActionButton = ({ label, icon: Icon, onClick, isActive, colorClass })
 
 const ICON_MAP = { Settings, Shield, User, CheckCircle, HardHat }
 
-const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns, onProjectionChange }) => {
+const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatterns, onProjectionChange, renderImpactSummary = true }) => {
   const [sliders, setSliders] = useState({})
   const [actionsToClose, setActionsToClose] = useState(0)
   const [activeQuickAction, setActiveQuickAction] = useState(null)
@@ -408,8 +408,8 @@ const SimulationPanel = ({ currentHazard, hazardIncidents, factorData, dayPatter
         </div>
       )}
 
-      {/* Intervention Impact Summary — immediate feedback */}
-      {projection.factorsAddressed > 0 && (
+      {/* Intervention Impact Summary — immediate feedback (skip when extracted to right column) */}
+      {renderImpactSummary && projection.factorsAddressed > 0 && (
         <InterventionImpactSummary projection={projection} />
       )}
 
@@ -454,27 +454,25 @@ const InterventionImpactSummary = ({ projection }) => {
   const bgClass = isReduction ? 'bg-green-50 border-green-200' : effect > 0 ? 'bg-red-50 border-red-200' : 'bg-surface-50 border-surface-200'
 
   return (
-    <div className={`rounded-lg border p-4 ${bgClass}`}>
-      <div className="flex items-center justify-between mb-2">
+    <div className={`rounded-lg border p-3 ${bgClass}`}>
+      <div className="flex items-center justify-between mb-1.5">
         <h4 className="text-xs font-semibold text-surface-600 uppercase tracking-wider">Projected Impact</h4>
-        <span className="text-[10px] text-surface-400">{projection.factorsAddressed} factor{projection.factorsAddressed !== 1 ? 's' : ''} addressed</span>
+        <span className="text-[10px] text-surface-400">{projection.factorsAddressed} factor{projection.factorsAddressed !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Large % display */}
-      <div className="text-center mb-3">
-        <span className={`text-3xl font-black ${colorClass}`}>
+      {/* % display */}
+      <div className="text-center mb-2">
+        <span className={`text-2xl font-black ${colorClass}`}>
           {effect > 0 ? '+' : ''}{effect}%
         </span>
-        <p className="text-xs text-surface-500 mt-0.5">
+        <p className="text-[10px] text-surface-500 mt-0.5">
           {isReduction ? 'Projected risk reduction' : effect > 0 ? 'Projected risk increase' : 'No change'}
         </p>
       </div>
 
       {/* Progress bar: -45% to +40% scale */}
-      <div className="relative h-3 bg-surface-100 rounded-full overflow-hidden mb-1.5">
-        {/* Center line at 0% */}
+      <div className="relative h-2 bg-surface-100 rounded-full overflow-hidden mb-1">
         <div className="absolute top-0 bottom-0 w-px bg-surface-400 z-10" style={{ left: `${center}%` }} />
-        {/* Effect bar */}
         <div
           className={`absolute top-0 bottom-0 rounded-full transition-all duration-300 ${isReduction ? 'bg-green-400' : effect > 0 ? 'bg-red-400' : ''}`}
           style={{
@@ -483,7 +481,7 @@ const InterventionImpactSummary = ({ projection }) => {
           }}
         />
       </div>
-      <div className="flex items-center justify-between text-[9px] text-surface-400 mb-3">
+      <div className="flex items-center justify-between text-[9px] text-surface-400 mb-2">
         <span>-45%</span>
         <span>0%</span>
         <span>+40%</span>
@@ -491,17 +489,11 @@ const InterventionImpactSummary = ({ projection }) => {
 
       {/* Capped indicator */}
       {projection.isCapped && (
-        <div className="flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded mb-2">
+        <div className="flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded">
           <AlertCircle size={11} />
           <span>Effect capped at conservative bounds</span>
         </div>
       )}
-
-      {/* Threshold explanation */}
-      <div className="flex items-start gap-1.5 text-[10px] text-surface-400">
-        <Info size={11} className="flex-shrink-0 mt-0.5" />
-        <span>Min 15% reduction needed to shift risk matrix position. 30% for 2 steps, 45% for 3.</span>
-      </div>
     </div>
   )
 }
@@ -679,169 +671,61 @@ const CenterHazardCard = ({ hazard, hazardIncidents, cellColor, trend, trendDeta
 
   const hasRecordable = severityBreakdown.fatality > 0 || severityBreakdown.lti > 0 || severityBreakdown.mti > 0 || severityBreakdown.fac > 0
 
+  // Compact severity pill definitions — only render those with count > 0
+  const SEVERITY_PILLS = [
+    { key: 'fatality', label: 'Fatality', weight: '×10000', bg: 'bg-red-200', dot: 'bg-red-900', text: 'text-red-900', wsub: 'text-red-700' },
+    { key: 'lti', label: 'LTI', weight: '×1000', bg: 'bg-red-100', dot: 'bg-red-600', text: 'text-red-700', wsub: 'text-red-500' },
+    { key: 'mti', label: 'MTI', weight: '×500', bg: 'bg-orange-100', dot: 'bg-orange-500', text: 'text-orange-700', wsub: 'text-orange-500' },
+    { key: 'fac', label: 'FAC', weight: '×100', bg: 'bg-yellow-100', dot: 'bg-yellow-500', text: 'text-yellow-700', wsub: 'text-yellow-600' },
+    { key: 'env', label: 'ENV', weight: '×200', bg: 'bg-amber-100', dot: 'bg-amber-600', text: 'text-amber-700', wsub: 'text-amber-500' },
+    { key: 'fire', label: 'Fire', weight: '×500', bg: 'bg-red-50', dot: 'bg-red-500', text: 'text-red-600', wsub: 'text-red-400' },
+    { key: 'security', label: 'Security', weight: '×100', bg: 'bg-stone-100', dot: 'bg-stone-500', text: 'text-stone-600', wsub: 'text-stone-400' },
+    { key: 'dmg', label: 'DMG', weight: '×200', bg: 'bg-lime-100', dot: 'bg-lime-600', text: 'text-lime-700', wsub: 'text-lime-500' },
+    { key: 'nearMiss', label: 'Near Miss', weight: '×50', bg: 'bg-amber-50', dot: 'bg-amber-500', text: 'text-amber-700', wsub: 'text-amber-500' },
+    { key: 'observations', label: 'Obs', weight: '×1', bg: 'bg-surface-100', dot: 'bg-surface-400', text: 'text-surface-600', wsub: 'text-surface-400' },
+  ]
+
   return (
-    <div className={`${cellColor?.bg || 'bg-primary-50'} ${cellColor?.border || 'border-primary-300'} border-2 rounded-2xl p-5 shadow-md`}>
-      {/* Top Row: Trend Badge + Risk Score */}
-      <div className="flex items-center justify-between mb-3">
-        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${trend.bg}`}>
-          <TrendIndicator trend={hazard?.trendLevel} size={14} />
-          <span className={`text-xs font-semibold ${trend.color}`}>{trend.label}</span>
+    <div className={`${cellColor?.bg || 'bg-primary-50'} ${cellColor?.border || 'border-primary-300'} border-2 rounded-2xl p-3 shadow-md`}>
+      {/* Header: Trend + Name + Count + Risk Score — single compact row */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${trend.bg} flex-shrink-0`}>
+          <TrendIndicator trend={hazard?.trendLevel} size={12} />
+          <span className={`text-[10px] font-semibold ${trend.color}`}>{trend.label}</span>
           {trendDetails.changePercent !== 0 && (
-            <span className={`text-xs ${trend.color}`}>
+            <span className={`text-[10px] ${trend.color}`}>
               {trendDetails.changePercent > 0 ? '+' : ''}{trendDetails.changePercent}%
             </span>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-surface-400 uppercase">Risk Score</p>
-          <p className={`text-lg font-bold ${cellColor?.text || 'text-primary-700'}`}>{hazard?.riskScore || 0}</p>
-        </div>
-      </div>
-
-      {/* Hazard Name */}
-      <h2 className={`text-xl font-bold leading-tight text-center ${cellColor?.text || 'text-primary-800'}`}>
-        {hazard?.name}
-      </h2>
-
-      {/* Total Count */}
-      <div className="text-center mt-2 mb-4">
-        <p className="text-3xl font-black text-surface-800">{severityBreakdown.total}</p>
-        <p className="text-xs text-surface-500 uppercase tracking-wider">total observations</p>
-      </div>
-
-      {/* Severity Breakdown - Pyramid Style */}
-      <div className="bg-white/60 rounded-xl p-3">
-        <p className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider mb-2 text-center">
-          Severity Breakdown
-        </p>
-
-        {/* Pyramid rows */}
-        <div className="space-y-1.5">
-          {/* Fatality - Top of pyramid */}
-          {severityBreakdown.fatality > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-red-200 px-3 py-1 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-900" />
-                <span className="text-xs font-bold text-red-900">{severityBreakdown.fatality} Fatality</span>
-                <span className="text-[10px] text-red-700">×10000</span>
-              </div>
-            </div>
-          )}
-
-          {/* LTI */}
-          {severityBreakdown.lti > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-red-100 px-3 py-1 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                <span className="text-xs font-bold text-red-700">{severityBreakdown.lti} LTI</span>
-                <span className="text-[10px] text-red-500">×1000</span>
-              </div>
-            </div>
-          )}
-
-          {/* MTI */}
-          {severityBreakdown.mti > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-orange-100 px-3 py-1 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-                <span className="text-xs font-bold text-orange-700">{severityBreakdown.mti} MTI</span>
-                <span className="text-[10px] text-orange-500">×500</span>
-              </div>
-            </div>
-          )}
-
-          {/* FAC */}
-          {severityBreakdown.fac > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                <span className="text-xs font-bold text-yellow-700">{severityBreakdown.fac} FAC</span>
-                <span className="text-[10px] text-yellow-600">×100</span>
-              </div>
-            </div>
-          )}
-
-          {/* ENV */}
-          {severityBreakdown.env > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-amber-100 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-amber-600" />
-                <span className="text-xs font-bold text-amber-700">{severityBreakdown.env} ENV</span>
-                <span className="text-[10px] text-amber-500">×200</span>
-              </div>
-            </div>
-          )}
-
-          {/* Fire */}
-          {severityBreakdown.fire > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-xs font-bold text-red-600">{severityBreakdown.fire} Fire</span>
-                <span className="text-[10px] text-red-400">×500</span>
-              </div>
-            </div>
-          )}
-
-          {/* Security */}
-          {severityBreakdown.security > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-stone-100 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-stone-500" />
-                <span className="text-xs font-bold text-stone-600">{severityBreakdown.security} Security</span>
-                <span className="text-[10px] text-stone-400">×100</span>
-              </div>
-            </div>
-          )}
-
-          {/* DMG */}
-          {severityBreakdown.dmg > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-lime-100 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-lime-600" />
-                <span className="text-xs font-bold text-lime-700">{severityBreakdown.dmg} DMG</span>
-                <span className="text-[10px] text-lime-500">×200</span>
-              </div>
-            </div>
-          )}
-
-          {/* Near Miss */}
-          {severityBreakdown.nearMiss > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-xs font-medium text-amber-700">{severityBreakdown.nearMiss} Near Miss</span>
-                <span className="text-[10px] text-amber-500">×50</span>
-              </div>
-            </div>
-          )}
-
-          {/* Observations - Base of pyramid */}
-          {severityBreakdown.observations > 0 && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex items-center gap-1.5 bg-surface-100 px-3 py-1 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-surface-400" />
-                <span className="text-xs text-surface-600">{severityBreakdown.observations} Observations</span>
-                <span className="text-[10px] text-surface-400">×1</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Weighted Score Summary */}
-        <div className="mt-3 pt-2 border-t border-surface-200 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-xs text-surface-500">Weighted Score:</span>
-            <span className={`text-sm font-bold ${hasRecordable ? 'text-red-600' : 'text-surface-700'}`}>
-              {severityBreakdown.weightedScore}
-            </span>
-          </div>
+        <h2 className={`text-base font-bold leading-tight truncate ${cellColor?.text || 'text-primary-800'}`} title={hazard?.name}>
+          {hazard?.name}
+        </h2>
+        <span className="text-sm font-black text-surface-700 flex-shrink-0">&middot; {severityBreakdown.total} obs</span>
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+          <span className="text-[9px] text-surface-400 uppercase">Score</span>
+          <span className={`text-sm font-bold ${cellColor?.text || 'text-primary-700'}`}>{hazard?.riskScore || 0}</span>
           {hasRecordable && (
-            <p className="text-[10px] text-red-500 mt-1">
-              ⚠️ Contains recordable incidents
-            </p>
+            <span className={`text-sm font-bold ${hasRecordable ? 'text-red-600' : 'text-surface-700'}`}>
+              (W:{severityBreakdown.weightedScore})
+            </span>
           )}
         </div>
+      </div>
+
+      {/* Severity pills — horizontal wrap */}
+      <div className="flex flex-wrap gap-1.5 justify-center">
+        {SEVERITY_PILLS.map(pill => {
+          const count = severityBreakdown[pill.key]
+          if (!count) return null
+          return (
+            <div key={pill.key} className={`inline-flex items-center gap-1 ${pill.bg} px-2 py-0.5 rounded-full`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${pill.dot}`} />
+              <span className={`text-[10px] font-semibold ${pill.text}`}>{count} {pill.label}</span>
+              <span className={`text-[9px] ${pill.wsub}`}>{pill.weight}</span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -859,7 +743,9 @@ const ConnectedHubDiagram = ({
   hourPatterns,
   siteClassifications,
   cellColor,
-  projection
+  projection,
+  projectedLikelihood: projectedLikelihoodProp,
+  showRiskFeedback = true,
 }) => {
   // Calculate WHERE data: top site + top 4 contractors (no duplication)
   const whereData = useMemo(() => {
@@ -939,20 +825,8 @@ const ConnectedHubDiagram = ({
   }
   const trend = trendConfig[hazard?.trendLevel?.level] || trendConfig.stable
 
-  // Calculate projected likelihood from simulation totalEffect
-  // Movement is ONLY downward (lower likelihood = lower risk), max 3 steps
-  const projectedLikelihood = useMemo(() => {
-    if (!projection || !hazard?.likelihood) return null
-    const reductionPct = projection.totalEffect < 0 ? Math.abs(projection.totalEffect) : 0
-    if (reductionPct < 15) return null // need at least 15% to move one step
-    // Conservative step mapping: 15-29% → -1, 30-44% → -2, 45%+ → -3
-    let steps = 0
-    if (reductionPct >= 45) steps = 3
-    else if (reductionPct >= 30) steps = 2
-    else steps = 1
-    const projected = Math.max(1, hazard.likelihood - steps)
-    return projected === hazard.likelihood ? null : projected
-  }, [projection, hazard])
+  // Use prop from parent (HazardDetailModal lifts this), or null
+  const projectedLikelihood = projectedLikelihoodProp ?? null
 
   const hasWhenData = whenData.day || whenData.shift || whenData.lowestDay || whenData.lowestShift
   const hasWhereData = whereData.topSite || whereData.contractors.length > 0
@@ -976,10 +850,10 @@ const ConnectedHubDiagram = ({
       {/* TOP ROW: WHEN + WHERE side by side */}
       <div className="grid grid-cols-2 gap-4">
         {/* WHEN Card */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Calendar size={16} className="text-blue-600" />
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Calendar size={14} className="text-blue-600" />
             </div>
             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">When</p>
           </div>
@@ -1039,10 +913,10 @@ const ConnectedHubDiagram = ({
         </div>
 
         {/* WHERE Card */}
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-              <MapPin size={16} className="text-purple-600" />
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center">
+              <MapPin size={14} className="text-purple-600" />
             </div>
             <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Where</p>
           </div>
@@ -1074,18 +948,6 @@ const ConnectedHubDiagram = ({
         </div>
       </div>
 
-      {/* Connector arrows pointing down to center */}
-      <div className="flex justify-center gap-24 -my-1">
-        <div className="flex flex-col items-center">
-          <div className="w-0.5 h-3 bg-surface-300" />
-          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface-300" />
-        </div>
-        <div className="flex flex-col items-center">
-          <div className="w-0.5 h-3 bg-surface-300" />
-          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface-300" />
-        </div>
-      </div>
-
       {/* CENTER: Main Hazard Card with severity breakdown */}
       <CenterHazardCard
         hazard={hazard}
@@ -1094,18 +956,6 @@ const ConnectedHubDiagram = ({
         trend={trend}
         trendDetails={trendDetails}
       />
-
-      {/* Connector arrows pointing down from center */}
-      <div className="flex justify-center gap-24 -my-1">
-        <div className="flex flex-col items-center">
-          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-surface-300" />
-          <div className="w-0.5 h-3 bg-surface-300" />
-        </div>
-        <div className="flex flex-col items-center">
-          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-surface-300" />
-          <div className="w-0.5 h-3 bg-surface-300" />
-        </div>
-      </div>
 
       {/* BOTTOM ROW: Contributing Factors + Trend Details side by side */}
       <div className="grid grid-cols-2 gap-4">
@@ -1170,8 +1020,8 @@ const ConnectedHubDiagram = ({
         </div>
       </div>
 
-      {/* MINI RISK MATRIX + CALCULATION BREAKDOWN */}
-      {hazard?.likelihood && hazard?.consequence && (
+      {/* MINI RISK MATRIX + CALCULATION BREAKDOWN (skip when extracted to right column) */}
+      {showRiskFeedback && hazard?.likelihood && hazard?.consequence && (
         <div className="space-y-3">
           <MiniRiskMatrix
             likelihood={hazard.likelihood}
@@ -1213,6 +1063,19 @@ const HazardDetailModal = ({
     setProjection(proj)
   }, [])
 
+  // Lifted from ConnectedHubDiagram so both left + right columns can use it
+  const projectedLikelihood = useMemo(() => {
+    if (!projection || !hazard?.likelihood) return null
+    const reductionPct = projection.totalEffect < 0 ? Math.abs(projection.totalEffect) : 0
+    if (reductionPct < 15) return null
+    let steps = 0
+    if (reductionPct >= 45) steps = 3
+    else if (reductionPct >= 30) steps = 2
+    else steps = 1
+    const projected = Math.max(1, hazard.likelihood - steps)
+    return projected === hazard.likelihood ? null : projected
+  }, [projection, hazard])
+
   useEffect(() => {
     if (!isOpen) return
     previousActiveElement.current = document.activeElement
@@ -1246,10 +1109,10 @@ const HazardDetailModal = ({
           <X size={18} className="text-surface-600" />
         </button>
 
-        {/* Content - Horizontal 2-Section Split */}
+        {/* Content - 3-Column Layout */}
         <div className="flex-1 overflow-y-auto p-6 pt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* LEFT COLUMN: Connected Hub Diagram (Diamond Layout) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(280px,1.3fr)_minmax(260px,1.2fr)] gap-5">
+            {/* LEFT COLUMN: Connected Hub Diagram */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wider border-b border-surface-200 pb-2">
                 Current State
@@ -1263,14 +1126,16 @@ const HazardDetailModal = ({
                 siteClassifications={siteClassifications}
                 cellColor={cellColor}
                 projection={projection}
+                projectedLikelihood={projectedLikelihood}
+                showRiskFeedback={false}
               />
             </div>
 
-            {/* RIGHT COLUMN: Predictive Simulation */}
+            {/* CENTER COLUMN: Predictive Simulation */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wider border-b border-surface-200 pb-2 flex items-center gap-2">
                 <Sliders size={14} className="text-primary-500" />
-                Predictive Simulation
+                Simulation
               </h3>
               <SimulationPanel
                 currentHazard={hazard}
@@ -1278,7 +1143,38 @@ const HazardDetailModal = ({
                 factorData={factorData}
                 dayPatterns={dayPatterns}
                 onProjectionChange={handleProjectionChange}
+                renderImpactSummary={false}
               />
+            </div>
+
+            {/* RIGHT COLUMN: Live Feedback (sticky) */}
+            <div className="space-y-3 lg:sticky lg:top-0 lg:self-start">
+              <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wider border-b border-surface-200 pb-2">
+                Live Feedback
+              </h3>
+
+              {/* Mini Risk Matrix */}
+              {hazard?.likelihood && hazard?.consequence && (
+                <MiniRiskMatrix
+                  likelihood={hazard.likelihood}
+                  consequence={hazard.consequence}
+                  projectedLikelihood={projectedLikelihood}
+                />
+              )}
+
+              {/* Projected Impact */}
+              {projection?.factorsAddressed > 0 && (
+                <InterventionImpactSummary projection={projection} />
+              )}
+
+              {/* Calculation Breakdown */}
+              {hazard?.likelihood && hazard?.consequence && (
+                <CalculationBreakdownPanel
+                  hazard={hazard}
+                  projectedLikelihood={projectedLikelihood}
+                  projection={projection}
+                />
+              )}
             </div>
           </div>
         </div>
