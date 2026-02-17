@@ -201,7 +201,7 @@ const DataQuality = () => {
     vagueHazards: { count: 0, records: [], percentage: '0', status: 'good', summary: { shortDescriptions: 0, primaryDescriptor: 0, topVagueTerms: [] } },
     autoClassification: { totalAutoClassified: 0, percentageOfTotal: '0.0', classifications: [] },
     otherHazards: { totalOther: 0, categories: [] },
-    unclassifiableRecords: { total: 0, byReason: { noDescription: EMPTY_REASON, tooShort: EMPTY_REASON, unrecognizedCategory: EMPTY_REASON, lowConfidence: EMPTY_REASON, historicalPlaceholder: EMPTY_REASON, restrictedClassification: EMPTY_REASON }, summary: { actionable: 0, total: 0, percentage: '0', message: '' } },
+    unclassifiableRecords: { total: 0, byReason: { noDescription: EMPTY_REASON, tooShort: EMPTY_REASON, unrecognizedCategory: EMPTY_REASON, lowConfidence: EMPTY_REASON, historicalPlaceholder: EMPTY_REASON }, summary: { actionable: 0, total: 0, percentage: '0', message: '' } },
   }
 
   const qualityData = useMemo(() => {
@@ -608,8 +608,7 @@ const DataQuality = () => {
       tooShort: 'Too Short',
       unrecognizedCategory: 'Unrecognized Category',
       lowConfidence: 'Low Confidence',
-      historicalPlaceholder: 'Historical/Placeholder',
-      restrictedClassification: 'Restricted Classification'
+      historicalPlaceholder: 'Historical/Placeholder'
     }
 
     openDrillDown(
@@ -1513,24 +1512,6 @@ const DataQuality = () => {
                   </div>
                 )}
 
-                {/* Restricted Classification (blocked by generic "Other" source) */}
-                {qualityData.unclassifiableRecords?.byReason?.restrictedClassification?.count > 0 && (
-                  <div
-                    className="group cursor-pointer hover:bg-surface-50 rounded p-1 -m-1"
-                    onClick={() => handleUnclassifiableDrillDown('restrictedClassification')}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-surface-600 group-hover:text-surface-800">Restricted</span>
-                      <span className="text-sm font-bold text-surface-700">{qualityData.unclassifiableRecords.byReason.restrictedClassification.count}</span>
-                    </div>
-                    <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, (qualityData.unclassifiableRecords.byReason.restrictedClassification.count / (qualityData.unclassifiableRecords?.total || 1)) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Review progress */}
