@@ -787,28 +787,20 @@ const ConnectedHubDiagram = ({
 }) => {
   // Calculate WHERE data: top site + top 4 contractors (no duplication)
   const whereData = useMemo(() => {
-    if (!hazardIncidents?.length) return { topSite: null, contractors: [] }
+    if (!hazardIncidents?.length) return { sites: [] }
 
     const siteCounts = {}
-    const contractorCounts = {}
     hazardIncidents.forEach(i => {
       const site = i.site || 'Unknown'
-      const contractor = i.contractor || i.contractorName || 'Unknown'
       siteCounts[site] = (siteCounts[site] || 0) + 1
-      contractorCounts[contractor] = (contractorCounts[contractor] || 0) + 1
     })
 
-    const sortedSites = Object.entries(siteCounts)
+    const sites = Object.entries(siteCounts)
       .map(([name, count]) => ({ name, pct: Math.round((count / hazardIncidents.length) * 100) }))
       .sort((a, b) => b.pct - a.pct)
-    const topSite = sortedSites[0] || null
+      .slice(0, 5)
 
-    const contractors = Object.entries(contractorCounts)
-      .map(([name, count]) => ({ name, pct: Math.round((count / hazardIncidents.length) * 100) }))
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 4)
-
-    return { topSite, contractors }
+    return { sites }
   }, [hazardIncidents])
 
   // Calculate WHEN data: peak/lowest day and shift with deviation %
@@ -867,7 +859,7 @@ const ConnectedHubDiagram = ({
   const projectedLikelihood = projectedLikelihoodProp ?? null
 
   const hasWhenData = whenData.day || whenData.shift || whenData.lowestDay || whenData.lowestShift
-  const hasWhereData = whereData.topSite || whereData.contractors.length > 0
+  const hasWhereData = whereData.sites.length > 0
 
   // Calculate trend details for bottom card
   const trendDetails = useMemo(() => {
@@ -960,28 +952,17 @@ const ConnectedHubDiagram = ({
           </div>
           {hasWhereData ? (
             <div className="space-y-1.5">
-              {whereData.topSite && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-surface-400">Site</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-xs truncate max-w-[90px] ${whereData.topSite.name === 'Unknown' ? 'text-surface-400 italic' : 'text-surface-700 font-medium'}`} title={whereData.topSite.name}>
-                      {whereData.topSite.name}
-                    </span>
-                    <span className="text-xs font-semibold text-purple-600">{whereData.topSite.pct}%</span>
-                  </div>
-                </div>
-              )}
-              {whereData.contractors.map((c, idx) => (
+              {whereData.sites.map((s, idx) => (
                 <div key={idx} className="flex items-center justify-between">
-                  <span className={`text-xs truncate max-w-[60%] ${c.name === 'Unknown' ? 'text-surface-400 italic' : 'text-surface-600'}`} title={c.name}>
-                    {c.name}
+                  <span className={`text-xs truncate max-w-[60%] ${s.name === 'Unknown' ? 'text-surface-400 italic' : 'text-surface-600'}`} title={s.name}>
+                    {s.name}
                   </span>
-                  <span className={`text-xs font-semibold ${c.name === 'Unknown' ? 'text-surface-400' : 'text-purple-600'}`}>{c.pct}%</span>
+                  <span className={`text-xs font-semibold ${s.name === 'Unknown' ? 'text-surface-400' : 'text-purple-600'}`}>{s.pct}%</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-surface-400 italic text-center py-2">No location data</p>
+            <p className="text-xs text-surface-400 italic text-center py-2">No site data</p>
           )}
         </div>
       </div>
@@ -1338,7 +1319,7 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
     if (!matrixData?.hazards?.length) return null
     const zones = { veryHigh: 0, high: 0, medium: 0, low: 0, veryLow: 0 }
     matrixData.hazards.forEach(h => { zones[h.zone.level] = (zones[h.zone.level] || 0) + 1 })
-    return { total: matrixData.hazards.length, ...zones, totalDays: matrixData.totalDays, isAdaptive: matrixData.isAdaptive }
+    return { total: matrixData.hazards.length, ...zones, totalDays: matrixData.totalDays }
   }, [matrixData])
 
   if (!matrixData?.hazards?.length) return null
@@ -1349,10 +1330,10 @@ const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
       {stats && (
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <span className="text-surface-500">{stats.total} hazards plotted over {stats.totalDays} days</span>
-          {stats.isAdaptive && (
-            <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+          {stats.totalDays < 30 && (
+            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
               <Info size={11} />
-              Adaptive thresholds (dataset &lt;90 days)
+              Confidence caps active (dataset &lt;30 days)
             </span>
           )}
           {stats.veryHigh > 0 && <span className="font-semibold text-red-700">{stats.veryHigh} Very High</span>}

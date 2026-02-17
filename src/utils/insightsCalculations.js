@@ -5112,6 +5112,22 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
+  // ── 6b. Site Breakdown (Top 5) ──
+  const siteCounts = {}
+  hazardIncidents.forEach(i => {
+    const site = i.site || 'Unknown'
+    siteCounts[site] = (siteCounts[site] || 0) + 1
+  })
+
+  const topSites = Object.entries(siteCounts)
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / hazardIncidents.length) * 100)
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+
   // ── 7. Recommendations ──
   const recommendations = []
 
@@ -5224,6 +5240,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
       peakDayPercentage: parseFloat(peakDay.percentage || '0')
     },
     contractors: topContractors,
+    sites: topSites,
     actions: {
       ...actionCounts,
       total: hazardIncidents.length,

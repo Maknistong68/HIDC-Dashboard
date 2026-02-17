@@ -1,12 +1,13 @@
 /**
  * Dashboard Pre-computation Cache
  *
- * Module-level Map storing pre-computed dashboard results.
- * Used to skip expensive useMemo/useDeferredMemo computations on initial mount
- * when data has been pre-computed during the import phase.
+ * WeakMap-based multi-entry cache that allows BOTH work-related toggle variants
+ * to coexist simultaneously. Toggling between variants is an O(1) cache hit.
  *
- * Each entry stores { incidents: <array ref>, result: <computed> }
- * so consumers can validate by reference equality (cached.incidents === incidents).
+ * Structure: Map<string, WeakMap<Array, result>>
+ * - Outer Map: keyed by cache key (e.g. 'dashboardAggregates')
+ * - Inner WeakMap: keyed by the array reference → computed result
+ *   WeakMap ensures old array entries are GC'd automatically when arrays lose refs.
  */
 
 const cache = new Map()
@@ -21,18 +22,31 @@ export const CACHE_KEYS = {
 }
 
 /**
- * Get a cached pre-computed result
+ * Get a cached pre-computed result for a specific array reference.
  * @param {string} key - One of CACHE_KEYS
- * @returns {{ incidents: Array, result: any } | undefined}
+ * @param {Array} ref - The array reference to look up
+ * @returns {any | undefined} The cached result, or undefined on miss
  */
-export const getCached = (key) => cache.get(key)
+export const getCached = (key, ref) => {
+  const weakMap = cache.get(key)
+  if (!weakMap || !ref) return undefined
+  return weakMap.get(ref)
+}
 
 /**
- * Store a pre-computed result
+ * Store a pre-computed result for a specific array reference.
  * @param {string} key - One of CACHE_KEYS
- * @param {{ incidents: Array, result: any }} value
+ * @param {Array} ref - The array reference to key on
+ * @param {any} result - The computed result to cache
  */
-export const setCached = (key, value) => cache.set(key, value)
+export const setCached = (key, ref, result) => {
+  let weakMap = cache.get(key)
+  if (!weakMap) {
+    weakMap = new WeakMap()
+    cache.set(key, weakMap)
+  }
+  weakMap.set(ref, result)
+}
 
 /**
  * Clear all dashboard pre-computation caches

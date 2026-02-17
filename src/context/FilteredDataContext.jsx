@@ -42,8 +42,8 @@ export const FilteredDataProvider = ({ children }) => {
   // Single O(n) pass computes base + workRelated variants together.
   const defaults = useMemo(() => {
     // Check pre-computation cache (populated during import phase)
-    const cached = getCached(CACHE_KEYS.FILTERED_DEFAULTS)
-    if (cached && cached.incidents === incidents) return cached.result
+    const cached = getCached(CACHE_KEYS.FILTERED_DEFAULTS, incidents)
+    if (cached) return cached
 
     const heatmap = []
     const wrFiltered = []
@@ -184,9 +184,12 @@ export const FilteredDataProvider = ({ children }) => {
     if (inactiveFiltered.length === 0) return
 
     // Dynamic import to avoid adding heavy transitive deps to critical render path
-    import('../utils/cacheWarmer').then(({ warmCaches }) => {
-      const ids = warmCaches(inactiveFiltered, inactiveHeatmap, period)
-      warmingRef.current = ids
+    import('../utils/cacheWarmer').then(({ warmCaches, warmDashboardMainThreadCaches }) => {
+      // Warm Web Worker caches (heavy analytics)
+      const workerIds = warmCaches(inactiveFiltered, inactiveHeatmap, period)
+      // Warm main-thread dashboard caches (aggregates, topHazards, heatmap, subregion)
+      const mainIds = warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap, siteClassifications)
+      warmingRef.current = [...workerIds, ...mainIds]
     })
 
     return () => {
@@ -199,13 +202,13 @@ export const FilteredDataProvider = ({ children }) => {
       })
       warmingRef.current = []
     }
-  }, [baseFiltered, workRelatedFiltered, baseHeatmap, workRelatedHeatmap, workRelatedOnly, period])
+  }, [baseFiltered, workRelatedFiltered, baseHeatmap, workRelatedHeatmap, workRelatedOnly, period, siteClassifications])
 
   // Unique contractors from all incidents (not filtered)
   const uniqueContractors = useMemo(() => {
     // Check pre-computation cache (populated during import phase)
-    const cached = getCached(CACHE_KEYS.UNIQUE_CONTRACTORS)
-    if (cached && cached.incidents === incidents) return cached.result
+    const cached = getCached(CACHE_KEYS.UNIQUE_CONTRACTORS, incidents)
+    if (cached) return cached
 
     const contractors = [...new Set(incidents.map(i => i.contractor).filter(Boolean))]
     return contractors.sort().map(c => ({ value: c, label: c }))

@@ -12,6 +12,7 @@ import {
   getAllRecords,
   getRecordsChunked,
   addRecords,
+  updateRecordsBatch,
   createFile,
   getAllFiles,
   getFileByHash,
@@ -186,6 +187,46 @@ export const migrateToIndexedDB = async () => {
 }
 
 // ============================================
+// DATA MIGRATIONS (one-time fixes for existing records)
+// ============================================
+
+const MIGRATION_KEY = 'hazard-category-fix-v1'
+
+/**
+ * Fix hazard categories for security & environmental incidents.
+ * Security → "Site Security", Environmental → "Environmental".
+ * Runs once, tracked via settings flag.
+ */
+export const migrateHazardCategories = async () => {
+  try {
+    const alreadyRun = await getSetting(MIGRATION_KEY)
+    if (alreadyRun) return { skipped: true }
+
+    const records = await getAllRecords()
+    const updates = []
+
+    for (const record of records) {
+      const t = record.type
+      if (t === 'security' && record.location !== 'Site Security') {
+        updates.push({ id: record.id, updates: { location: 'Site Security' } })
+      } else if ((t === 'environmental' || t === 'env-minor' || t === 'env-major') && record.location !== 'Environmental') {
+        updates.push({ id: record.id, updates: { location: 'Environmental' } })
+      }
+    }
+
+    if (updates.length > 0) {
+      await updateRecordsBatch(updates)
+    }
+
+    await setSetting(MIGRATION_KEY, { ran: true, fixed: updates.length, date: new Date().toISOString() })
+    return { fixed: updates.length }
+  } catch (error) {
+    if (import.meta.env.DEV) console.error('[Migration] Hazard category fix failed:', error)
+    return { error: error.message }
+  }
+}
+
+// ============================================
 // UNIFIED STORAGE API
 // ============================================
 
@@ -198,8 +239,9 @@ export const loadIncidents = async () => {
     const useIDB = await shouldUseIndexedDB()
 
     if (useIDB) {
-      // Run migration if needed
+      // Run migrations if needed
       await migrateToIndexedDB()
+      await migrateHazardCategories()
 
       const records = await getAllRecords()
       return records
@@ -229,6 +271,7 @@ export const loadIncidentsChunked = async (onChunk) => {
 
     if (useIDB) {
       await migrateToIndexedDB()
+      await migrateHazardCategories()
       return await getRecordsChunked(5000, onChunk)
     }
 

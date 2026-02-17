@@ -58,6 +58,7 @@ const TREND_CONFIG = {
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
+  const hasSpike = payload.some(e => e.dataKey === 'spike' && e.value != null)
   return (
     <div style={TOOLTIP_STYLE} className="p-2">
       <p className="font-medium text-surface-700 mb-1">{label}</p>
@@ -68,6 +69,9 @@ const CustomTooltip = ({ active, payload, label }) => {
           </p>
         ) : null
       ))}
+      {hasSpike && (
+        <p className="text-[10px] font-semibold text-red-600 mt-1">Spike: above upper Bollinger band</p>
+      )}
     </div>
   )
 }
@@ -112,6 +116,7 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
   const [sliderValues, setSliderValues] = useState({})
   const [actionsToClose, setActionsToClose] = useState(0)
   const [activePreset, setActivePreset] = useState(null)
+  const [criticalZoneMode, setCriticalZoneMode] = useState('avg')
 
   // All hazard forecasts (ranked)
   const allForecasts = useMemo(
@@ -244,6 +249,13 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     return calculateCriticalThreshold(hazardIncidents, forecastData.weeklyRates)
   }, [forecastData, hazardIncidents])
 
+  // Active threshold value based on selected mode (only for serious-data path)
+  const activeCriticalThreshold = useMemo(() => {
+    if (!criticalThreshold?.hasSeriousData || criticalZoneMode === 'off') return null
+    if (!criticalThreshold.thresholds) return criticalThreshold.threshold
+    return criticalThreshold.thresholds[criticalZoneMode] ?? criticalThreshold.threshold
+  }, [criticalThreshold, criticalZoneMode])
+
   const simulatedRate = simulatedForecast?.simulatedRate ?? forecastData?.currentRate ?? 0
 
   const simulatedProbability = useMemo(() => {
@@ -259,10 +271,14 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
       const worstSev = weekIncs.length > 0
         ? Math.max(...weekIncs.map(inc => CONSEQUENCE_TYPE_MAP[inc.type?.toLowerCase()] || 1))
         : 0
+      const emaEntry = forecastData.emaLine[i]
       return {
         week: w.week,
         count: w.count,
-        ema: forecastData.emaLine[i]?.ema ?? null,
+        ema: emaEntry?.ema ?? null,
+        bollingerUpper: emaEntry?.bollingerUpper ?? null,
+        bollingerLower: emaEntry?.bollingerLower ?? null,
+        spike: emaEntry?.spike ? w.count : null,
         incidentDot: worstSev > 0 ? w.count : null,
         dotColor: SEVERITY_DOT_COLORS[worstSev] || null,
       }
@@ -274,8 +290,8 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
         count: null,
         ema: null,
         forecastEma: f.ema,
-        upper: forecastData.confidence[i]?.upper,
-        lower: forecastData.confidence[i]?.lower,
+        forecastUpper: forecastData.confidence[i]?.upper,
+        forecastLower: forecastData.confidence[i]?.lower,
       }
       // Merge simulated overlay
       if (simulatedForecast) {
@@ -297,6 +313,7 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
       setSliderValues({})
       setActionsToClose(0)
       setActivePreset(null)
+      setCriticalZoneMode('avg')
     })
   }, [])
 
@@ -350,62 +367,6 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
   return (
     <div className="space-y-4 animate-fade-in">
       {/* KPI Cards: WHAT + WHEN + PROBABILITY */}
-      {forecastData?.hasData && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white rounded-lg border border-surface-200 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-surface-500 mb-1">Current Rate</p>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xl font-bold text-surface-900">{forecastData.currentRate}<span className="text-xs font-normal text-surface-500"> /wk</span></p>
-              <TrendIcon size={14} className={trend.color} />
-            </div>
-            <p className="text-[9px] text-surface-400 mt-0.5">EMA Smoothed</p>
-          </div>
-          <div className="bg-white rounded-lg border border-surface-200 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-surface-500 mb-1">Peak Day</p>
-            <p className="text-lg font-bold text-surface-900">{dayPatterns?.peakDay || '—'}</p>
-            {hourPatterns?.shifts?.length > 0 && (() => {
-              const peak = [...hourPatterns.shifts].sort((a, b) => b.count - a.count)[0]
-              return <p className="text-[10px] text-surface-500">{peak?.label || ''}</p>
-            })()}
-          </div>
-          <div className="bg-white rounded-lg border border-surface-200 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-surface-500 mb-1">P(&ge;1) 4 Weeks</p>
-            <p className="text-xl font-bold text-violet-700">{baselineProbability}%</p>
-            {hasSimulation && (
-              <p className={`text-[10px] font-semibold ${simulatedProbability < baselineProbability ? 'text-green-600' : 'text-red-600'}`}>
-                Sim: {simulatedProbability}%
-              </p>
-            )}
-          </div>
-          <div className="bg-white rounded-lg border border-surface-200 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-surface-500 mb-1">4-Week Forecast</p>
-            <p className="text-xl font-bold text-violet-700">{forecastData.forecastRate}<span className="text-xs font-normal text-surface-500"> /wk</span></p>
-            {hasSimulation && (
-              <p className={`text-[10px] font-semibold ${simulatedRate < forecastData.forecastRate ? 'text-green-600' : 'text-red-600'}`}>
-                Sim: {simulatedRate}/wk
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Data confidence indicator */}
-      {forecastData?.hasData && (() => {
-        const weekCount = forecastData.weeklyRates.length
-        const obsCount = hazardIncidents.length
-        const conf = weekCount > 20
-          ? { label: 'High confidence', color: 'text-green-600' }
-          : weekCount >= 8
-            ? { label: 'Moderate confidence', color: 'text-blue-600' }
-            : { label: 'Low confidence', color: 'text-orange-600' }
-        return (
-          <p className="text-[10px] text-surface-500 text-center -mt-2">
-            Based on {weekCount} weeks of data &middot; {obsCount} observations &middot;{' '}
-            <span className={`font-semibold ${conf.color}`}>{conf.label}</span>
-          </p>
-        )
-      })()}
-
       {/* Chart + Simulator side-by-side */}
       {forecastData?.hasData && chartData.length > 0 && (
         <div className="flex flex-col lg:flex-row gap-4">
@@ -416,11 +377,36 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                 {activeHazard}
                 <span className="text-surface-400 font-normal ml-1">— Weekly Incident Rate + EMA Forecast</span>
               </h3>
-              {hasSimulation && (
-                <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                  Simulation active
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {criticalThreshold?.hasSeriousData && (
+                  <div className="inline-flex rounded border border-surface-200 bg-surface-50 overflow-hidden">
+                    {[
+                      { key: 'avg', label: 'Avg', tip: 'Average weekly count during serious-incident weeks' },
+                      { key: 'med', label: 'Med', tip: 'Median — less affected by outlier weeks' },
+                      { key: 'min', label: 'Min', tip: 'Minimum — most sensitive early warning' },
+                      { key: 'off', label: 'Off', tip: 'Hide critical zone overlay' },
+                    ].map(({ key, label, tip }) => (
+                      <button
+                        key={key}
+                        title={tip}
+                        onClick={() => setCriticalZoneMode(key)}
+                        className={`text-[10px] px-2 py-0.5 font-medium transition-colors ${
+                          criticalZoneMode === key
+                            ? 'bg-white text-red-600 shadow-sm'
+                            : 'text-surface-500 hover:text-surface-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {hasSimulation && (
+                  <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                    Simulation active
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex-1 min-h-[256px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -440,22 +426,61 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                   <Legend wrapperStyle={{ fontSize: 11 }} />
 
                   {/* Critical threshold red zone */}
-                  {criticalThreshold && (
+                  {activeCriticalThreshold != null && (
                     <>
-                      <ReferenceArea y1={criticalThreshold.threshold} fill="#fef2f2" fillOpacity={0.6} />
+                      <ReferenceArea
+                        y1={activeCriticalThreshold}
+                        fill="#fef2f2"
+                        fillOpacity={0.6}
+                        label={{ value: 'Risk Zone', position: 'insideTopLeft', fontSize: 9, fill: '#fca5a5' }}
+                      />
+                      <ReferenceLine
+                        y={activeCriticalThreshold}
+                        stroke="#ef4444"
+                        strokeDasharray="6 3"
+                        strokeWidth={1.5}
+                        label={{
+                          value: criticalThreshold?.hasSeriousData
+                            ? `Serious Incident Zone — ${criticalZoneMode === 'med' ? 'Median' : criticalZoneMode === 'min' ? 'Min' : 'Avg'} (${activeCriticalThreshold}/wk)`
+                            : `Elevated Activity Zone (${activeCriticalThreshold}/wk)`,
+                          position: 'insideTopRight',
+                          fontSize: 9,
+                          fill: '#ef4444',
+                        }}
+                      />
+                    </>
+                  )}
+                  {/* Statistical fallback zone (no serious data, always shown) */}
+                  {criticalThreshold && !criticalThreshold.hasSeriousData && (
+                    <>
+                      <ReferenceArea
+                        y1={criticalThreshold.threshold}
+                        fill="#fef2f2"
+                        fillOpacity={0.6}
+                        label={{ value: 'Risk Zone', position: 'insideTopLeft', fontSize: 9, fill: '#fca5a5' }}
+                      />
                       <ReferenceLine
                         y={criticalThreshold.threshold}
                         stroke="#ef4444"
                         strokeDasharray="6 3"
                         strokeWidth={1.5}
-                        label={{ value: 'Critical Threshold', position: 'insideTopRight', fontSize: 9, fill: '#ef4444' }}
+                        label={{
+                          value: `Elevated Activity Zone (${criticalThreshold.threshold}/wk)`,
+                          position: 'insideTopRight',
+                          fontSize: 9,
+                          fill: '#ef4444',
+                        }}
                       />
                     </>
                   )}
 
-                  {/* Confidence cone */}
-                  <Area dataKey="upper" stroke="none" fill={CHART_COLORS.confidence} fillOpacity={0.5} name="Confidence Band" connectNulls={false} />
-                  <Area dataKey="lower" stroke="none" fill="#ffffff" fillOpacity={1} name="" legendType="none" connectNulls={false} />
+                  {/* Bollinger Bands — historical zone (blue) */}
+                  <Area dataKey="bollingerUpper" stroke="#93c5fd" strokeWidth={0.5} strokeDasharray="3 2" fill="#dbeafe" fillOpacity={0.25} name="Bollinger Band" connectNulls={false} />
+                  <Area dataKey="bollingerLower" stroke="#93c5fd" strokeWidth={0.5} strokeDasharray="3 2" fill="#ffffff" fillOpacity={1} name="" legendType="none" connectNulls={false} />
+
+                  {/* Forecast confidence band (purple, tighter) */}
+                  <Area dataKey="forecastUpper" stroke="#a78bfa" strokeWidth={0.5} strokeDasharray="4 2" fill="#ede9fe" fillOpacity={0.35} name="Forecast Band" connectNulls={false} />
+                  <Area dataKey="forecastLower" stroke="#a78bfa" strokeWidth={0.5} strokeDasharray="4 2" fill="#ffffff" fillOpacity={1} name="" legendType="none" connectNulls={false} />
 
                   {/* Historical bars */}
                   <Bar dataKey="count" fill={CHART_COLORS.bar} name="Weekly Count" radius={[2, 2, 0, 0]} barSize={14} />
@@ -467,6 +492,19 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                         key={i}
                         fill={entry.dotColor || 'transparent'}
                         r={entry.incidentDot != null ? 5 : 0}
+                        stroke="#fff"
+                        strokeWidth={1.5}
+                      />
+                    ))}
+                  </Scatter>
+
+                  {/* Spike markers (breached upper Bollinger band) */}
+                  <Scatter dataKey="spike" name="Spike" legendType="none" shape="diamond">
+                    {chartData.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.spike != null ? '#dc2626' : 'transparent'}
+                        r={entry.spike != null ? 5 : 0}
                         stroke="#fff"
                         strokeWidth={1.5}
                       />
@@ -486,6 +524,20 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            {criticalThreshold?.hasSeriousData && criticalZoneMode !== 'off' && (
+              <p className="text-[10px] text-red-400 italic mt-1">
+                {criticalZoneMode === 'avg'
+                  ? `Red zone (average): When this hazard exceeded ${activeCriticalThreshold}/wk, serious incidents (LTI, fire, etc.) occurred — based on ${criticalThreshold.seriousWeekCount} occurrence${criticalThreshold.seriousWeekCount !== 1 ? 's' : ''} from ${criticalThreshold.dateRange.from} to ${criticalThreshold.dateRange.to}.`
+                  : criticalZoneMode === 'med'
+                    ? `Red zone (median): ${activeCriticalThreshold}/wk — median of ${criticalThreshold.seriousWeekCount} occurrence${criticalThreshold.seriousWeekCount !== 1 ? 's' : ''} from ${criticalThreshold.dateRange.from} to ${criticalThreshold.dateRange.to}. Median is less affected by outlier weeks.`
+                    : `Red zone (minimum): ${activeCriticalThreshold}/wk — lowest weekly count that still produced a serious incident (${criticalThreshold.dateRange.from} to ${criticalThreshold.dateRange.to}). Most sensitive early-warning threshold.`}
+              </p>
+            )}
+            {criticalThreshold && !criticalThreshold.hasSeriousData && (
+              <p className="text-[10px] text-red-400 italic mt-1">
+                Red zone: Statistically elevated activity level (mean + 1.5{'\u03C3'}). No serious incidents recorded for this hazard.
+              </p>
+            )}
           </div>
 
           {/* Simulation panel — fixed 320px width */}

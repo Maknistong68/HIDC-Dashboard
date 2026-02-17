@@ -925,6 +925,8 @@ const RecordDetailsModal = ({ record, onClose }) => {
               {record.company && (
                 <DetailField icon={Briefcase} label="Company" value={record.company} />
               )}
+              {/* Hide hazard category for security/environmental - it's redundant and could be misleading */}
+              {record.type !== 'security' && record.type !== 'environmental' && record.type !== 'env-minor' && record.type !== 'env-major' && (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-surface-500 uppercase tracking-wide">
                   <AlertCircle size={12} />
@@ -950,6 +952,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
                   </button>
                 </div>
               </div>
+              )}
               <DetailField icon={User} label="Reported By" value={record.reportedBy} />
               <DetailField icon={CheckCircle} label="Approval" value={record.approvalStatus || '-'} />
               {record.consequence && (

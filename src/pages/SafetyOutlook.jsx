@@ -1,11 +1,11 @@
 import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
-import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp, Dices } from 'lucide-react'
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast, MonteCarloTab } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -110,6 +110,12 @@ const MAIN_TABS = [
   { id: 'risk', label: 'Risk & Performance', icon: Shield }
 ]
 
+const PREDICTIVE_SUB_TABS = [
+  { id: 'smsa', label: 'Risk Matrix', icon: Shield },
+  { id: 'trend-forecast', label: 'Risk Trend', icon: TrendingUp },
+  { id: 'monte-carlo', label: 'Monte Carlo', icon: Dices },
+]
+
 /**
  * SafetyOutlook - Main page component with 3-tab layout
  * Tab 1: Correlations (Hazards & Factors)
@@ -139,6 +145,7 @@ const SafetyOutlook = () => {
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
   const [showGuide, setShowGuide] = useState(false)
+  const [activePredictiveSubTab, setActivePredictiveSubTab] = useState('smsa')
 
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
@@ -339,6 +346,12 @@ const SafetyOutlook = () => {
   const handleSubTabChange = useCallback((tab) => {
     startTransition(() => {
       setActiveSubTab(tab)
+    })
+  }, [])
+
+  const handlePredictiveSubTabChange = useCallback((tab) => {
+    startTransition(() => {
+      setActivePredictiveSubTab(tab)
     })
   }, [])
 
@@ -583,16 +596,57 @@ const SafetyOutlook = () => {
       {visitedTabsRef.current.has('predictive') && (
         <div style={{ display: activeMainTab === 'predictive' ? 'block' : 'none' }}>
           <TabErrorBoundary label="Predictive & Simulation">
-          <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive">
-            <HazardRiskMatrix
-              sortedHazards={sortedHazards}
-              negativeIncidents={negativeIncidents}
-              filteredIncidents={filteredIncidents}
-              factorData={factorData}
-              period={period}
-              siteClassifications={siteClassifications}
-              matrixData={matrixData}
-            />
+          <div role="tabpanel" id="tabpanel-predictive" aria-labelledby="tab-predictive" className="space-y-3">
+            {/* Predictive Sub-Tab Pills */}
+            <div className="flex items-center gap-2" role="tablist" aria-label="Predictive sub-tabs">
+              {PREDICTIVE_SUB_TABS.map(tab => {
+                const Icon = tab.icon
+                const isActive = activePredictiveSubTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => handlePredictiveSubTabChange(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'text-surface-600 hover:bg-surface-100'
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Sub-tab content */}
+            {activePredictiveSubTab === 'smsa' && (
+              <HazardRiskMatrix
+                sortedHazards={sortedHazards}
+                negativeIncidents={negativeIncidents}
+                filteredIncidents={filteredIncidents}
+                factorData={factorData}
+                period={period}
+                siteClassifications={siteClassifications}
+                matrixData={matrixData}
+              />
+            )}
+            {activePredictiveSubTab === 'trend-forecast' && (
+              <RiskTrendForecast
+                incidents={negativeIncidents}
+                sortedHazards={sortedHazards}
+                factorData={factorData}
+                negativeIncidents={negativeIncidents}
+              />
+            )}
+            {activePredictiveSubTab === 'monte-carlo' && (
+              <MonteCarloTab
+                negativeIncidents={negativeIncidents}
+                sortedHazards={sortedHazards}
+              />
+            )}
           </div>
           </TabErrorBoundary>
         </div>

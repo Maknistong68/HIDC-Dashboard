@@ -85,21 +85,33 @@ export const calculateEMAForecast = (incidents, hazardName, alpha = 0.5) => {
     }
   }
 
-  // Calculate EMA
+  // Calculate EMA with Bollinger Bands (rolling 4-week, 1.5σ — tight bands)
+  const BOLLINGER_WINDOW = 4
+  const BOLLINGER_K = 1.5
   const emaLine = []
   let ema = weeklyCounts[0].count
-  for (const wk of weeklyCounts) {
-    ema = alpha * wk.count + (1 - alpha) * ema
-    emaLine.push({ week: wk.week, ema: Math.round(ema * 100) / 100 })
+  for (let j = 0; j < weeklyCounts.length; j++) {
+    ema = alpha * weeklyCounts[j].count + (1 - alpha) * ema
+    const roundedEma = Math.round(ema * 100) / 100
+    // Rolling σ from recent actual counts
+    const wStart = Math.max(0, j - BOLLINGER_WINDOW + 1)
+    const window = weeklyCounts.slice(wStart, j + 1).map(w => w.count)
+    const wMean = window.reduce((s, v) => s + v, 0) / window.length
+    const wStd = Math.sqrt(window.reduce((s, v) => s + (v - wMean) ** 2, 0) / window.length)
+    const bUpper = Math.round((roundedEma + BOLLINGER_K * wStd) * 100) / 100
+    const bLower = Math.round(Math.max(0, roundedEma - BOLLINGER_K * wStd) * 100) / 100
+    emaLine.push({
+      week: weeklyCounts[j].week,
+      ema: roundedEma,
+      bollingerUpper: bUpper,
+      bollingerLower: bLower,
+      spike: weeklyCounts[j].count > roundedEma + BOLLINGER_K * wStd,
+    })
   }
 
-  // Rolling standard deviation (last 8 weeks or all if fewer)
-  const recentWindow = weeklyCounts.slice(-Math.min(8, weeklyCounts.length))
-  const mean = recentWindow.reduce((s, w) => s + w.count, 0) / recentWindow.length
-  const variance =
-    recentWindow.reduce((s, w) => s + Math.pow(w.count - mean, 2), 0) /
-    recentWindow.length
-  const stdDev = Math.sqrt(variance)
+  // Extract last Bollinger width to continue bands into forecast zone
+  const lastBollingerEntry = emaLine[emaLine.length - 1]
+  const lastBollingerWidth = lastBollingerEntry.bollingerUpper - lastBollingerEntry.ema
 
   // Trend from last 6 EMA values (or fewer)
   const lastEma = ema
@@ -108,13 +120,26 @@ export const calculateEMAForecast = (incidents, hazardName, alpha = 0.5) => {
   const weeklySlope = trendReg.slope
   const projectionSlope = weeklySlope
 
-  // 4-week trending forecast with symmetric 95% CI bands
+  // 4-week trending forecast with Bollinger-continuation bands
+  // Damped decay: convert slope to per-week rate, capped at ±30% to prevent extremes
+  const slopeRate = lastEma > 0 ? Math.max(-0.3, Math.min(0.3, projectionSlope / lastEma)) : 0
+  // Floor: forecast can't drop below 30% of current rate (hazards don't vanish)
+  const floor = lastEma * 0.3
+
+  // Recovery rate for last 2 forecast weeks — mirror the slope magnitude, min 5%/week
+  const recoveryRate = Math.max(0.05, Math.abs(slopeRate))
+
   const forecast = []
   const confidence = []
+  let prevEma = lastEma
   for (let i = 1; i <= 4; i++) {
     const forecastWeek = format(addWeeks(parseISO(weeklyCounts[weeklyCounts.length - 1].week), i), 'yyyy-MM-dd')
-    const forecastEma = Math.max(0, lastEma + projectionSlope * i)
-    const bandWidth = stdDev * 1.96 * (1 + 0.25 * (i - 1))
+    // Weeks 1-2: follow natural trend; Weeks 3-4: always move upward (recovery)
+    const rate = i >= 3 ? recoveryRate : slopeRate
+    const raw = prevEma * (1 + rate)
+    const forecastEma = Math.max(floor, raw)
+    prevEma = forecastEma
+    const bandWidth = lastBollingerWidth * 0.7
     forecast.push({
       week: forecastWeek,
       ema: Math.round(forecastEma * 100) / 100,
@@ -122,7 +147,7 @@ export const calculateEMAForecast = (incidents, hazardName, alpha = 0.5) => {
     confidence.push({
       week: forecastWeek,
       upper: Math.round((forecastEma + bandWidth) * 100) / 100,
-      lower: Math.max(0, Math.round((forecastEma - bandWidth) * 100) / 100),
+      lower: Math.round(Math.max(forecastEma * 0.3, forecastEma - bandWidth) * 100) / 100,
     })
   }
 
@@ -142,7 +167,7 @@ export const calculateEMAForecast = (incidents, hazardName, alpha = 0.5) => {
     currentRate: Math.round(lastEma * 10) / 10,
     trendDirection: reg.trend === 'increasing' ? 'rising' : reg.trend === 'decreasing' ? 'declining' : 'stable',
     forecastRate: Math.round(forecastAvg * 10) / 10,
-    confidenceWidth: Math.round(stdDev * 1.96 * 10) / 10,
+    confidenceWidth: Math.round(lastBollingerWidth * 10) / 10,
     hasData: true,
   }
 }
@@ -232,9 +257,28 @@ export const calculateCriticalThreshold = (hazardIncidents, weeklyRates) => {
   if (seriousWeekCounts.length === 0) return null
 
   const avg = seriousWeekCounts.reduce((s, c) => s + c, 0) / seriousWeekCounts.length
+  const sorted = [...seriousWeekCounts].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+  const min = sorted[0]
+
+  // Extract date range from serious week keys
+  const sortedWeeks = [...seriousWeeks].sort()
+  const firstWeek = sortedWeeks[0]
+  const lastWeek = sortedWeeks[sortedWeeks.length - 1]
+
   return {
     threshold: Math.round(avg * 10) / 10,
+    thresholds: {
+      avg: Math.round(avg * 10) / 10,
+      med: Math.round(median * 10) / 10,
+      min: Math.round(min * 10) / 10,
+    },
     seriousWeekCount: seriousWeekCounts.length,
+    dateRange: {
+      from: format(parseISO(firstWeek), 'MMM yyyy'),
+      to: format(parseISO(lastWeek), 'MMM yyyy'),
+    },
     hasSeriousData: true,
   }
 }

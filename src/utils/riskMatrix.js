@@ -8,7 +8,7 @@ import { getSortedDates } from './incidentHelpers'
 
 // Maps incident type → impact severity level (1-5)
 export const CONSEQUENCE_TYPE_MAP = {
-  fatality: 5,
+  fatality: 4,
   lti: 3,
   fire: 4,
   mti: 2,
@@ -51,13 +51,18 @@ export const LIKELIHOOD_LABELS = [
   'Almost Certain',
 ]
 
-// Default thresholds (incidents per day) - ISO 31000 / AS/NZS 4360 aligned
-const DEFAULT_LIKELIHOOD_THRESHOLDS = [
-  { level: 5, min: 1.0 },    // Almost Certain: daily+
-  { level: 4, min: 0.2 },    // Likely: 1-6 per week
-  { level: 3, min: 0.033 },  // Possible: 1-6 per month
-  { level: 2, min: 0.008 },  // Unlikely: 1-3 per quarter
-  { level: 1, min: 0 },      // Rare: less than quarterly
+// Assessment period for Poisson probability calculation (1 year = standard operational HSE)
+export const ASSESSMENT_PERIOD_DAYS = 365
+
+// Likelihood probability thresholds — ISO 31000 / AS/NZS 4360 aligned
+// P(≥1 incident in assessment period) = 1 − e^(−λT)
+// where λ = observed rate (incidents/day), T = assessment period (days)
+export const LIKELIHOOD_PROBABILITY_THRESHOLDS = [
+  { level: 5, minProbability: 0.90, label: '>90%',    freqDesc: 'Multiple times per year' },
+  { level: 4, minProbability: 0.71, label: '71–90%',  freqDesc: 'Once every 1–2 years' },
+  { level: 3, minProbability: 0.31, label: '31–70%',  freqDesc: 'Once every 2–5 years' },
+  { level: 2, minProbability: 0.10, label: '10–30%',  freqDesc: 'Once every 5–10 years' },
+  { level: 1, minProbability: 0,    label: '<10%',     freqDesc: 'Once in 10+ years' },
 ]
 
 // ============================================================================
@@ -234,75 +239,59 @@ export const calculateConsequenceLevel = (incidents, referenceDate) => {
 }
 
 /**
- * Get adaptive thresholds when dataset is small (<90 days)
- * Uses percentile distribution of hazard rates
+ * Calculate the Poisson probability of at least 1 incident occurring
+ * within the assessment period, given the observed rate.
+ *
+ * Formula: P(≥1) = 1 − e^(−λT)
+ *   λ = negativeCount / totalDays  (observed rate, incidents per day)
+ *   T = ASSESSMENT_PERIOD_DAYS     (365 days = 1 year)
+ *
+ * @param {number} negativeCount - Number of negative incidents for this hazard
+ * @param {number} totalDays - Total calendar days in the dataset
+ * @returns {number} Probability 0–1
  */
-const getAdaptiveThresholds = (hazardRates) => {
-  if (!hazardRates.length) return DEFAULT_LIKELIHOOD_THRESHOLDS
-
-  const sorted = [...hazardRates].sort((a, b) => a - b)
-  const pct = (p) => sorted[Math.min(Math.floor(p * sorted.length), sorted.length - 1)]
-
-  return [
-    { level: 5, min: pct(0.8) },
-    { level: 4, min: pct(0.6) },
-    { level: 3, min: pct(0.4) },
-    { level: 2, min: pct(0.2) },
-    { level: 1, min: 0 },
-  ]
+export const calculatePoissonProbability = (negativeCount, totalDays) => {
+  if (totalDays <= 0 || negativeCount <= 0) return 0
+  const lambda = negativeCount / totalDays
+  return 1 - Math.exp(-lambda * ASSESSMENT_PERIOD_DAYS)
 }
 
 /**
- * Fix 5: Get blended thresholds for medium-sized datasets (30-90 days).
- * Linearly blends between adaptive (relative) and fixed (absolute) thresholds
- * so that rankings transition smoothly as dataset grows.
- * @param {Array} hazardRates - Array of rate values per hazard
- * @param {number} totalDays - Total days in the dataset
- * @returns {Array} Blended threshold array
- */
-export const getBlendedThresholds = (hazardRates, totalDays) => {
-  if (!hazardRates.length) return DEFAULT_LIKELIHOOD_THRESHOLDS
-  if (totalDays >= 90) return DEFAULT_LIKELIHOOD_THRESHOLDS
-  if (totalDays < 30) return getAdaptiveThresholds(hazardRates)
-
-  // Blend: at 30 days weight=0.33 (mostly adaptive), at 90 days weight=1.0 (fully fixed)
-  const weight = totalDays / 90
-  const adaptive = getAdaptiveThresholds(hazardRates)
-
-  return DEFAULT_LIKELIHOOD_THRESHOLDS.map((fixed, idx) => ({
-    level: fixed.level,
-    min: weight * fixed.min + (1 - weight) * adaptive[idx].min,
-  }))
-}
-
-/**
- * Calculate likelihood level for a hazard based on incident frequency.
- * Applies confidence caps for small sample sizes and short dataset spans
- * to prevent statistical noise from inflating likelihood.
+ * Calculate likelihood level for a hazard using Poisson probability.
+ *
+ * Maps the probability of at least 1 incident in the assessment period
+ * to the 5-level scale per ISO 31000 / AS/NZS 4360:
+ *   5 Almost Certain  >90%   Multiple times per year
+ *   4 Likely           71–90% Once every 1–2 years
+ *   3 Possible         31–70% Once every 2–5 years
+ *   2 Unlikely         10–30% Once every 5–10 years
+ *   1 Rare             <10%   Once in 10+ years
+ *
+ * Confidence caps prevent statistical noise from inflating small samples.
+ *
  * @param {number} negativeCount - Number of negative incidents for this hazard
  * @param {number} totalDays - Total days in the dataset
- * @param {Array} thresholds - Likelihood thresholds to use
  * @returns {number} Likelihood level 1-5
  */
-export const calculateLikelihoodLevel = (negativeCount, totalDays, thresholds) => {
+export const calculateLikelihoodLevel = (negativeCount, totalDays) => {
   if (totalDays <= 0 || negativeCount <= 0) return 1
-  const rate = negativeCount / totalDays
-  const levels = thresholds || DEFAULT_LIKELIHOOD_THRESHOLDS
+
+  const probability = calculatePoissonProbability(negativeCount, totalDays)
+
+  // Map probability to likelihood level (highest match first)
   let calculated = 1
-  for (const { level, min } of levels) {
-    if (rate >= min) {
+  for (const { level, minProbability } of LIKELIHOOD_PROBABILITY_THRESHOLDS) {
+    if (probability >= minProbability) {
       calculated = level
       break
     }
   }
 
-  // Fix 2: Minimum sample size guard
-  // Small incident counts are statistically unreliable for high likelihood
+  // Confidence cap: small sample sizes are statistically unreliable
   if (negativeCount < 3) calculated = Math.min(calculated, 2)       // <3 incidents → cap at Unlikely
   else if (negativeCount < 5) calculated = Math.min(calculated, 3)  // <5 incidents → cap at Possible
 
-  // Fix 3: Minimum dataset span guard
-  // Short observation windows inflate frequency rates
+  // Confidence cap: short observation windows inflate annualized rates
   if (totalDays < 14) calculated = Math.min(calculated, 2)       // <2 weeks → cap at Unlikely
   else if (totalDays < 30) calculated = Math.min(calculated, 3)  // <1 month → cap at Possible
 
@@ -321,20 +310,27 @@ export const calculateMatrixRiskScore = (likelihood, consequence) => {
 // ============================================================================
 
 /**
- * Calculate matrix placement for all hazards
+ * Calculate matrix placement for all hazards using Poisson probability.
+ *
+ * Each hazard gets:
+ *   - consequence: time-decayed worst severity (1-5)
+ *   - likelihood: Poisson probability mapped to ISO 31000 levels (1-5)
+ *   - riskScore: L × C (1-25)
+ *   - probability: raw P(≥1) over the assessment period (0-1)
+ *
  * @param {Array} allIncidents - All incidents in the dataset
  * @param {Array} sortedHazards - Hazards from getHazardTrendingByPeriod()
- * @returns {Object} { hazards: [...], thresholds, totalDays, isAdaptive }
+ * @returns {Object} { hazards: [...], thresholds, totalDays }
  */
 export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
   if (!allIncidents?.length || !sortedHazards?.length) {
-    return { hazards: [], thresholds: DEFAULT_LIKELIHOOD_THRESHOLDS, totalDays: 0, isAdaptive: false }
+    return { hazards: [], thresholds: LIKELIHOOD_PROBABILITY_THRESHOLDS, totalDays: 0 }
   }
 
   // Calculate total days in dataset
   const dates = getSortedDates(allIncidents)
   if (!dates.length) {
-    return { hazards: [], thresholds: DEFAULT_LIKELIHOOD_THRESHOLDS, totalDays: 0, isAdaptive: false }
+    return { hazards: [], thresholds: LIKELIHOOD_PROBABILITY_THRESHOLDS, totalDays: 0 }
   }
   const firstDate = new Date(dates[0])
   const lastDate = new Date(dates[dates.length - 1])
@@ -352,17 +348,6 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
     hazardIncidentMap.get(hazardName).push(incident)
   }
 
-  // Calculate rates for adaptive threshold check
-  const hazardRates = []
-  for (const [, incidents] of hazardIncidentMap) {
-    hazardRates.push(incidents.length / totalDays)
-  }
-
-  // Fix 5: Blended thresholds for datasets <90 days
-  // <30 days: fully adaptive, 30-90 days: blended, >=90 days: fixed
-  const isAdaptive = totalDays < 90
-  const thresholds = getBlendedThresholds(hazardRates, totalDays)
-
   // Calculate L x C for each hazard
   const hazards = sortedHazards
     .filter(h => !h.hasNoData && h.totalCount > 0)
@@ -370,11 +355,11 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
       const incidents = hazardIncidentMap.get(h.name) || []
       if (incidents.length === 0) return null
 
-      // Fix 4: Use only negative incidents for consequence (consistent with likelihood)
       const consequence = calculateConsequenceLevel(incidents, lastDate)
-      const likelihood = calculateLikelihoodLevel(incidents.length, totalDays, thresholds)
+      const likelihood = calculateLikelihoodLevel(incidents.length, totalDays)
       const riskScore = calculateMatrixRiskScore(likelihood, consequence)
       const rate = incidents.length / totalDays
+      const probability = calculatePoissonProbability(incidents.length, totalDays)
       const zone = getRiskZone(likelihood, consequence)
 
       return {
@@ -383,6 +368,7 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
         likelihood,
         riskScore,
         rate: Math.round(rate * 1000) / 1000,
+        probability: Math.round(probability * 1000) / 1000,
         zone,
         negativeCount: incidents.length,
         incidents,
@@ -391,5 +377,5 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
     .filter(Boolean)
     .sort((a, b) => b.riskScore - a.riskScore || b.negativeCount - a.negativeCount)
 
-  return { hazards, thresholds, totalDays, isAdaptive }
+  return { hazards, thresholds: LIKELIHOOD_PROBABILITY_THRESHOLDS, totalDays }
 }

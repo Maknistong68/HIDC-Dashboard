@@ -512,6 +512,27 @@ const CONSEQUENCE_PROTECTED_TYPES = new Set([
 // ============================================
 
 export const INCIDENT_RECLASSIFY_PATTERNS = {
+  'security': {
+    keywords: [
+      // Core security keywords
+      'theft', 'stolen', 'robbery', 'robbed', 'vandalism', 'vandalized',
+      'break-in', 'trespassing', 'unauthorized access', 'intruder',
+      'assault', 'attacked', 'threatened', 'security breach',
+      'missing property', 'confiscated', 'apprehended', 'burglary',
+      'pilferage', 'sabotage', 'forced entry', 'unauthorized entry',
+      'security violation', 'access violation', 'tailgating',
+      // Vandalism-related cut patterns (all tense variations)
+      'cable had been cut', 'cables had been cut',
+      'cable has been cut', 'cables have been cut',
+      'wire had been cut', 'wires had been cut',
+      'wire has been cut', 'wires have been cut',
+      'found to be cut', 'deliberately cut', 'intentionally cut',
+      'cable was cut', 'cables were cut',
+      'wire was cut', 'wires were cut',
+      'tampered', 'tampered with'
+    ],
+    priority: 1  // HIGHEST - security incidents must always be classified as security
+  },
   'env-minor': {
     keywords: [
       // Core environmental keywords
@@ -528,25 +549,7 @@ export const INCIDENT_RECLASSIFY_PATTERNS = {
       'wastewater', 'overflowed', 'ground contamination',
       'soil contaminated', 'environmental impact'
     ],
-    priority: 1  // HIGHEST - most specific category (defaults to env-minor, refined by Consequence column)
-  },
-  'security': {
-    keywords: [
-      // Core security keywords
-      'theft', 'stolen', 'robbery', 'robbed', 'vandalism', 'vandalized',
-      'break-in', 'trespassing', 'unauthorized access', 'intruder',
-      'assault', 'attacked', 'threatened', 'security breach',
-      'missing property', 'confiscated', 'apprehended', 'burglary',
-      'pilferage', 'sabotage', 'forced entry', 'unauthorized entry',
-      'security violation', 'access violation', 'tailgating',
-      // Vandalism-related cut patterns
-      'cable had been cut', 'cables had been cut',
-      'wire had been cut', 'wires had been cut',
-      'found to be cut', 'deliberately cut',
-      'cable was cut', 'cables were cut',
-      'wire was cut', 'wires were cut'
-    ],
-    priority: 2  // MEDIUM - specific category
+    priority: 2  // MEDIUM - environmental category
   },
   'dmg-light-vehicle': {
     keywords: [
@@ -870,9 +873,12 @@ const hasActualInjury = (text) => {
  * to correctly identify property-damage incidents that mention lack of injury.
  *
  * Priority order (most specific first):
- * 1. Environmental (spills, contamination) - priority 1
- * 2. Security (theft, vandalism, assault) - priority 2
+ * 1. Security (theft, vandalism, assault) - priority 1 (ALWAYS wins, even with injuries)
+ * 2. Environmental (spills, contamination) - priority 2
  * 3. Property-damage (collisions, damage) - priority 3 (generic fallback)
+ *
+ * Security is checked BEFORE the injury guard because security incidents (assaults,
+ * attacks, robberies) commonly involve injuries but should still be classified as security.
  *
  * @param {string} description - The incident description
  * @param {string} currentType - Current incident type
@@ -893,15 +899,35 @@ export const reclassifyIncidentType = (description, currentType) => {
 
   const text = description.toLowerCase()
 
-  // Check if description contains ACTUAL injury (not negated)
-  // This now correctly handles "cut" ambiguity (cables vs body parts)
+  // ── SECURITY CHECK FIRST ──────────────────────────────────────────────
+  // Security incidents (assaults, theft, vandalism) often involve injuries,
+  // so we check security keywords BEFORE the injury guard.
+  // If it matches security → return 'security' regardless of injury keywords.
+  const securityConfig = INCIDENT_RECLASSIFY_PATTERNS['security']
+  if (securityConfig) {
+    for (const keyword of securityConfig.keywords) {
+      if (text.includes(keyword.toLowerCase())) {
+        return 'security'
+      }
+    }
+  }
+
+  // Also check regex-based cut-object patterns (covers all tense variations)
+  // e.g., "cables have been cut", "discovered that the wire was cut", etc.
+  if (hasCutObjectReference(text) && !hasCutInjuryReference(text)) {
+    return 'security'
+  }
+
+  // ── INJURY GUARD ──────────────────────────────────────────────────────
+  // For non-security types, if there's an actual injury, keep the original type.
+  // This correctly handles "cut" ambiguity (cables vs body parts).
   if (hasActualInjury(text)) {
     return currentType // Keep as injury type - there was a real injury
   }
 
-  // Check for reclassification patterns (sorted by priority)
-  // Priority: 1=environmental, 2=security, 3=property-damage
+  // ── REMAINING PATTERNS (environmental, property-damage) ───────────────
   const sortedPatterns = Object.entries(INCIDENT_RECLASSIFY_PATTERNS)
+    .filter(([type]) => type !== 'security') // already checked above
     .sort((a, b) => a[1].priority - b[1].priority)
 
   for (const [newType, config] of sortedPatterns) {
@@ -2084,7 +2110,10 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     // Always categorize using the new 29-category system (eliminates "Others")
     // Pass existing category for normalization, falls back to description-based classification
     const classificationResult = categorizeHazardWithScores(description, rawHazardCategory, classificationMode)
-    const hazardCategory = classificationResult.category
+    let hazardCategory = classificationResult.category
+
+    // NOTE: Hazard category for security/environmental is forced AFTER final type
+    // resolution (see below, after consequence mapping)
 
     // Track hazard auto-classification (when original was blank or generic like "Other")
     const genericHazards = ['other', 'others', 'general', 'general safety', 'not specified', '']
@@ -2407,6 +2436,19 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       if (consequenceType) {
         mapping = { ...mapping, incidentType: consequenceType, consequenceMapped: true }
       }
+    }
+
+    // ============================================
+    // FORCE HAZARD CATEGORY FOR SECURITY & ENVIRONMENTAL
+    // After all type resolution is complete, ensure security/environmental incidents
+    // always appear under their correct hazard category, not a misleading one
+    // (e.g., "Breaking Ground & Excavation" for a sewage spill)
+    // ============================================
+    const finalType = mapping.incidentType
+    if (finalType === 'security') {
+      hazardCategory = 'Site Security'
+    } else if (finalType === 'environmental' || finalType === 'env-minor' || finalType === 'env-major') {
+      hazardCategory = 'Environmental'
     }
 
     incidents.push({

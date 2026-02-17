@@ -43,3 +43,11 @@ export { default as DataConfidenceFooter } from './DataConfidenceFooter'
 // Director Insights - Tab 2 components
 export { default as RiskHubView } from './RiskHubView'
 export { default as HazardRiskMatrix } from './HazardRiskMatrix'
+
+// Forecast intelligence + simulator
+export { default as ForecastIntelligencePanel } from './ForecastIntelligencePanel'
+export { default as ForecastSimulatorPanel } from './ForecastSimulatorPanel'
+
+// Predictive sub-tabs
+export { default as RiskTrendForecast } from './RiskTrendForecast'
+export { default as MonteCarloTab } from './MonteCarloTab'
