@@ -1,5 +1,7 @@
 import { isPositiveType } from './rootCauseEngine'
 import { getSortedDates } from './incidentHelpers'
+import { SEVERITY_WEIGHTS } from './calculations'
+import { SIGNIFICANT_HAZARDS, PYRAMID_SECTIONS } from './constants'
 
 // ============================================================================
 // IMPACT AXIS - "What is the worst that has happened?"
@@ -477,4 +479,159 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
     .sort((a, b) => b.riskScore - a.riskScore || b.negativeCount - a.negativeCount)
 
   return { hazards, thresholds: LIKELIHOOD_PROBABILITY_THRESHOLDS, totalDays }
+}
+
+// ============================================================================
+// PYRAMID RANKING — Weighted severity scoring for hazard prioritization
+// ============================================================================
+
+// Build a lookup: incident type → which PYRAMID_SECTIONS section it belongs to
+const TYPE_TO_SECTION = (() => {
+  const map = {}
+  for (const section of PYRAMID_SECTIONS) {
+    for (const t of section.types) {
+      map[t.key] = section.id
+    }
+  }
+  return map
+})()
+
+// Section IDs for grouping scores
+const SECTION_IDS = {
+  INJURY: 'incidents-hum',
+  ENV_PROP: 'incidents-env-dmg',
+  OBSERVATIONS: 'observations',
+}
+
+/**
+ * Calculate pyramid-weighted severity ranking for all hazards.
+ *
+ * Groups negative incidents by hazard, multiplies count × SEVERITY_WEIGHTS per type,
+ * and merges the L×C Risk Score from the risk matrix for combined ranking.
+ *
+ * Ranking order: riskScore (L×C, 1-25) first, then pyramidScore (weighted count) as tiebreaker.
+ * This ensures hazards that are both frequent AND severe rank highest.
+ *
+ * @param {Array} incidents - All incidents (positive types are filtered out internally)
+ * @param {Array} sortedHazards - Hazards from getHazardTrendingByPeriod() (for trend data)
+ * @param {Object} [matrixData] - Output from plotHazardsOnMatrix() with L×C risk scores
+ * @returns {Array<Object>} Ranked hazards with riskScore, pyramidScore, breakdown, sections, topContributor
+ */
+export const calculatePyramidRanking = (incidents, sortedHazards, matrixData) => {
+  if (!incidents?.length) return []
+
+  const significantSet = new Set(SIGNIFICANT_HAZARDS)
+
+  // Build trend lookup from sortedHazards
+  const trendMap = new Map()
+  if (sortedHazards?.length) {
+    for (const h of sortedHazards) {
+      trendMap.set(h.name, h.trendLevel)
+    }
+  }
+
+  // Build risk matrix lookup: hazard name → { riskScore, likelihood, consequence, zone }
+  const matrixMap = new Map()
+  if (matrixData?.hazards?.length) {
+    for (const h of matrixData.hazards) {
+      matrixMap.set(h.name, {
+        riskScore: h.riskScore,
+        likelihood: h.likelihood,
+        consequence: h.consequence,
+        zone: h.zone,
+      })
+    }
+  }
+
+  // Group negative incidents by hazard
+  const hazardMap = new Map()
+  for (const inc of incidents) {
+    const hazard = inc.location
+    if (!hazard) continue
+    if (isPositiveType(inc.type)) continue
+    if (!hazardMap.has(hazard)) hazardMap.set(hazard, [])
+    hazardMap.get(hazard).push(inc)
+  }
+
+  const results = []
+
+  for (const [name, hazardIncidents] of hazardMap) {
+    // Count by type and calculate weighted scores
+    const typeCounts = {}
+    let pyramidScore = 0
+
+    for (const inc of hazardIncidents) {
+      const type = inc.type?.toLowerCase()
+      if (!type) continue
+      if (!typeCounts[type]) typeCounts[type] = { count: 0, score: 0 }
+      const weight = SEVERITY_WEIGHTS[type] || SEVERITY_WEIGHTS.default
+      typeCounts[type].count += 1
+      typeCounts[type].score += weight
+      pyramidScore += weight
+    }
+
+    if (pyramidScore === 0) continue
+
+    // Build breakdown (per-type) and sections (grouped)
+    const breakdown = {}
+    const sections = {
+      [SECTION_IDS.INJURY]: 0,
+      [SECTION_IDS.ENV_PROP]: 0,
+      [SECTION_IDS.OBSERVATIONS]: 0,
+    }
+
+    let topType = null
+    let topScore = 0
+
+    for (const [type, data] of Object.entries(typeCounts)) {
+      breakdown[type] = { count: data.count, score: data.score }
+      const sectionId = TYPE_TO_SECTION[type]
+      if (sectionId && sections[sectionId] !== undefined) {
+        sections[sectionId] += data.score
+      }
+      if (data.score > topScore) {
+        topScore = data.score
+        topType = type
+      }
+    }
+
+    // Find display label for top contributor
+    let topLabel = topType
+    for (const section of PYRAMID_SECTIONS) {
+      const found = section.types.find(t => t.key === topType)
+      if (found) { topLabel = found.label; break }
+    }
+
+    // Merge risk matrix L×C data
+    const matrix = matrixMap.get(name) || { riskScore: 0, likelihood: 0, consequence: 0, zone: null }
+
+    results.push({
+      name,
+      riskScore: matrix.riskScore,
+      likelihood: matrix.likelihood,
+      consequence: matrix.consequence,
+      zone: matrix.zone,
+      pyramidScore,
+      rawCount: hazardIncidents.length,
+      isSignificant: significantSet.has(name),
+      trendLevel: trendMap.get(name) || null,
+      breakdown,
+      sections,
+      topContributor: {
+        type: topType,
+        label: topLabel,
+        percentage: Math.round((topScore / pyramidScore) * 100),
+      },
+    })
+  }
+
+  // Sort by riskScore (L×C) first, then pyramidScore as tiebreaker
+  results.sort((a, b) => b.riskScore - a.riskScore || b.pyramidScore - a.pyramidScore || b.rawCount - a.rawCount)
+
+  // Assign ranks
+  for (let i = 0; i < results.length; i++) {
+    results[i].rank = i + 1
+  }
+
+  return results
 }

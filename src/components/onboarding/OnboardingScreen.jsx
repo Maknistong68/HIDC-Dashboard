@@ -13,8 +13,7 @@ import {
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
 import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
-import { precomputeDashboardData } from '../../utils/dashboardPrecompute'
-import { getPrecomputeStatus, waitForPrecompute } from '../../utils/dashboardCache'
+import { precomputeAllData } from '../../utils/dashboardPrecompute'
 
 /**
  * OnboardingScreen - Full-page import UI for first-time users
@@ -321,15 +320,16 @@ const OnboardingScreen = () => {
       }
     }
 
-    // Single batch reload after all files - clears caches once + pre-warms worker
+    // Single batch reload after all files - clears caches once
     const records = await batchReloadIncidents()
 
-    // Fire off dashboard pre-computation in background
+    // Await full precompute (calculation gate) — blocks until ALL analytics complete
     if (records && records.length > 0) {
       setIsPreparingDashboard(true)
-      precomputeDashboardData(records, siteClassifications, (step, percent) => {
+      await precomputeAllData(records, siteClassifications, (step, percent) => {
         setPrepProgress({ step, percent })
-      }).finally(() => setIsPreparingDashboard(false))
+      })
+      setIsPreparingDashboard(false)
     }
 
     // Collect unique sites from all successfully imported records
@@ -355,13 +355,10 @@ const OnboardingScreen = () => {
   }, [addIncidentsWithFile, batchReloadIncidents, setIsImporting, setIsProcessingBatch, siteClassifications])
 
   // Handle Done button - reload data to trigger transition to main app
+  // Precompute is guaranteed complete by the time this button is clickable
   const handleDone = useCallback(async () => {
     setIsReloading(true)
     try {
-      // Wait for dashboard pre-computation to finish before transitioning
-      if (getPrecomputeStatus() === 'running') {
-        await waitForPrecompute()
-      }
       await reloadFiles({ silent: true })
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -703,39 +700,43 @@ const OnboardingScreen = () => {
                   </div>
                 )}
 
-                {/* Dashboard preparation progress */}
-                {isPreparingDashboard && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                      <span className="text-sm font-medium text-blue-700">
-                        Preparing Dashboard...
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden mb-1">
+                {/* Dashboard preparation progress - prominent gate UI */}
+                {isPreparingDashboard ? (
+                  <div className="mb-4 p-5 bg-gradient-to-br from-blue-50 to-primary-50 rounded-xl border border-blue-200 text-center">
+                    <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                    <h4 className="text-base font-semibold text-blue-800 mb-1">
+                      Preparing Your Dashboard
+                    </h4>
+                    <p className="text-xs text-blue-600 mb-3">
+                      Running analytics engine and computing risk models...
+                    </p>
+                    <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden mb-2">
                       <div
-                        className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-blue-500 to-primary-500 rounded-full transition-all duration-300"
                         style={{ width: `${prepProgress.percent}%` }}
                       />
                     </div>
-                    <p className="text-xs text-blue-600">{prepProgress.step}</p>
+                    <div className="flex items-center justify-between text-xs text-blue-600">
+                      <span>{prepProgress.step}</span>
+                      <span className="font-medium">{prepProgress.percent}%</span>
+                    </div>
                   </div>
+                ) : (
+                  <button
+                    onClick={handleDone}
+                    disabled={isReloading || isAssigning}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
+                  >
+                    {isReloading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Loading dashboard...
+                      </>
+                    ) : (
+                      'Go to Dashboard'
+                    )}
+                  </button>
                 )}
-
-                <button
-                  onClick={handleDone}
-                  disabled={isReloading || isAssigning}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
-                >
-                  {isReloading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Loading dashboard...
-                    </>
-                  ) : (
-                    'Go to Dashboard'
-                  )}
-                </button>
               </div>
             )}
           </div>

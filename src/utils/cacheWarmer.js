@@ -127,7 +127,7 @@ export function warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap,
 }
 
 export function warmInitialDashboardCaches(records) {
-  if (!records || records.length === 0) return
+  if (!records || records.length === 0) return []
 
   const PROACTIVE_SET = new Set(['positive', 'leadership', 'emergency-drill'])
 
@@ -147,11 +147,14 @@ export function warmInitialDashboardCaches(records) {
   const heatmap = wrHeatmap
 
   // Fire all 7 tasks immediately (no scheduleIdle - time-critical)
-  warmWorkerCache('aggregateFactors', heatmap, null)     // Dashboard factors
-  warmWorkerCache('aggregateFactors', filtered, null)     // Outlook factors
-  warmWorkerCache('hazardTrending', filtered, { period: null }) // Default period
-  warmWorkerCache('misclassification', filtered, null)
-  warmWorkerCache('textAnalysis', filtered, null)
-  warmWorkerCache('categorization', filtered, null)
-  warmWorkerCache('trendFlagged', filtered, null)
+  // Return promises so callers can await completion
+  return [
+    warmWorkerCache('aggregateFactors', heatmap, null),     // Dashboard factors
+    warmWorkerCache('aggregateFactors', filtered, null),     // Outlook factors
+    warmWorkerCache('hazardTrending', filtered, { period: null }), // Default period
+    warmWorkerCache('misclassification', filtered, null),
+    warmWorkerCache('textAnalysis', filtered, null),
+    warmWorkerCache('categorization', filtered, null),
+    warmWorkerCache('trendFlagged', filtered, null),
+  ]
 }

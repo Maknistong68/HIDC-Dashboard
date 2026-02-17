@@ -19,6 +19,8 @@ export const CACHE_KEYS = {
   TOP_HAZARDS: 'topHazards',
   HAZARDS_HEATMAP: 'hazardsHeatmap',
   SUBREGION_CONTRIBUTION: 'subregionContribution',
+  RISK_MATRIX: 'riskMatrix',
+  PYRAMID_RANKING: 'pyramidRanking',
 }
 
 /**

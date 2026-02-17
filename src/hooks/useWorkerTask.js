@@ -226,8 +226,8 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
  * @param {Object|null} params
  */
 export function warmWorkerCache(taskName, incidents, params) {
-  if (!incidents || incidents.length === 0) return
+  if (!incidents || incidents.length === 0) return Promise.resolve(null)
   const { promise } = postTask(taskName, incidents, params)
-  // Fire and forget - we don't need the result
-  promise.catch(() => {})
+  promise.catch(() => {}) // Suppress unhandled rejection
+  return promise
 }

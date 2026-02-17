@@ -49,3 +49,4 @@ export { default as ForecastSimulatorPanel } from './ForecastSimulatorPanel'
 
 // Predictive sub-tabs
 export { default as RiskTrendForecast } from './RiskTrendForecast'
+export { default as HazardPyramidRanking } from './HazardPyramidRanking'

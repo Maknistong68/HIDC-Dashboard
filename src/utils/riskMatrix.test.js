@@ -8,6 +8,7 @@ import {
   getRiskZone,
   getDescriptionSeveritySignal,
   countRecentFatalities,
+  calculatePyramidRanking,
   ASSESSMENT_PERIOD_DAYS,
   LIKELIHOOD_PROBABILITY_THRESHOLDS,
   CONSEQUENCE_TYPE_MAP,
@@ -627,5 +628,162 @@ describe('ISO 31000 Standard Alignment', () => {
     // 6 incidents over 730 days → P = 1-e^(-3) ≈ 95.0%
     const p = calculatePoissonProbability(6, 730)
     expect(p).toBeGreaterThanOrEqual(0.90)
+  })
+})
+
+// ============================================================================
+// Pyramid Ranking — weighted severity scoring
+// ============================================================================
+
+describe('calculatePyramidRanking', () => {
+  const makeInc = (location, type) => ({
+    location,
+    type,
+    date: '2026-01-15',
+    description: '',
+  })
+
+  it('returns empty array for null/empty inputs', () => {
+    expect(calculatePyramidRanking(null, [])).toEqual([])
+    expect(calculatePyramidRanking([], [])).toEqual([])
+    expect(calculatePyramidRanking(undefined, undefined)).toEqual([])
+  })
+
+  it('ranks a fatality-only hazard above a near-miss-only hazard', () => {
+    const incidents = [
+      makeInc('Hazard A', 'fatality'),
+      ...Array.from({ length: 50 }, () => makeInc('Hazard B', 'near-miss')),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result.length).toBe(2)
+    // Fatality = 10,000 vs 50 near-misses × 50 = 2,500
+    expect(result[0].name).toBe('Hazard A')
+    expect(result[0].pyramidScore).toBe(10000)
+    expect(result[1].name).toBe('Hazard B')
+    expect(result[1].pyramidScore).toBe(2500)
+  })
+
+  it('breakdown scores sum to pyramidScore', () => {
+    const incidents = [
+      makeInc('Lifting', 'lti'),
+      makeInc('Lifting', 'mti'),
+      makeInc('Lifting', 'near-miss'),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result.length).toBe(1)
+    const h = result[0]
+    const breakdownSum = Object.values(h.breakdown).reduce((s, b) => s + b.score, 0)
+    expect(breakdownSum).toBe(h.pyramidScore)
+    // lti=1000 + mti=500 + near-miss=50 = 1550
+    expect(h.pyramidScore).toBe(1550)
+  })
+
+  it('sorts descending by pyramidScore and assigns ranks', () => {
+    const incidents = [
+      makeInc('Low', 'near-miss'),
+      makeInc('High', 'fatality'),
+      makeInc('Mid', 'lti'),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result.map(r => r.name)).toEqual(['High', 'Mid', 'Low'])
+    expect(result.map(r => r.rank)).toEqual([1, 2, 3])
+  })
+
+  it('identifies significant hazards', () => {
+    const incidents = [
+      makeInc('Working at Height', 'lti'),
+      makeInc('Some Other Hazard', 'lti'),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    const wah = result.find(r => r.name === 'Working at Height')
+    const other = result.find(r => r.name === 'Some Other Hazard')
+    expect(wah.isSignificant).toBe(true)
+    expect(other.isSignificant).toBe(false)
+  })
+
+  it('calculates topContributor correctly', () => {
+    const incidents = [
+      makeInc('Fire', 'fatality'),
+      makeInc('Fire', 'near-miss'),
+      makeInc('Fire', 'near-miss'),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result[0].topContributor.type).toBe('fatality')
+    // fatality=10000, near-miss×2=100, total=10100 → ~99%
+    expect(result[0].topContributor.percentage).toBe(99)
+  })
+
+  it('filters out positive types', () => {
+    const incidents = [
+      makeInc('Test', 'positive'),
+      makeInc('Test', 'Good Catch'),
+      makeInc('Test', 'near-miss'),
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result.length).toBe(1)
+    expect(result[0].rawCount).toBe(1) // only the near-miss
+  })
+
+  it('populates sections correctly', () => {
+    const incidents = [
+      makeInc('H1', 'lti'),           // injury section
+      makeInc('H1', 'environmental'),  // env/prop section
+      makeInc('H1', 'near-miss'),      // observations section
+    ]
+    const result = calculatePyramidRanking(incidents, [])
+    const h = result[0]
+    expect(h.sections['incidents-hum']).toBe(1000)       // lti
+    expect(h.sections['incidents-env-dmg']).toBe(200)    // environmental
+    expect(h.sections['observations']).toBe(50)           // near-miss
+  })
+
+  it('merges risk matrix L×C scores when matrixData provided', () => {
+    const incidents = [
+      makeInc('Hazard A', 'lti'),
+      makeInc('Hazard B', 'near-miss'),
+    ]
+    const matrixData = {
+      hazards: [
+        { name: 'Hazard A', riskScore: 15, likelihood: 5, consequence: 3, zone: { level: 'high', label: 'High' } },
+        { name: 'Hazard B', riskScore: 5, likelihood: 5, consequence: 1, zone: { level: 'medium', label: 'Medium' } },
+      ]
+    }
+    const result = calculatePyramidRanking(incidents, [], matrixData)
+    expect(result[0].name).toBe('Hazard A')
+    expect(result[0].riskScore).toBe(15)
+    expect(result[0].likelihood).toBe(5)
+    expect(result[0].consequence).toBe(3)
+    expect(result[0].zone.label).toBe('High')
+    expect(result[1].riskScore).toBe(5)
+  })
+
+  it('sorts by riskScore first, then pyramidScore as tiebreaker', () => {
+    // Hazard A: low weighted score but high L×C risk
+    // Hazard B: high weighted score but low L×C risk
+    const incidents = [
+      makeInc('Low Weight High Risk', 'near-miss'),
+      makeInc('High Weight Low Risk', 'fatality'),
+    ]
+    const matrixData = {
+      hazards: [
+        { name: 'Low Weight High Risk', riskScore: 20, likelihood: 5, consequence: 4, zone: { level: 'veryHigh' } },
+        { name: 'High Weight Low Risk', riskScore: 3, likelihood: 1, consequence: 3, zone: { level: 'low' } },
+      ]
+    }
+    const result = calculatePyramidRanking(incidents, [], matrixData)
+    // riskScore 20 > 3, so Low Weight ranks first despite lower pyramidScore
+    expect(result[0].name).toBe('Low Weight High Risk')
+    expect(result[0].riskScore).toBe(20)
+    expect(result[1].name).toBe('High Weight Low Risk')
+    expect(result[1].pyramidScore).toBe(10000) // fatality, but lower L×C
+  })
+
+  it('defaults riskScore to 0 when no matrixData provided', () => {
+    const incidents = [makeInc('Test', 'lti')]
+    const result = calculatePyramidRanking(incidents, [])
+    expect(result[0].riskScore).toBe(0)
+    expect(result[0].likelihood).toBe(0)
+    expect(result[0].consequence).toBe(0)
+    expect(result[0].zone).toBeNull()
   })
 })

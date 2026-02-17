@@ -1,11 +1,11 @@
 import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
-import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp, BarChart3 } from 'lucide-react'
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast, HazardPyramidRanking } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -13,6 +13,7 @@ import { getHazardDailyData, forecastIncidents } from '../utils/insightsCalculat
 import { isPositiveType } from '../utils/rootCauseEngine'
 import { MethodologyExplorerModal } from '../components/methodology'
 import { plotHazardsOnMatrix } from '../utils/riskMatrix'
+import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -113,6 +114,7 @@ const MAIN_TABS = [
 const PREDICTIVE_SUB_TABS = [
   { id: 'smsa', label: 'Risk Matrix', icon: Shield },
   { id: 'trend-forecast', label: 'Risk Trend', icon: TrendingUp },
+  { id: 'pyramid-rank', label: 'Hazard Ranking', icon: BarChart3 },
 ]
 
 /**
@@ -223,7 +225,10 @@ const SafetyOutlook = () => {
   }, [filteredIncidents])
 
   // Lifted matrixData for both HazardRiskMatrix and Methodology Guide
+  // Cache-first: uses precomputed result from calculation gate if available
   const matrixData = useDeferredMemo(() => {
+    const cached = getCached(CACHE_KEYS.RISK_MATRIX, filteredIncidents)
+    if (cached) return cached
     return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
   }, [filteredIncidents, sortedHazards])
 
@@ -638,6 +643,15 @@ const SafetyOutlook = () => {
                 sortedHazards={sortedHazards}
                 factorData={factorData}
                 negativeIncidents={negativeIncidents}
+              />
+            )}
+            {activePredictiveSubTab === 'pyramid-rank' && (
+              <HazardPyramidRanking
+                filteredIncidents={filteredIncidents}
+                sortedHazards={sortedHazards}
+                negativeIncidents={negativeIncidents}
+                period={period}
+                matrixData={matrixData}
               />
             )}
           </div>

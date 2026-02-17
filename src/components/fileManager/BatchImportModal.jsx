@@ -12,7 +12,7 @@ import { parseExcelFileAsync } from '../../utils/excelParserAsync'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
 import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
-import { precomputeDashboardData } from '../../utils/dashboardPrecompute'
+import { precomputeAllData } from '../../utils/dashboardPrecompute'
 
 /**
  * BatchImportModal - Import multiple files at once with GUARANTEED completion
@@ -44,6 +44,8 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
   const [unassignedSites, setUnassignedSites] = useState([])
   const [assignedRegion, setAssignedRegion] = useState(null)
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isPreparingDashboard, setIsPreparingDashboard] = useState(false)
+  const [prepProgress, setPrepProgress] = useState({ step: '', percent: 0 })
 
   const fileInputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -323,9 +325,13 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     updateProcessingDetails({ step: 'Finalizing import...', progress: 100 })
     const records = await batchReloadIncidents()
 
-    // Fire-and-forget dashboard pre-computation for instant navigation
+    // Await full precompute (calculation gate) — blocks until ALL analytics complete
     if (records && records.length > 0) {
-      precomputeDashboardData(records, siteClassifications, () => {}).catch(() => {})
+      setIsPreparingDashboard(true)
+      await precomputeAllData(records, siteClassifications, (step, percent) => {
+        setPrepProgress({ step, percent })
+      })
+      setIsPreparingDashboard(false)
     }
 
     // Now mark complete
@@ -793,6 +799,26 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
         )}
       </div>
 
+      {/* Dashboard preparation progress */}
+      {isPreparingDashboard && (
+        <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-primary-50 border-t border-blue-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <span className="text-sm font-medium text-blue-700">
+              Preparing Dashboard...
+            </span>
+            <span className="ml-auto text-xs font-medium text-blue-600">{prepProgress.percent}%</span>
+          </div>
+          <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden mb-1">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-primary-500 rounded-full transition-all duration-300"
+              style={{ width: `${prepProgress.percent}%` }}
+            />
+          </div>
+          <p className="text-xs text-blue-600">{prepProgress.step}</p>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 p-4 border-t border-surface-200 bg-surface-50 rounded-b-xl">
         {!isComplete ? (
@@ -825,7 +851,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
         ) : (
           <button
             onClick={handleDone}
-            disabled={isReloading}
+            disabled={isReloading || isPreparingDashboard}
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
           >
             {isReloading ? (

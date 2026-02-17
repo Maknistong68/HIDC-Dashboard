@@ -339,20 +339,12 @@ export const DataProvider = ({ children }) => {
   // Must be synchronous (no startTransition) so setIncidents commits before
   // handleDone() calls setIsProcessingBatch(false), otherwise App.jsx guard
   // sees incidents.length=0 + isProcessingBatch=false and shows empty Layout
+  // NOTE: Worker warming is now handled by precomputeAllData() in the calculation gate
   const batchReloadIncidents = useCallback(async () => {
     clearDataCaches()
     const records = await getAllRecords()
     const validRecords = Array.isArray(records) ? records : []
     setIncidents(validRecords)
-
-    // Pre-warm worker caches so dashboard renders instantly when user navigates
-    // Dynamic import avoids adding cacheWarmer to DataContext's initial bundle
-    if (validRecords.length > 0) {
-      import('../utils/cacheWarmer').then(({ warmInitialDashboardCaches }) => {
-        warmInitialDashboardCaches(validRecords)
-      }).catch(() => {})
-    }
-
     return validRecords
   }, [])
 
