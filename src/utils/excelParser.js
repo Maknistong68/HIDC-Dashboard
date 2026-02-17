@@ -269,12 +269,14 @@ export const mapExcelColumns = (headers) => {
  * Footer metadata patterns - rows appended by export system
  * that should be stripped before parsing data rows.
  */
-const FOOTER_MARKER_PATTERNS = [
+export const FOOTER_MARKER_PATTERNS = [
   /^\s*information\s*$/i,
   /this report has been generated/i,
   /search criteria/i,
   /query builder/i,
   /end of report/i,
+  /unable to display/i,
+  /please use extraction/i,
 ]
 
 /**
@@ -282,20 +284,26 @@ const FOOTER_MARKER_PATTERNS = [
  * Scans backwards from the end for efficiency since footer is always at the tail.
  * Returns the index of the first footer row, or -1 if none found.
  */
-function detectFooterStart(rows) {
+export function detectFooterStart(rows) {
   let footerStart = -1
 
   for (let i = rows.length - 1; i >= 0; i--) {
     const row = rows[i]
-    // Get the first non-empty cell's text
-    const text = row
-      ?.find(cell => cell !== null && cell !== undefined && cell !== '')
-      ?.toString()
-      ?.trim()
+    // Collect all non-empty cell texts from the row
+    const cellTexts = []
+    if (row) {
+      for (const cell of row) {
+        if (cell !== null && cell !== undefined && cell !== '') {
+          cellTexts.push(cell.toString().trim())
+        }
+      }
+    }
 
-    if (!text) continue // skip fully-empty rows between footer lines
+    if (cellTexts.length === 0) continue // skip fully-empty rows between footer lines
 
-    const isFooter = FOOTER_MARKER_PATTERNS.some(pattern => pattern.test(text))
+    const isFooter = cellTexts.some(text =>
+      FOOTER_MARKER_PATTERNS.some(pattern => pattern.test(text))
+    )
     if (isFooter) {
       footerStart = i
     } else {

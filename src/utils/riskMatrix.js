@@ -33,6 +33,80 @@ export const CONSEQUENCE_TYPE_MAP = {
   'unsafe-condition': 1,
 }
 
+// Description-based severity signals — phrases from the NEOM Hazard Impact Table
+// Each entry: { phrases: string[], minSeverity: number, bypassMaxBoost: boolean }
+// bypassMaxBoost=true means the phrase can jump directly to its level (level 5 only)
+// bypassMaxBoost=false means the phrase is capped at +1 above the type severity
+export const DESCRIPTION_SEVERITY_SIGNALS = [
+  {
+    minSeverity: 5,
+    bypassMaxBoost: true,
+    phrases: ['multiple fatalities', 'multiple deaths', 'several fatalities', 'mass casualty'],
+  },
+  {
+    minSeverity: 4,
+    bypassMaxBoost: false,
+    phrases: [
+      'permanent disability', 'amputation', 'paralysis',
+      'complete shutdown', 'stop work order', 'license suspended',
+    ],
+  },
+  {
+    minSeverity: 3,
+    bypassMaxBoost: false,
+    phrases: ['hospitalized', 'hospitalization', 'admitted to hospital', 'intensive care'],
+  },
+]
+
+/**
+ * Scan description text for severity-indicating phrases.
+ * Returns the highest matching signal or null.
+ * @param {string} description - Incident description text
+ * @returns {{ minSeverity: number, bypassMaxBoost: boolean } | null}
+ */
+export const getDescriptionSeveritySignal = (description) => {
+  if (!description || typeof description !== 'string') return null
+  const text = description.toLowerCase()
+  for (const signal of DESCRIPTION_SEVERITY_SIGNALS) {
+    for (const phrase of signal.phrases) {
+      if (text.includes(phrase)) {
+        return { minSeverity: signal.minSeverity, bypassMaxBoost: signal.bypassMaxBoost }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Count fatality-type incidents with time-decay weight >= 0.6 (within ~6 months).
+ * Used for the multiple-fatalities override to reach consequence level 5.
+ * @param {Array} incidents - Incidents for this hazard
+ * @param {Date} referenceDate - Date to measure recency from
+ * @returns {number} Count of recent fatalities
+ */
+export const countRecentFatalities = (incidents, referenceDate) => {
+  if (!incidents?.length) return 0
+  const now = referenceDate || new Date()
+  let count = 0
+  for (const incident of incidents) {
+    const type = incident.type?.toLowerCase()
+    if (type !== 'fatality') continue
+    const incDate = incident.date ? new Date(incident.date) : null
+    let weight = 1.0
+    if (incDate && !isNaN(incDate)) {
+      const daysAgo = Math.max(0, (now - incDate) / (1000 * 60 * 60 * 24))
+      for (const band of CONSEQUENCE_DECAY_BANDS) {
+        if (daysAgo <= band.maxDaysAgo) {
+          weight = band.weight
+          break
+        }
+      }
+    }
+    if (weight >= 0.6) count++
+  }
+  return count
+}
+
 export const CONSEQUENCE_LABELS = [
   '', // index 0 unused
   'Very Low',
@@ -200,8 +274,14 @@ const CONSEQUENCE_DECAY_BANDS = [
 ]
 
 /**
- * Calculate consequence level for a hazard using time-decayed worst severity.
- * Instead of a permanent max, recent severe incidents weigh more than old ones.
+ * Calculate consequence level for a hazard using time-decayed worst severity,
+ * enhanced with description-based severity signals from the NEOM Hazard Impact Table.
+ *
+ * Three paths (in order):
+ *   A) Multiple recent fatalities (≥2 within ~6 months) → level 5 immediately
+ *   B) Per-incident: type severity + description boost (capped at +1, unless bypassMaxBoost)
+ *   C) Time decay still applies to boosted severity
+ *
  * @param {Array} incidents - Negative incidents for this hazard
  * @param {Date} [referenceDate] - Date to measure recency from (defaults to now)
  * @returns {number} Consequence level 1-5
@@ -209,15 +289,34 @@ const CONSEQUENCE_DECAY_BANDS = [
 export const calculateConsequenceLevel = (incidents, referenceDate) => {
   if (!incidents?.length) return 1
   const now = referenceDate || new Date()
+
+  // Path A: Multiple recent fatalities → level 5 (complete shutdown scenario)
+  if (countRecentFatalities(incidents, now) >= 2) return 5
+
+  // Path B + C: Per-incident type + description boost with time decay
   let maxWeighted = 0
 
   for (const incident of incidents) {
     const type = incident.type?.toLowerCase()
     if (!type) continue
-    const severity = CONSEQUENCE_TYPE_MAP[type] || 0
-    if (severity === 0) continue
+    const typeSeverity = CONSEQUENCE_TYPE_MAP[type] || 0
+    if (typeSeverity === 0) continue
 
-    // Calculate days ago for this incident
+    // Check description for severity-indicating phrases
+    const descSignal = getDescriptionSeveritySignal(incident.description)
+    let effectiveSeverity = typeSeverity
+
+    if (descSignal) {
+      if (descSignal.bypassMaxBoost) {
+        // Level 5 phrases (e.g. "multiple fatalities") can jump directly
+        effectiveSeverity = Math.max(typeSeverity, descSignal.minSeverity)
+      } else {
+        // Conservative +1 cap: boost at most 1 level above type severity
+        effectiveSeverity = Math.max(typeSeverity, Math.min(typeSeverity + 1, descSignal.minSeverity))
+      }
+    }
+
+    // Calculate time-decay weight
     const incDate = incident.date ? new Date(incident.date) : null
     let weight = 1.0
     if (incDate && !isNaN(incDate)) {
@@ -231,11 +330,11 @@ export const calculateConsequenceLevel = (incidents, referenceDate) => {
     }
     // No valid date → full weight (conservative: treat as recent)
 
-    const weighted = severity * weight
+    const weighted = effectiveSeverity * weight
     if (weighted > maxWeighted) maxWeighted = weighted
   }
 
-  return Math.max(1, Math.round(maxWeighted))
+  return Math.max(1, Math.min(5, Math.round(maxWeighted)))
 }
 
 /**

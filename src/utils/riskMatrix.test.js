@@ -6,9 +6,12 @@ import {
   calculateMatrixRiskScore,
   plotHazardsOnMatrix,
   getRiskZone,
+  getDescriptionSeveritySignal,
+  countRecentFatalities,
   ASSESSMENT_PERIOD_DAYS,
   LIKELIHOOD_PROBABILITY_THRESHOLDS,
   CONSEQUENCE_TYPE_MAP,
+  DESCRIPTION_SEVERITY_SIGNALS,
 } from './riskMatrix'
 
 // ============================================================================
@@ -204,7 +207,7 @@ describe('calculateConsequenceLevel', () => {
   })
 
   it('decays old fatality (>1 year) to level 1', () => {
-    // Fatality severity=5, weight=0.1 for >1yr → 5×0.1 = 0.5 → rounds to 1
+    // Fatality severity=4, weight=0.1 for >1yr → 4×0.1 = 0.4 → rounds to 1
     const incidents = [{ type: 'fatality', date: '2024-01-01' }]
     expect(calculateConsequenceLevel(incidents, today)).toBe(1)
   })
@@ -227,6 +230,214 @@ describe('calculateConsequenceLevel', () => {
   it('treats missing date as recent (full weight)', () => {
     const incidents = [{ type: 'fire' }] // no date
     expect(calculateConsequenceLevel(incidents, today)).toBe(4)
+  })
+})
+
+// ============================================================================
+// Description Severity Signal — keyword detection
+// ============================================================================
+
+describe('getDescriptionSeveritySignal', () => {
+  it('returns null for empty/missing description', () => {
+    expect(getDescriptionSeveritySignal(null)).toBeNull()
+    expect(getDescriptionSeveritySignal(undefined)).toBeNull()
+    expect(getDescriptionSeveritySignal('')).toBeNull()
+  })
+
+  it('returns null when no keywords match', () => {
+    expect(getDescriptionSeveritySignal('Worker tripped on cable')).toBeNull()
+  })
+
+  it('detects level 5 phrases (multiple fatalities)', () => {
+    const signal = getDescriptionSeveritySignal('Multiple fatalities reported at site')
+    expect(signal.minSeverity).toBe(5)
+    expect(signal.bypassMaxBoost).toBe(true)
+  })
+
+  it('detects level 4 phrases (permanent disability)', () => {
+    const signal = getDescriptionSeveritySignal('Worker suffered permanent disability')
+    expect(signal.minSeverity).toBe(4)
+    expect(signal.bypassMaxBoost).toBe(false)
+  })
+
+  it('detects level 3 phrases (hospitalized)', () => {
+    const signal = getDescriptionSeveritySignal('Worker was hospitalized after fall')
+    expect(signal.minSeverity).toBe(3)
+    expect(signal.bypassMaxBoost).toBe(false)
+  })
+
+  it('returns highest match when multiple phrases present', () => {
+    const signal = getDescriptionSeveritySignal('Hospitalized with permanent disability')
+    // Level 4 (permanent disability) is checked before level 3 (hospitalized)
+    expect(signal.minSeverity).toBe(4)
+  })
+
+  it('is case insensitive', () => {
+    expect(getDescriptionSeveritySignal('HOSPITALIZED')).not.toBeNull()
+    expect(getDescriptionSeveritySignal('Multiple Fatalities')).not.toBeNull()
+  })
+})
+
+// ============================================================================
+// countRecentFatalities — multiple fatalities detection
+// ============================================================================
+
+describe('countRecentFatalities', () => {
+  const today = new Date('2026-02-16')
+
+  it('returns 0 for empty incidents', () => {
+    expect(countRecentFatalities([], today)).toBe(0)
+    expect(countRecentFatalities(null, today)).toBe(0)
+  })
+
+  it('counts recent fatalities (within 6 months)', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-01-15' },
+      { type: 'fatality', date: '2026-02-01' },
+    ]
+    expect(countRecentFatalities(incidents, today)).toBe(2)
+  })
+
+  it('excludes old fatalities (>6 months, weight < 0.6)', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-02-01' }, // recent → weight 1.0
+      { type: 'fatality', date: '2025-01-01' }, // >1 year → weight 0.1
+    ]
+    expect(countRecentFatalities(incidents, today)).toBe(1)
+  })
+
+  it('ignores non-fatality types', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-02-01' },
+      { type: 'lti', date: '2026-02-01' },
+      { type: 'mti', date: '2026-02-01' },
+    ]
+    expect(countRecentFatalities(incidents, today)).toBe(1)
+  })
+
+  it('treats missing date as recent', () => {
+    const incidents = [
+      { type: 'fatality' },
+      { type: 'fatality' },
+    ]
+    expect(countRecentFatalities(incidents, today)).toBe(2)
+  })
+})
+
+// ============================================================================
+// Consequence Level — description-based severity boost
+// ============================================================================
+
+describe('calculateConsequenceLevel — description boost', () => {
+  const today = new Date('2026-02-16')
+
+  it('returns 5 for 2+ recent fatalities (Path A)', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-01-15' },
+      { type: 'fatality', date: '2026-02-01' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBe(5)
+  })
+
+  it('returns 5 for description containing "multiple fatalities" (bypass)', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-02-01', description: 'Multiple fatalities at worksite' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBe(5)
+  })
+
+  it('does not return 5 for old fatalities even if multiple', () => {
+    const incidents = [
+      { type: 'fatality', date: '2024-06-01' }, // >1 year → weight 0.1
+      { type: 'fatality', date: '2024-07-01' }, // >1 year → weight 0.1
+    ]
+    // countRecentFatalities = 0, each: severity 4 × 0.1 = 0.4 → rounds to 1
+    expect(calculateConsequenceLevel(incidents, today)).toBe(1)
+  })
+
+  it('boosts MTI + "hospitalized" to level 3 (+1 cap)', () => {
+    const incidents = [
+      { type: 'mti', date: '2026-02-01', description: 'Worker was hospitalized after fall' },
+    ]
+    // MTI = 2, hospitalized signal = 3, min(2+1, 3) = 3
+    expect(calculateConsequenceLevel(incidents, today)).toBe(3)
+  })
+
+  it('boosts LTI + "permanent disability" to level 4 (+1 cap)', () => {
+    const incidents = [
+      { type: 'lti', date: '2026-02-01', description: 'Worker suffered permanent disability' },
+    ]
+    // LTI = 3, permanent disability signal = 4, min(3+1, 4) = 4
+    expect(calculateConsequenceLevel(incidents, today)).toBe(4)
+  })
+
+  it('caps near-miss + high severity keyword to +1 only (no inflation)', () => {
+    const incidents = [
+      { type: 'near-miss', date: '2026-02-01', description: 'Near miss but worker had permanent disability from previous' },
+    ]
+    // near-miss = 1, permanent disability signal = 4, min(1+1, 4) = 2
+    expect(calculateConsequenceLevel(incidents, today)).toBe(2)
+  })
+
+  it('caps near-miss + "hospitalized" to +1 only', () => {
+    const incidents = [
+      { type: 'near-miss', date: '2026-02-01', description: 'Worker nearly hospitalized' },
+    ]
+    // near-miss = 1, hospitalized signal = 3, min(1+1, 3) = 2
+    expect(calculateConsequenceLevel(incidents, today)).toBe(2)
+  })
+
+  it('does not boost when no description present (unchanged behavior)', () => {
+    const incidents = [
+      { type: 'mti', date: '2026-02-01' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBe(2)
+  })
+
+  it('does not boost when description has no keywords', () => {
+    const incidents = [
+      { type: 'mti', date: '2026-02-01', description: 'Worker twisted ankle on uneven ground' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBe(2)
+  })
+
+  it('applies time decay to boosted severity', () => {
+    const incidents = [
+      { type: 'mti', date: '2025-06-01', description: 'Worker was hospitalized' },
+    ]
+    // MTI=2, boosted to 3, but 8+ months old → weight 0.3
+    // 3 × 0.3 = 0.9 → rounds to 1
+    expect(calculateConsequenceLevel(incidents, today)).toBe(1)
+  })
+
+  it('boosts MTI + "amputation" to level 3 (+1 cap)', () => {
+    const incidents = [
+      { type: 'mti', date: '2026-02-01', description: 'Worker suffered amputation of finger' },
+    ]
+    // MTI = 2, amputation signal = 4, min(2+1, 4) = 3
+    expect(calculateConsequenceLevel(incidents, today)).toBe(3)
+  })
+
+  it('boosts FAC + "intensive care" to level 3 (+1 cap)', () => {
+    const incidents = [
+      { type: 'fac', date: '2026-02-01', description: 'Worker taken to intensive care unit' },
+    ]
+    // FAC = 2, intensive care signal = 3, min(2+1, 3) = 3
+    expect(calculateConsequenceLevel(incidents, today)).toBe(3)
+  })
+
+  it('single fatality without keywords stays at 4 (not 5)', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-02-01', description: 'Worker fell from height' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBe(4)
+  })
+
+  it('result never exceeds 5', () => {
+    const incidents = [
+      { type: 'fatality', date: '2026-02-01', description: 'Multiple fatalities reported' },
+    ]
+    expect(calculateConsequenceLevel(incidents, today)).toBeLessThanOrEqual(5)
   })
 })
 

@@ -10,39 +10,13 @@
 // (these are lightweight string operations, fine on main thread)
 import {
   EXPECTED_COLUMNS,
+  FOOTER_MARKER_PATTERNS,
+  detectFooterStart,
 } from './excelParser'
-
-// Footer marker patterns (duplicated here to avoid importing private function)
-const FOOTER_MARKER_PATTERNS = [
-  /^\s*information\s*$/i,
-  /this report has been generated/i,
-  /search criteria/i,
-  /query builder/i,
-  /end of report/i,
-]
 
 const normalizeHeader = (h) => {
   if (!h) return ''
   return h.toString().toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-}
-
-function detectFooterStart(rows) {
-  let footerStart = -1
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const row = rows[i]
-    const text = row
-      ?.find(cell => cell !== null && cell !== undefined && cell !== '')
-      ?.toString()
-      ?.trim()
-    if (!text) continue
-    const isFooter = FOOTER_MARKER_PATTERNS.some(pattern => pattern.test(text))
-    if (isFooter) {
-      footerStart = i
-    } else {
-      break
-    }
-  }
-  return footerStart
 }
 
 function detectHeaderRow(rows, maxRowsToCheck = 15) {
