@@ -1,16 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { Layers, ChevronRight, AlertTriangle } from 'lucide-react'
-
-/**
- * Get color based on count for the badge
- */
-const getCountColor = (count, maxCount) => {
-  const ratio = maxCount > 0 ? count / maxCount : 0
-  if (ratio > 0.7) return { bg: 'bg-red-500', text: 'text-white' }
-  if (ratio > 0.4) return { bg: 'bg-amber-500', text: 'text-white' }
-  if (ratio > 0.2) return { bg: 'bg-blue-500', text: 'text-white' }
-  return { bg: 'bg-surface-400', text: 'text-white' }
-}
+import { AlertTriangle } from 'lucide-react'
 
 /**
  * DetectionRatioCard - Shows total observations vs detected ratio
@@ -95,73 +84,44 @@ const DetectionRatioCard = React.memo(({ totalIncidents, detectedCount, factors 
 DetectionRatioCard.displayName = 'DetectionRatioCard'
 
 /**
- * FactorItem - Individual factor button matching HazardItem styling
+ * FactorItem - Clean numbered factor row matching HazardItem styling
  */
-const FactorItem = React.memo(({ factor, isSelected, onSelect, maxCount }) => {
+const FactorItem = React.memo(({ factor, index, isSelected, onSelect, sortBy }) => {
   const isUnclassified = factor.isUnclassified || factor.name === 'Unclassified'
-  // Use gray color for Unclassified factor
-  const colorConfig = isUnclassified
-    ? { bg: 'bg-gray-500', text: 'text-white' }
-    : getCountColor(factor.count, maxCount)
   const hazardCount = factor.hazardBreakdown?.length || 0
+
+  // Value depends on active sort
+  const value = sortBy === 'hazards' ? hazardCount : factor.count
 
   return (
     <button
       onClick={() => onSelect(factor)}
       className={`
-        w-full flex items-center gap-2 p-2 rounded-lg
+        w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
         text-left group
         transition-all duration-200 ease-out
         ${isSelected
-          ? isUnclassified
-            ? 'bg-gray-100 border-2 border-gray-500 shadow-sm'
-            : 'bg-primary-100 border-2 border-primary-500 shadow-sm'
-          : isUnclassified
-            ? 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm border-2 border-gray-300 hover:border-gray-400'
-            : 'bg-white hover:bg-primary-50 hover:shadow-sm border-2 border-surface-200 hover:border-primary-200'
+          ? 'bg-primary-50 border-2 border-primary-400 shadow-sm'
+          : 'bg-white hover:bg-surface-50 border-2 border-surface-200 hover:border-surface-300'
         }
       `}
     >
-      {/* Count badge - matches trend indicator styling */}
-      <span className={`flex-shrink-0 w-6 h-6 rounded ${colorConfig.bg} ${colorConfig.text} flex items-center justify-center text-xs font-bold transition-transform duration-200 ${isSelected ? 'scale-110' : ''}`}>
-        {factor.count > 99 ? '99+' : factor.count}
+      {/* Rank number */}
+      <span className="flex-shrink-0 w-5 text-xs text-surface-400 text-right tabular-nums">
+        {index + 1}.
       </span>
 
-      {/* Name and hazard count */}
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm truncate transition-colors duration-200 ${
-          isSelected
-            ? isUnclassified ? 'text-gray-800 font-semibold' : 'text-primary-800 font-semibold'
-            : isUnclassified ? 'text-gray-700 font-medium' : 'text-surface-800 font-medium'
-        }`}>
-          {factor.name}
-          {isUnclassified && <span className="ml-1 text-2xs text-gray-500">(no factors)</span>}
-        </p>
-        <p className="text-xs text-surface-500">
-          {hazardCount} hazard{hazardCount !== 1 ? 's' : ''} affected
-        </p>
-      </div>
+      {/* Factor name */}
+      <p className={`flex-1 min-w-0 text-sm truncate transition-colors duration-200 ${
+        isSelected ? 'text-primary-700 font-semibold' : isUnclassified ? 'text-surface-500 font-medium' : 'text-surface-800 font-medium'
+      }`}>
+        {factor.name}
+      </p>
 
-      {/* Arrow */}
-      <div className="flex flex-col items-end gap-0.5">
-        <div className="flex items-center gap-1">
-          <span className={`text-xs font-bold transition-colors duration-200 ${
-            isSelected
-              ? isUnclassified ? 'text-gray-600' : 'text-primary-600'
-              : 'text-surface-500'
-          }`}>
-            {factor.count}
-          </span>
-          <ChevronRight
-            size={16}
-            className={`transition-all duration-200 ${
-              isSelected
-                ? isUnclassified ? 'text-gray-600 translate-x-0.5' : 'text-primary-600 translate-x-0.5'
-                : 'text-surface-400 group-hover:text-surface-600 group-hover:translate-x-0.5'
-            }`}
-          />
-        </div>
-      </div>
+      {/* Value (count or hazard count) */}
+      <span className="flex-shrink-0 text-xs font-bold tabular-nums text-surface-600">
+        {value}
+      </span>
     </button>
   )
 })
@@ -179,12 +139,6 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents = 0, detectedC
   const handleSelect = useCallback((factor) => {
     onSelect(factor)
   }, [onSelect])
-
-  // Calculate max count for color scaling
-  const maxCount = useMemo(() => {
-    if (!factors?.length) return 0
-    return Math.max(...factors.map(f => f.count))
-  }, [factors])
 
   // Sort factors based on criteria
   const sortedFactors = useMemo(() => {
@@ -212,9 +166,6 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents = 0, detectedC
           factors={factors}
         />
         <div className="flex flex-col items-center justify-center flex-1 text-center p-4">
-          <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-3">
-            <Layers size={24} className="text-surface-400" />
-          </div>
           <p className="text-sm text-surface-500">No factors detected</p>
           <p className="text-xs text-surface-400 mt-1">Factors are detected from descriptions</p>
         </div>
@@ -247,13 +198,14 @@ const FactorList = ({ factors, selected, onSelect, totalIncidents = 0, detectedC
 
       {/* Factor list - scrollable with smooth scroll */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-1 pr-1 scroll-smooth">
-        {sortedFactors.map((factor) => (
+        {sortedFactors.map((factor, index) => (
           <FactorItem
             key={factor.name}
             factor={factor}
+            index={index}
             isSelected={selected?.name === factor.name}
             onSelect={handleSelect}
-            maxCount={maxCount}
+            sortBy={sortBy}
           />
         ))}
       </div>

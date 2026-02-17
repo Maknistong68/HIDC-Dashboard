@@ -69,8 +69,8 @@ const TASKS = {
     return aggregateContributingFactors(incidents)
   },
 
-  hazardTrending(incidents, params) {
-    return getHazardTrendingByPeriod(incidents, params?.period)
+  hazardTrending(incidents) {
+    return getHazardTrendingByPeriod(incidents)
   },
 
   misclassification(incidents) {

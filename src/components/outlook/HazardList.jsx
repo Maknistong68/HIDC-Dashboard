@@ -1,103 +1,51 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { Target, ChevronRight } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 
-// Static mapping for trend configs - defined outside component to avoid recreation
-const TREND_CONFIGS = {
-  'significant-rise': { bg: 'bg-red-500', text: 'text-white', icon: '▲▲' },
-  'rising': { bg: 'bg-amber-500', text: 'text-white', icon: '▲' },
-  'stable': { bg: 'bg-surface-400', text: 'text-white', icon: '―' },
-  'declining': { bg: 'bg-emerald-500', text: 'text-white', icon: '▼' },
-  'significant-decline': { bg: 'bg-green-600', text: 'text-white', icon: '▼▼' },
-  'new': { bg: 'bg-blue-500', text: 'text-white', icon: '★' },
-  'no-data': { bg: 'bg-surface-200', text: 'text-surface-400', icon: '○' },
-  'default': { bg: 'bg-surface-300', text: 'text-white', icon: '―' }
+/**
+ * Get trend-based text color for the value display
+ */
+const getValueColor = (hazard) => {
+  if (hazard.hasNoData) return 'text-surface-300'
+  if (hazard.isNew) return 'text-blue-600'
+  const percent = hazard.changePercent
+  if (percent === undefined || percent === null) return 'text-surface-500'
+  if (percent > 30) return 'text-safety-critical'
+  if (percent > 10) return 'text-safety-warning'
+  if (percent > -10) return 'text-surface-500'
+  if (percent > -30) return 'text-emerald-500'
+  return 'text-safety-success'
 }
 
 /**
- * Get trend indicator config based on trendLevel object
+ * Format the change percent for display
  */
-const getTrendConfig = (trendLevel) => {
-  if (!trendLevel || !trendLevel.level) {
-    return TREND_CONFIGS.default
-  }
-  return TREND_CONFIGS[trendLevel.level] || TREND_CONFIGS.default
+const formatChangePercent = (hazard) => {
+  if (hazard.hasNoData) return '--'
+  if (hazard.isNew) return 'New'
+  if (hazard.changePercent === undefined || hazard.changePercent === null) return '--'
+
+  const percent = Math.round(hazard.changePercent)
+  if (percent > 500) return '>500%'
+  if (percent < -80) return '<-80%'
+  const sign = percent >= 0 ? '+' : ''
+  return `${sign}${percent}%`
 }
 
 /**
- * HazardItem - Individual hazard button with smooth transitions
+ * HazardItem - Clean numbered hazard row
  */
-const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
-  const trendConfig = getTrendConfig(hazard.trendLevel)
+const HazardItem = React.memo(({ hazard, index, isSelected, onSelect, sortBy }) => {
+  const value = sortBy === 'count'
+    ? hazard.totalCount
+    : formatChangePercent(hazard)
 
-  // Format percentage with absolute counts for context
-  const formatPercentWithCounts = () => {
-    if (hazard.hasNoData) return { percent: '--', counts: null }
-
-    // For new hazards, show as "New" with count
-    if (hazard.isNew) {
-      return {
-        percent: '+100%',
-        counts: `(0→${hazard.currentCount})`,
-        isNew: true
-      }
-    }
-
-    if (hazard.changePercent === undefined || hazard.changePercent === null) {
-      return { percent: '--', counts: null }
-    }
-
-    const percent = Math.round(hazard.changePercent)
-    let percentStr
-    // Cap extreme percentages for readability but preserve info in tooltip
-    if (percent > 500) {
-      percentStr = '>500%'
-    } else if (percent < -80) {
-      percentStr = '<-80%'
-    } else {
-      const sign = percent >= 0 ? '+' : ''
-      percentStr = `${sign}${percent}%`
-    }
-
-    // Include absolute counts for context
-    const counts = `(${hazard.previousCount}→${hazard.currentCount})`
-
-    return { percent: percentStr, counts }
-  }
-
-  const getPercentColor = () => {
-    if (hazard.hasNoData) return 'text-surface-300'
-    if (hazard.isNew) return 'text-blue-600'
-    const percent = hazard.changePercent
-    if (percent === undefined || percent === null) return 'text-surface-500'
-    if (percent > 30) return 'text-safety-critical'
-    if (percent > 10) return 'text-safety-warning'
-    if (percent > -10) return 'text-surface-500'
-    if (percent > -30) return 'text-emerald-500'
-    return 'text-safety-success'
-  }
-
-  const getConfidenceIndicator = () => {
-    if (hazard.hasNoData) return null
-    // Show warning for low sample sizes
-    if (hazard.confidence?.level === 'low') {
-      return {
-        icon: '⚠',
-        tooltip: 'Low sample size - trend may be unreliable',
-        color: 'text-amber-500'
-      }
-    }
-    return null
-  }
-
-  const { percent, counts, isNew } = formatPercentWithCounts()
-  const confidenceIndicator = getConfidenceIndicator()
+  const valueColor = sortBy === 'change' ? getValueColor(hazard) : 'text-surface-600'
 
   const buttonContent = (
     <button
       onClick={() => onSelect(hazard)}
       className={`
-        w-full flex items-center gap-2 p-2 rounded-lg
+        w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
         text-left group
         transition-all duration-200 ease-out
         ${isSelected
@@ -106,55 +54,20 @@ const HazardItem = React.memo(({ hazard, isSelected, onSelect }) => {
         }
       `}
     >
-      {/* Trend indicator badge */}
-      <span className={`flex-shrink-0 w-6 h-6 rounded ${trendConfig.bg} ${trendConfig.text} flex items-center justify-center text-xs font-bold`}>
-        {trendConfig.icon}
+      {/* Rank number */}
+      <span className="flex-shrink-0 w-5 text-xs text-surface-400 text-right tabular-nums">
+        {index + 1}.
       </span>
 
-      {/* Name and count */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <p className={`text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-700 font-semibold' : 'text-surface-800 font-medium'}`}>
-            {hazard.name}
-          </p>
-          {/* Confidence warning indicator */}
-          {confidenceIndicator && (
-            <Tooltip content={confidenceIndicator.tooltip} position="top" delay={200}>
-              <span className={`text-xs ${confidenceIndicator.color}`}>
-                {confidenceIndicator.icon}
-              </span>
-            </Tooltip>
-          )}
-        </div>
-        <p className="text-xs text-surface-500">
-          {hazard.totalCount} observations
-          {/* Show major hazard badge */}
-          {hazard.isMajor && (
-            <span className="ml-1.5 px-1 py-0.5 bg-red-100 text-red-600 rounded text-2xs font-medium">
-              Major
-            </span>
-          )}
-        </p>
-      </div>
+      {/* Hazard name */}
+      <p className={`flex-1 min-w-0 text-sm truncate transition-colors duration-200 ${isSelected ? 'text-primary-700 font-semibold' : 'text-surface-800 font-medium'}`}>
+        {hazard.name}
+      </p>
 
-      {/* Change percent with absolute counts */}
-      <div className="flex flex-col items-end gap-0.5">
-        <div className="flex items-center gap-1">
-          <span className={`text-xs font-bold transition-colors duration-200 ${getPercentColor()}`}>
-            {isNew ? 'New' : percent}
-          </span>
-          <ChevronRight
-            size={16}
-            className={`transition-colors duration-200 ${isSelected ? 'text-primary-500' : 'text-surface-400 group-hover:text-surface-500'}`}
-          />
-        </div>
-        {/* Absolute counts for context */}
-        {counts && (
-          <span className="text-2xs text-surface-400">
-            {counts}
-          </span>
-        )}
-      </div>
+      {/* Value (count or % change) */}
+      <span className={`flex-shrink-0 text-xs font-bold tabular-nums ${valueColor}`}>
+        {value}
+      </span>
     </button>
   )
 
@@ -220,9 +133,6 @@ const HazardList = ({ hazards, selected, onSelect }) => {
   if (!hazards || hazards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center p-4">
-        <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-3">
-          <Target size={24} className="text-surface-400" />
-        </div>
         <p className="text-sm text-surface-500">No hazard data available</p>
         <p className="text-xs text-surface-400 mt-1">Import data to see hazard trends</p>
       </div>
@@ -246,12 +156,14 @@ const HazardList = ({ hazards, selected, onSelect }) => {
 
       {/* Hazard list - scrollable with smooth scroll */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-1 pr-1 scroll-smooth">
-        {sortedHazards.map((hazard) => (
+        {sortedHazards.map((hazard, index) => (
           <HazardItem
             key={hazard.name}
             hazard={hazard}
+            index={index}
             isSelected={selected?.name === hazard.name}
             onSelect={handleSelect}
+            sortBy={sortBy}
           />
         ))}
       </div>

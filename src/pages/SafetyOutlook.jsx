@@ -1,11 +1,11 @@
 import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
-import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp, BarChart3 } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp } from 'lucide-react'
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast, HazardPyramidRanking } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -114,7 +114,6 @@ const MAIN_TABS = [
 const PREDICTIVE_SUB_TABS = [
   { id: 'smsa', label: 'Risk Matrix', icon: Shield },
   { id: 'trend-forecast', label: 'Risk Trend', icon: TrendingUp },
-  { id: 'pyramid-rank', label: 'Hazard Ranking', icon: BarChart3 },
 ]
 
 /**
@@ -151,10 +150,10 @@ const SafetyOutlook = () => {
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
 
-  // Calculate hazard trends based on filtered incidents and period
+  // Calculate hazard trends (current month vs previous month)
   // Offloaded to Web Worker to keep main thread free
   const { result: sortedHazards, isPending: sortedHazardsPending } = useWorkerTask(
-    'hazardTrending', filteredIncidents, { period }, [filteredIncidents, period], []
+    'hazardTrending', filteredIncidents, null, [filteredIncidents], []
   )
 
   // Calculate contributing factors (all observations including positive)
@@ -645,15 +644,7 @@ const SafetyOutlook = () => {
                 negativeIncidents={negativeIncidents}
               />
             )}
-            {activePredictiveSubTab === 'pyramid-rank' && (
-              <HazardPyramidRanking
-                filteredIncidents={filteredIncidents}
-                sortedHazards={sortedHazards}
-                negativeIncidents={negativeIncidents}
-                period={period}
-                matrixData={matrixData}
-              />
-            )}
+
           </div>
           </TabErrorBoundary>
         </div>

@@ -3017,48 +3017,28 @@ const calculateTimeWeight = (incidentDate, endDate) => {
  * For "All Time" periods, applies time-decay weighting to prevent
  * stale historical trends from dominating current analysis.
  */
-export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
+export const getHazardTrendingByPeriod = (incidents) => {
   const dates = getSortedDates(incidents)
   if (dates.length === 0) return []
 
+  // Use the latest date in the data as reference
   const endDate = parseISO(dates[dates.length - 1])
-  const dataStartDate = parseISO(dates[0])
 
-  let midDate, startDate
-  const isAllTime = periodMonths === null || periodMonths === undefined
+  // Current month: 1st of endDate's month → end of endDate's month
+  const currentMonthStart = startOfMonth(endDate)
+  const currentMonthEnd = endOfMonth(endDate)
 
-  // Handle null/undefined period (All time) - use full data range, split in half
-  if (isAllTime) {
-    // For "All time", use full data range and split at midpoint
-    startDate = dataStartDate
-    const totalDays = differenceInDays(endDate, dataStartDate)
-    midDate = subDays(endDate, Math.floor(totalDays / 2))
-  } else {
-    // Calculate half period for comparison (current half vs previous half)
-    const halfPeriodMonths = periodMonths / 2
+  // Previous month: 1st of prior month → end of prior month
+  const prevMonthStart = startOfMonth(subMonths(endDate, 1))
+  const prevMonthEnd = endOfMonth(subMonths(endDate, 1))
 
-    if (halfPeriodMonths < 1) {
-      const halfPeriodDays = Math.round(halfPeriodMonths * 30)
-      midDate = subDays(endDate, halfPeriodDays)
-      startDate = subDays(endDate, halfPeriodDays * 2)
-    } else {
-      midDate = subMonths(endDate, halfPeriodMonths)
-      startDate = subMonths(endDate, periodMonths)
-    }
-
-    // If calculated start is before actual data, use data start date
-    if (startDate < dataStartDate) {
-      startDate = dataStartDate
-    }
-  }
-
-  // Split into previous period vs current period
+  // Split into previous month vs current month
   const previousPeriod = incidents.filter(i => {
     if (!i.date) return false
     try {
       const d = parseISO(i.date.substring(0, 10))
       if (isNaN(d.getTime())) return false
-      return d >= startDate && d < midDate
+      return d >= prevMonthStart && d <= prevMonthEnd
     } catch {
       return false
     }
@@ -3069,38 +3049,23 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
     try {
       const d = parseISO(i.date.substring(0, 10))
       if (isNaN(d.getTime())) return false
-      return d >= midDate && d <= endDate
+      return d >= currentMonthStart && d <= currentMonthEnd
     } catch {
       return false
     }
   })
 
-  // Count by hazard for each period
-  // For "All Time", apply time-decay weighting to prevent stale trends from dominating
+  // Count by hazard for each month
   const previousCounts = {}
   previousPeriod.forEach(i => {
     const h = i.location || 'Unspecified'
-    if (isAllTime) {
-      // Apply time-decay weight for "All Time" view
-      const incidentDate = parseISO(i.date.substring(0, 10))
-      const weight = calculateTimeWeight(incidentDate, endDate)
-      previousCounts[h] = (previousCounts[h] || 0) + weight
-    } else {
-      previousCounts[h] = (previousCounts[h] || 0) + 1
-    }
+    previousCounts[h] = (previousCounts[h] || 0) + 1
   })
 
   const currentCounts = {}
   currentPeriod.forEach(i => {
     const h = i.location || 'Unspecified'
-    if (isAllTime) {
-      // Apply time-decay weight for "All Time" view
-      const incidentDate = parseISO(i.date.substring(0, 10))
-      const weight = calculateTimeWeight(incidentDate, endDate)
-      currentCounts[h] = (currentCounts[h] || 0) + weight
-    } else {
-      currentCounts[h] = (currentCounts[h] || 0) + 1
-    }
+    currentCounts[h] = (currentCounts[h] || 0) + 1
   })
 
   // ALWAYS include ALL hazard categories from the master list
@@ -3109,42 +3074,30 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
   const allHazards = new Set([...ALL_HAZARDS, ...dataHazards])
 
   const trending = [...allHazards].map(hazard => {
-    const prevWeighted = previousCounts[hazard] || 0
-    const currWeighted = currentCounts[hazard] || 0
-    const totalWeighted = prevWeighted + currWeighted
-
-    // For display, round weighted counts to integers
-    const prev = isAllTime ? Math.round(prevWeighted) : prevWeighted
-    const curr = isAllTime ? Math.round(currWeighted) : currWeighted
+    const prev = previousCounts[hazard] || 0
+    const curr = currentCounts[hazard] || 0
     const total = prev + curr
 
-    // Determine if this is a "new" hazard (no baseline data to compare)
-    const isNew = prevWeighted === 0 && currWeighted > 0
+    // Determine if this is a "new" hazard (no previous month data)
+    const isNew = prev === 0 && curr > 0
 
-    // Calculate change percent using weighted values for accuracy
-    // This ensures trend reflects time-weighted reality
+    // Calculate month-over-month change percent
     let changePercent = 0
-    if (prevWeighted > 0) {
-      changePercent = ((currWeighted - prevWeighted) / prevWeighted) * 100
+    if (prev > 0) {
+      changePercent = ((curr - prev) / prev) * 100
     } else if (isNew) {
-      // New hazards are treated as +100% for proper ranking in "By % Change" sort
       changePercent = 100
     }
 
-    // For hazards with no data at all, use a special "no-data" level
-    const hasNoData = totalWeighted === 0
-
-    // Calculate confidence based on sample size (use actual total for better accuracy)
+    const hasNoData = total === 0
     const confidence = getConfidenceFromCount(total)
-
-    // Check statistical significance for established hazards
     const isSignificant = !isNew && isStatisticallySignificant(prev, curr)
 
     const trendLevel = hasNoData
       ? { level: 'no-data', icon: '○', label: 'No Data', color: 'muted', sortOrder: 5 }
       : getTrendLevel(changePercent, isNew, curr)
 
-    const hazardObj = {
+    return {
       name: hazard,
       previousCount: prev,
       currentCount: curr,
@@ -3156,12 +3109,8 @@ export const getHazardTrendingByPeriod = (incidents, periodMonths = 3) => {
       isMajor: MAJOR_HAZARDS.includes(hazard),
       isSignificantHazard: SIGNIFICANT_HAZARDS.includes(hazard),
       confidence,
-      isSignificant,
-      // Include weighted values for debugging/advanced analysis
-      _weightedPrev: isAllTime ? prevWeighted : undefined,
-      _weightedCurr: isAllTime ? currWeighted : undefined
+      isSignificant
     }
-    return hazardObj
   })
 
   // Calculate max volume for normalization across all hazards with data
@@ -4552,7 +4501,7 @@ export const calculatePredictiveRiskProfile = (incidents) => {
   const severityWeight = { lti: 10, mti: 5, fac: 2, 'near-miss': 1 }
 
   // Get hazard trending data (reuse existing function)
-  const trendingData = getHazardTrendingByPeriod(incidents, 3)
+  const trendingData = getHazardTrendingByPeriod(incidents)
 
   // Get open/overdue actions
   const openActions = incidents.filter(isOpenAction)
