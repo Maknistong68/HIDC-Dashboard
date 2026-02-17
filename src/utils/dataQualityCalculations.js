@@ -2461,51 +2461,81 @@ export const getUnclassifiableRecords = (incidents) => {
     }
   })
 
-  const total = allUnclassifiable.size
+  // Separate reviewed from unreviewed for each category
+  const filterUnreviewed = (records) => records.filter(r => !r.incident?._reviewedAt)
+  const countReviewed = (records) => records.filter(r => !!r.incident?._reviewedAt).length
+
+  const unreviewedUnclassifiable = new Set()
+  const allArrays = [noDescription, tooShort, unrecognizedCategory, lowConfidence, historicalPlaceholder, restrictedClassification]
+  allArrays.forEach(arr => {
+    arr.forEach(r => {
+      if (!r.incident?._reviewedAt) {
+        unreviewedUnclassifiable.add(r.incident?.id || r.id)
+      }
+    })
+  })
+
+  const totalDetected = allUnclassifiable.size
+  const totalReviewed = totalDetected - unreviewedUnclassifiable.size
+  const total = unreviewedUnclassifiable.size
   const totalIncidents = incidents.length
 
   return {
     total,
+    totalDetected,
+    totalReviewed,
     byReason: {
       noDescription: {
-        count: noDescription.length,
+        count: filterUnreviewed(noDescription).length,
+        totalCount: noDescription.length,
+        reviewedCount: countReviewed(noDescription),
         records: noDescription,
-        percentage: totalIncidents > 0 ? ((noDescription.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(noDescription).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'No Description',
         description: 'Records with empty or blank description field'
       },
       tooShort: {
-        count: tooShort.length,
+        count: filterUnreviewed(tooShort).length,
+        totalCount: tooShort.length,
+        reviewedCount: countReviewed(tooShort),
         records: tooShort,
-        percentage: totalIncidents > 0 ? ((tooShort.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(tooShort).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Too Short (0-5 words)',
         description: 'Descriptions with 5 words or less (Poor quality)'
       },
       unrecognizedCategory: {
-        count: unrecognizedCategory.length,
+        count: filterUnreviewed(unrecognizedCategory).length,
+        totalCount: unrecognizedCategory.length,
+        reviewedCount: countReviewed(unrecognizedCategory),
         records: unrecognizedCategory,
-        percentage: totalIncidents > 0 ? ((unrecognizedCategory.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(unrecognizedCategory).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Unrecognized Category',
         description: 'Original Excel category not in approved list'
       },
       lowConfidence: {
-        count: lowConfidence.length,
+        count: filterUnreviewed(lowConfidence).length,
+        totalCount: lowConfidence.length,
+        reviewedCount: countReviewed(lowConfidence),
         records: lowConfidence,
-        percentage: totalIncidents > 0 ? ((lowConfidence.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(lowConfidence).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Low Confidence',
         description: 'Auto-classified with less than 65% confidence'
       },
       historicalPlaceholder: {
-        count: historicalPlaceholder.length,
+        count: filterUnreviewed(historicalPlaceholder).length,
+        totalCount: historicalPlaceholder.length,
+        reviewedCount: countReviewed(historicalPlaceholder),
         records: historicalPlaceholder,
-        percentage: totalIncidents > 0 ? ((historicalPlaceholder.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(historicalPlaceholder).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Historical/Placeholder',
         description: 'Legacy Enablon events marked as "ignore" - not real observations'
       },
       restrictedClassification: {
-        count: restrictedClassification.length,
+        count: filterUnreviewed(restrictedClassification).length,
+        totalCount: restrictedClassification.length,
+        reviewedCount: countReviewed(restrictedClassification),
         records: restrictedClassification,
-        percentage: totalIncidents > 0 ? ((restrictedClassification.length / totalIncidents) * 100).toFixed(1) : '0.0',
+        percentage: totalIncidents > 0 ? ((filterUnreviewed(restrictedClassification).length / totalIncidents) * 100).toFixed(1) : '0.0',
         label: 'Restricted Classification',
         description: 'High-confidence major hazard blocked because Excel had generic category'
       }

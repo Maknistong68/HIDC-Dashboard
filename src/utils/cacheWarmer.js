@@ -8,7 +8,8 @@
  * Also warms main-thread dashboard caches (aggregates, topHazards, heatmap, subregion)
  * so that toggling workRelatedOnly is instant even when data changes.
  *
- * Uses requestIdleCallback to schedule warm-up tasks without blocking the UI.
+ * Uses the tab priority scheduler for ordered background warming instead of raw
+ * requestIdleCallback, so active tab work is never starved.
  */
 
 import { warmWorkerCache } from '../hooks/useWorkerTask'
@@ -20,13 +21,16 @@ import {
 } from './dashboardComputations'
 import { getOverdueCutoffDate } from './dateUtils'
 import { setCached, CACHE_KEYS } from './dashboardCache'
+import { scheduler } from './tabPriorityScheduler'
 
+// Fallback for warmInitialDashboardCaches (runs before tabs exist)
 const scheduleIdle = typeof requestIdleCallback === 'function'
   ? (cb) => requestIdleCallback(cb, { timeout: 5000 })
   : (cb) => setTimeout(cb, 1)
 
 /**
  * Warm the Web Worker's internal cache for the inactive dataset variant.
+ * Uses scheduler to respect tab priority — active tab computations run first.
  *
  * @param {Array} inactiveFiltered - Filtered incidents for the inactive toggle state
  * @param {Array} inactiveHeatmap - Heatmap incidents for the inactive toggle state
@@ -38,39 +42,81 @@ export function warmCaches(inactiveFiltered, inactiveHeatmap, period) {
 
   const ids = []
 
-  // Priority 1: Dashboard contributing factors (VERY HIGH cost)
-  ids.push(scheduleIdle(() => {
+  // Worker warm-ups scheduled as DEFERRED priority (background work)
+  // The scheduler will use requestIdleCallback with appropriate timeouts
+  // based on whether these tabs were recently visited
+
+  // Dashboard contributing factors (VERY HIGH cost)
+  ids.push(scheduler.schedule('dashboard', () => {
     warmWorkerCache('aggregateFactors', inactiveHeatmap, null)
   }))
 
-  // Priority 2: Outlook contributing factors (VERY HIGH cost)
-  ids.push(scheduleIdle(() => {
+  // Outlook contributing factors (VERY HIGH cost)
+  ids.push(scheduler.schedule('outlook', () => {
     warmWorkerCache('aggregateFactors', inactiveFiltered, null)
   }))
 
-  // Priority 3: Hazard trending (HIGH cost)
-  ids.push(scheduleIdle(() => {
+  // Hazard trending (HIGH cost) — used by outlook
+  ids.push(scheduler.schedule('outlook', () => {
     warmWorkerCache('hazardTrending', inactiveFiltered, { period })
   }))
 
-  // Priority 4: Misclassification analysis (VERY HIGH cost)
-  ids.push(scheduleIdle(() => {
+  // Misclassification analysis (VERY HIGH cost) — used by dataQuality
+  ids.push(scheduler.schedule('dataQuality', () => {
     warmWorkerCache('misclassification', inactiveFiltered, null)
   }))
 
-  // Priority 5: Text analysis (HIGH cost)
-  ids.push(scheduleIdle(() => {
+  // Text analysis (HIGH cost) — used by dataQuality
+  ids.push(scheduler.schedule('dataQuality', () => {
     warmWorkerCache('textAnalysis', inactiveFiltered, null)
   }))
 
-  // Priority 6: Categorization (MEDIUM cost)
-  ids.push(scheduleIdle(() => {
+  // Categorization (MEDIUM cost) — used by dataQuality
+  ids.push(scheduler.schedule('dataQuality', () => {
     warmWorkerCache('categorization', inactiveFiltered, null)
   }))
 
-  // Priority 7: Trend & flagged records (MEDIUM cost)
-  ids.push(scheduleIdle(() => {
+  // Trend & flagged records (MEDIUM cost) — used by dataQuality
+  ids.push(scheduler.schedule('dataQuality', () => {
     warmWorkerCache('trendFlagged', inactiveFiltered, null)
+  }))
+
+  return ids
+}
+
+/**
+ * Warm main-thread dashboard caches for the inactive toggle variant.
+ * Each computation runs via the tab priority scheduler to avoid blocking UI.
+ *
+ * @param {Array} inactiveFiltered - Filtered incidents for the inactive toggle state
+ * @param {Array} inactiveHeatmap - Heatmap incidents for the inactive toggle state
+ * @param {Object} siteClassifications - Site-to-subregion mapping
+ * @returns {Array<number>} Array of callback/timeout IDs for cancellation
+ */
+export function warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap, siteClassifications) {
+  if (!inactiveFiltered || inactiveFiltered.length === 0) return []
+
+  const ids = []
+
+  ids.push(scheduler.schedule('dashboard', () => {
+    const overdue30 = getOverdueCutoffDate(30)
+    const result = computeDashboardAggregates(inactiveFiltered, overdue30)
+    setCached(CACHE_KEYS.DASHBOARD_AGGREGATES, inactiveFiltered, result)
+  }))
+
+  ids.push(scheduler.schedule('dashboard', () => {
+    const result = computeTopHazards(inactiveFiltered)
+    setCached(CACHE_KEYS.TOP_HAZARDS, inactiveFiltered, result)
+  }))
+
+  ids.push(scheduler.schedule('dashboard', () => {
+    const result = computeHazardsHeatmap(inactiveHeatmap)
+    setCached(CACHE_KEYS.HAZARDS_HEATMAP, inactiveHeatmap, result)
+  }))
+
+  ids.push(scheduler.schedule('dashboard', () => {
+    const result = computeSubregionContribution(inactiveFiltered, siteClassifications)
+    setCached(CACHE_KEYS.SUBREGION_CONTRIBUTION, inactiveFiltered, result)
   }))
 
   return ids
@@ -88,44 +134,6 @@ export function warmCaches(inactiveFiltered, inactiveHeatmap, period) {
  *
  * @param {Array} records - All incident records from IndexedDB
  */
-/**
- * Warm main-thread dashboard caches for the inactive toggle variant.
- * Each computation runs in a separate requestIdleCallback to avoid blocking UI.
- *
- * @param {Array} inactiveFiltered - Filtered incidents for the inactive toggle state
- * @param {Array} inactiveHeatmap - Heatmap incidents for the inactive toggle state
- * @param {Object} siteClassifications - Site-to-subregion mapping
- * @returns {Array<number>} Array of callback/timeout IDs for cancellation
- */
-export function warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap, siteClassifications) {
-  if (!inactiveFiltered || inactiveFiltered.length === 0) return []
-
-  const ids = []
-
-  ids.push(scheduleIdle(() => {
-    const overdue30 = getOverdueCutoffDate(30)
-    const result = computeDashboardAggregates(inactiveFiltered, overdue30)
-    setCached(CACHE_KEYS.DASHBOARD_AGGREGATES, inactiveFiltered, result)
-  }))
-
-  ids.push(scheduleIdle(() => {
-    const result = computeTopHazards(inactiveFiltered)
-    setCached(CACHE_KEYS.TOP_HAZARDS, inactiveFiltered, result)
-  }))
-
-  ids.push(scheduleIdle(() => {
-    const result = computeHazardsHeatmap(inactiveHeatmap)
-    setCached(CACHE_KEYS.HAZARDS_HEATMAP, inactiveHeatmap, result)
-  }))
-
-  ids.push(scheduleIdle(() => {
-    const result = computeSubregionContribution(inactiveFiltered, siteClassifications)
-    setCached(CACHE_KEYS.SUBREGION_CONTRIBUTION, inactiveFiltered, result)
-  }))
-
-  return ids
-}
-
 export function warmInitialDashboardCaches(records) {
   if (!records || records.length === 0) return []
 
@@ -146,7 +154,7 @@ export function warmInitialDashboardCaches(records) {
   const filtered = wrFiltered
   const heatmap = wrHeatmap
 
-  // Fire all 7 tasks immediately (no scheduleIdle - time-critical)
+  // Fire all 7 tasks immediately (no scheduler - time-critical)
   // Return promises so callers can await completion
   return [
     warmWorkerCache('aggregateFactors', heatmap, null),     // Dashboard factors

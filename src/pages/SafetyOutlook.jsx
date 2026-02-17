@@ -3,7 +3,7 @@ import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp } fr
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
-import { useDeferredMemo } from '../hooks/useDeferredMemo'
+import { useTabCache } from '../hooks/useTabCache'
 import { useWorkerTask } from '../hooks/useWorkerTask'
 import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
@@ -130,7 +130,7 @@ const SafetyOutlook = () => {
   const { setPeriod, setFilter, clearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, filterConfig, filterFingerprint } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
 
   // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
@@ -164,13 +164,13 @@ const SafetyOutlook = () => {
   )
 
   // Calculate hazard trend data for selected hazard
-  const hazardTrendData = useDeferredMemo(() => {
+  const hazardTrendData = useTabCache('hazardTrendData', () => {
     if (!selectedHazard?.name) return null
     return getHazardDailyData(filteredIncidents, selectedHazard.name, period)
-  }, [filteredIncidents, selectedHazard?.name, period])
+  }, filterFingerprint, [filteredIncidents, selectedHazard?.name, period])
 
   // Calculate factor trend data for selected factor
-  const factorTrendData = useDeferredMemo(() => {
+  const factorTrendData = useTabCache('factorTrendData', () => {
     if (!selectedFactor?.name || !factorData?.byFactor) return null
     // Build trend data from factor's incidents
     const factor = factorData.byFactor.find(f => f.name === selectedFactor.name)
@@ -215,30 +215,30 @@ const SafetyOutlook = () => {
       trend,
       hasData: true
     }
-  }, [selectedFactor?.name, factorData?.byFactor])
+  }, filterFingerprint, [selectedFactor?.name, factorData?.byFactor])
 
   // Negative incidents (for Tab 2 - Predictive & Simulation)
   // Use isPositiveType for consistent filtering across codebase
-  const negativeIncidents = useDeferredMemo(() => {
+  const negativeIncidents = useTabCache('negativeIncidents', () => {
     return filteredIncidents.filter(i => !isPositiveType(i.type))
-  }, [filteredIncidents])
+  }, filterFingerprint, [filteredIncidents])
 
   // Lifted matrixData for both HazardRiskMatrix and Methodology Guide
   // Cache-first: uses precomputed result from calculation gate if available
-  const matrixData = useDeferredMemo(() => {
+  const matrixData = useTabCache('matrixData', () => {
     const cached = getCached(CACHE_KEYS.RISK_MATRIX, filteredIncidents)
     if (cached) return cached
     return plotHazardsOnMatrix(filteredIncidents, sortedHazards)
-  }, [filteredIncidents, sortedHazards])
+  }, filterFingerprint, [filteredIncidents, sortedHazards])
 
   // Lifted forecastData for Methodology Guide
-  const forecastData = useDeferredMemo(() => {
+  const forecastData = useTabCache('forecastData', () => {
     if (!negativeIncidents.length) return null
     return forecastIncidents(negativeIncidents)
-  }, [negativeIncidents])
+  }, filterFingerprint, [negativeIncidents])
 
   // Calculate detected incidents count (unique incidents that have at least one REAL factor - exclude Unclassified)
-  const detectedIncidentsCount = useDeferredMemo(() => {
+  const detectedIncidentsCount = useTabCache('detectedIncidentsCount', () => {
     const incidentSet = new Set()
     factorData.byFactor.forEach(f => {
       // Exclude Unclassified from detected count - those are observations WITHOUT factors
@@ -248,7 +248,7 @@ const SafetyOutlook = () => {
       })
     })
     return incidentSet.size
-  }, [factorData])
+  }, filterFingerprint, [factorData])
 
   // Auto-select first hazard when data loads, or update selection if current hazard no longer exists
   useEffect(() => {

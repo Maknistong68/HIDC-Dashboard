@@ -1,6 +1,7 @@
 import { memo, useMemo, useState, useEffect, startTransition } from 'react'
 import { useLocation } from 'react-router-dom'
 import { TabVisibilityContext } from '../../hooks/useDeferredMemo'
+import { scheduler } from '../../utils/tabPriorityScheduler'
 import Dashboard from '../../pages/Dashboard'
 import DataQuality from '../../pages/DataQuality'
 import SafetyOutlook from '../../pages/SafetyOutlook'
@@ -23,6 +24,11 @@ const PreloadedTabs = memo(() => {
       default: return null
     }
   }, [location.pathname])
+
+  // Notify scheduler of tab switches — flushes pending work for newly active tab
+  useEffect(() => {
+    if (activeTab) scheduler.setActiveTab(activeTab)
+  }, [activeTab])
 
   // Mount active tab immediately, defer others with startTransition
   useEffect(() => {

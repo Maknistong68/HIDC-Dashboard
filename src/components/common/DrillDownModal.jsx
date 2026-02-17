@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet, Pencil, CheckCircle2, RotateCcw } from 'lucide-react'
 import { List as VirtualList } from 'react-window'
 import { format, parseISO } from 'date-fns'
 import { useDataActions } from '../../context/DataContext'
 import { getStatusColor } from '../../utils/statusColors'
+import { HAZARD_CATEGORIES } from '../../utils/constants'
 import useResizable from '../../hooks/useResizable.jsx'
 import HighlightedText from './HighlightedText'
 import { HazardInsightsTab, CategoryInsightsTab, ObserverInsightsTab } from '../drilldown'
@@ -807,6 +808,7 @@ const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onVie
  */
 const RecordDetailsModal = ({ record, onClose }) => {
   const [copied, setCopied] = useState(false)
+  const [isEditingCategory, setIsEditingCategory] = useState(false)
   const { updateIncident } = useDataActions()
   const copyTimerRef = useRef(null)
 
@@ -819,12 +821,29 @@ const RecordDetailsModal = ({ record, onClose }) => {
 
   // Flag for miscategorization
   const isFlagged = record._flaggedMiscategorized
+  const isReviewed = !!record._reviewedAt
 
   const handleToggleFlag = () => {
     updateIncident(record.id, {
       _flaggedMiscategorized: !isFlagged,
       _flaggedMiscategorizedAt: !isFlagged ? new Date().toISOString() : null
     })
+  }
+
+  const handleToggleReviewed = () => {
+    updateIncident(record.id, {
+      _reviewedAt: isReviewed ? null : new Date().toISOString()
+    })
+  }
+
+  const handleCategoryChange = (newCategory) => {
+    updateIncident(record.id, {
+      location: newCategory,
+      hazardCategorySource: 'manual',
+      _previousCategory: record.location,
+      _reclassifiedAt: new Date().toISOString()
+    })
+    setIsEditingCategory(false)
   }
 
   // Resizable functionality
@@ -927,30 +946,70 @@ const RecordDetailsModal = ({ record, onClose }) => {
               )}
               {/* Hide hazard category for security/environmental - it's redundant and could be misleading */}
               {record.type !== 'security' && record.type !== 'environmental' && record.type !== 'env-minor' && record.type !== 'env-major' && (
-              <div className="space-y-1">
+              <div className="space-y-1 col-span-full">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-surface-500 uppercase tracking-wide">
                   <AlertCircle size={12} />
                   Hazard Category
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-surface-900">{record.location || '-'}</span>
-                  {record.hazardCategorySource && (
-                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${record.hazardCategorySource === 'excel' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {record.hazardCategorySource === 'excel' ? 'Excel' : 'Auto'}
-                    </span>
-                  )}
-                  <button
-                    onClick={handleToggleFlag}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      isFlagged
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-                    }`}
-                  >
-                    <Flag size={12} />
-                    {isFlagged ? 'Flagged' : 'Flag'}
-                  </button>
-                </div>
+                {isEditingCategory ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select
+                      defaultValue={record.location || ''}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="text-sm border border-surface-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none max-w-[240px]"
+                      autoFocus
+                    >
+                      <option value="" disabled>Select category...</option>
+                      {HAZARD_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => setIsEditingCategory(false)}
+                      className="p-1.5 rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
+                      title="Cancel"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-surface-900">{record.location || '-'}</span>
+                    {record.hazardCategorySource && (
+                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                        record.hazardCategorySource === 'excel' ? 'bg-green-100 text-green-700'
+                          : record.hazardCategorySource === 'manual' ? 'bg-purple-100 text-purple-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {record.hazardCategorySource === 'excel' ? 'Excel' : record.hazardCategorySource === 'manual' ? 'Manual' : 'Auto'}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setIsEditingCategory(true)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-surface-100 text-surface-600 hover:bg-surface-200 transition-colors"
+                      title="Re-classify hazard category"
+                    >
+                      <Pencil size={11} />
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleToggleFlag}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        isFlagged
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                      }`}
+                    >
+                      <Flag size={12} />
+                      {isFlagged ? 'Flagged' : 'Flag'}
+                    </button>
+                  </div>
+                )}
+                {record._previousCategory && record.hazardCategorySource === 'manual' && (
+                  <div className="text-[10px] text-surface-400 mt-1">
+                    Changed from "{record._previousCategory}" on {format(parseISO(record._reclassifiedAt), 'dd MMM yyyy')}
+                  </div>
+                )}
               </div>
               )}
               <DetailField icon={User} label="Reported By" value={record.reportedBy} />
@@ -978,6 +1037,32 @@ const RecordDetailsModal = ({ record, onClose }) => {
               <div className="p-4 bg-surface-50/80 rounded-xl border border-surface-200/50 text-sm text-surface-700 leading-relaxed whitespace-pre-wrap">
                 {record.description || 'No description provided.'}
               </div>
+            </div>
+
+            {/* Mark as Reviewed */}
+            <div className="pt-4 border-t border-surface-200/50">
+              <button
+                onClick={handleToggleReviewed}
+                className={`flex items-center gap-2 w-full justify-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isReviewed
+                    ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                }`}
+              >
+                {isReviewed ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Reviewed
+                    <span className="text-green-500 text-xs ml-1">({format(parseISO(record._reviewedAt), 'dd MMM yyyy')})</span>
+                    <RotateCcw size={12} className="ml-auto opacity-50" />
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Mark as Reviewed
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Reference ID with Copy Button */}

@@ -30,6 +30,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
 } from 'lucide-react'
 import { List as VirtualList } from 'react-window'
 import { useDebouncedValue } from '../../hooks/useDebouncedFilter'
@@ -84,7 +85,14 @@ const PRESETS = [
     label: 'Needs Review',
     icon: Eye,
     color: 'rose',
-    predicate: (r) => r.contextAnalysis?.needsReview === true,
+    predicate: (r) => r.contextAnalysis?.needsReview === true && !r._reviewedAt,
+  },
+  {
+    id: 'reviewed',
+    label: 'Reviewed',
+    icon: CheckCircle2,
+    color: 'green',
+    predicate: (r) => !!r._reviewedAt,
   },
   {
     id: 'openActions',
@@ -107,6 +115,7 @@ const PRESET_COLORS = {
   amber: 'bg-amber-100 text-amber-700 border-amber-300',
   purple: 'bg-purple-100 text-purple-700 border-purple-300',
   rose: 'bg-rose-100 text-rose-700 border-rose-300',
+  green: 'bg-green-100 text-green-700 border-green-300',
   blue: 'bg-blue-100 text-blue-700 border-blue-300',
   red: 'bg-red-100 text-red-700 border-red-300',
 }
@@ -114,6 +123,7 @@ const PRESET_COLORS_ACTIVE = {
   amber: 'bg-amber-500 text-white border-amber-600',
   purple: 'bg-purple-500 text-white border-purple-600',
   rose: 'bg-rose-500 text-white border-rose-600',
+  green: 'bg-green-500 text-white border-green-600',
   blue: 'bg-blue-500 text-white border-blue-600',
   red: 'bg-red-500 text-white border-red-600',
 }
@@ -643,11 +653,24 @@ const DetailPanel = ({ record, onClose }) => {
         )}
 
         {/* Needs Review */}
-        {record.contextAnalysis?.needsReview && (
+        {record.contextAnalysis?.needsReview && !record._reviewedAt && (
           <div className="mt-2 p-3 bg-rose-50 border border-rose-200 rounded-lg">
             <p className="text-[10px] font-semibold text-rose-600 uppercase tracking-wider mb-1">Needs Review</p>
             <p className="text-xs text-rose-800">
               {record.contextAnalysis.reasoning || 'This record has been flagged for manual review.'}
+            </p>
+          </div>
+        )}
+
+        {/* Reviewed Status */}
+        {record._reviewedAt && (
+          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-1.5">
+              <CircleCheck size={14} className="text-green-600" />
+              <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">Reviewed</p>
+            </div>
+            <p className="text-xs text-green-700 mt-1">
+              Reviewed on {new Date(record._reviewedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
             </p>
           </div>
         )}

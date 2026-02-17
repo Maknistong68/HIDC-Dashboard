@@ -49,7 +49,7 @@ import {
 import { useDataState, useDataActions } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
-import { useDeferredMemo } from '../hooks/useDeferredMemo'
+import { useTabCache } from '../hooks/useTabCache'
 import { useWorkerTask } from '../hooks/useWorkerTask'
 import {
   calculateQualityScore,
@@ -119,7 +119,7 @@ const DataQuality = () => {
   const { setPeriod, setFilter, clearFilters, setExcludedReporters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, filterConfig, filterFingerprint } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
 
   // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
@@ -157,14 +157,14 @@ const DataQuality = () => {
   )
 
   // Group 1: Core quality score metrics (depends on misclassification data)
-  // useDeferredMemo so hidden tabs skip this O(n) computation
-  const coreQualityMetrics = useDeferredMemo(() => {
+  // useTabCache so hidden tabs skip this O(n) computation + LRU fingerprint cache
+  const coreQualityMetrics = useTabCache('coreQualityMetrics', () => {
     if (filteredIncidents.length === 0) return null
     return {
       quality: calculateQualityScore(filteredIncidents, misclassificationData),
       nearMiss: getNearMissMetrics(filteredIncidents),
     }
-  }, [filteredIncidents, misclassificationData])
+  }, filterFingerprint, [filteredIncidents, misclassificationData])
 
   // Group 2: Categorization metrics - offloaded to Web Worker
   const { result: categorizationMetrics } = useWorkerTask(
@@ -177,13 +177,13 @@ const DataQuality = () => {
   )
 
   // Group 4: Reporter and contractor metrics (includes classification accuracy)
-  const reporterContractorMetrics = useDeferredMemo(() => {
+  const reporterContractorMetrics = useTabCache('reporterContractorMetrics', () => {
     if (filteredIncidents.length === 0) return null
     return {
       reporters: getReporterMetrics(filteredIncidents, misclassificationData),
       contractors: getContractorMetrics(filteredIncidents, misclassificationData),
     }
-  }, [filteredIncidents, misclassificationData])
+  }, filterFingerprint, [filteredIncidents, misclassificationData])
 
   // Group 5: Flagged records - offloaded to Web Worker
   const { result: trendAndFlaggedMetrics } = useWorkerTask(
@@ -1398,7 +1398,12 @@ const DataQuality = () => {
               }`}>
                 {qualityData.unclassifiableRecords?.total || 0}
               </div>
-              <div className="text-xs text-surface-500">records</div>
+              <div className="text-xs text-surface-500">
+                {(qualityData.unclassifiableRecords?.totalReviewed || 0) > 0
+                  ? `${qualityData.unclassifiableRecords.totalReviewed} reviewed`
+                  : 'records'
+                }
+              </div>
             </div>
           </div>
 
@@ -1527,6 +1532,24 @@ const DataQuality = () => {
                   </div>
                 )}
               </div>
+
+              {/* Review progress */}
+              {(qualityData.unclassifiableRecords?.totalReviewed || 0) > 0 && (
+                <div className="mt-3 pt-2 border-t border-surface-200">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-surface-500">Review Progress</span>
+                    <span className="font-bold text-green-600">
+                      {qualityData.unclassifiableRecords.totalReviewed}/{qualityData.unclassifiableRecords.totalDetected}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${Math.round((qualityData.unclassifiableRecords.totalReviewed / qualityData.unclassifiableRecords.totalDetected) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Footer */}
               <div className="mt-3 pt-2 border-t border-surface-200 text-center">

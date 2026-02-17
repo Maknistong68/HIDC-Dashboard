@@ -284,6 +284,14 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
       }
     })
 
+    // Bridge: inject forecast values into last historical point so bands connect
+    if (data.length > 0 && forecastData.forecast.length > 0) {
+      const lastHistorical = data[data.length - 1]
+      lastHistorical.forecastEma = lastHistorical.ema
+      lastHistorical.forecastUpper = lastHistorical.bollingerUpper
+      lastHistorical.forecastLower = lastHistorical.bollingerLower
+    }
+
     forecastData.forecast.forEach((f, i) => {
       const point = {
         week: f.week,

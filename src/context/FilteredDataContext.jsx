@@ -5,6 +5,7 @@ import { useFilterState } from './FilterContext'
 import { useDebouncedFilter } from '../hooks/useDebouncedFilter'
 import { PROACTIVE_TYPES } from '../utils/constants'
 import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
+import { filterHierarchical, buildFilterFingerprint } from '../utils/filterCache'
 
 const FilteredDataContext = createContext(null)
 
@@ -20,12 +21,16 @@ const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
  * Dual-dataset pattern: Both work-related and all-incidents arrays are pre-computed so
  * toggling workRelatedOnly is an instant reference swap with zero recomputation.
  *
+ * Hierarchical filter cache: When removing a filter, uses cached intermediate results
+ * instead of re-scanning all incidents from scratch.
+ *
  * Provides:
  * - filteredIncidents: incidents filtered by contractor, site, subRegion, and period
  * - heatmapIncidents: incidents filtered by contractor, site, subRegion (no period, no proactive types)
  * - uniqueContractors: dropdown options for contractor filter
  * - siteOptions: dropdown options for site filter (scoped to selected contractor)
  * - filterConfig: complete filter configuration array for FilterBar
+ * - filterFingerprint: deterministic string representing current filter state (for per-tab caching)
  */
 export const FilteredDataProvider = ({ children }) => {
   const { incidents, siteClassifications, hasSubregionAssignments, assignedSubRegions } = useDataState()
@@ -76,74 +81,37 @@ export const FilteredDataProvider = ({ children }) => {
       c.length === 0 && s.length === 0 && sr.length === 0
   }, [filters, period, customDateRange])
 
-  // Single-pass computation: baseFiltered, baseHeatmap, and siteOptions all at once
-  // Uses debounced filter values so rapid multi-select clicks batch into one computation
+  // Hierarchical filtered computation with LRU cache at each filter level.
+  // Uses debounced filter values so rapid multi-select clicks batch into one computation.
+  // When removing a filter, walks UP to find deepest cached intermediate and filters DOWN.
   const { baseFiltered, baseHeatmap, siteOptions } = useMemo(() => {
     // Fast path: all filters cleared → return pre-cached defaults (zero iteration)
     if (isAllCleared) return defaults
 
-    const { contractor: dContractor, site: dSite, subRegion: dSubRegion } = debouncedFilters
-    const hasContractor = dContractor.length > 0
-    const hasSite = dSite.length > 0
-    const hasSubRegion = dSubRegion.length > 0
-    const contractorSet = hasContractor ? new Set(dContractor) : null
-    const subRegionSet = hasSubRegion ? new Set(dSubRegion) : null
-
-    // For site filtering, intersect selected sites with valid options inline
-    // (handles stale selections from contractor change without needing cleanup effects)
-    let siteSet = null
-    if (hasSite) {
-      siteSet = new Set(dSite)
-    }
-
+    // Compute date range
     let dateFrom = null
     let dateTo = null
+    let dateKey = null
     if (customDateRange !== null) {
       dateFrom = customDateRange.start
       dateTo = customDateRange.end
+      dateKey = `${customDateRange.start}~${customDateRange.end}`
     } else if (period !== null) {
       const range = getPeriodRange(period)
       dateFrom = range.start
       dateTo = range.end
+      dateKey = `p${period}`
     }
 
-    const filtered = []
-    const heatmap = []
-    const contractorSitesSet = new Set()
-
-    for (let idx = 0; idx < incidents.length; idx++) {
-      const i = incidents[idx]
-
-      // Collect sites scoped to selected contractors (for siteOptions dropdown)
-      if (i.site && (!hasContractor || contractorSet.has(i.contractor))) {
-        contractorSitesSet.add(i.site)
-      }
-
-      // Apply contractor filter
-      if (hasContractor && !contractorSet.has(i.contractor)) continue
-      // Apply site filter
-      if (siteSet && !siteSet.has(i.site)) continue
-      // Apply subRegion filter
-      if (hasSubRegion && !subRegionSet.has(siteClassifications[i.site])) continue
-
-      // Heatmap: no period filter, no proactive types
-      if (!PROACTIVE_SET.has(i.type)) {
-        heatmap.push(i)
-      }
-
-      // Filtered: with period filter
-      if (dateFrom !== null) {
-        if (i.date < dateFrom || i.date > dateTo) continue
-      }
-
-      filtered.push(i)
-    }
-
-    // Build siteOptions from the collected sites
-    const sites = Array.from(contractorSitesSet).sort()
-      .map(s => ({ value: s, label: s }))
-
-    return { baseFiltered: filtered, baseHeatmap: heatmap, siteOptions: sites }
+    return filterHierarchical(
+      incidents,
+      debouncedFilters,
+      siteClassifications,
+      dateFrom,
+      dateTo,
+      dateKey,
+      PROACTIVE_SET
+    )
   }, [incidents, debouncedFilters, siteClassifications, period, customDateRange, getPeriodRange, isAllCleared, defaults])
 
   // Pre-compute work-related variant — fast-path returns cached ref when all cleared
@@ -163,6 +131,13 @@ export const FilteredDataProvider = ({ children }) => {
 
   // Swap reference based on toggle — no recomputation
   const heatmapIncidents = workRelatedOnly ? workRelatedHeatmap : baseHeatmap
+
+  // Deterministic fingerprint of the current filter state — enables per-tab KPI caching
+  // without comparing array references. Identical filter combos produce identical fingerprints.
+  const filterFingerprint = useMemo(
+    () => buildFilterFingerprint(debouncedFilters, period, customDateRange, workRelatedOnly),
+    [debouncedFilters, period, customDateRange, workRelatedOnly]
+  )
 
   // Background-warm aggregation caches for the INACTIVE variant
   const warmingRef = useRef([])
@@ -253,8 +228,9 @@ export const FilteredDataProvider = ({ children }) => {
       uniqueContractors,
       siteOptions,
       filterConfig,
+      filterFingerprint,
     }
-  }, [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig])
+  }, [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig, filterFingerprint])
 
   return (
     <FilteredDataContext.Provider value={value}>

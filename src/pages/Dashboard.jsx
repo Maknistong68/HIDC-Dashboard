@@ -14,7 +14,7 @@ import { useDataState, useUIState } from '../context/DataContext'
 import { useDate } from '../context/DateContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
-import { useDeferredMemo } from '../hooks/useDeferredMemo'
+import { useTabCache } from '../hooks/useTabCache'
 import { useWorkerTask } from '../hooks/useWorkerTask'
 import KPICard from '../components/dashboard/KPICard'
 import IncidentTrendChart from '../components/dashboard/IncidentTrendChart'
@@ -108,7 +108,7 @@ const Dashboard = () => {
   const { setPeriod, setFilter, clearFilters: contextClearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig } = useFilteredData()
+  const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig, filterFingerprint } = useFilteredData()
   const filteredIncidents = useDeferredValue(_fi)
   const heatmapIncidents = useDeferredValue(_hi)
 
@@ -334,8 +334,8 @@ const Dashboard = () => {
 
   // ── Single-pass KPI + chart aggregation ──────────────────────────────
   // Replaces 8 separate O(n) useMemos with ONE pass through filteredIncidents.
-  // Hidden tabs skip this entirely thanks to useDeferredMemo.
-  const dashboardAggregates = useDeferredMemo(() => {
+  // Hidden tabs skip this entirely thanks to useTabCache.
+  const dashboardAggregates = useTabCache('dashboardAggregates', () => {
     // Check pre-computation cache (populated during import phase or write-through)
     const cached = getCached(CACHE_KEYS.DASHBOARD_AGGREGATES, filteredIncidents)
     if (cached) return cached
@@ -457,7 +457,7 @@ const Dashboard = () => {
     }
     setCached(CACHE_KEYS.DASHBOARD_AGGREGATES, filteredIncidents, result)
     return result
-  }, [filteredIncidents, cutoffDates.overdue30Days])
+  }, filterFingerprint, [filteredIncidents, cutoffDates.overdue30Days])
 
   // Destructure for easy access (stable refs while tab is hidden)
   const {
@@ -468,7 +468,7 @@ const Dashboard = () => {
   } = dashboardAggregates
 
   // Subregion Contribution: top 6 subregions + Others
-  const subregionContributionData = useDeferredMemo(() => {
+  const subregionContributionData = useTabCache('subregionContribution', () => {
     // Check pre-computation cache (populated during import phase or write-through)
     const cached = getCached(CACHE_KEYS.SUBREGION_CONTRIBUTION, filteredIncidents)
     if (cached) return cached
@@ -496,11 +496,11 @@ const Dashboard = () => {
     }
     setCached(CACHE_KEYS.SUBREGION_CONTRIBUTION, filteredIncidents, result)
     return result
-  }, [filteredIncidents, siteClassifications])
+  }, filterFingerprint, [filteredIncidents, siteClassifications])
 
   // Top Hazards data - EXCLUDES proactive types (only counts non-proactive)
   // Significant Hazards (13 official categories) are prioritized first
-  const topHazards = useDeferredMemo(() => {
+  const topHazards = useTabCache('topHazards', () => {
     // Check pre-computation cache (populated during import phase or write-through)
     const cached = getCached(CACHE_KEYS.TOP_HAZARDS, filteredIncidents)
     if (cached) return cached
@@ -546,11 +546,11 @@ const Dashboard = () => {
       .slice(0, 10)
     setCached(CACHE_KEYS.TOP_HAZARDS, filteredIncidents, result)
     return result
-  }, [filteredIncidents])
+  }, filterFingerprint, [filteredIncidents])
 
   // Hazards Heatmap data (uses heatmapIncidents - not affected by "This Month")
   // Always shows all 14 Significant Hazards + any additional hazards with data
-  const hazardsHeatmap = useDeferredMemo(() => {
+  const hazardsHeatmap = useTabCache('hazardsHeatmap', () => {
     // Check pre-computation cache (populated during import phase or write-through)
     const cached = getCached(CACHE_KEYS.HAZARDS_HEATMAP, heatmapIncidents)
     if (cached) return cached
@@ -645,7 +645,7 @@ const Dashboard = () => {
     const result = { months, hazards, data, maxValue }
     setCached(CACHE_KEYS.HAZARDS_HEATMAP, heatmapIncidents, result)
     return result
-  }, [heatmapIncidents])
+  }, filterFingerprint, [heatmapIncidents])
 
   // Get heatmap cell color
   const getHeatmapColor = (value, maxValue) => {
