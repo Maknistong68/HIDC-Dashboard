@@ -45,7 +45,7 @@ const DataConfidenceFooter = ({ negativeIncidents, weekly }) => {
         <ul className="mt-2 pt-2 border-t border-surface-200 space-y-1 text-2xs text-surface-500 list-disc list-inside">
           <li>Predictions assume current trends continue. Operational changes may alter outcomes.</li>
           <li>Control effectiveness (75%/50%/30%) are industry benchmarks, not site-calibrated.</li>
-          <li>Monte Carlo uses {stats.observations} data points. Results vary between runs.</li>
+          <li>Simulation uses {stats.observations} data points. Results may vary with new data.</li>
         </ul>
       )}
     </div>

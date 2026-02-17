@@ -1,11 +1,11 @@
 import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
-import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp, Dices } from 'lucide-react'
+import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp } from 'lucide-react'
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useDeferredMemo } from '../hooks/useDeferredMemo'
 import { useWorkerTask } from '../hooks/useWorkerTask'
-import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast, MonteCarloTab } from '../components/outlook'
+import { HazardList, HazardDetailPanel, FactorList, FactorDetailPanel, RiskPerformanceTab, HazardRiskMatrix, RiskTrendForecast } from '../components/outlook'
 import TabErrorBoundary from '../components/common/TabErrorBoundary'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
@@ -113,7 +113,6 @@ const MAIN_TABS = [
 const PREDICTIVE_SUB_TABS = [
   { id: 'smsa', label: 'Risk Matrix', icon: Shield },
   { id: 'trend-forecast', label: 'Risk Trend', icon: TrendingUp },
-  { id: 'monte-carlo', label: 'Monte Carlo', icon: Dices },
 ]
 
 /**
@@ -639,12 +638,6 @@ const SafetyOutlook = () => {
                 sortedHazards={sortedHazards}
                 factorData={factorData}
                 negativeIncidents={negativeIncidents}
-              />
-            )}
-            {activePredictiveSubTab === 'monte-carlo' && (
-              <MonteCarloTab
-                negativeIncidents={negativeIncidents}
-                sortedHazards={sortedHazards}
               />
             )}
           </div>

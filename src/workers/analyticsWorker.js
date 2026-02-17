@@ -23,7 +23,6 @@ import {
   getFlaggedRecords,
 } from '../utils/dataQualityCalculations'
 import { detectMisspellings } from '../utils/spellChecker'
-import { runMonteCarloSimulation } from '../utils/monteCarloEngine'
 
 // ─── Internal LRU Cache ─────────────────────────────────────────────
 const CACHE_MAX = 50
@@ -102,13 +101,6 @@ const TASKS = {
     }
   },
 
-  monteCarlo(incidents, params) {
-    return runMonteCarloSimulation(incidents, params?.sortedHazards || [], {
-      numSimulations: params?.numSimulations || 5000,
-      horizonWeeks: params?.horizonWeeks || 4,
-      significantOnly: params?.significantOnly ?? false,
-    })
-  },
 }
 
 // ─── Layer 4: Data dedup cache — store incident arrays by hash ──────

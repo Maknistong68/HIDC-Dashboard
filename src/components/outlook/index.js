@@ -35,7 +35,6 @@ export { default as LeadingIndicatorTracker } from './LeadingIndicatorTracker'
 
 // Redesign components
 export { default as SafetyStatusBanner } from './SafetyStatusBanner'
-export { default as RiskTimeline } from './RiskTimeline'
 export { default as HazardRiskCards } from './HazardRiskCards'
 export { default as IncidentTypeOutlook } from './IncidentTypeOutlook'
 export { default as DataConfidenceFooter } from './DataConfidenceFooter'
@@ -50,4 +49,3 @@ export { default as ForecastSimulatorPanel } from './ForecastSimulatorPanel'
 
 // Predictive sub-tabs
 export { default as RiskTrendForecast } from './RiskTrendForecast'
-export { default as MonteCarloTab } from './MonteCarloTab'
