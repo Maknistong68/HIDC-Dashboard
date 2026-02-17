@@ -4,7 +4,7 @@ import { TabVisibilityContext } from './useDeferredMemo'
 // ─── Hash helper (copied from analyticsWorker.js) ───────────────────
 function hashIncidents(incidents) {
   if (!incidents || incidents.length === 0) return 'empty'
-  const sampleSize = Math.min(10, incidents.length)
+  const sampleSize = Math.max(10, Math.min(50, Math.ceil(incidents.length / 500)))
   const step = Math.max(1, Math.floor(incidents.length / sampleSize))
   const parts = []
   for (let i = 0; i < incidents.length && parts.length < sampleSize; i += step) {

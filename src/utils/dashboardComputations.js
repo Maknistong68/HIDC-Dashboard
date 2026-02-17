@@ -195,8 +195,9 @@ export function computeDashboardAggregates(filteredIncidents, overdue30) {
 
 export function computeTopHazards(filteredIncidents) {
   const counts = {}
-  const nonPositiveIncidents = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
-  nonPositiveIncidents.forEach(incident => {
+  for (let idx = 0; idx < filteredIncidents.length; idx++) {
+    const incident = filteredIncidents[idx]
+    if (PROACTIVE_SET.has(incident.type)) continue
     const normalized = normalizeHazard(incident.location)
     if (normalized && normalized !== 'Not Specified') {
       if (!counts[normalized]) {
@@ -208,7 +209,7 @@ export function computeTopHazards(filteredIncidents) {
         counts[normalized].open++
       }
     }
-  })
+  }
   return Object.entries(counts)
     .map(([name, data]) => ({
       name,
@@ -237,17 +238,28 @@ export function computeHazardsHeatmap(heatmapIncidents) {
   const hazardSet = new Set(SIGNIFICANT_HAZARDS)
   const hazardSetLower = new Set(SIGNIFICANT_HAZARDS.map(h => h.toLowerCase()))
 
-  heatmapIncidents.forEach(i => {
-    const normalized = normalizeHazard(i.location)
-    if (normalized && normalized !== 'Not Specified') {
-      const lowerNormalized = normalized.toLowerCase()
-      if (!hazardSetLower.has(lowerNormalized)) {
-        const canonicalSub = SUB_SIGNIFICANT_HAZARDS.find(h => h.toLowerCase() === lowerNormalized)
-        hazardSet.add(canonicalSub || normalized)
-        hazardSetLower.add(lowerNormalized)
-      }
+  // Single pass: build hazard set, track min/max date, collect pre-normalized pairs
+  let minDate = null, maxDate = null
+  const normalized = [] // [{month, lowerHazard}]
+  for (let idx = 0; idx < heatmapIncidents.length; idx++) {
+    const i = heatmapIncidents[idx]
+    const norm = normalizeHazard(i.location)
+    if (!norm || norm === 'Not Specified') continue
+
+    const lower = norm.toLowerCase()
+    if (!hazardSetLower.has(lower)) {
+      const canonicalSub = SUB_SIGNIFICANT_HAZARDS.find(h => h.toLowerCase() === lower)
+      hazardSet.add(canonicalSub || norm)
+      hazardSetLower.add(lower)
     }
-  })
+
+    if (i.date) {
+      normalized.push({ month: i.date.substring(0, 7), lowerHazard: lower })
+      if (!minDate || i.date < minDate) minDate = i.date
+      if (!maxDate || i.date > maxDate) maxDate = i.date
+    }
+  }
+  if (!minDate) return { months: [], hazards: [], data: {}, maxValue: 0 }
 
   const hazards = Array.from(hazardSet).sort((a, b) => {
     const lowerA = a.toLowerCase()
@@ -266,11 +278,8 @@ export function computeHazardsHeatmap(heatmapIncidents) {
     return a.localeCompare(b)
   })
 
-  const dates = heatmapIncidents.map(i => i.date).filter(Boolean).sort()
-  if (dates.length === 0) return { months: [], hazards: [], data: {}, maxValue: 0 }
-
-  const startDate = parseISO(dates[0])
-  const endDate = parseISO(dates[dates.length - 1])
+  const startDate = parseISO(minDate)
+  const endDate = parseISO(maxDate)
 
   const months = eachMonthOfInterval({ start: startOfMonth(startDate), end: endOfMonth(endDate) })
     .map(d => format(d, 'yyyy-MM'))
@@ -278,31 +287,24 @@ export function computeHazardsHeatmap(heatmapIncidents) {
   const data = {}
   let maxValue = 0
 
+  const lowerToCanonical = {}
   hazards.forEach(hazard => {
     data[hazard] = {}
     months.forEach(month => {
       data[hazard][month] = 0
     })
+    lowerToCanonical[hazard.toLowerCase()] = hazard
   })
 
-  const lowerToCanonical = {}
-  hazards.forEach(h => {
-    lowerToCanonical[h.toLowerCase()] = h
-  })
-
-  heatmapIncidents.forEach(incident => {
-    const normalized = normalizeHazard(incident.location)
-    if (normalized && normalized !== 'Not Specified' && incident.date) {
-      const month = incident.date.substring(0, 7)
-      const canonicalHazard = lowerToCanonical[normalized.toLowerCase()]
-      if (canonicalHazard && data[canonicalHazard] && data[canonicalHazard][month] !== undefined) {
-        data[canonicalHazard][month]++
-        if (data[canonicalHazard][month] > maxValue) {
-          maxValue = data[canonicalHazard][month]
-        }
-      }
+  // Build matrix from collected pairs (no re-normalization needed)
+  for (let idx = 0; idx < normalized.length; idx++) {
+    const { month, lowerHazard } = normalized[idx]
+    const canonical = lowerToCanonical[lowerHazard]
+    if (canonical && data[canonical]?.[month] !== undefined) {
+      data[canonical][month]++
+      if (data[canonical][month] > maxValue) maxValue = data[canonical][month]
     }
-  })
+  }
 
   return { months, hazards, data, maxValue }
 }

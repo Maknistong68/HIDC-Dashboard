@@ -226,15 +226,15 @@ export const getFileByHash = async (hash) => {
  */
 export const getFileRecordCounts = async () => {
   const db = await getDB()
-  const records = await db.getAll(STORES.RECORDS)
-
+  const tx = db.transaction(STORES.RECORDS, 'readonly')
+  const index = tx.store.index('fileId')
   const counts = new Map()
-  for (const record of records) {
-    if (record.fileId) {
-      counts.set(record.fileId, (counts.get(record.fileId) || 0) + 1)
-    }
+  let cursor = await index.openCursor()
+  while (cursor) {
+    const fileId = cursor.value.fileId
+    if (fileId) counts.set(fileId, (counts.get(fileId) || 0) + 1)
+    cursor = await cursor.continue()
   }
-
   return counts
 }
 

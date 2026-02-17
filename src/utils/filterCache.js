@@ -14,7 +14,8 @@
  * LRU cache with 20 entries max (~800KB worst case: 20 entries x 5K refs x 8 bytes).
  */
 
-const MAX_ENTRIES = 20
+const MAX_ENTRIES = 15
+const MAX_AGE_MS = 300_000 // 5 minutes
 
 // LRU cache: Map preserves insertion order; oldest entries evicted first
 let cache = new Map()
@@ -85,8 +86,14 @@ function getFilterLevel(filters, hasDate) {
 function cacheSet(key, value) {
   // Move to end (most recently used) by deleting and re-adding
   if (cache.has(key)) cache.delete(key)
-  cache.set(key, value)
-  // Evict oldest if over capacity
+  cache.set(key, { ...value, _ts: Date.now() })
+  // Evict stale entries (> 5 min) — Map preserves insertion order
+  const cutoff = Date.now() - MAX_AGE_MS
+  for (const [k, v] of cache) {
+    if (v._ts < cutoff) cache.delete(k)
+    else break
+  }
+  // Also enforce count cap
   if (cache.size > MAX_ENTRIES) {
     const oldest = cache.keys().next().value
     cache.delete(oldest)
@@ -100,8 +107,14 @@ function cacheSet(key, value) {
 function cacheGet(key) {
   if (!cache.has(key)) return undefined
   const value = cache.get(key)
+  // Evict if stale
+  if (value._ts < Date.now() - MAX_AGE_MS) {
+    cache.delete(key)
+    return undefined
+  }
   // Promote to most recent
   cache.delete(key)
+  value._ts = Date.now()
   cache.set(key, value)
   return value
 }
@@ -167,11 +180,19 @@ export function filterHierarchical(
   const siteSet = hasSite ? new Set(debouncedFilters.site) : null
   const subRegionSet = hasSubRegion ? new Set(debouncedFilters.subRegion) : null
 
+  // Determine if we should build L1 intermediate during this loop
+  const l1Key = (startLevel === 0 && targetLevel > 1 && hasContractor)
+    ? buildKey(1, debouncedFilters, dateKey)
+    : null
+  const buildL1 = l1Key && !cache.has(l1Key)
+
   // Filter from startData down to target level
   const filtered = []
   const heatmap = []
   const filteredPreDate = [] // L3 result (spatial only, before date filter)
   const contractorSitesSet = new Set()
+  const l1Filtered = buildL1 ? [] : null
+  const l1Heatmap = buildL1 ? [] : null
 
   for (let idx = 0; idx < startData.length; idx++) {
     const i = startData[idx]
@@ -183,6 +204,13 @@ export function filterHierarchical(
 
     // Apply contractor filter (skip if already applied at startLevel)
     if (startLevel < 1 && hasContractor && !contractorSet.has(i.contractor)) continue
+
+    // After contractor filter passes — collect L1 intermediate
+    if (buildL1 && startLevel < 1) {
+      l1Filtered.push(i)
+      if (!proactiveSet.has(i.type)) l1Heatmap.push(i)
+    }
+
     // Apply site filter (skip if already applied at startLevel)
     if (startLevel < 2 && hasSite && !siteSet.has(i.site)) continue
     // Apply subRegion filter (skip if already applied at startLevel)
@@ -217,28 +245,15 @@ export function filterHierarchical(
   // Cache at target level
   cacheSet(targetKey, { ...result, baseFilteredPreDate: hasDate ? filteredPreDate : filtered })
 
-  // Also cache intermediate levels if we computed them
-  // Cache L1 (contractor-only) if we started from L0 and target > 1
-  if (startLevel === 0 && targetLevel > 1 && hasContractor) {
-    const l1Key = buildKey(1, debouncedFilters, dateKey)
-    if (!cache.has(l1Key)) {
-      // L1 = contractor-filtered, no site/subRegion/date
-      const l1Filtered = []
-      const l1Heatmap = []
-      for (let idx = 0; idx < allIncidents.length; idx++) {
-        const i = allIncidents[idx]
-        if (!contractorSet.has(i.contractor)) continue
-        if (!proactiveSet.has(i.type)) l1Heatmap.push(i)
-        l1Filtered.push(i)
-      }
-      const l1Sites = Array.from(contractorSitesSet).sort().map(s => ({ value: s, label: s }))
-      cacheSet(l1Key, {
-        baseFiltered: l1Filtered,
-        baseFilteredPreDate: l1Filtered,
-        baseHeatmap: l1Heatmap,
-        siteOptions: l1Sites,
-      })
-    }
+  // Cache L1 intermediate (built during the main loop — no second scan needed)
+  if (buildL1) {
+    const l1Sites = Array.from(contractorSitesSet).sort().map(s => ({ value: s, label: s }))
+    cacheSet(l1Key, {
+      baseFiltered: l1Filtered,
+      baseFilteredPreDate: l1Filtered,
+      baseHeatmap: l1Heatmap,
+      siteOptions: l1Sites,
+    })
   }
 
   if (import.meta.env.DEV) console.debug(`[FilterCache] MISS L${targetLevel}, computed from L${startLevel}`, targetKey)
