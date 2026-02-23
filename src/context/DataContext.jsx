@@ -333,7 +333,7 @@ export const DataProvider = ({ children }) => {
       if (import.meta.env.DEV) console.error('[DataContext] CRITICAL ERROR in addIncidentsWithFile:', error)
       throw error
     }
-  }, [])
+  }, [reloadFiles])
 
   // Batch reload - single cache clear + state update after batch import
   // Must be synchronous (no startTransition) so setIncidents commits before

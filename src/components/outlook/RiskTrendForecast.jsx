@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, startTransition, memo } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, startTransition, memo } from 'react'
 import {
   ComposedChart, Bar, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
@@ -249,9 +249,19 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     return calculateCriticalThreshold(hazardIncidents, forecastData.weeklyRates)
   }, [forecastData, hazardIncidents])
 
-  // Active threshold value based on selected mode (only for serious-data path)
+  // Sync mode keys when switching between serious-data / statistical hazards
+  useEffect(() => {
+    if (!criticalThreshold) return
+    if (criticalThreshold.hasSeriousData) {
+      setCriticalZoneMode(prev => ['avg', 'med', 'min', 'off'].includes(prev) ? prev : 'avg')
+    } else {
+      setCriticalZoneMode(prev => ['tight', 'std', 'wide', 'off'].includes(prev) ? prev : 'std')
+    }
+  }, [criticalThreshold?.hasSeriousData])
+
+  // Active threshold value based on selected mode (works for both paths)
   const activeCriticalThreshold = useMemo(() => {
-    if (!criticalThreshold?.hasSeriousData || criticalZoneMode === 'off') return null
+    if (!criticalThreshold || criticalZoneMode === 'off') return null
     if (!criticalThreshold.thresholds) return criticalThreshold.threshold
     return criticalThreshold.thresholds[criticalZoneMode] ?? criticalThreshold.threshold
   }, [criticalThreshold, criticalZoneMode])
@@ -334,7 +344,8 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     setSliderValues({})
     setActionsToClose(0)
     setActivePreset(null)
-  }, [])
+    setCriticalZoneMode(criticalThreshold?.hasSeriousData ? 'avg' : 'std')
+  }, [criticalThreshold?.hasSeriousData])
 
   const handlePreset = useCallback((presetId) => {
     if (activePreset === presetId) {
@@ -386,14 +397,22 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                 <span className="text-surface-400 font-normal ml-1">— Weekly Incident Rate + EMA Forecast</span>
               </h3>
               <div className="flex items-center gap-2">
-                {criticalThreshold?.hasSeriousData && (
+                {criticalThreshold && (
                   <div className="inline-flex rounded border border-surface-200 bg-surface-50 overflow-hidden">
-                    {[
-                      { key: 'avg', label: 'Avg', tip: 'Average weekly count during serious-incident weeks' },
-                      { key: 'med', label: 'Med', tip: 'Median — less affected by outlier weeks' },
-                      { key: 'min', label: 'Min', tip: 'Minimum — most sensitive early warning' },
-                      { key: 'off', label: 'Off', tip: 'Hide critical zone overlay' },
-                    ].map(({ key, label, tip }) => (
+                    {(criticalThreshold.hasSeriousData
+                      ? [
+                          { key: 'avg', label: 'Avg', tip: 'Average weekly count during serious-incident weeks' },
+                          { key: 'med', label: 'Med', tip: 'Median — less affected by outlier weeks' },
+                          { key: 'min', label: 'Min', tip: 'Minimum — most sensitive early warning' },
+                          { key: 'off', label: 'Off', tip: 'Hide critical zone overlay' },
+                        ]
+                      : [
+                          { key: 'tight', label: '1σ', tip: 'Tighter threshold — earlier warning' },
+                          { key: 'std', label: '1.5σ', tip: 'Standard statistical threshold' },
+                          { key: 'wide', label: '2σ', tip: 'Conservative — only extreme spikes' },
+                          { key: 'off', label: 'Off', tip: 'Hide critical zone overlay' },
+                        ]
+                    ).map(({ key, label, tip }) => (
                       <button
                         key={key}
                         title={tip}
@@ -433,7 +452,7 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
 
-                  {/* Critical threshold red zone */}
+                  {/* Critical threshold red zone (unified for both serious-data & statistical paths) */}
                   {activeCriticalThreshold != null && (
                     <>
                       <ReferenceArea
@@ -450,30 +469,7 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                         label={{
                           value: criticalThreshold?.hasSeriousData
                             ? `Serious Incident Zone — ${criticalZoneMode === 'med' ? 'Median' : criticalZoneMode === 'min' ? 'Min' : 'Avg'} (${activeCriticalThreshold}/wk)`
-                            : `Elevated Activity Zone (${activeCriticalThreshold}/wk)`,
-                          position: 'insideTopRight',
-                          fontSize: 9,
-                          fill: '#ef4444',
-                        }}
-                      />
-                    </>
-                  )}
-                  {/* Statistical fallback zone (no serious data, always shown) */}
-                  {criticalThreshold && !criticalThreshold.hasSeriousData && (
-                    <>
-                      <ReferenceArea
-                        y1={criticalThreshold.threshold}
-                        fill="#fef2f2"
-                        fillOpacity={0.6}
-                        label={{ value: 'Risk Zone', position: 'insideTopLeft', fontSize: 9, fill: '#fca5a5' }}
-                      />
-                      <ReferenceLine
-                        y={criticalThreshold.threshold}
-                        stroke="#ef4444"
-                        strokeDasharray="6 3"
-                        strokeWidth={1.5}
-                        label={{
-                          value: `Elevated Activity Zone (${criticalThreshold.threshold}/wk)`,
+                            : `Elevated Activity Zone — ${criticalZoneMode === 'tight' ? '1σ' : criticalZoneMode === 'wide' ? '2σ' : '1.5σ'} (${activeCriticalThreshold}/wk)`,
                           position: 'insideTopRight',
                           fontSize: 9,
                           fill: '#ef4444',
@@ -495,9 +491,9 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
 
                   {/* Incident severity dots on historical bars */}
                   <Scatter dataKey="incidentDot" name="Worst Severity" legendType="none" shape="circle">
-                    {chartData.map((entry, i) => (
+                    {chartData.map((entry) => (
                       <Cell
-                        key={i}
+                        key={entry.week}
                         fill={entry.dotColor || 'transparent'}
                         r={entry.incidentDot != null ? 5 : 0}
                         stroke="#fff"
@@ -508,9 +504,9 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
 
                   {/* Spike markers (breached upper Bollinger band) */}
                   <Scatter dataKey="spike" name="Spike" legendType="none" shape="diamond">
-                    {chartData.map((entry, i) => (
+                    {chartData.map((entry) => (
                       <Cell
-                        key={i}
+                        key={entry.week}
                         fill={entry.spike != null ? '#dc2626' : 'transparent'}
                         r={entry.spike != null ? 5 : 0}
                         stroke="#fff"
@@ -541,9 +537,13 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
                     : `Red zone (minimum): ${activeCriticalThreshold}/wk — lowest weekly count that still produced a serious incident (${criticalThreshold.dateRange.from} to ${criticalThreshold.dateRange.to}). Most sensitive early-warning threshold.`}
               </p>
             )}
-            {criticalThreshold && !criticalThreshold.hasSeriousData && (
+            {criticalThreshold && !criticalThreshold.hasSeriousData && criticalZoneMode !== 'off' && (
               <p className="text-[10px] text-red-400 italic mt-1">
-                Red zone: Statistically elevated activity level (mean + 1.5{'\u03C3'}). No serious incidents recorded for this hazard.
+                {criticalZoneMode === 'tight'
+                  ? `Red zone (1σ): Activity above ${activeCriticalThreshold}/wk — tighter threshold for earlier warning. No serious incidents recorded for this hazard.`
+                  : criticalZoneMode === 'wide'
+                    ? `Red zone (2σ): Activity above ${activeCriticalThreshold}/wk — conservative threshold, only extreme spikes. No serious incidents recorded for this hazard.`
+                    : `Red zone (1.5σ): Activity above ${activeCriticalThreshold}/wk — standard statistical threshold. No serious incidents recorded for this hazard.`}
               </p>
             )}
           </div>

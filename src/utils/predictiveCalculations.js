@@ -237,13 +237,18 @@ export const calculateCriticalThreshold = (hazardIncidents, weeklyRates) => {
   }
 
   if (seriousWeeks.size === 0) {
-    // Fallback: statistical upper bound (mean + 1.5σ of weekly counts)
+    // Fallback: statistical upper bounds at multiple sigma levels
     const counts = weeklyRates.map(w => w.count)
     const mean = counts.reduce((s, c) => s + c, 0) / counts.length
     const variance = counts.reduce((s, c) => s + Math.pow(c - mean, 2), 0) / counts.length
-    const fallbackThreshold = mean + 1.5 * Math.sqrt(variance)
+    const stdDev = Math.sqrt(variance)
     return {
-      threshold: Math.round(fallbackThreshold * 10) / 10,
+      threshold: Math.round((mean + 1.5 * stdDev) * 10) / 10,
+      thresholds: {
+        tight: Math.round((mean + 1.0 * stdDev) * 10) / 10,
+        std: Math.round((mean + 1.5 * stdDev) * 10) / 10,
+        wide: Math.round((mean + 2.0 * stdDev) * 10) / 10,
+      },
       seriousWeekCount: 0,
       hasSeriousData: false,
     }

@@ -137,12 +137,6 @@ const Dashboard = () => {
   // Report modal state
   const [viewingRecord, setViewingRecord] = useState(null)
 
-  // Collapsible section state
-  const [collapsedSections, setCollapsedSections] = useState({
-    temporal: true,  // Collapsed by default
-    heatmap: true,   // Collapsed by default
-  })
-
   // Heatmap scroll ref
   const heatmapScrollRef = useRef(null)
 
@@ -162,12 +156,12 @@ const Dashboard = () => {
   const hourOfDayRef = useRef(null)
   const hazardsHeatmapRef = useRef(null)
 
-  // Auto-scroll heatmap to end (most recent months) on load
+  // Auto-scroll heatmap to end (most recent months) on mount
   useEffect(() => {
     if (heatmapScrollRef.current) {
       heatmapScrollRef.current.scrollLeft = heatmapScrollRef.current.scrollWidth
     }
-  }, [incidents])
+  }, [])
 
   // Handle period change
   const handlePeriodChange = useCallback((newPeriod) => {
@@ -197,10 +191,6 @@ const Dashboard = () => {
 
   const closeHeatmapDrillDown = useCallback(() => {
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }, [])
-
-  const toggleSection = useCallback((section) => {
-    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }, [])
 
   // Handle drill-down - opens modal with level 2 (monthly breakdown)
@@ -253,7 +243,7 @@ const Dashboard = () => {
       // Exclude proactive types for hazards drill-down (consistent with Top Hazards chart)
       const normalizedFilter = normalizeHazard(drillDown.filter)
       filtered = filteredIncidents.filter(i =>
-        !PROACTIVE_TYPES.includes(i.type) && normalizeHazard(i.location) === normalizedFilter
+        !PROACTIVE_SET.has(i.type) && normalizeHazard(i.location) === normalizedFilter
       )
     } else if (drillDown.chart === 'company') {
       // Filter by contractor/company
@@ -264,15 +254,15 @@ const Dashboard = () => {
       // Filter by positive, negative, or incidents category
       if (drillDown.filter === 'Negative') {
         filtered = filteredIncidents.filter(i =>
-          NEGATIVE_OBSERVATION_TYPES.includes(i.type)
+          NEGATIVE_SET.has(i.type)
         )
       } else if (drillDown.filter === 'Positive') {
         filtered = filteredIncidents.filter(i =>
-          PROACTIVE_TYPES.includes(i.type)
+          PROACTIVE_SET.has(i.type)
         )
       } else if (drillDown.filter === 'Incidents') {
         filtered = filteredIncidents.filter(i =>
-          INCIDENT_CATEGORY_TYPES.includes(i.type)
+          INCIDENT_CAT_SET.has(i.type)
         )
       }
     } else if (drillDown.chart === 'subRegion') {
@@ -507,7 +497,7 @@ const Dashboard = () => {
 
     const counts = {}
     // Filter out proactive types - Top Hazards should only show non-proactive observations
-    const nonPositiveIncidents = filteredIncidents.filter(i => !PROACTIVE_TYPES.includes(i.type))
+    const nonPositiveIncidents = filteredIncidents.filter(i => !PROACTIVE_SET.has(i.type))
     nonPositiveIncidents.forEach(incident => {
       const normalized = normalizeHazard(incident.location)
       if (normalized && normalized !== 'Not Specified') {
