@@ -474,7 +474,7 @@ export const calculateFactorTemporalCorrelations = (factorData, temporalPatterns
         if (peakDays.includes(dayIndex)) {
           peakDayCount++
         }
-      } catch (e) { /* skip invalid dates */ }
+      } catch { /* skip invalid dates */ }
     }
 
     // Calculate correlation ratio
@@ -780,7 +780,7 @@ export const generateDynamicSliders = (factorData, hazardName, totalNegativeInci
 export const calculateActionClosureEffect = (
   actionsToClose,
   totalOpenActions,
-  totalNegativeIncidents
+  _totalNegativeIncidents
 ) => {
   // Guard: Ensure both values are valid positive numbers
   if (!totalOpenActions || totalOpenActions <= 0) return 0
@@ -979,7 +979,7 @@ import { QUICK_ACTION_PRESETS } from '../../utils/constants'
  * @param {number} openActionsCount - Number of open corrective actions
  * @returns {Object} { sliders, actionsToClose }
  */
-export const applyQuickActionPreset = (actionId, prevalence = {}, openActionsCount = 0) => {
+export const applyQuickActionPreset = (actionId, _prevalence = {}, openActionsCount = 0) => {
   const preset = QUICK_ACTION_PRESETS.find(a => a.id === actionId)
   if (!preset) {
     return { sliders: {}, actionsToClose: 0 }
@@ -1122,11 +1122,11 @@ export const getRecommendedActionsForMultipleHazards = (hazardNames, factorData,
  */
 export const calculateThreeFixedScenarios = ({
   incidentPrediction,
-  factorData,
+  factorData: _factorData,
   negativeIncidents,
   prevalence,
   topRiskHazard,
-  sortedHazards
+  sortedHazards: _sortedHazards
 }) => {
   const totalNegative = negativeIncidents?.length || 0
 
@@ -1250,7 +1250,7 @@ export const determineSingleBestAction = ({
   factorData,
   prevalence,
   topRiskHazard,
-  sortedHazards,
+  sortedHazards: _sortedHazards2,
   dataSourceBreakdown
 }) => {
   if (!factorData?.byFactor?.length) {

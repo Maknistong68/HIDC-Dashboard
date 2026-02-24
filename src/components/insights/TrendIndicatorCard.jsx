@@ -1,5 +1,5 @@
-import React from 'react'
-import { TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react'
+import { memo } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 /**
  * TrendIndicatorCard - Shows trend direction with visual indicator
@@ -93,4 +93,4 @@ export const TrendIndicatorGroup = ({ trends }) => {
   )
 }
 
-export default React.memo(TrendIndicatorCard)
+export default memo(TrendIndicatorCard)

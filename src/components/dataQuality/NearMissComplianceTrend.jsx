@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   LineChart,
   Line,
@@ -14,7 +14,7 @@ import TimePeriodToggle from '../common/TimePeriodToggle'
 import { InfoTooltip } from '../ui/Tooltip'
 import { TrendingUp, X, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 import { getNearMissComplianceTrend } from '../../utils/dataQualityCalculations'
-import { startOfQuarter, endOfQuarter, format, parseISO } from 'date-fns'
+import { endOfQuarter, format, parseISO } from 'date-fns'
 
 const TARGET = 2
 const PYRAMID_TYPES = ['lti', 'mti', 'fac', 'near-miss', 'unsafe-act', 'unsafe-condition']

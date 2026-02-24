@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { Search, MapPin, ChevronLeft, ChevronRight, Filter, X, Check, CheckSquare } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Search, MapPin, ChevronLeft, ChevronRight, Filter, X, CheckSquare } from 'lucide-react'
 import { useDataActions } from '../../context/DataContext'
 import { Card } from '../ui'
 

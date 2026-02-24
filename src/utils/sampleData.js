@@ -70,7 +70,6 @@ export const sampleProjects = [
 // Generate sample incidents
 export const generateSampleIncidents = () => {
   const incidents = []
-  const projectIds = sampleProjects.map(p => p.id)
 
   // Add historical incidents over 6 months
   const incidentData = [

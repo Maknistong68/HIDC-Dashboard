@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef } from 'react'
+import { memo, useCallback, useRef } from 'react'
 import { Settings, Shield, User, CheckCircle, RotateCcw } from 'lucide-react'
 import { QUICK_ACTION_PRESETS } from '../../utils/constants'
 

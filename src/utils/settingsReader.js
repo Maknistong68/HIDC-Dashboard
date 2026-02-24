@@ -4,12 +4,8 @@
  */
 
 import {
-  levenshteinSimilarity,
-  soundexMatch,
-  reporterNameSimilarity,
   enhancedDescriptionSimilarity,
   contractorSimilarity,
-  normalizeContractorName
 } from './stringMatching'
 
 // Hardcoded sensible defaults
@@ -119,7 +115,7 @@ export const getSetting = (path) => {
 /**
  * Apply text cleanup to a string
  */
-export const cleanText = (text, fieldType = 'description') => {
+export const cleanText = (text, _fieldType = 'description') => {
   if (!text || typeof text !== 'string') return text
 
   let result = text
@@ -142,6 +138,7 @@ export const cleanText = (text, fieldType = 'description') => {
   result = result.replace(/<[^>]*>/g, '')
 
   // Remove non-printable characters
+  // eslint-disable-next-line no-control-regex
   result = result.replace(/[\x00-\x1F\x7F]/g, '')
 
   return result
@@ -172,7 +169,7 @@ export const applyCapitalization = (text, rule) => {
 /**
  * Clean name field (always applies title case normalization)
  */
-export const cleanName = (name, fieldType) => {
+export const cleanName = (name, _fieldType) => {
   if (!name || typeof name !== 'string') return name
 
   let result = name.trim().replace(/\s+/g, ' ')
@@ -306,12 +303,6 @@ export const calculateRecordQuality = (record) => {
 export const checkDuplicate = (newRecord, existingRecord) => {
   const threshold = 0.85
   const dateTolerance = 1
-
-  const fieldMap = {
-    date: 'date',
-    contractor: 'contractor',
-    description: 'description',
-  }
 
   // Check date
   const newDate = (newRecord.date || '').toString().trim()

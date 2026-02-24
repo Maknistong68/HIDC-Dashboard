@@ -1,4 +1,3 @@
-import React from 'react'
 import ModalPortal from '../common/ModalPortal'
 import { X, Calculator, TrendingUp, TrendingDown, Minus, AlertCircle, Info } from 'lucide-react'
 
@@ -175,7 +174,7 @@ const ForecastBreakdown = ({ data, period }) => {
 
       {/* Confidence Explanation */}
       <div>
-        <h4 className="text-sm font-semibold text-surface-800 mb-2">Why "{confidence}" confidence?</h4>
+        <h4 className="text-sm font-semibold text-surface-800 mb-2">Why &quot;{confidence}&quot; confidence?</h4>
         <div className={`p-3 rounded-lg ${
           confidence === 'high' ? 'bg-green-50 text-green-800' :
           confidence === 'medium' ? 'bg-amber-50 text-amber-800' :
@@ -197,7 +196,7 @@ const ForecastBreakdown = ({ data, period }) => {
 
       {/* Trend Explanation */}
       <div>
-        <h4 className="text-sm font-semibold text-surface-800 mb-2">Why "{trend}" trend?</h4>
+        <h4 className="text-sm font-semibold text-surface-800 mb-2">Why &quot;{trend}&quot; trend?</h4>
         <div className="flex items-center gap-2 p-3 bg-surface-50 rounded-lg">
           {trend === 'increasing' && <TrendingUp className="text-red-500" size={20} />}
           {trend === 'decreasing' && <TrendingDown className="text-green-500" size={20} />}
@@ -217,7 +216,7 @@ const ForecastBreakdown = ({ data, period }) => {
  * TypeProbabilityBreakdown - Shows how type probabilities were calculated
  */
 const TypeProbabilityBreakdown = ({ data }) => {
-  const { types, monthlyData, lookbackMonths } = data || {}
+  const { types, monthlyData, lookbackMonths: _lookbackMonths } = data || {}
 
   return (
     <div className="space-y-6">

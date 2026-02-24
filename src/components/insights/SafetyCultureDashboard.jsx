@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import {
   TrendingUp,
   TrendingDown,
@@ -36,12 +36,6 @@ const SafetyCultureDashboard = ({ cultureData }) => {
     if (status === 'good') return 'text-safety-success'
     if (status === 'warning') return 'text-safety-warning'
     return 'text-safety-critical'
-  }
-
-  const getStatusBg = (status) => {
-    if (status === 'good') return 'bg-safety-success-light border-safety-success/20'
-    if (status === 'warning') return 'bg-safety-warning-light border-safety-warning/20'
-    return 'bg-safety-critical-light border-safety-critical/20'
   }
 
   const getLevelConfig = () => {
@@ -228,4 +222,4 @@ const SafetyCultureDashboard = ({ cultureData }) => {
   )
 }
 
-export default React.memo(SafetyCultureDashboard)
+export default memo(SafetyCultureDashboard)

@@ -1,4 +1,3 @@
-import React from 'react'
 import ModalPortal from '../common/ModalPortal'
 import { X } from 'lucide-react'
 

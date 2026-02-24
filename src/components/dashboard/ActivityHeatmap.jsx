@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { format, subDays, startOfWeek, addDays } from 'date-fns'
 
 const ActivityHeatmapComponent = ({ data, title = 'Activity Heatmap', period = null }) => {
-  const today = new Date()
+  const today = useMemo(() => new Date(), [])
 
   // Calculate weeks to show based on period (max 12 columns)
   const weeksToShow = useMemo(() => {

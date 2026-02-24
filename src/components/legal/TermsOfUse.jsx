@@ -1,5 +1,3 @@
-import React from 'react'
-
 const TermsOfUse = () => {
   return (
     <div className="prose prose-sm max-w-none">
@@ -33,7 +31,7 @@ const TermsOfUse = () => {
           <li><strong>Regular Backups:</strong> Export and backup your data regularly, as browser storage is not guaranteed</li>
           <li><strong>Authorized Use:</strong> Use the application only for legitimate organizational HSE purposes</li>
           <li><strong>Device Security:</strong> Maintain appropriate security on devices where the application is used</li>
-          <li><strong>Compliance:</strong> Ensure your use complies with your organization's policies and applicable laws</li>
+          <li><strong>Compliance:</strong> Ensure your use complies with your organization&apos;s policies and applicable laws</li>
         </ul>
       </section>
 
@@ -60,7 +58,7 @@ const TermsOfUse = () => {
         <h3 className="text-lg font-semibold text-surface-900 mb-3">6. No Warranty</h3>
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-amber-800">
-            This application is provided "AS IS" and "AS AVAILABLE" without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
+            This application is provided &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
           </p>
         </div>
       </section>
@@ -84,7 +82,7 @@ const TermsOfUse = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800 mb-2"><strong>Important Warning:</strong></p>
           <p className="text-red-700">
-            Data is stored in your browser's localStorage, which can be cleared by browser updates, clearing browsing data, or system maintenance. We strongly recommend regular data exports as backups. We are not responsible for any data loss.
+            Data is stored in your browser&apos;s localStorage, which can be cleared by browser updates, clearing browsing data, or system maintenance. We strongly recommend regular data exports as backups. We are not responsible for any data loss.
           </p>
         </div>
       </section>
@@ -92,7 +90,7 @@ const TermsOfUse = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">9. Modifications to Terms</h3>
         <p className="text-surface-600">
-          We reserve the right to modify these Terms of Use at any time. Changes will be reflected in the "Last Updated" date. Your continued use of the application after any changes constitutes acceptance of the new terms.
+          We reserve the right to modify these Terms of Use at any time. Changes will be reflected in the &quot;Last Updated&quot; date. Your continued use of the application after any changes constitutes acceptance of the new terms.
         </p>
       </section>
 

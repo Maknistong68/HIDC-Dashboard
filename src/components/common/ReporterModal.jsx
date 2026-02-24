@@ -1,15 +1,13 @@
-import React, { memo } from 'react'
+import { memo } from 'react'
 import ModalPortal from './ModalPortal'
 import {
   X,
   User,
-  Calendar,
   Clock,
   FileText,
   AlertTriangle,
   CheckCircle,
   TrendingUp,
-  Award,
   Target,
   BarChart3
 } from 'lucide-react'
@@ -37,14 +35,6 @@ const COLORS = {
   incident: '#ef4444'
 }
 
-const TYPE_LABELS = {
-  nearMiss: 'Near Miss',
-  unsafeCondition: 'Unsafe Condition',
-  unsafeAct: 'Unsafe Act',
-  positive: 'Positive',
-  incident: 'Incident'
-}
-
 const ReporterModal = ({ isOpen, onClose, data }) => {
   // Resizable functionality
   const {
@@ -70,29 +60,6 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
     { name: 'Positive', value: data.typeBreakdown.positive, color: COLORS.positive },
     { name: 'Incident', value: data.typeBreakdown.incident, color: COLORS.incident }
   ].filter(d => d.value > 0)
-
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'near-miss': return 'bg-blue-100 text-blue-700'
-      case 'unsafe-condition': return 'bg-indigo-100 text-indigo-700'
-      case 'unsafe-act': return 'bg-purple-100 text-purple-700'
-      case 'positive': return 'bg-green-100 text-green-700'
-      default: return 'bg-red-100 text-red-700'
-    }
-  }
-
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case 'near-miss': return 'Near Miss'
-      case 'unsafe-condition': return 'Unsafe Cond'
-      case 'unsafe-act': return 'Unsafe Act'
-      case 'positive': return 'Positive'
-      case 'lti': return 'LTI'
-      case 'mti': return 'MTI'
-      case 'fac': return 'FAC'
-      default: return type
-    }
-  }
 
   return (
     <ModalPortal isOpen={true}>
@@ -392,7 +359,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                           <span className="text-surface-400">→</span>
                           <span className="text-green-600 font-medium">{record.suggestedCategory}</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.misclassifiedRecords.length > 5 && (
@@ -417,7 +384,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                           <span>{record.date}</span>
                           <span className="text-red-600 font-medium">{record.wordCount} words</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description || '(empty)'}"</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description || '(empty)'}&quot;</p>
                       </div>
                     ))}
                     {data.flaggedRecords.length > 5 && (
@@ -442,7 +409,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                           <span>{record.date}</span>
                           <span className="text-orange-600 font-medium">Used {record.duplicateCount}x</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.duplicateDescriptions.length > 5 && (
@@ -467,7 +434,7 @@ const ReporterModal = ({ isOpen, onClose, data }) => {
                           <span>{record.date}</span>
                           <span className="text-surface-600 font-medium">{record.confidence}% confidence</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.vagueDescriptions.length > 5 && (

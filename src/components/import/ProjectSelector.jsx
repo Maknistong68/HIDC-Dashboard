@@ -1,4 +1,4 @@
-import React from 'react'
+// React import removed (jsx-runtime)
 import { Building2, CheckCircle } from 'lucide-react'
 
 const ProjectSelector = ({ projects, selectedProjectId, onProjectSelect }) => {

@@ -191,7 +191,6 @@ const RiskComparisonPanel = ({
   onRiskWeightsChange,
   presetProfile,
   onPresetChange,
-  presets
 }) => {
   const [activeTab, setActiveTab] = useState('contractor')
   const [showEditor, setShowEditor] = useState(false)

@@ -7,6 +7,20 @@ import RecommendationCard from './RecommendationCard'
  * Shows priority-ordered list of action items
  */
 const RecommendationsList = ({ recommendations, onItemClick }) => {
+  // Single-pass filtering instead of 3 separate filter operations
+  const { highPriority, mediumPriority, lowPriority } = useMemo(() => {
+    if (!recommendations || recommendations.length === 0) {
+      return { highPriority: [], mediumPriority: [], lowPriority: [] }
+    }
+    const grouped = { highPriority: [], mediumPriority: [], lowPriority: [] }
+    for (const rec of recommendations) {
+      if (rec.priority === 'HIGH') grouped.highPriority.push(rec)
+      else if (rec.priority === 'MEDIUM') grouped.mediumPriority.push(rec)
+      else grouped.lowPriority.push(rec)
+    }
+    return grouped
+  }, [recommendations])
+
   if (!recommendations || recommendations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -20,17 +34,6 @@ const RecommendationsList = ({ recommendations, onItemClick }) => {
       </div>
     )
   }
-
-  // Single-pass filtering instead of 3 separate filter operations
-  const { highPriority, mediumPriority, lowPriority } = useMemo(() => {
-    const grouped = { highPriority: [], mediumPriority: [], lowPriority: [] }
-    for (const rec of recommendations) {
-      if (rec.priority === 'HIGH') grouped.highPriority.push(rec)
-      else if (rec.priority === 'MEDIUM') grouped.mediumPriority.push(rec)
-      else grouped.lowPriority.push(rec)
-    }
-    return grouped
-  }, [recommendations])
 
   return (
     <div className="space-y-4">

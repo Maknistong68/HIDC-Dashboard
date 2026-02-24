@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   LineChart,
   Line,
@@ -35,7 +35,7 @@ const STATUS_CONFIG = {
   poor: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-50', bar: 'bg-red-500' },
 }
 
-const getStatus = (value) => value >= 75 ? 'good' : value >= 50 ? 'warning' : 'poor'
+const getStatus = (value) => value >= 90 ? 'good' : value >= 50 ? 'warning' : 'poor'
 
 /**
  * Build the 5-category quality breakdown for a given set of month keys.
@@ -167,7 +167,7 @@ const QualityScoreTrend = ({ incidents, isMobile }) => {
         >
           <TrendingUp size={14} className="text-blue-600" />
           <Card.Title>Quality Score Trend</Card.Title>
-          <InfoTooltip text="HOW THIS CHART IS CREATED: Each period, we calculate a quality score for all observations submitted using the same 5-category formula (classification accuracy, description quality, near-miss rate, reporter diversity, and data integrity). UPWARD TREND: Quality is improving - training and processes are working. DOWNWARD TREND: Quality is declining - may need refresher training or process review. The dashed blue line at 75% shows the recommended target. Click any dot to see the breakdown." />
+          <InfoTooltip text="HOW THIS CHART IS CREATED: Each period, we calculate a quality score for all observations submitted using the same 5-category formula (classification accuracy, description quality, near-miss rate, reporter diversity, and data integrity). UPWARD TREND: Quality is improving - training and processes are working. DOWNWARD TREND: Quality is declining - may need refresher training or process review. The dashed blue line at 90% shows the recommended target. Click any dot to see the breakdown." />
         </Card.Header>
         <div className={isMobile ? 'h-[200px]' : 'h-[280px]'}>
           <ResponsiveContainer width="100%" height="100%">
@@ -217,14 +217,14 @@ const QualityScoreTrend = ({ incidents, isMobile }) => {
                 }}
               />
               <ReferenceLine
-                y={75}
+                y={90}
                 stroke="#3b82f6"
                 strokeDasharray="5 5"
                 strokeWidth={1}
                 label={
                   isMobile
                     ? null
-                    : { value: '75% target', position: 'right', fontSize: 10, fill: '#3b82f6' }
+                    : { value: '90% target', position: 'right', fontSize: 10, fill: '#3b82f6' }
                 }
               />
               <Line
@@ -284,14 +284,14 @@ const QualityScoreTrend = ({ incidents, isMobile }) => {
             {/* Overall score */}
             <div className="flex items-center gap-3 px-5 py-3 bg-surface-50 border-b border-surface-100">
               <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-white text-sm font-bold ${
-                breakdown.score >= 75 ? 'bg-blue-500' : breakdown.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                breakdown.score >= 90 ? 'bg-blue-500' : breakdown.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
               }`}>
                 {breakdown.score}
               </div>
               <div>
                 <div className="text-xs font-semibold text-surface-700">Overall Quality Score</div>
                 <div className="text-[11px] text-surface-500">
-                  {breakdown.score >= 75 ? 'Good — meeting targets' : breakdown.score >= 50 ? 'Needs improvement' : 'Below standard — action required'}
+                  {breakdown.score >= 90 ? 'Good — meeting targets' : breakdown.score >= 50 ? 'Needs improvement' : 'Below standard — action required'}
                 </div>
               </div>
             </div>

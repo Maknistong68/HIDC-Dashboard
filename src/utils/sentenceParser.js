@@ -483,7 +483,6 @@ export const ACTOR_HAZARD_CONFIDENCE = {
   // Mobile plant roles → Mobile Plant & Equipment
   'forklift operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
   'excavator operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
-  'crane operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.85 },
   'loader operator': { hazard: 'Mobile Plant & Equipment', confidence: 0.95 },
   'dump truck driver': { hazard: 'Mobile Plant & Equipment', confidence: 0.9 },
   'operator': { hazard: 'Mobile Plant & Equipment', confidence: DEFAULT_CONFIDENCE },

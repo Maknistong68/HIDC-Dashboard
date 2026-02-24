@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, memo } from 'react'
 import { ChevronRight, Info } from 'lucide-react'
 import { getCategoryInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
-import { RECORDABLE_INCIDENT_TYPES, ENV_BREAKDOWN_TYPES, DMG_BREAKDOWN_TYPES } from '../../utils/constants'
+import { ENV_BREAKDOWN_TYPES, DMG_BREAKDOWN_TYPES } from '../../utils/constants'
 import CategoryTopHazards from './CategoryTopHazards'
 import HazardRootCauseChart from './HazardRootCauseChart'
 import HazardActionStatus from './HazardActionStatus'
@@ -25,7 +25,7 @@ const CategoryInsightsTab = ({
   categoryType,
   categoryIncidents = [],
   allIncidents = [],
-  onViewRecords,
+  onViewRecords: _onViewRecords,
   onFilterByHazard,
   onFilterByRootCause,
   isMobile = false
@@ -37,8 +37,6 @@ const CategoryInsightsTab = ({
   // Check if this is a consolidated type with sub-type breakdown
   const isEnvCategory = categoryType === 'environmental'
   const isDmgCategory = categoryType === 'damage-to-property'
-  const hasSubTypeBreakdown = isIncidentAggregate || isEnvCategory || isDmgCategory
-
   // Get the sub-type breakdown config
   const subTypeBreakdownConfig = isEnvCategory
     ? { subTypes: ENV_BREAKDOWN_TYPES, title: 'Environmental Breakdown' }
@@ -123,7 +121,7 @@ const CategoryInsightsTab = ({
         </div>
         <h3 className="text-base font-semibold text-surface-700 mb-1">No Insights Available</h3>
         <p className="text-sm text-surface-500 text-center max-w-xs">
-          Not enough data to generate insights for "{getCategoryLabel(categoryType)}".
+          Not enough data to generate insights for &quot;{getCategoryLabel(categoryType)}&quot;.
           {categoryIncidents.length === 0 && ' No observations found for this category.'}
         </p>
       </div>
@@ -214,4 +212,4 @@ const CategoryInsightsTab = ({
   )
 }
 
-export default React.memo(CategoryInsightsTab)
+export default memo(CategoryInsightsTab)

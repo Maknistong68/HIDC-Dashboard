@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState, memo } from 'react'
 import { Eye, ChevronRight, Info, User, PieChart } from 'lucide-react'
 import { getObserverInsights } from '../../utils/insightsCalculations'
 import HazardActionStatus from './HazardActionStatus'
@@ -37,7 +37,7 @@ const ObserverTypeBreakdown = ({ typeBreakdown = [], isMobile = false }) => {
 
       {/* Type List */}
       <div className="space-y-2">
-        {typeBreakdown.map((item, index) => {
+        {typeBreakdown.map((item) => {
           const barWidth = (item.count / maxCount) * 100
 
           return (
@@ -80,7 +80,7 @@ const ObserverTypeBreakdown = ({ typeBreakdown = [], isMobile = false }) => {
         <div className="mt-3 pt-3 border-t border-surface-100">
           <p className="text-2xs text-surface-500">
             <span className="font-medium text-surface-700">{typeBreakdown[0].label}</span>
-            {' '}accounts for {typeBreakdown[0].percentage}% of this observer's reports.
+            {' '}accounts for {typeBreakdown[0].percentage}% of this observer&apos;s reports.
           </p>
         </div>
       )}
@@ -105,7 +105,7 @@ const ObserverInsightsTab = ({
   observerIncidents = [],
   allIncidents = [],
   onViewRecords,
-  onFilterByType,
+  onFilterByType: _onFilterByType,
   onFilterByHazard,
   isMobile = false
 }) => {
@@ -133,7 +133,7 @@ const ObserverInsightsTab = ({
         </div>
         <h3 className="text-base font-semibold text-surface-700 mb-1">No Insights Available</h3>
         <p className="text-sm text-surface-500 text-center max-w-xs">
-          Not enough data to generate insights for "{observerName}".
+          Not enough data to generate insights for &quot;{observerName}&quot;.
           {observerIncidents.length === 0 && ' No observations found for this observer.'}
         </p>
         {observerIncidents.length > 0 && (
@@ -244,4 +244,4 @@ const ObserverInsightsTab = ({
   )
 }
 
-export default React.memo(ObserverInsightsTab)
+export default memo(ObserverInsightsTab)

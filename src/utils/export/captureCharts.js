@@ -61,7 +61,7 @@ export const captureAllCharts = async (chartRefs, onProgress) => {
     if (ref?.current) {
       try {
         images[key] = await captureElement(ref.current)
-      } catch (error) {
+      } catch {
         // error handled silently
         images[key] = null
       }

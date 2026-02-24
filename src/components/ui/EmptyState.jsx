@@ -1,4 +1,3 @@
-import React from 'react'
 import { FileText, Search, AlertCircle, Inbox, Database } from 'lucide-react'
 import Button from './Button'
 

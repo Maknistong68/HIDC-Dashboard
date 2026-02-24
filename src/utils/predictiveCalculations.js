@@ -1,4 +1,4 @@
-import { parseISO, subDays, differenceInDays, format, startOfWeek, addWeeks } from 'date-fns'
+import { parseISO, subDays, format, startOfWeek, addWeeks } from 'date-fns'
 import {
   filterByHazard,
   isOpenAction,

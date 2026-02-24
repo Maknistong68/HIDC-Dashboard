@@ -62,7 +62,7 @@ export function computeFilteredDefaults(incidents) {
   for (let idx = 0; idx < incidents.length; idx++) {
     const i = incidents[idx]
     if (i.site) sites.add(i.site)
-    const isProactive = PROACTIVE_SET.has(i.type)
+    const isProactive = i._isProactive !== undefined ? i._isProactive : PROACTIVE_SET.has(i.type)
     if (!isProactive) heatmap.push(i)
     if (i.workRelated !== false) {
       wrFiltered.push(i)
@@ -147,7 +147,7 @@ export function computeDashboardAggregates(filteredIncidents, overdue30) {
 
     const typeCountKey = SUB_TYPE_TO_PYRAMID[type] || type
     if (typeCounts[typeCountKey] !== undefined) typeCounts[typeCountKey]++
-    if (RECORDABLE_INCIDENT_TYPES.includes(type)) typeCounts['incident']++
+    if (i._isRecordable !== undefined ? i._isRecordable : RECORDABLE_INCIDENT_TYPES.includes(type)) typeCounts['incident']++
 
     const reporter = i.reportedBy || 'Unknown'
     if (!observerMap[reporter]) observerMap[reporter] = { open: 0, closed: 0 }
@@ -197,7 +197,7 @@ export function computeTopHazards(filteredIncidents) {
   const counts = {}
   for (let idx = 0; idx < filteredIncidents.length; idx++) {
     const incident = filteredIncidents[idx]
-    if (PROACTIVE_SET.has(incident.type)) continue
+    if (incident._isProactive !== undefined ? incident._isProactive : PROACTIVE_SET.has(incident.type)) continue
     const normalized = normalizeHazard(incident.location)
     if (normalized && normalized !== 'Not Specified') {
       if (!counts[normalized]) {

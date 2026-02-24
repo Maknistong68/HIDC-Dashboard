@@ -42,7 +42,7 @@ const VelocityTooltip = ({ active, payload, label }) => {
   )
 }
 
-const IncidentVelocityTimeline = ({ negativeIncidents, period }) => {
+const IncidentVelocityTimeline = ({ negativeIncidents }) => {
   const { chartData, zones, stats } = useMemo(() => {
     if (!negativeIncidents?.length) return { chartData: [], zones: [], stats: null }
 

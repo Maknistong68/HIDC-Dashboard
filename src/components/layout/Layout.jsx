@@ -1,7 +1,7 @@
-import React, { useState, useCallback, memo } from 'react'
+import { useState, useCallback, memo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Target, ShieldCheck, Eye, EyeOff, Trash2, FolderOpen, Gauge } from 'lucide-react'
-import { useUIState, useDataActions, useDataState } from '../../context/DataContext'
+import { useUIState, useDataActions } from '../../context/DataContext'
 import { useImportLock } from '../../context/ImportLockContext'
 import { Logo } from '../ui'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -16,9 +16,6 @@ const Layout = memo(({ children }) => {
   const { isLocked: isImportLocked } = useImportLock()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const isMobile = useIsMobile(768) // Use md breakpoint for nav switch
-
-  // Combined import check - either DataContext importing or global lock
-  const isBlocked = isImporting || isImportLocked
 
   // Guard navigation while importing - completely blocks when locked
   const guardNavClick = useCallback((e) => {

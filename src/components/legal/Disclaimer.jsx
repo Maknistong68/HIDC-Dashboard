@@ -1,4 +1,3 @@
-import React from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 const Disclaimer = () => {
@@ -58,7 +57,7 @@ const Disclaimer = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">4. Local Storage Limitations</h3>
         <p className="text-surface-600 mb-3">
-          This application stores data in your browser's localStorage. Be aware that:
+          This application stores data in your browser&apos;s localStorage. Be aware that:
         </p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
           <li>Browser updates may clear localStorage</li>
@@ -105,7 +104,7 @@ const Disclaimer = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">8. Use at Your Own Risk</h3>
         <p className="text-surface-600">
-          Your use of this application is at your sole risk. The application is provided for convenience and internal tracking purposes only. For official HSE records, compliance documentation, or regulatory submissions, use your organization's approved systems and processes.
+          Your use of this application is at your sole risk. The application is provided for convenience and internal tracking purposes only. For official HSE records, compliance documentation, or regulatory submissions, use your organization&apos;s approved systems and processes.
         </p>
       </section>
 

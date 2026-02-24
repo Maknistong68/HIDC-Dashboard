@@ -75,7 +75,6 @@ const SafetyCultureBreakdown = ({
   onCultureWeightsChange,
   presetProfile,
   onPresetChange,
-  presets
 }) => {
   const [showEditor, setShowEditor] = useState(false)
 

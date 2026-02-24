@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, startTransition } from 'react'
 import {
   loadIncidentsChunked,
   saveIncidentsWithFile,
@@ -9,7 +9,6 @@ import {
 } from '../utils/storage'
 import {
   getAllRecords,
-  addRecords,
   updateRecord,
   deleteRecord,
   replaceFileRecords,
@@ -117,6 +116,7 @@ export const DataProvider = ({ children }) => {
   // Load data on mount
   useEffect(() => {
     loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
   }, [])
 
   // Reload incidents from storage
@@ -427,6 +427,7 @@ export const DataProvider = ({ children }) => {
       if (import.meta.env.DEV) console.error('[DataContext] Error deleting file:', error)
       throw error
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stable callback
   }, [])
 
   // Replace a file's records (for file update feature)
@@ -463,6 +464,7 @@ export const DataProvider = ({ children }) => {
       if (import.meta.env.DEV) console.error('[DataContext] Error replacing file:', error)
       throw error
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stable callback
   }, [])
 
   // Get file by ID

@@ -43,44 +43,11 @@ import { Calendar, Clock, Sun, TrendingUp, AlertTriangle, Info } from 'lucide-re
 const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
   const [activeView, setActiveView] = useState('dayOfWeek')
 
-  if (!data || !data.hasData) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 bg-surface-50 rounded-lg border border-surface-200">
-        <AlertTriangle size={32} className="text-surface-400 mb-2" />
-        <p className="text-sm text-surface-500">{data?.error || 'Insufficient data for seasonal analysis'}</p>
-        <p className="text-xs text-surface-400 mt-1">Need at least 30 incidents</p>
-      </div>
-    )
-  }
-
-  const { dayOfWeek, hourOfDay, monthOfYear, riskFactors, summary } = data
-
-  const views = [
-    { key: 'dayOfWeek', label: 'Day', icon: Calendar, hasData: dayOfWeek?.hasData },
-    { key: 'hourOfDay', label: 'Hour', icon: Clock, hasData: hourOfDay?.hasData },
-    { key: 'monthOfYear', label: 'Month', icon: Sun, hasData: monthOfYear?.hasData }
-  ]
-
-  const getRiskColor = (riskLevel) => {
-    switch (riskLevel) {
-      case 'high': return '#dc2626'
-      case 'elevated': return '#f59e0b'
-      case 'low': return '#22c55e'
-      default: return '#3b82f6'
-    }
-  }
-
-  const getRiskBgColor = (riskLevel) => {
-    switch (riskLevel) {
-      case 'high': return 'bg-red-100 text-red-700'
-      case 'elevated': return 'bg-amber-100 text-amber-700'
-      case 'low': return 'bg-green-100 text-green-700'
-      default: return 'bg-blue-100 text-blue-700'
-    }
-  }
+  const { dayOfWeek, hourOfDay, monthOfYear, riskFactors, summary } = data || {}
 
   // Prepare chart data based on active view
   const chartData = useMemo(() => {
+    if (!data?.hasData) return []
     switch (activeView) {
       case 'dayOfWeek':
         return dayOfWeek?.patterns?.map(p => ({
@@ -115,7 +82,7 @@ const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
       default:
         return []
     }
-  }, [activeView, dayOfWeek, hourOfDay, monthOfYear])
+  }, [activeView, data?.hasData, dayOfWeek, hourOfDay, monthOfYear])
 
   const avgValue = useMemo(() => {
     if (chartData.length === 0) return 0
@@ -159,6 +126,40 @@ const SeasonalPatternChart = ({ data, title = 'Seasonal Patterns' }) => {
       default: return []
     }
   }, [activeView, dayOfWeek, hourOfDay, monthOfYear])
+
+  if (!data || !data.hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-surface-50 rounded-lg border border-surface-200">
+        <AlertTriangle size={32} className="text-surface-400 mb-2" />
+        <p className="text-sm text-surface-500">{data?.error || 'Insufficient data for seasonal analysis'}</p>
+        <p className="text-xs text-surface-400 mt-1">Need at least 30 incidents</p>
+      </div>
+    )
+  }
+
+  const views = [
+    { key: 'dayOfWeek', label: 'Day', icon: Calendar, hasData: dayOfWeek?.hasData },
+    { key: 'hourOfDay', label: 'Hour', icon: Clock, hasData: hourOfDay?.hasData },
+    { key: 'monthOfYear', label: 'Month', icon: Sun, hasData: monthOfYear?.hasData }
+  ]
+
+  const getRiskColor = (riskLevel) => {
+    switch (riskLevel) {
+      case 'high': return '#dc2626'
+      case 'elevated': return '#f59e0b'
+      case 'low': return '#22c55e'
+      default: return '#3b82f6'
+    }
+  }
+
+  const getRiskBgColor = (riskLevel) => {
+    switch (riskLevel) {
+      case 'high': return 'bg-red-100 text-red-700'
+      case 'elevated': return 'bg-amber-100 text-amber-700'
+      case 'low': return 'bg-green-100 text-green-700'
+      default: return 'bg-blue-100 text-blue-700'
+    }
+  }
 
   return (
     <div className="space-y-4">

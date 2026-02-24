@@ -7,7 +7,6 @@ import { detectZScoreAnomalies, detectIQRAnomalies, detectChangePoints } from '.
  * For the Predictive & Simulation tab
  */
 const ANOMALY_DISPLAY_LIMIT = 8
-const CHANGEPOINT_DISPLAY_LIMIT = 5
 
 const AnomalyDetectionPanel = ({ negativeIncidents }) => {
   const [isExpanded, setIsExpanded] = useState(false)

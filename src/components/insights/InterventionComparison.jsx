@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { TrendingDown, TrendingUp, CheckCircle, Shield, Settings, User, Leaf, Target } from 'lucide-react'
 
 // Category icons mapping
@@ -24,7 +24,7 @@ const CATEGORY_COLORS = {
  */
 const InterventionComparison = ({
   baseline,
-  projected,
+  projected: _projected,
   effects = {},
   changePercent = 0,
   selectedHazard
@@ -226,4 +226,4 @@ const InterventionComparison = ({
   )
 }
 
-export default React.memo(InterventionComparison)
+export default memo(InterventionComparison)

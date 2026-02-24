@@ -1,42 +1,49 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { getExcludedReporters, setExcludedReporters as persistExcludedReporters } from '../utils/indexedDBStorage'
 
 // Separate contexts for state and actions to prevent unnecessary re-renders
-const FilterStateContext = createContext(null)
-const FilterActionsContext = createContext(null)
+// Exported so TabFreezeGate can provide frozen values to hidden tabs
+export const FilterStateContext = createContext(null)
+export const FilterActionsContext = createContext(null)
+
+// Per-tab filter isolation constants
+const TAB_PATHS = new Set(['/', '/data-control', '/outlook'])
+const DEFAULT_TAB_FILTERS = {
+  period: null,
+  customDateRange: null,
+  contractor: [],
+  site: [],
+  subRegion: [],
+  workRelatedOnly: true,
+}
 
 /**
- * FilterProvider - Shared filter state across Dashboard, DataQuality, and SafetyOutlook
+ * FilterProvider - Per-tab isolated filter state for Dashboard, DataQuality, and SafetyOutlook
  *
- * Provides synchronized filter state that persists when navigating between tabs:
- * - period: Time period filter (null = All, 0.25 = 1W, 1 = 1M, 3 = 3M, 6 = 6M, 12 = 1Y)
- * - contractor: Selected contractor filter ('' = All)
- * - site: Selected site filter ('' = All)
+ * Each tab maintains its own independent filter state. Filtering on one tab does NOT affect
+ * other tabs. Switching tabs is instant because each tab's filter fingerprint is stable
+ * (unchanged while the user is on another tab) — so all cache layers hit.
  *
  * Split into FilterStateContext and FilterActionsContext to optimize re-renders:
  * - Components that only dispatch actions don't re-render on state changes
  * - Components that read state re-render only when state they use changes
  */
 export const FilterProvider = ({ children }) => {
-  const [period, setPeriodState] = useState(null)        // null = All
-  const [customDateRange, setCustomDateRangeState] = useState(null) // {start, end} | null
-  const [contractor, setContractorState] = useState([])
-  const [site, setSiteState] = useState([])
-  const [subRegion, setSubRegionState] = useState([])
+  const location = useLocation()
+  const activeTab = TAB_PATHS.has(location.pathname) ? location.pathname : '/'
+
+  // Per-tab filter state map
+  const [tabFilters, setTabFilters] = useState(() => {
+    const initial = {}
+    for (const path of TAB_PATHS) {
+      initial[path] = { ...DEFAULT_TAB_FILTERS }
+    }
+    return initial
+  })
+
+  // excludedReporters stays GLOBAL (it's a data-quality setting, not a per-tab filter)
   const [excludedReporters, setExcludedReportersState] = useState([])
-  const [workRelatedOnly, setWorkRelatedOnly] = useState(true)
-
-  // Mutual exclusion: setting period clears custom range
-  const setPeriod = useCallback((value) => {
-    setPeriodState(value)
-    setCustomDateRangeState(null)
-  }, [])
-
-  // Mutual exclusion: setting custom range clears period
-  const setCustomDateRange = useCallback((value) => {
-    setCustomDateRangeState(value)
-    setPeriodState(null)
-  }, [])
 
   // Load excluded reporters from IndexedDB on mount
   useEffect(() => {
@@ -45,25 +52,55 @@ export const FilterProvider = ({ children }) => {
     })
   }, [])
 
-  // Contractor change resets site and subRegion (parent-child relationship)
+  // Mutual exclusion: setting period clears custom range (active tab only)
+  const setPeriod = useCallback((value) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], period: value, customDateRange: null }
+    }))
+  }, [activeTab])
+
+  // Mutual exclusion: setting custom range clears period (active tab only)
+  const setCustomDateRange = useCallback((value) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], customDateRange: value, period: null }
+    }))
+  }, [activeTab])
+
+  // Contractor change resets site and subRegion (parent-child relationship, active tab only)
   const setContractor = useCallback((value) => {
-    setContractorState(value)
-    setSiteState([])
-    setSubRegionState([])
-  }, [])
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], contractor: value, site: [], subRegion: [] }
+    }))
+  }, [activeTab])
 
-  // Site change resets subRegion (parent-child relationship)
+  // Site change resets subRegion (parent-child relationship, active tab only)
   const setSite = useCallback((value) => {
-    setSiteState(value)
-    setSubRegionState([])
-  }, [])
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], site: value, subRegion: [] }
+    }))
+  }, [activeTab])
 
-  // Direct subRegion setter
+  // Direct subRegion setter (active tab only)
   const setSubRegion = useCallback((value) => {
-    setSubRegionState(value)
-  }, [])
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], subRegion: value }
+    }))
+  }, [activeTab])
 
-  // Excluded reporters setter (persists to IndexedDB)
+  // Work-related toggle (active tab only)
+  const setWorkRelatedOnly = useCallback((value) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], workRelatedOnly: value }
+    }))
+  }, [activeTab])
+
+  // Excluded reporters setter (persists to IndexedDB) - GLOBAL
   const setExcludedReporters = useCallback(async (reporters) => {
     setExcludedReportersState(reporters)
     await persistExcludedReporters(reporters)
@@ -74,29 +111,30 @@ export const FilterProvider = ({ children }) => {
     if (key === 'contractor') {
       setContractor(value)
     } else if (key === 'site') {
-      setSiteState(value)
+      setSite(value)
     } else if (key === 'subRegion') {
-      setSubRegionState(value)
+      setSubRegion(value)
     } else if (key === 'excludedReporters') {
       setExcludedReporters(value)
     }
-  }, [setContractor, setExcludedReporters])
+  }, [setContractor, setSite, setSubRegion, setExcludedReporters])
 
-  // Clear all filters (excludedReporters persists - it's a setting, not a temporary filter)
+  // Clear all filters for the active tab only (excludedReporters persists - it's a global setting)
   const clearFilters = useCallback(() => {
-    setPeriodState(null)
-    setCustomDateRangeState(null)
-    setContractorState([])
-    setSiteState([])
-    setSubRegionState([])
-    setWorkRelatedOnly(true)
-  }, [])
+    setTabFilters(prev => ({
+      ...prev,
+      [activeTab]: { ...DEFAULT_TAB_FILTERS }
+    }))
+  }, [activeTab])
+
+  // Derive active tab's state
+  const active = tabFilters[activeTab] || DEFAULT_TAB_FILTERS
+  const { period, customDateRange, contractor, site, subRegion, workRelatedOnly } = active
 
   // Combined filters object for FilterBar compatibility
-  // Only includes actual filters — workRelatedOnly and excludedReporters are settings, not filters
   const filters = useMemo(() => ({ contractor, site, subRegion }), [contractor, site, subRegion])
 
-  // State context value - will cause re-renders when state changes
+  // State context value - exposes active tab's state (same shape as before)
   const stateValue = useMemo(() => ({
     period,
     customDateRange,
@@ -108,7 +146,7 @@ export const FilterProvider = ({ children }) => {
     filters
   }), [period, customDateRange, contractor, site, subRegion, excludedReporters, workRelatedOnly, filters])
 
-  // Actions context value - stable reference, won't cause re-renders
+  // Actions context value - stable reference, only changes when activeTab changes
   const actionsValue = useMemo(() => ({
     setPeriod,
     setCustomDateRange,
@@ -119,7 +157,7 @@ export const FilterProvider = ({ children }) => {
     setWorkRelatedOnly,
     setFilter,
     clearFilters
-  }), [setPeriod, setCustomDateRange, setContractor, setSite, setSubRegion, setExcludedReporters, setFilter, clearFilters])
+  }), [setPeriod, setCustomDateRange, setContractor, setSite, setSubRegion, setExcludedReporters, setWorkRelatedOnly, setFilter, clearFilters])
 
   return (
     <FilterStateContext.Provider value={stateValue}>
@@ -172,4 +210,5 @@ export const useFilter = () => {
   }), [state, actions])
 }
 
+// Legacy default export (unused — prefer named exports above)
 export default FilterStateContext

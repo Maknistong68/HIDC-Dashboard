@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react'
+import { createContext, useContext, useMemo, useEffect, useRef } from 'react'
 import { useDataState } from './DataContext'
 import { useDate } from './DateContext'
 import { useFilterState } from './FilterContext'
@@ -7,7 +7,8 @@ import { PROACTIVE_TYPES } from '../utils/constants'
 import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
 import { filterHierarchical, buildFilterFingerprint } from '../utils/filterCache'
 
-const FilteredDataContext = createContext(null)
+// Exported so TabFreezeGate can provide frozen values to hidden tabs
+export const FilteredDataContext = createContext(null)
 
 const PROACTIVE_SET = new Set(PROACTIVE_TYPES)
 
@@ -74,12 +75,16 @@ export const FilteredDataProvider = ({ children }) => {
   }, [incidents])
 
   // Fast boolean check: are ALL filters in their default (cleared) state?
-  // Uses immediate `filters` (not debouncedFilters) so clear-all is detected in the SAME render
+  // Uses debouncedFilters (not immediate) so it stays in sync with the main computation.
+  // This prevents a double-render cascade: without this, isAllCleared flips immediately
+  // on filter change while debouncedFilters lags behind, causing a wasted O(n) pass
+  // with stale data followed by the real computation 100ms later — two full render cycles.
+  // "Clear All" is still instant because useDebouncedFilter flushes immediately when all empty.
   const isAllCleared = useMemo(() => {
-    const { contractor: c, site: s, subRegion: sr } = filters
+    const { contractor: c, site: s, subRegion: sr } = debouncedFilters
     return period === null && customDateRange === null &&
       c.length === 0 && s.length === 0 && sr.length === 0
-  }, [filters, period, customDateRange])
+  }, [debouncedFilters, period, customDateRange])
 
   // Hierarchical filtered computation with LRU cache at each filter level.
   // Uses debounced filter values so rapid multi-select clicks batch into one computation.
@@ -140,8 +145,12 @@ export const FilteredDataProvider = ({ children }) => {
   )
 
   // Background-warm aggregation caches for the INACTIVE variant
+  // Debounced by 500ms to avoid warming overhead on rapid filter changes
   const warmingRef = useRef([])
+  const warmDebounceRef = useRef(null)
   useEffect(() => {
+    // Cancel pending debounce
+    if (warmDebounceRef.current) clearTimeout(warmDebounceRef.current)
     // Cancel any in-flight warming tasks
     warmingRef.current.forEach(id => {
       if (typeof cancelIdleCallback === 'function') {
@@ -158,16 +167,20 @@ export const FilteredDataProvider = ({ children }) => {
 
     if (inactiveFiltered.length === 0) return
 
-    // Dynamic import to avoid adding heavy transitive deps to critical render path
-    import('../utils/cacheWarmer').then(({ warmCaches, warmDashboardMainThreadCaches }) => {
-      // Warm Web Worker caches (heavy analytics)
-      const workerIds = warmCaches(inactiveFiltered, inactiveHeatmap, period)
-      // Warm main-thread dashboard caches (aggregates, topHazards, heatmap, subregion)
-      const mainIds = warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap, siteClassifications)
-      warmingRef.current = [...workerIds, ...mainIds]
-    })
+    // Debounce: wait 500ms after last filter change before warming
+    warmDebounceRef.current = setTimeout(() => {
+      // Dynamic import to avoid adding heavy transitive deps to critical render path
+      import('../utils/cacheWarmer').then(({ warmCaches, warmDashboardMainThreadCaches }) => {
+        // Warm Web Worker caches (heavy analytics)
+        const workerIds = warmCaches(inactiveFiltered, inactiveHeatmap, period)
+        // Warm main-thread dashboard caches (aggregates, topHazards, heatmap, subregion)
+        const mainIds = warmDashboardMainThreadCaches(inactiveFiltered, inactiveHeatmap, siteClassifications)
+        warmingRef.current = [...workerIds, ...mainIds]
+      })
+    }, 500)
 
     return () => {
+      if (warmDebounceRef.current) clearTimeout(warmDebounceRef.current)
       warmingRef.current.forEach(id => {
         if (typeof cancelIdleCallback === 'function') {
           cancelIdleCallback(id)
@@ -229,8 +242,9 @@ export const FilteredDataProvider = ({ children }) => {
       siteOptions,
       filterConfig,
       filterFingerprint,
+      isAllCleared,
     }
-  }, [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig, filterFingerprint])
+  }, [filteredIncidents, heatmapIncidents, uniqueContractors, siteOptions, filterConfig, filterFingerprint, isAllCleared])
 
   return (
     <FilteredDataContext.Provider value={value}>

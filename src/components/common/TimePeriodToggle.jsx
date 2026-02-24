@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useTransition, memo } from 'react'
+import { useState, useRef, useEffect, useCallback, useTransition, memo } from 'react'
 import { Calendar, X } from 'lucide-react'
 import { useFilterState, useFilterActions } from '../../context/FilterContext'
 import { formatDateRangeDisplay } from '../../utils/dateUtils'

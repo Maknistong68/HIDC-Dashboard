@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, ChevronDown, ChevronUp, X, Calendar, Tag, Building2 } from 'lucide-react'
 
 const ImportWarnings = ({ warnings, onDismiss }) => {
@@ -220,7 +220,7 @@ const ImportWarnings = ({ warnings, onDismiss }) => {
           )}
 
           <p className="text-xs text-amber-700">
-            These records were imported but may need review. Date issues used today's date as fallback.
+            These records were imported but may need review. Date issues used today&apos;s date as fallback.
             {contractorCount > 0 && ' Contractor/site names were auto-normalized to match existing data.'}
           </p>
         </div>

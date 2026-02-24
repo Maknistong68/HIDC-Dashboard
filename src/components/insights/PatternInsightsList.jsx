@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link2, Users, AlertTriangle, Lightbulb, CheckCircle } from 'lucide-react'
+import { memo } from 'react'
+import { Users, AlertTriangle, Lightbulb, CheckCircle } from 'lucide-react'
 import CorrelationPatternCard from './CorrelationPatternCard'
 
 /**
@@ -111,4 +111,4 @@ const PatternInsightsList = ({ data, onPatternClick }) => {
   )
 }
 
-export default React.memo(PatternInsightsList)
+export default memo(PatternInsightsList)

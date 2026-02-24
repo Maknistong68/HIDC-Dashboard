@@ -1,10 +1,19 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Table } from 'lucide-react'
 
 /**
  * RootCauseHazardMatrix - Correlation table showing root causes by hazard
  */
 const RootCauseHazardMatrix = ({ data, onCellClick }) => {
+  const matrix = data?.matrix
+  const rootCauses = data?.rootCauses
+
+  // Memoize max count calculation to avoid recalculating on every render
+  const maxCount = useMemo(() => {
+    if (!matrix || !rootCauses || matrix.length === 0) return 1
+    return Math.max(...matrix.flatMap(row => rootCauses.map(rc => row[rc] || 0)))
+  }, [matrix, rootCauses])
+
   if (!data || !data.hasData) {
     return (
       <div className="flex flex-col items-center justify-center h-48 text-center">
@@ -21,8 +30,6 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
     )
   }
 
-  const { matrix, hazards, rootCauses } = data
-
   // Get cell color intensity based on count
   const getCellColor = (count, maxCount) => {
     if (count === 0) return 'bg-surface-50'
@@ -32,12 +39,6 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
     if (intensity > 25) return 'bg-primary-100 text-primary-700'
     return 'bg-surface-100 text-surface-600'
   }
-
-  // Memoize max count calculation to avoid recalculating on every render
-  const maxCount = useMemo(() => {
-    if (!matrix || !rootCauses || matrix.length === 0) return 1
-    return Math.max(...matrix.flatMap(row => rootCauses.map(rc => row[rc] || 0)))
-  }, [matrix, rootCauses])
 
   return (
     <div className="overflow-x-auto">
@@ -132,4 +133,4 @@ const RootCauseHazardMatrix = ({ data, onCellClick }) => {
   )
 }
 
-export default React.memo(RootCauseHazardMatrix)
+export default memo(RootCauseHazardMatrix)

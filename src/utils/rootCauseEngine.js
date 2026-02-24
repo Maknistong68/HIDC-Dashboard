@@ -1,4 +1,4 @@
-import { filterByHazard, normalizeText } from './incidentHelpers'
+import { filterByHazard } from './incidentHelpers'
 import { getCachedFactors } from './memoizedCalculations'
 
 /**
@@ -4187,7 +4187,7 @@ const checkGlobalExclusions = (text) => {
  * @param {boolean} options.returnScores - Return detailed scores (default: false)
  * @returns {Array} Array of matched factor display names
  */
-export const detectContributingFactors = (description, hazardCategory = null, options = {}) => {
+export const detectContributingFactors = (description, _hazardCategory = null, options = {}) => {
   if (!description || typeof description !== 'string') {
     return []
   }
@@ -4249,7 +4249,7 @@ export const detectContributingFactors = (description, hazardCategory = null, op
  * @param {string} hazardCategory - Hazard category (used for context)
  * @returns {Object} { factors: string[], candidates: Object[], excluded: Object[], globalExclusions: string[] }
  */
-export const detectContributingFactorsWithDetails = (description, hazardCategory = null, options = {}) => {
+export const detectContributingFactorsWithDetails = (description, _hazardCategory = null, options = {}) => {
   if (!description || typeof description !== 'string') {
     return { factors: [], candidates: [], excluded: [], globalExclusions: [] }
   }
@@ -4501,9 +4501,9 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
   let filteredIncidents = incidents
   if (observationType === 'negative') {
     // Exclude positive observations - this is more inclusive than requiring specific negative types
-    filteredIncidents = incidents.filter(i => !isPositiveType(i.type))
+    filteredIncidents = incidents.filter(i => i._isProactive !== undefined ? !i._isProactive : !isPositiveType(i.type))
   } else if (observationType === 'positive') {
-    filteredIncidents = incidents.filter(i => isPositiveType(i.type))
+    filteredIncidents = incidents.filter(i => i._isProactive !== undefined ? i._isProactive : isPositiveType(i.type))
   }
 
   // Track factors with counts and hazard breakdowns
@@ -4514,11 +4514,12 @@ export const aggregateContributingFactors = (incidents, observationType = null, 
   const unclassifiedIncidents = []
 
   for (const incident of filteredIncidents) {
-    // Get hazard category for validation
-    const hazardCategory = useValidation ? getHazardCategory(incident) : null
-
-    // Detect factors with scores for confidence tracking
-    const factorsWithScores = detectContributingFactors(incident.description, hazardCategory, { returnScores: true, incidentType: incident.type })
+    // Use pre-computed factors if available (computed at import time), otherwise detect live
+    const factorsWithScores = incident._factors
+      || (() => {
+        const hazardCategory = useValidation ? getHazardCategory(incident) : null
+        return detectContributingFactors(incident.description, hazardCategory, { returnScores: true, incidentType: incident.type })
+      })()
 
     // Track incidents with no factors detected as "Unclassified"
     if (factorsWithScores.length === 0) {

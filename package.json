@@ -10,8 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src/ --ext .js,.jsx",
-    "lint:fix": "eslint src/ --ext .js,.jsx --fix",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -34,6 +34,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -44,6 +45,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^17.3.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.4.49",
     "puppeteer": "^24.34.0",

@@ -1,6 +1,4 @@
-import React from 'react'
-import { CheckCircle, AlertCircle } from 'lucide-react'
-import { EXPECTED_COLUMNS } from '../../utils/excelParser'
+import { CheckCircle } from 'lucide-react'
 
 const REQUIRED_FIELDS = ['date', 'description']
 const RECOMMENDED_FIELDS = ['eventId', 'type', 'classification', 'status']
@@ -34,7 +32,7 @@ const ColumnMapper = ({ headers, mappings, onMappingChange, previewData }) => {
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-700">
-          Map your Excel columns to the required fields. We've auto-detected some mappings based on column names.
+          Map your Excel columns to the required fields. We&apos;ve auto-detected some mappings based on column names.
         </p>
       </div>
 

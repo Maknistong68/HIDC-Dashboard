@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import {
   ComposedChart,
   Area,
@@ -34,7 +34,7 @@ const calculateMovingAverage = (data, windowSize = 7) => {
 /**
  * Custom Tooltip for the chart
  */
-const ChartTooltip = ({ active, payload, label, isPrediction }) => {
+const ChartTooltip = ({ active, payload, label, isPrediction: _isPrediction }) => {
   if (!active || !payload || !payload.length) return null
 
   const data = payload[0]?.payload
@@ -84,7 +84,7 @@ const PredictionTrendChart = ({
   range,
   trend = 'stable',
   hazardName,
-  avgPerDay,
+  avgPerDay: _avgPerDay,
   compact = false
 }) => {
   // Process historical data with moving average
@@ -373,4 +373,4 @@ const PredictionTrendChart = ({
   )
 }
 
-export default React.memo(PredictionTrendChart)
+export default memo(PredictionTrendChart)

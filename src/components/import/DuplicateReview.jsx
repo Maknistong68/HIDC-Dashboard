@@ -1,7 +1,6 @@
-import React from 'react'
 import { Plus, RefreshCw, SkipForward, ArrowRight } from 'lucide-react'
 
-const DuplicateReview = ({ results, onProceed }) => {
+const DuplicateReview = ({ results, onProceed: _onProceed }) => {
   const { newRecords, updates, skipped } = results
 
   return (

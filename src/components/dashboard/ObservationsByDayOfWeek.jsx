@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { InfoTooltip } from '../ui/Tooltip'
 import { Card } from '../ui'
 import { parseISO, getDay } from 'date-fns'
@@ -25,7 +25,7 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
         try {
           const dayOfWeek = getDay(parseISO(incident.date))
           counts[dayOfWeek]++
-        } catch (e) {
+        } catch {
           // Skip invalid dates
         }
       }
@@ -103,4 +103,4 @@ const ObservationsByDayOfWeek = ({ incidents = [] }) => {
   )
 }
 
-export default React.memo(ObservationsByDayOfWeek)
+export default memo(ObservationsByDayOfWeek)

@@ -2487,7 +2487,6 @@ export const HSE_ABBREVIATIONS = {
 
   // Equipment Types
   'jcb': 'backhoe loader',
-  'adt': 'articulated dump truck',
   'rtc': 'rough terrain crane',
   'atc': 'all terrain crane',
 

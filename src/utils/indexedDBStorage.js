@@ -96,7 +96,7 @@ const getDB = async () => {
       const testTx = dbInstance.transaction(STORES.SETTINGS, 'readonly')
       testTx.abort() // Immediately abort - we just wanted to test
       return dbInstance
-    } catch (error) {
+    } catch {
       // Connection is stale or closing, reset it
       dbInstance = null
       dbInitPromise = null

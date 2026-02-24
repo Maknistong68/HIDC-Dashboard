@@ -867,7 +867,6 @@ export const CONTEXT_REDIRECTS = {
   'firepoint at the': 'Fire',
   'fire point at the': 'Fire',
   'firepoint blocked': 'Fire',
-  'fire point blocked': 'Fire',
   'blocked by the scaffold barricade, hindering easy access': 'Fire',
   'blocked by scaffold barricade, hindering': 'Fire',
   'hindering easy access during an emergency': 'Fire',
@@ -901,7 +900,6 @@ export const CONTEXT_REDIRECTS = {
   'deep excavation is present without sturdy barriers': 'Breaking Ground & Excavation',
   'deep excavation is present without any barriers': 'Breaking Ground & Excavation',
   'deep excavation is present without': 'Breaking Ground & Excavation',
-  'deep excavation without': 'Breaking Ground & Excavation',
   'excavation is present without': 'Breaking Ground & Excavation',
   'risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
   'posing a risk of vehicles or workers falling': 'Breaking Ground & Excavation',
@@ -947,7 +945,6 @@ export const CONTEXT_REDIRECTS = {
   // Unprotected edges of excavation/trenches → Breaking Ground & Excavation
   'unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
   'unprotected edges of deep excavation': 'Breaking Ground & Excavation',
-  'unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
   'unprotected edges of deep trenches': 'Breaking Ground & Excavation',
   'unprotected edges of the deep trenches': 'Breaking Ground & Excavation',
   'edges of the deep excavation': 'Breaking Ground & Excavation',
@@ -1444,7 +1441,6 @@ export const CONTEXT_REDIRECTS = {
   'management of electrical': 'Energized System',
 
   // Tool inspection → Tools
-  'power tool': 'Tools',
   'tool without inspection': 'Tools',
   'tool inspection': 'Tools',
   'monthly colour code': 'Tools',
@@ -1512,7 +1508,6 @@ export const CONTEXT_REDIRECTS = {
   'floor is open': 'Access',
 
   // Water cooler/igloo → Site Welfare (not Water hazard)
-  'water cooler': 'Worker Welfare',
   'igloo cooler': 'Worker Welfare',
   'water station': 'Worker Welfare',
   'drinking bottle': 'Worker Welfare',
@@ -1592,7 +1587,6 @@ export const CONTEXT_REDIRECTS = {
   'generating dust': 'Respiratory Hazard',
 
   // Fire blanket → Hot Work
-  'fire blanket': 'Hot Work',
   'fire blanket is not': 'Hot Work',
   'fire blanket not in place': 'Hot Work',
   'welder performing': 'Hot Work',
@@ -1610,9 +1604,6 @@ export const CONTEXT_REDIRECTS = {
   'spikes protruding': 'General Site Issues',
 
   // Poor housekeeping variations → Housekeeping
-  'poor housekeeping': 'Housekeeping',
-  'garbage is accumulated': 'Housekeeping',
-  'left scattered': 'Housekeeping',
   'been left': 'Housekeeping',
   'have been lef': 'Housekeeping',
   'concrete-contaminat': 'Housekeeping',
@@ -1654,7 +1645,6 @@ export const CONTEXT_REDIRECTS = {
   'harness stored': 'Working at Height',
   'harness on rack': 'Working at Height',
   'harness inspection': 'Working at Height',
-  'harness storage': 'Working at Height',
   'body harness inspection': 'Working at Height',
   'harness not inspected': 'Working at Height',
   'expired harness': 'Working at Height',
@@ -1703,7 +1693,6 @@ export const CONTEXT_REDIRECTS = {
   'water was not available': 'Worker Welfare',
   'drinking water container': 'Worker Welfare',
   'water color': 'Worker Welfare',
-  'water cooler': 'Worker Welfare',
   'smoking tray': 'Worker Welfare',
   'smoking shelter': 'Worker Welfare',
 
@@ -1742,14 +1731,11 @@ export const CONTEXT_REDIRECTS = {
   'gas test was not': 'Confined Spaces',
   'confined space entry': 'Confined Spaces',
   'confined space activity': 'Confined Spaces',
-  'confined space work': 'Confined Spaces',
   'inside confined': 'Confined Spaces',
   'entering confined': 'Confined Spaces',
   'confined space attendant': 'Confined Spaces',
 
   // Breaking Ground & Excavation (override inspection context)
-  'deep excavation': 'Breaking Ground & Excavation',
-  'deep trench': 'Breaking Ground & Excavation',
   'trench was left': 'Breaking Ground & Excavation',
   'excavation walls': 'Breaking Ground & Excavation',
 
@@ -1776,12 +1762,9 @@ export const CONTEXT_REDIRECTS = {
 
   // Energized System (override inspection context)
   'electrical cables': 'Energized System',
-  'electrical cable': 'Energized System',
   'exposed conductors': 'Energized System',
-  'exposed wire': 'Energized System',
   'loose connection': 'Energized System',
   'earthing rod': 'Energized System',
-  'grounding': 'Energized System',
   'generator inspection': 'Energized System',
   'quarterly sticker': 'Tools',
 
@@ -1799,7 +1782,6 @@ export const CONTEXT_REDIRECTS = {
 
   // Hot Work (override inspection context)
   'welding activities': 'Hot Work',
-  'welding machine': 'Hot Work',
   'hot work activities': 'Hot Work',
   'hot work activity': 'Hot Work',
   'grinding activities': 'Hot Work',
@@ -1815,13 +1797,10 @@ export const CONTEXT_REDIRECTS = {
   'distribution board': 'Energized System',
   'db board': 'Energized System',
   'db panel': 'Energized System',
-  'electrical panel': 'Energized System',
 
   // Drinking water → Worker Welfare
-  'drinking water': 'Worker Welfare',
   'drinking water tank': 'Worker Welfare',
   'water tank': 'Worker Welfare',
-  'potable water': 'Worker Welfare',
   'water analysis': 'Worker Welfare',
   'water analysis test': 'Worker Welfare',
   'water delivery': 'Worker Welfare',
@@ -1933,7 +1912,6 @@ export const CONTEXT_REDIRECTS = {
   'wood with nails': 'Physical Hazard',
   'plywood with nails': 'Physical Hazard',
   'planks with nails': 'Physical Hazard',
-  'nails protruding': 'Physical Hazard',
   'nail protruding': 'Physical Hazard',
   'protruding nails': 'Physical Hazard',
   'protruding nail': 'Physical Hazard',
@@ -1958,8 +1936,6 @@ export const CONTEXT_REDIRECTS = {
   'septic overflow': 'Environmental',
   'sewage overflow': 'Environmental',
   'environmental contamination': 'Environmental',
-  'ground contamination': 'Environmental',
-  'soil contamination': 'Environmental',
   'concrete waste on soil': 'Environmental',
   'waste on soil': 'Environmental',
 
@@ -1970,8 +1946,6 @@ export const CONTEXT_REDIRECTS = {
   'food waste': 'Worker Welfare',
   'hygiene risk': 'Worker Welfare',
   'hygiene concerns': 'Worker Welfare',
-  'hygiene issues': 'Worker Welfare',
-  'pest attraction': 'Worker Welfare',
   'pest risks': 'Worker Welfare',
   'unpleasant odor': 'Worker Welfare',
   'unpleasant odour': 'Worker Welfare',
@@ -2009,8 +1983,6 @@ export const CONTEXT_REDIRECTS = {
   'bin overflowing': 'Worker Welfare',
   'poor hygiene': 'Worker Welfare',
   // First Aid → Worker Welfare
-  'first aid box': 'Worker Welfare',
-  'first aid kit': 'Worker Welfare',
   'first aid box not provided': 'Worker Welfare',
   'first aid not provided': 'Worker Welfare',
 
@@ -2047,8 +2019,6 @@ export const CONTEXT_REDIRECTS = {
   'risk of falls': 'Access',
   'slip, trip, and fall': 'Slip and Trip',
   'slip, trip and fall': 'Slip and Trip',
-  'trip hazard': 'Slip and Trip',
-  'tripping hazard': 'Slip and Trip',
 
   // Electrical cables → Energized System (not Housekeeping)
   'grounding cables': 'Energized System',
@@ -2062,14 +2032,9 @@ export const CONTEXT_REDIRECTS = {
   'dip tray full of diesel': 'Fire',
   'dip tray was full': 'Fire',
   'full of diesel': 'Fire',
-  'diesel spill': 'Fire',
   'diesel overflow': 'Fire',
-  'fuel spill': 'Fire',
   'fire hazards': 'Fire',
-  'fire hazard': 'Fire',
   'increases the chance of fire': 'Fire',
-  'oil spill': 'COSHH',
-  'generator drip tray': 'Fire',
   'generator dip tray': 'Fire',
 
   // Material storage/stacking → General Site Issues (collapse hazard)
@@ -2097,13 +2062,11 @@ export const CONTEXT_REDIRECTS = {
   'timber on top': 'Physical Hazard',
   'placed on top of': 'Physical Hazard',
   'posed a serious falling object': 'Physical Hazard',
-  'falling object hazard': 'Physical Hazard',
   'risk of injury to workers passing': 'Physical Hazard',
   'risk of injury to workers below': 'Physical Hazard',
   'working below': 'Physical Hazard',
 
   // Security cabin issues → Site Security
-  'security cabin': 'Site Security',
   'sleeping during duty': 'Site Security',
   'sleeping purposes during duty': 'Site Security',
   'used for sleeping': 'Site Security',
@@ -2144,7 +2107,6 @@ export const CONTEXT_REDIRECTS = {
   'scaffolding clamps': 'Housekeeping',
   'scaffold clamps': 'Housekeeping',
   'scattered on the ground': 'Housekeeping',
-  'found scattered': 'Housekeeping',
   'lying on the ground': 'Housekeeping',
   'scattered across': 'Housekeeping',
 
@@ -2162,7 +2124,6 @@ export const CONTEXT_REDIRECTS = {
 
   // Scaffolding materials scattered = Housekeeping (explicit "housekeeping issues")
   'unwanted scaffolding materials were found scattered': 'Housekeeping',
-  'scaffolding materials were found scattered': 'Housekeeping',
   'creating housekeeping issues': 'Housekeeping',
   'housekeeping issues': 'Housekeeping',
   'risk of trips, falls, and restricted access': 'Housekeeping',
@@ -2276,97 +2237,59 @@ export const CONTEXT_REDIRECTS = {
   // ============================================================================
 
   // Deep excavation patterns → Breaking Ground & Excavation
-  'deep excavation is present without sturdy barriers': 'Breaking Ground & Excavation',
-  'deep excavation is present without any barriers': 'Breaking Ground & Excavation',
   'posing a risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
-  'risk of vehicles or workers falling in': 'Breaking Ground & Excavation',
-  'immediate installation of protective barriers': 'Breaking Ground & Excavation',
   'fall into excavations, pits': 'Breaking Ground & Excavation',
 
   // Dewatering activity → Breaking Ground & Excavation
-  'dewatering activity has commenced': 'Breaking Ground & Excavation',
-  'dewatering activity': 'Breaking Ground & Excavation',
   'workers do not have proper access or a stable platform': 'Breaking Ground & Excavation',
 
   // Chamber/shuttering inside excavation → Breaking Ground & Excavation
-  'chamber preparations and shuttering activities inside the excavation': 'Breaking Ground & Excavation',
   'shuttering activities inside the excavation area': 'Breaking Ground & Excavation',
-  'inside the excavation area': 'Breaking Ground & Excavation',
-  'enter and exit the excavation': 'Breaking Ground & Excavation',
   'only one ladder was available for workers': 'Breaking Ground & Excavation',
 
   // Stockpile/backfilling materials → Breaking Ground & Excavation
-  'stockpile of backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
-  'backfilling materials is dangerously stacked': 'Breaking Ground & Excavation',
-  'near 90-degree cut': 'Breaking Ground & Excavation',
   'too steep and unstable for loose soil': 'Breaking Ground & Excavation',
   'collapse and fall onto the equipment': 'Breaking Ground & Excavation',
 
   // Unwanted ramp to excavation → Breaking Ground & Excavation
-  'unwanted ramp going to site and leading to open deep excavation': 'Breaking Ground & Excavation',
-  'leading to open deep excavation': 'Breaking Ground & Excavation',
   'fall of equipmwnt/vehicles in excavation': 'Breaking Ground & Excavation',
   'fall of equipment/vehicles in excavation': 'Breaking Ground & Excavation',
 
   // Steel works on pit → Breaking Ground & Excavation
-  'steel works are ongoing on top of the pit': 'Breaking Ground & Excavation',
-  'on top of the pit where the edges are open': 'Breaking Ground & Excavation',
   'top of the pit where the edges': 'Breaking Ground & Excavation',
 
   // Excavation close to access road → Breaking Ground & Excavation
   'excavation close to the vehicle access lacks': 'Breaking Ground & Excavation',
-  'excavation close to the vehicle access': 'Breaking Ground & Excavation',
   'prevent the man/equipment from falling on the deep excation': 'Breaking Ground & Excavation',
-  'prevent the man/equipment from falling on the deep excavation': 'Breaking Ground & Excavation',
   'falling on the deep excation': 'Breaking Ground & Excavation',
-  'deep excavation close to the access road': 'Breaking Ground & Excavation',
-  'preventing vehicles or equipment from falling': 'Breaking Ground & Excavation',
 
   // Handmade ladder for excavation → Breaking Ground & Excavation
   'access and egress to the excavation were being made using a handmade': 'Breaking Ground & Excavation',
-  'handmade wooden ladder': 'Breaking Ground & Excavation',
-  'ladder was not secured, appeared unstable': 'Breaking Ground & Excavation',
   'did not meet standard safety requirements for excavation': 'Breaking Ground & Excavation',
 
   // ============================================================================
   // PERMIT/DOCUMENTATION ISSUES → General Site Issues
   // ============================================================================
-  'cold work permit is used but not the appropriate permit': 'General Site Issues',
   'cold work permit not appropriate': 'General Site Issues',
-  'not the appropriate permit for haulage': 'General Site Issues',
-  'permit to work was not filled 100%': 'General Site Issues',
   'permit was not filled 100%': 'General Site Issues',
-  'temporary works was not mentioned as a significant hazard': 'General Site Issues',
 
   // ============================================================================
   // HOUSEKEEPING - Materials stored/scattered improperly
   // ============================================================================
   'improper materials arrangements for scaffold': 'Housekeeping',
-  'improper materials arrangements': 'Housekeeping',
   'cement bags and scaffolding materials were observed stored near': 'Housekeeping',
-  'stored near the access point': 'Housekeeping',
-  'obstructing safe movement and creating potential trip': 'Housekeeping',
 
   // Step ladders lying unattended → Housekeeping
-  'step ladders were found lying unattended': 'Housekeeping',
-  'ladders were found lying unattended': 'Housekeeping',
-  'lying unattended in various work areas': 'Housekeeping',
-  'creating potential trip hazards and obstructing': 'Housekeeping',
 
   // ============================================================================
   // PHYSICAL HAZARD - Struck-by/Falling objects
   // ============================================================================
-  'worker is sitting beneath scaffolding activity area': 'Physical Hazard',
-  'sitting beneath scaffolding activity': 'Physical Hazard',
-  'beneath scaffolding activity area': 'Physical Hazard',
   'where materials could potentially fall on him': 'Physical Hazard',
   'materials could potentially fall': 'Physical Hazard',
 
   // ============================================================================
   // LIFTING - Uninspected equipment for lifting
   // ============================================================================
-  'uninspected scaffold structure tripod used for lifting': 'Lifting',
-  'tripod used for lifting': 'Lifting',
   'used for lifting an electrical grounding rod': 'Lifting',
   'risk of collapse of scaffolding': 'Lifting',
 
@@ -2391,9 +2314,6 @@ export const CONTEXT_REDIRECTS = {
   'around a deep excavation': 'Breaking Ground & Excavation',
 
   'unprotected edges of deep trenches were observed': 'Breaking Ground & Excavation',
-  'unprotected edges of deep trenches': 'Breaking Ground & Excavation',
-  'unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
-  'unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
   'at several locations of the deep excavation': 'Breaking Ground & Excavation',
   'several locations around the site had unprotected edges of deep excavations': 'Breaking Ground & Excavation',
 
@@ -2401,12 +2321,10 @@ export const CONTEXT_REDIRECTS = {
   'outside the barricades near the edges': 'Breaking Ground & Excavation',
 
   'hydrotesting device was found placed at the unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
-  'placed at the unprotected edges of the deep excavation': 'Breaking Ground & Excavation',
 
   'site engineer standing near the unprotected edges of a deep excavation': 'Breaking Ground & Excavation',
   'very close to the moving radius of an active excavator': 'Mobile Plant & Equipment',
 
-  'unsafe activities in deep trenches': 'Breaking Ground & Excavation',
   'performing tasks in deep excavations': 'Breaking Ground & Excavation',
   'workers are standing at the unprotected edges of deep excavations': 'Breaking Ground & Excavation',
 
@@ -2417,17 +2335,12 @@ export const CONTEXT_REDIRECTS = {
   'within the confined space has only one access point': 'Confined Spaces',
   'ensure easy evacuation during an emergency': 'Confined Spaces',
 
-  'safety officer in charge of confined space does not have': 'Confined Spaces',
-  'safety officer in charge of confined space': 'Confined Spaces',
-  'no safety supervision in your confined space work': 'Confined Spaces',
 
   // ============================================================================
   // FIRE - Fire point blocked
   // ============================================================================
   'firepoint at the tsf area is blocked': 'Fire',
   'firepoint at the.*area is blocked': 'Fire',
-  'blocked by the scaffold barricade, hindering easy access': 'Fire',
-  'hindering easy access during an emergency': 'Fire',
 
   // ============================================================================
   // MORE HOUSEKEEPING - Scaffold materials stored/scattered improperly
@@ -2460,7 +2373,6 @@ export const CONTEXT_REDIRECTS = {
   'due to high winds': 'Housekeeping',
 
   'scaffold materials were observed to be scattered': 'Housekeeping',
-  'scaffold materials were observed scattered': 'Housekeeping',
   'creating potential tripping hazards and compromising site organization': 'Housekeeping',
   'they should be properly stored': 'Housekeeping',
 
@@ -2471,22 +2383,14 @@ export const CONTEXT_REDIRECTS = {
   'observed scaffold tubes on-site that were damaged': 'Housekeeping',
   'scaffold tubes on-site that were damaged': 'Housekeeping',
 
-  'scaffolding materials were thrown scattered': 'Housekeeping',
-  'thrown scattered across the site': 'Housekeeping',
 
-  'unwanted scaffold barricades in front of the warehouse': 'Housekeeping',
   'front of the warehouse at the tsf area': 'Housekeeping',
 
-  'poor housekeeping observed in the scaffold material storage': 'Housekeeping',
-  'scaffold material storage access': 'Housekeeping',
-  'slipping and tripping hazards during material shifting': 'Housekeeping',
 
   'wooden planks are stored on an unstable': 'Housekeeping',
   'unstable and overloaded makeshift scaffold/rack': 'Housekeeping',
   'posing a high risk of collapse': 'Housekeeping',
 
-  'scaffolding material storage area is not properly barricaded': 'Site Security',
-  'not properly barricaded, posing a risk of unauthorized access': 'Site Security',
 
   // ============================================================================
   // PREVENT EXCAVATION OVER-MATCHING - These should NOT be Breaking Ground
@@ -2496,8 +2400,6 @@ export const CONTEXT_REDIRECTS = {
   'polythene bag of the waste bin was not changed': 'Worker Welfare',
   'polythene bag of waste bin was not changed': 'Worker Welfare',
   'waste bin was not changed': 'Worker Welfare',
-  'polythene bag in the waste bin': 'Worker Welfare',
-  'waste bin was full': 'Worker Welfare',
 
   // Toilet checklist near excavation → Worker Welfare
   'toilet check was not available for the toilet': 'Worker Welfare',
@@ -2911,9 +2813,7 @@ export const CONTEXT_REDIRECTS = {
   'installed barricades on the ditch': 'Breaking Ground & Excavation',
 
   // Scaffold entrance on active roadway → Traffic Management
-  'scaffold access entrance is positioned directly on an active roadway': 'Traffic Management',
   'access entrance is positioned directly on an active roadway': 'Traffic Management',
-  'positioned directly on an active roadway': 'Traffic Management',
 
   // Harness storage blocked → Housekeeping
   'harness storage point for safety harnesses': 'Housekeeping',
@@ -2929,7 +2829,6 @@ export const CONTEXT_REDIRECTS = {
   // Lifting scaffold material with rope → Lifting
   'lifting scaffolding material manually': 'Lifting',
   'worker was lifting scaffolding material': 'Lifting',
-  'lifting scaffolding material manually with a rope': 'Lifting',
 
   // Scaffold barricades unattended, no housekeeping → Housekeeping
   'unwanted scaffolding barricades left unattended': 'Housekeeping',
@@ -2938,7 +2837,6 @@ export const CONTEXT_REDIRECTS = {
   'concrete barriers not returned to their original position': 'Housekeeping',
 
   // Formwork inside confined space → Confined Spaces
-  'formwork is in progress inside confined space': 'Confined Spaces',
   'in progress inside confined space used scaffolding platform': 'Confined Spaces',
   'inside confined space used scaffolding platform': 'Confined Spaces',
   'scaffolding access is red tagged': 'Working at Height',
@@ -3064,8 +2962,6 @@ export const CONTEXT_REDIRECTS = {
   'towards the vehicle and people movement area': 'Physical Hazard',
 
   // GFCI not installed → Energized System
-  'gfci was not installed in power distribution': 'Energized System',
-  'gfci was not installed': 'Energized System',
   'gfci not installed': 'Energized System',
 
   // Air hose not secured → Mechanical Hazard

@@ -33,13 +33,6 @@ export const MAX_FIELD_LENGTHS = {
   default: 2000         // Default for unmapped fields
 }
 
-// Valid date format patterns
-const DATE_PATTERNS = [
-  /^\d{4}-\d{2}-\d{2}$/,           // ISO: 2024-01-15
-  /^\d{2}\/\d{2}\/\d{4}$/,         // European: 15/01/2024
-  /^\d{1,2}\/\d{1,2}\/\d{4}/,      // Flexible: 1/5/2024
-]
-
 /**
  * Sanitize a string field by removing potentially dangerous characters
  * and limiting length
@@ -61,6 +54,7 @@ const sanitizeField = (value, fieldName = 'default') => {
   }
 
   // Remove null bytes and other control characters (except newlines, tabs)
+  // eslint-disable-next-line no-control-regex
   str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
 
   return str
@@ -71,27 +65,16 @@ const sanitizeField = (value, fieldName = 'default') => {
  * @param {string} dateStr - Date string to validate
  * @returns {boolean} - True if valid format
  */
-const isValidDateFormat = (dateStr) => {
-  if (!dateStr || typeof dateStr !== 'string') return false
-  return DATE_PATTERNS.some(pattern => pattern.test(dateStr.trim()))
-}
 import { analyzeObservation } from './contextClassifier'
 import { HAZARD_SEVERITY } from './contextMappings'
 import {
   parseSentence,
-  extractWeightedKeywords,
   analyzeForRootCause,
-  GRAMMATICAL_WEIGHTS
 } from './sentenceParser'
 import {
-  getSettings,
   cleanText,
   cleanName,
-  validateDate,
-  validateRecord,
-  calculateRecordQuality,
   checkDuplicate,
-  meetsConfidenceThreshold,
   mapType,
   mapStatus
 } from './settingsReader'
@@ -99,7 +82,6 @@ import {
   findSimilarContractors,
   suggestContractorConsolidations,
   autoNormalizeContractor,
-  normalizeContractorName
 } from './stringMatching'
 
 // ============================================
@@ -1143,7 +1125,6 @@ export const normalizeHazardCategory = (category) => {
     'man machine': 'Mobile Plant & Equipment',
     // Working in Heat variations
     'heat stress': 'Working in Heat',
-    'working in the heat': 'Working in Heat',
     // Worker Welfare variations
     'drinking water': 'Worker Welfare',
     'rest shelter': 'Worker Welfare',
@@ -1563,11 +1544,10 @@ export const getObservationAnalysis = (description) => {
  * @param {string} mode
  * @returns {{ category: string, scores: Object|null, winMethod: string, blockedCategory: string|null, blockedConfidence: number|null }}
  */
-const _classifyWithScoring = (description, existingCategory = '', mode = 'trust-excel') => {
+const _classifyWithScoring = (description, existingCategory = '', _mode = 'trust-excel') => {
   const text = (description || '').toLowerCase()
 
-  // Get categorization settings - use hardcoded defaults for simplified flow
-  const confidenceThreshold = 70 // Hardcoded 70% confidence threshold
+  // Categorization settings - hardcoded 70% confidence threshold
 
   // Strip reference text (after "Ref:", "Reference:", etc.) - only classify MAIN observation
   const mainText = stripReferenceText(text)
@@ -2022,9 +2002,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
     warnings.rowLimitApplied = true
   }
 
-  // Get current settings for processing
-  const settings = getSettings()
-
   dataRows.forEach((row, index) => {
     // getValue with built-in sanitization for security
     const getValue = (field) => {
@@ -2065,7 +2042,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
     // Enhanced contractor normalization with fuzzy matching
     let contractor = cleanName(rawContractor, 'contractor')
-    let contractorWasNormalized = false
     let originalContractor = contractor
 
     if (contractor && existingContractors.length > 0) {
@@ -2073,7 +2049,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       if (normResult.wasNormalized && normResult.normalized !== contractor) {
         originalContractor = contractor
         contractor = normResult.normalized
-        contractorWasNormalized = true
         warnings.contractorNormalizations.push({
           row: index + 2,
           original: originalContractor,
@@ -2087,7 +2062,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
 
     // Enhanced site normalization with fuzzy matching
     let site = cleanName(rawSite, 'site')
-    let siteWasNormalized = false
     let originalSite = site
 
     if (site && existingSites.length > 0) {
@@ -2095,7 +2069,6 @@ export const transformRows = (rows, headers, columnMappings, projectId, existing
       if (normResult.wasNormalized && normResult.normalized !== site) {
         originalSite = site
         site = normResult.normalized
-        siteWasNormalized = true
         // Add to contractor normalizations (same structure works for sites)
         warnings.contractorNormalizations.push({
           row: index + 2,

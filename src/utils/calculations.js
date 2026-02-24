@@ -1,4 +1,4 @@
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO, getWeek, getYear, getDaysInMonth, getDate, differenceInMonths, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, getQuarter, format } from 'date-fns'
+import { isWithinInterval, parseISO, getWeek, getYear, getDaysInMonth, getDate, differenceInMonths, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, getQuarter, format } from 'date-fns'
 import { RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, PYRAMID_SECTIONS } from './constants'
 import { getCurrentDate } from './dateUtils'
 import { isOpenAction } from './incidentHelpers'
@@ -32,7 +32,7 @@ export const getIncidentCountsByType = (incidents) => {
     // Map sub-types to consolidated pyramid key
     const pyramidKey = SUB_TYPE_TO_PYRAMID[type] || type
     // Count in pyramid bucket
-    if (counts.hasOwnProperty(pyramidKey)) {
+    if (Object.hasOwn(counts, pyramidKey)) {
       counts[pyramidKey]++
     }
     // Also maintain aggregate 'incident' count for backward compat

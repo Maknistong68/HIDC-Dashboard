@@ -32,7 +32,6 @@ import { SEVERITY_WEIGHTS } from '../../utils/calculations'
 import { isOpenAction } from '../../utils/incidentHelpers'
 import {
   plotHazardsOnMatrix,
-  getCellRiskColor,
   getScoreColor,
   getScoreLabel,
   getRiskZone,
@@ -531,20 +530,6 @@ const InterventionImpactSummary = ({ projection }) => {
 // ============================================================================
 
 const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) => {
-  if (!hazard?.likelihood || !hazard?.consequence) return null
-
-  const L = hazard.likelihood
-  const C = hazard.consequence
-  const currentScore = L * C
-  const currentColor = getScoreColor(currentScore)
-  const currentZone = getRiskZone(L, C)
-
-  const pL = projectedLikelihood ?? L
-  const projectedScore = pL * C
-  const projectedColor = getScoreColor(projectedScore)
-  const projectedZone = getRiskZone(pL, C)
-  const hasChange = pL !== L
-
   // Build per-intervention breakdown from projection.effects
   const effectRows = useMemo(() => {
     if (!projection?.effects) return []
@@ -563,6 +548,20 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
       .sort((a, b) => a.effect - b.effect) // most negative (biggest reduction) first
   }, [projection])
 
+  if (!hazard?.likelihood || !hazard?.consequence) return null
+
+  const L = hazard.likelihood
+  const C = hazard.consequence
+  const currentScore = L * C
+  const currentColor = getScoreColor(currentScore)
+  const currentZone = getRiskZone(L, C)
+
+  const pL = projectedLikelihood ?? L
+  const projectedScore = pL * C
+  const projectedColor = getScoreColor(projectedScore)
+  const projectedZone = getRiskZone(pL, C)
+  const hasChange = pL !== L
+
   const hasEffects = effectRows.length > 0 || (projection?.totalEffect && projection.totalEffect !== 0)
   if (!hasEffects && !hasChange) return null
 
@@ -577,7 +576,7 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
           <p className="text-[11px] text-surface-400 mb-1">Current</p>
           <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded" style={{ backgroundColor: currentColor.backgroundColor + '30', border: `1px solid ${currentColor.borderColor}` }}>
             <span className="text-sm font-bold" style={{ color: currentColor.borderColor }}>
-              L{L} <span className="text-xs font-normal">"{LIKELIHOOD_LABELS[L]}"</span> × C{C} <span className="text-xs font-normal">"{CONSEQUENCE_LABELS[C]}"</span> = {currentScore}
+              L{L} <span className="text-xs font-normal">&quot;{LIKELIHOOD_LABELS[L]}&quot;</span> × C{C} <span className="text-xs font-normal">&quot;{CONSEQUENCE_LABELS[C]}&quot;</span> = {currentScore}
             </span>
           </div>
           <div className="mt-1">
@@ -596,7 +595,7 @@ const CalculationBreakdownPanel = ({ hazard, projectedLikelihood, projection }) 
               <p className="text-[11px] text-surface-400 mb-1">Projected</p>
               <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded" style={{ backgroundColor: projectedColor.backgroundColor + '30', border: `1px solid ${projectedColor.borderColor}` }}>
                 <span className="text-sm font-bold" style={{ color: projectedColor.borderColor }}>
-                  L{pL} <span className="text-xs font-normal">"{LIKELIHOOD_LABELS[pL]}"</span> × C{C} = {projectedScore}
+                  L{pL} <span className="text-xs font-normal">&quot;{LIKELIHOOD_LABELS[pL]}&quot;</span> × C{C} = {projectedScore}
                 </span>
               </div>
               <div className="mt-1">
@@ -779,7 +778,7 @@ const ConnectedHubDiagram = ({
   hazardFactors,
   dayPatterns,
   hourPatterns,
-  siteClassifications,
+  _siteClassifications,
   cellColor,
   projection,
   projectedLikelihood: projectedLikelihoodProp,
@@ -1294,7 +1293,7 @@ const RiskMatrixCell = ({ likelihood, consequence, hazards, onClick }) => {
  * RiskMatrixView - True 5x5 Likelihood x Impact grid (score-based)
  * Columns reversed: L5 (left) → L1 (right) so highest risk is top-left
  */
-const RiskMatrixView = ({ matrixData, allIncidents, onHazardClick }) => {
+const RiskMatrixView = ({ matrixData, onHazardClick }) => {
   // Build 5x5 grid: grid[consequence][likelihood] = [hazards]
   const grid = useMemo(() => {
     const g = {}
@@ -1416,7 +1415,6 @@ const HazardRiskMatrix = ({
   negativeIncidents,
   filteredIncidents,
   factorData,
-  period,
   siteClassifications = {},
   matrixData: matrixDataProp,
 }) => {

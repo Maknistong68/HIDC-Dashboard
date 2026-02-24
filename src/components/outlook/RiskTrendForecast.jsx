@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, startTransition, memo } from 'react'
+import { useState, useMemo, useCallback, useEffect, startTransition, memo } from 'react'
 import {
   ComposedChart, Bar, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
@@ -20,7 +20,6 @@ import {
   calculateActionClosureEffect,
   applyQuickActionPreset,
 } from '../insights/ScenarioSimulatorEngine'
-import { QUICK_ACTION_PRESETS } from '../../utils/constants'
 import { parseISO, startOfWeek, format } from 'date-fns'
 import { CONSEQUENCE_TYPE_MAP } from '../../utils/riskMatrix'
 import { filterByHazard, isOpenAction } from '../../utils/incidentHelpers'
@@ -257,6 +256,7 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     } else {
       setCriticalZoneMode(prev => ['tight', 'std', 'wide', 'off'].includes(prev) ? prev : 'std')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync on hasSeriousData flag change
   }, [criticalThreshold?.hasSeriousData])
 
   // Active threshold value based on selected mode (works for both paths)
@@ -265,8 +265,6 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     if (!criticalThreshold.thresholds) return criticalThreshold.threshold
     return criticalThreshold.thresholds[criticalZoneMode] ?? criticalThreshold.threshold
   }, [criticalThreshold, criticalZoneMode])
-
-  const simulatedRate = simulatedForecast?.simulatedRate ?? forecastData?.currentRate ?? 0
 
   const simulatedProbability = useMemo(() => {
     if (!simulatedForecast) return baselineProbability
@@ -365,11 +363,6 @@ const RiskTrendForecast = ({ incidents, sortedHazards, factorData, negativeIncid
     setActionsToClose(result.actionsToClose || 0)
     setActivePreset(presetId)
   }, [activePreset, prevalence, openActionsCount, contextualSliders, handleReset])
-
-  const trend = forecastData
-    ? TREND_CONFIG[forecastData.trendDirection] || TREND_CONFIG.stable
-    : TREND_CONFIG.stable
-  const TrendIcon = trend.icon
 
   if (!allForecasts.length) {
     return (

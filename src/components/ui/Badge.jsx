@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * Badge - Status indicators and labels

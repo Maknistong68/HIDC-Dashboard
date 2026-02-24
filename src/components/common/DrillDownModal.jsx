@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet, Pencil, CheckCircle2, RotateCcw } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Eye, Calendar, Building2, MapPin, User, AlertCircle, CheckCircle, Clock, Copy, Check, AlertTriangle, FileText, Flag, BarChart3, List, Briefcase, FileSpreadsheet, Pencil, CheckCircle2, RotateCcw, Database } from 'lucide-react'
 import { List as VirtualList } from 'react-window'
 import { format, parseISO } from 'date-fns'
 import { useDataActions } from '../../context/DataContext'
@@ -440,7 +440,7 @@ const MonthlyBreakdown = ({ data, onSelect, isMobile = false }) => {
  * Monthly Quality Breakdown View
  * Shows detailed metric breakdown with formulas for a specific month
  */
-const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false }) => {
+const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile: _isMobile = false }) => {
   if (!data) {
     return (
       <div className="text-center py-12 text-surface-500">
@@ -555,7 +555,7 @@ const MonthlyQualityBreakdown = ({ data, onViewObservations, isMobile = false })
  * Records Table View
  */
 const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords = [], copyContext = {} }) => {
-  const [copied, setCopied] = React.useState(false)
+  const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef(null)
 
   // Cleanup timer on unmount
@@ -741,7 +741,7 @@ const RecordsTable = ({ data, onViewDetails, isMobile = false, highlightKeywords
 /**
  * Single record card - extracted for use in both virtualized and direct rendering
  */
-const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onViewDetails }) => (
+const RecordCard = memo(function RecordCard({ record, isMobile, highlightKeywords = [], onViewDetails }) { return (
   <div
     className={`
       group rounded-xl bg-white border border-surface-200/50
@@ -801,7 +801,7 @@ const RecordCard = React.memo(({ record, isMobile, highlightKeywords = [], onVie
       </button>
     </div>
   </div>
-))
+)})
 
 /**
  * Record Details Modal (Glassmorphism)
@@ -1007,7 +1007,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 )}
                 {record._previousCategory && record.hazardCategorySource === 'manual' && (
                   <div className="text-[10px] text-surface-400 mt-1">
-                    Changed from "{record._previousCategory}" on {format(parseISO(record._reclassifiedAt), 'dd MMM yyyy')}
+                    Changed from &quot;{record._previousCategory}&quot; on {format(parseISO(record._reclassifiedAt), 'dd MMM yyyy')}
                   </div>
                 )}
               </div>

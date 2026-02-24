@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import { Calendar, AlertTriangle, TrendingUp, CheckCircle } from 'lucide-react'
 
 /**
@@ -100,7 +100,7 @@ const SeasonalRiskPrediction = ({ data, title = '7-Day Risk Forecast' }) => {
 
       {/* 7-day prediction grid */}
       <div className="grid grid-cols-7 gap-1">
-        {predictions.map((day, index) => (
+        {predictions.map((day) => (
           <div
             key={day.date}
             className={`
@@ -173,4 +173,4 @@ const SeasonalRiskPrediction = ({ data, title = '7-Day Risk Forecast' }) => {
   )
 }
 
-export default React.memo(SeasonalRiskPrediction)
+export default memo(SeasonalRiskPrediction)

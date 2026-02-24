@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, memo } from 'react'
 import { useDebounce } from '../../hooks/useDebounce'
 import { List } from 'react-window'
 import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Eye, ChevronsLeft, ChevronsRight, Building2, MapPin, Calendar } from 'lucide-react'
@@ -480,7 +480,7 @@ const DataTable = ({
 /**
  * MobileCard - Card layout for table rows on mobile
  */
-const MobileCard = ({ row, columns, onView, onClick, config }) => {
+const MobileCard = ({ row, columns: _columns, onView, onClick, config: _config }) => {
   const date = row.date || ''
   const description = row.description || 'No description'
   const contractor = row.contractor || ''
@@ -554,4 +554,4 @@ const MobileCard = ({ row, columns, onView, onClick, config }) => {
   )
 }
 
-export default React.memo(DataTable)
+export default memo(DataTable)

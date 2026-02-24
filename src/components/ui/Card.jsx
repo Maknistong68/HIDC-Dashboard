@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * Card - Consistent container component
@@ -49,6 +48,7 @@ Card.Header = ({ children, className = '', action }) => (
     {action && <div>{action}</div>}
   </div>
 )
+Card.Header.displayName = 'Card.Header'
 
 // Card Title
 Card.Title = ({ children, className = '' }) => (
@@ -56,11 +56,13 @@ Card.Title = ({ children, className = '' }) => (
     {children}
   </h3>
 )
+Card.Title.displayName = 'Card.Title'
 
 // Card Body
 Card.Body = ({ children, className = '' }) => (
   <div className={className}>{children}</div>
 )
+Card.Body.displayName = 'Card.Body'
 
 // Card Footer
 Card.Footer = ({ children, className = '' }) => (
@@ -68,5 +70,6 @@ Card.Footer = ({ children, className = '' }) => (
     {children}
   </div>
 )
+Card.Footer.displayName = 'Card.Footer'
 
 export default Card

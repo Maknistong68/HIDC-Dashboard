@@ -11,7 +11,7 @@
  * can be exported for compliance review.
  */
 
-import { getDB, STORES } from './indexedDBStorage'
+import { getDB } from './indexedDBStorage'
 
 // Audit action types
 export const AUDIT_ACTIONS = {
@@ -81,7 +81,7 @@ export const logAuditEvent = async (action, details = {}) => {
     if (!db.objectStoreNames.contains(AUDIT_STORE)) {
       // Store doesn't exist yet - log to console in dev mode
       if (import.meta.env.DEV) {
-        console.log('[AuditLog] Store not initialized, logging to console:', entry)
+        console.warn('[AuditLog] Store not initialized, logging to console:', entry)
       }
       return null
     }

@@ -154,7 +154,7 @@ export function filterHierarchical(
   const targetKey = buildKey(targetLevel, debouncedFilters, dateKey)
   const exactHit = cacheGet(targetKey)
   if (exactHit) {
-    if (import.meta.env.DEV) console.debug(`[FilterCache] HIT L${targetLevel}`, targetKey)
+    if (import.meta.env.DEV) console.warn(`[FilterCache] HIT L${targetLevel}`, targetKey)
     return { ...exactHit, cacheLevel: `HIT L${targetLevel}` }
   }
 
@@ -170,7 +170,7 @@ export function filterHierarchical(
       // We need the combined filtered+heatmap source, so use baseFiltered
       // (heatmap is always a subset, recalculated from filtered)
       startData = hit.baseFilteredPreDate || hit.baseFiltered
-      if (import.meta.env.DEV) console.debug(`[FilterCache] PARTIAL HIT L${level}, filtering L${level}→L${targetLevel}`)
+      if (import.meta.env.DEV) console.warn(`[FilterCache] PARTIAL HIT L${level}, filtering L${level}→L${targetLevel}`)
       break
     }
   }
@@ -256,7 +256,7 @@ export function filterHierarchical(
     })
   }
 
-  if (import.meta.env.DEV) console.debug(`[FilterCache] MISS L${targetLevel}, computed from L${startLevel}`, targetKey)
+  if (import.meta.env.DEV) console.warn(`[FilterCache] MISS L${targetLevel}, computed from L${startLevel}`, targetKey)
 
   return { ...result, cacheLevel: `MISS L${targetLevel} from L${startLevel}` }
 }

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { BarChart3 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -27,7 +27,7 @@ const getBarColor = (count, maxCount) => {
  * Clickable bars to filter observations by root cause
  */
 const HazardRootCauseChart = ({ rootCauses = [], onBarClick, isMobile = false }) => {
-  const { chartData, maxCount } = useMemo(() => {
+  const { chartData } = useMemo(() => {
     if (!rootCauses?.length) return { chartData: [], maxCount: 0 }
 
     // Prepare data for chart
@@ -163,4 +163,4 @@ const HazardRootCauseChart = ({ rootCauses = [], onBarClick, isMobile = false })
   )
 }
 
-export default React.memo(HazardRootCauseChart)
+export default memo(HazardRootCauseChart)

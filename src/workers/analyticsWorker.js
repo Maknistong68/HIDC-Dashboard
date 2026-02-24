@@ -120,7 +120,7 @@ function dataCacheSet(hash, incidents) {
 // ─── Message Handler ────────────────────────────────────────────────
 
 self.onmessage = (e) => {
-  const { id, task, incidents, dataHash, params } = e.data
+  const { id, task, incidents, dataHash, params, fingerprint } = e.data
 
   // Validate
   if (!TASKS[task]) {
@@ -144,8 +144,8 @@ self.onmessage = (e) => {
     dataCacheSet(dataHash, resolvedIncidents)
   }
 
-  // Build result cache key
-  const hash = dataHash || hashIncidents(resolvedIncidents)
+  // Build result cache key — prefer fingerprint (deterministic) over data hash (sampled)
+  const hash = fingerprint ? `fp:${fingerprint}` : (dataHash || hashIncidents(resolvedIncidents))
   const paramsKey = params ? JSON.stringify(params) : ''
   const cacheKey = `${task}:${hash}:${paramsKey}`
 

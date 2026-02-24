@@ -71,7 +71,7 @@ const DetectionRatioCard = React.memo(({ totalIncidents, detectedCount, factors 
                 High Unclassified Rate: {unclassifiedRate.toFixed(1)}%
               </p>
               <p className="text-amber-700 mt-0.5">
-                {notDetectedCount} observations couldn't be classified. Factor detection patterns may need expansion.
+                {notDetectedCount} observations couldn&apos;t be classified. Factor detection patterns may need expansion.
               </p>
             </div>
           </div>

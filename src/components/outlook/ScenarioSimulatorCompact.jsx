@@ -6,8 +6,6 @@ import {
   TrendingDown,
   RefreshCw,
   Target,
-  Zap,
-  BarChart3,
   CheckCircle2,
   Minus,
   AlertTriangle,
@@ -19,7 +17,6 @@ import HazardSpecificActions from './HazardSpecificActions'
 import InterventionSliderGroup from './InterventionSliderGroup'
 import {
   CONTROL_HIERARCHY,
-  calculateFactorPrevalence,
   generateDynamicSliders,
   generateContextualSliders,
   calculateMultiHazardProjection
@@ -40,13 +37,8 @@ const ScenarioSimulatorCompact = ({
   trendingHazards = [],
   factorData,
   incidentStats,
-  prevalence: externalPrevalence,
   filteredIncidents = [],
-  hazardFilteredIncidents = [],
-  selectedHazard,
-  onHazardChange,
   weekly,
-  onProjectionChange
 }) => {
   // UI State
   const [isExpanded, setIsExpanded] = useState(true)
@@ -77,15 +69,6 @@ const ScenarioSimulatorCompact = ({
     }
     return selectedHazards
   }, [selectAllTrending, trendingList, selectedHazards])
-
-  // Calculate factor prevalence
-  const prevalence = useMemo(() => {
-    if (externalPrevalence && Object.keys(externalPrevalence).length > 0) {
-      return externalPrevalence
-    }
-    if (!factorData?.byFactor || !incidentStats?.totalNegative) return {}
-    return calculateFactorPrevalence(factorData, incidentStats.totalNegative)
-  }, [externalPrevalence, factorData, incidentStats?.totalNegative])
 
   // Calculate temporal patterns for selected hazard(s)
   const temporalPatterns = useMemo(() => {
@@ -172,13 +155,6 @@ const ScenarioSimulatorCompact = ({
     if (total >= 30) return { level: 'medium', label: 'Medium confidence', color: 'text-amber-600', bg: 'bg-amber-100' }
     return { level: 'low', label: 'Low confidence', color: 'text-red-500', bg: 'bg-red-100' }
   }, [incidentStats?.totalNegative])
-
-  // Fix 2.4: Check for negative sliders (reducing controls = increasing risk)
-  const negativeSliderIds = useMemo(() => {
-    return Object.entries(sliders)
-      .filter(([_, value]) => value < 0)
-      .map(([id]) => id)
-  }, [sliders])
 
   // Handlers
   const handleToggleHazard = useCallback((hazardName) => {

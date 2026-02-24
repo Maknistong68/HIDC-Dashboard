@@ -6,9 +6,6 @@ import { logAuditEvent, AUDIT_ACTIONS } from '../auditLogger'
 // Security disclaimer for all exported reports
 const DISCLAIMER_TEXT = 'CONFIDENTIAL: This report contains safety data. Please review all data before sharing. Data exported from Event Dashboard.'
 
-// Security watermark text
-const SECURITY_WATERMARK = 'Event Dashboard Export - Handle as Confidential'
-
 /**
  * Generates a PDF document by capturing the entire dashboard as one image
  * with professional layout and disclaimer
@@ -222,7 +219,7 @@ const addSummarySection = (pdf, incidents, x, y, contentWidth, pageWidth) => {
 /**
  * Add header to PDF (centered) - Professional design
  */
-const addHeader = (pdf, filterInfo, x, y, pageWidth, contentWidth) => {
+const addHeader = (pdf, filterInfo, x, y, pageWidth, _contentWidth) => {
   // Top accent line
   pdf.setFillColor(59, 130, 246) // Blue accent
   pdf.rect(0, 0, pageWidth, 3, 'F')

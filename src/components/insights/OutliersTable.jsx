@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import { HelpCircle, Users, ChevronRight } from 'lucide-react'
 
 /**
@@ -29,7 +29,7 @@ const SupportOpportunitiesTable = ({ data, onRowClick }) => {
     )
   }
 
-  const { outliers, criticalCount, warningCount } = data
+  const { outliers, criticalCount, warningCount: _warningCount } = data
 
   /**
    * Support level configuration - neutral, action-oriented
@@ -100,7 +100,7 @@ const SupportOpportunitiesTable = ({ data, onRowClick }) => {
             </tr>
           </thead>
           <tbody>
-            {outliers.map((outlier, idx) => {
+            {outliers.map((outlier) => {
               const supportLevel = getSupportLevel(outlier.status)
               return (
                 <tr
@@ -165,4 +165,4 @@ const SupportOpportunitiesTable = ({ data, onRowClick }) => {
 
 // Export with both names for backward compatibility
 export { SupportOpportunitiesTable }
-export default React.memo(SupportOpportunitiesTable)
+export default memo(SupportOpportunitiesTable)

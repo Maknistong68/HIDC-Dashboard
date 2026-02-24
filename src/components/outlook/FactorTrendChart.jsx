@@ -118,18 +118,18 @@ const FactorTrendChart = ({ data, factorName, timePeriod }) => {
   const [dragStart, setDragStart] = useState(null)
   const chartRef = useRef(null)
 
-  const days = data?.days || []
   const totalCount = data?.totalCount || 0
   const trend = data?.trend || 'stable'
 
   // Filter and calculate moving average
   const allDays = useMemo(() => {
+    const days = data?.days || []
     const filtered = days.filter(d => d.count > 0)
     if (showMovingAvg && filtered.length > 0) {
       return calculateMovingAverage(filtered, 7, 'count')
     }
     return filtered
-  }, [days, showMovingAvg])
+  }, [data?.days, showMovingAvg])
 
   // Initialize view range when data changes
   useEffect(() => {

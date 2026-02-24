@@ -4,7 +4,6 @@ import { reportError } from '../../utils/errorReporter'
 
 // Categorize errors for better user messaging
 const getErrorInfo = (error) => {
-  const errorString = error?.toString() || ''
   const errorMessage = error?.message || ''
 
   // Data-related errors

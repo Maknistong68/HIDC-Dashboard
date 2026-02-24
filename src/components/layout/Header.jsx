@@ -1,9 +1,9 @@
-import React, { useMemo, memo } from 'react'
+import { useMemo, memo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bell, Download } from 'lucide-react'
 import { useDataState, useDataActions } from '../../context/DataContext'
 import { useDate } from '../../context/DateContext'
-import { downloadJSON, exportAllData } from '../../utils/storage'
+import { downloadJSON } from '../../utils/storage'
 import { format } from 'date-fns'
 import { isOpenAction } from '../../utils/incidentHelpers'
 

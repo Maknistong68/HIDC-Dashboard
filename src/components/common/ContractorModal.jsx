@@ -1,4 +1,4 @@
-import React, { useMemo, useState, memo } from 'react'
+import { useMemo, useState, memo } from 'react'
 import ModalPortal from './ModalPortal'
 import {
   X,
@@ -237,7 +237,7 @@ const ContractorModal = ({
                 )}
               </div>
               <p className="text-xs text-orange-700 mb-3">
-                Select reporters to exclude (e.g., client observers) to see the contractor's own employee performance.
+                Select reporters to exclude (e.g., client observers) to see the contractor&apos;s own employee performance.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
                 {allContractorReporters.map((reporter) => {
@@ -567,7 +567,7 @@ const ContractorModal = ({
                           <span className="text-surface-400">→</span>
                           <span className="text-green-600 font-medium">{record.suggestedCategory}</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.misclassifiedRecords.length > 5 && (
@@ -592,7 +592,7 @@ const ContractorModal = ({
                           <span>{record.date} | {record.reporter || 'Unknown'}</span>
                           <span className="text-red-600 font-medium">{record.wordCount} words</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description || '(empty)'}"</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description || '(empty)'}&quot;</p>
                       </div>
                     ))}
                     {data.flaggedRecords.length > 5 && (
@@ -617,7 +617,7 @@ const ContractorModal = ({
                           <span>{record.date} | {record.reporter || 'Unknown'}</span>
                           <span className="text-orange-600 font-medium">Used {record.duplicateCount}x</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.duplicateDescriptions.length > 5 && (
@@ -642,7 +642,7 @@ const ContractorModal = ({
                           <span>{record.date} | {record.reporter || 'Unknown'}</span>
                           <span className="text-surface-600 font-medium">{record.confidence}% confidence</span>
                         </div>
-                        <p className="text-surface-700 italic truncate">"{record.description?.substring(0, 80) || '(empty)'}..."</p>
+                        <p className="text-surface-700 italic truncate">&quot;{record.description?.substring(0, 80) || '(empty)'}&hellip;&quot;</p>
                       </div>
                     ))}
                     {data.vagueDescriptions.length > 5 && (

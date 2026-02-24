@@ -66,8 +66,8 @@ HazardSummary.displayName = 'HazardSummary'
  * FactorBarChart - Horizontal bar chart showing top contributing factors with variance colors
  */
 const FactorBarChart = React.memo(({ factors, isTransitioning, onBarClick }) => {
-  const { chartData, maxCount } = useMemo(() => {
-    if (!factors?.length) return { chartData: [], maxCount: 0 }
+  const { chartData } = useMemo(() => {
+    if (!factors?.length) return { chartData: [] }
 
     // Show all factors (no limit) for scrollable view
     const data = factors.map(f => ({
@@ -218,12 +218,14 @@ const HazardDetailPanelInner = ({ hazard, incidents, timePeriod, trendData, onOp
       incidents,
       (data) => detectFactorsForHazard(data, hazard.name)
     )
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute only when hazard name changes
   }, [hazard?.name, incidents])
 
   // Get hazard incidents for drill-down filtering
   const hazardIncidents = useMemo(() => {
     if (!hazard || !incidents) return []
     return incidents.filter(i => i.location === hazard.name)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute only when hazard name changes
   }, [hazard?.name, incidents])
 
   // Handle factor bar click - filter observations and open drill-down

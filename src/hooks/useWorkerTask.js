@@ -1,5 +1,10 @@
-import { useState, useEffect, useRef, useContext } from 'react'
-import { TabVisibilityContext } from './useDeferredMemo'
+import { useState, useEffect, useRef, startTransition } from 'react'
+
+// Default fingerprints for "all filters cleared" state
+const DEFAULT_FINGERPRINTS = new Set([
+  'c=|s=|sr=|d=|wr=1',
+  'c=|s=|sr=|d=|wr=0',
+])
 
 // ─── Hash helper (copied from analyticsWorker.js) ───────────────────
 function hashIncidents(incidents) {
@@ -16,6 +21,59 @@ function hashIncidents(incidents) {
     parts.push(`${last?.id || ''}|${last?.location || ''}|${last?.type || ''}`)
   }
   return `${incidents.length}:${parts.join(':')}`
+}
+
+// ─── Global LRU result cache ─────────────────────────────────────────
+// Prevents flash of fallback when tabs unmount/remount (route-based rendering).
+// Keyed by taskName|dataHash|paramsKey, holds up to 30 entries.
+const MAX_RESULT_CACHE = 30
+const resultCache = new Map()
+
+/**
+ * Permanent defaults cache — stores "all filters cleared" worker results outside the LRU.
+ * These are NEVER evicted by filter cycling, so clearing filters is always instant.
+ * Keyed by taskName|fingerprint|paramsKey
+ */
+const defaultResultCache = new Map()
+
+function resultCacheGet(key) {
+  if (!resultCache.has(key)) return undefined
+  const val = resultCache.get(key)
+  resultCache.delete(key)
+  resultCache.set(key, val)
+  return val
+}
+
+function resultCacheSet(key, value) {
+  if (resultCache.has(key)) resultCache.delete(key)
+  resultCache.set(key, value)
+  if (resultCache.size > MAX_RESULT_CACHE) {
+    const oldest = resultCache.keys().next().value
+    resultCache.delete(oldest)
+  }
+}
+
+/**
+ * Clear the global worker result cache.
+ * Called on data import/delete via clearAllCaches()/clearDataCaches().
+ */
+export function clearWorkerResultCache() {
+  resultCache.clear()
+  defaultResultCache.clear()
+}
+
+/**
+ * Seed a result into the permanent defaults cache.
+ * Called during import pre-computation to ensure first render is instant.
+ *
+ * @param {string} taskName - Worker task name
+ * @param {string} fingerprint - Filter fingerprint (e.g. 'c=|s=|sr=|d=|wr=1')
+ * @param {string} paramsKey - JSON-stringified params (or '')
+ * @param {any} result - The pre-computed result to seed
+ */
+export function seedDefaultWorkerResult(taskName, fingerprint, paramsKey, result) {
+  const key = `${taskName}|fp:${fingerprint}|${paramsKey}`
+  defaultResultCache.set(key, result)
 }
 
 /**
@@ -76,9 +134,10 @@ const sentDataHashes = new Set()
  * @param {string} task - Task name (matches TASKS keys in analyticsWorker.js)
  * @param {Array} incidents - Incidents data to process
  * @param {Object|null} params - Additional params for the task
+ * @param {string} [fingerprint] - Optional filter fingerprint for cache keying
  * @returns {{ promise: Promise, id: number }}
  */
-function postTask(task, incidents, params) {
+function postTask(task, incidents, params, fingerprint) {
   const id = ++requestIdCounter
   const worker = getWorker()
 
@@ -87,13 +146,19 @@ function postTask(task, incidents, params) {
   })
 
   const dataHash = hashIncidents(incidents)
+  const msg = { id, task, dataHash, params }
+
+  // Include fingerprint if provided so worker can use it for cache keying
+  if (fingerprint) msg.fingerprint = fingerprint
+
   if (sentDataHashes.has(dataHash)) {
     // Worker already has this data — send lightweight message
-    worker.postMessage({ id, task, dataHash, params })
+    worker.postMessage(msg)
   } else {
     // First time — send full data + hash
     sentDataHashes.add(dataHash)
-    worker.postMessage({ id, task, incidents, dataHash, params })
+    msg.incidents = incidents
+    worker.postMessage(msg)
   }
   return { promise, id }
 }
@@ -112,62 +177,55 @@ function postTask(task, incidents, params) {
  * @param {Object|null} params - Extra params for the task
  * @param {Array} deps - Dependency array (triggers re-computation when changed)
  * @param {any} fallback - Initial fallback value before first result
+ * @param {string} [fingerprint] - Optional filter fingerprint for permanent cache keying
  * @returns {{ result: any, isPending: boolean }}
  */
-export function useWorkerTask(taskName, incidents, params, deps, fallback = null) {
-  const [result, setResult] = useState(fallback)
-  const [isPending, setIsPending] = useState(true)
+export function useWorkerTask(taskName, incidents, params, deps, fallback = null, fingerprint = undefined) {
+  const [result, setResult] = useState(() => {
+    // Check global cache for instant init (prevents fallback flash on remount)
+    if (!incidents || incidents.length === 0) return fallback
+    const paramsKey = params ? JSON.stringify(params) : ''
+
+    // Check permanent defaults cache first (fingerprint-based)
+    if (fingerprint && DEFAULT_FINGERPRINTS.has(fingerprint)) {
+      const fpKey = `${taskName}|fp:${fingerprint}|${paramsKey}`
+      const defaultHit = defaultResultCache.get(fpKey)
+      if (defaultHit !== undefined) return defaultHit
+    }
+
+    // Fall back to hash-based LRU cache
+    const hash = hashIncidents(incidents)
+    const cacheKey = `${taskName}|${hash}|${paramsKey}`
+    const cached = resultCacheGet(cacheKey)
+    return cached !== undefined ? cached : fallback
+  })
+  const [isPending, setIsPending] = useState(() => {
+    if (!incidents || incidents.length === 0) return false
+    const paramsKey = params ? JSON.stringify(params) : ''
+
+    // Check permanent defaults cache first
+    if (fingerprint && DEFAULT_FINGERPRINTS.has(fingerprint)) {
+      const fpKey = `${taskName}|fp:${fingerprint}|${paramsKey}`
+      if (defaultResultCache.has(fpKey)) return false
+    }
+
+    const hash = hashIncidents(incidents)
+    const cacheKey = `${taskName}|${hash}|${paramsKey}`
+    return !resultCache.has(cacheKey)
+  })
   const latestIdRef = useRef(0)
   const mountedRef = useRef(true)
-  const prevKeyRef = useRef(null) // tracks hash + params together
-  const pendingArgsRef = useRef(null) // Layer 3: stash args when tab is hidden
-
-  // Layer 3: visibility-aware gating — hidden tabs defer worker calls
-  const isVisible = useContext(TabVisibilityContext)
+  const prevKeyRef = useRef(null)
 
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
-  // Layer 3: When tab becomes visible, flush any stashed work
-  useEffect(() => {
-    if (isVisible && pendingArgsRef.current) {
-      const { stashedIncidents, stashedParams, stashedKey } = pendingArgsRef.current
-      pendingArgsRef.current = null
-
-      // Check key hasn't already been processed
-      if (stashedKey === prevKeyRef.current) {
-        setIsPending(false)
-        return
-      }
-      prevKeyRef.current = stashedKey
-
-      setIsPending(true)
-      const { promise, id } = postTask(taskName, stashedIncidents, stashedParams)
-      latestIdRef.current = id
-
-      promise
-        .then((workerResult) => {
-          if (latestIdRef.current === id && mountedRef.current) {
-            setResult(workerResult)
-            setIsPending(false)
-          }
-        })
-        .catch((err) => {
-          if (import.meta.env.DEV) console.warn(`[useWorkerTask] ${taskName} flush failed:`, err.message)
-          if (latestIdRef.current === id && mountedRef.current) {
-            setIsPending(false)
-          }
-        })
-    }
-  }, [isVisible, taskName]) // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     // Don't send empty arrays to worker - return fallback immediately
     if (!incidents || incidents.length === 0) {
       prevKeyRef.current = null
-      pendingArgsRef.current = null
       setResult(fallback)
       setIsPending(false)
       return
@@ -177,12 +235,6 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
     const paramsKey = params ? JSON.stringify(params) : ''
     const fullKey = `${hash}|${paramsKey}`
 
-    // Layer 3: If tab is hidden, stash args instead of firing worker
-    if (!isVisible) {
-      pendingArgsRef.current = { stashedIncidents: incidents, stashedParams: params, stashedKey: fullKey }
-      return
-    }
-
     // Skip postMessage if incidents hash AND params are unchanged
     if (fullKey === prevKeyRef.current) {
       setIsPending(false)
@@ -190,15 +242,44 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
     }
     prevKeyRef.current = fullKey
 
+    // Check permanent defaults cache first (fingerprint-based, never evicted)
+    if (fingerprint && DEFAULT_FINGERPRINTS.has(fingerprint)) {
+      const fpKey = `${taskName}|fp:${fingerprint}|${paramsKey}`
+      const defaultHit = defaultResultCache.get(fpKey)
+      if (defaultHit !== undefined) {
+        startTransition(() => { setResult(defaultHit) })
+        setIsPending(false)
+        return
+      }
+    }
+
+    // Check global hash-based result cache before posting to worker
+    const cacheKey = `${taskName}|${fullKey}`
+    const cached = resultCacheGet(cacheKey)
+    if (cached !== undefined) {
+      startTransition(() => { setResult(cached) })
+      setIsPending(false)
+      return
+    }
+
     setIsPending(true)
-    const { promise, id } = postTask(taskName, incidents, params)
+    const { promise, id } = postTask(taskName, incidents, params, fingerprint)
     latestIdRef.current = id
 
     promise
       .then((workerResult) => {
+        // Store in global hash-based cache
+        resultCacheSet(cacheKey, workerResult)
+
+        // Also pin in defaults cache if this is a default fingerprint
+        if (fingerprint && DEFAULT_FINGERPRINTS.has(fingerprint)) {
+          const fpKey = `${taskName}|fp:${fingerprint}|${paramsKey}`
+          defaultResultCache.set(fpKey, workerResult)
+        }
+
         // Only apply if this is still the latest request and component is mounted
         if (latestIdRef.current === id && mountedRef.current) {
-          setResult(workerResult)
+          startTransition(() => { setResult(workerResult) })
           setIsPending(false)
         }
       })
@@ -209,9 +290,6 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
           setIsPending(false)
         }
       })
-
-    // Cleanup: mark stale (latestIdRef update handles it naturally)
-    // No need to explicitly cancel - the ID check in .then() handles staleness
   }, deps) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { result, isPending }
@@ -224,6 +302,7 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
  * @param {string} taskName
  * @param {Array} incidents
  * @param {Object|null} params
+ * @returns {Promise}
  */
 export function warmWorkerCache(taskName, incidents, params) {
   if (!incidents || incidents.length === 0) return Promise.resolve(null)

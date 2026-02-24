@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useId } from 'react'
+import { useEffect, useRef, useCallback, useId } from 'react'
 import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
@@ -19,7 +19,6 @@ const Modal = ({
 }) => {
   const modalRef = useRef(null)
   const previousFocusRef = useRef(null)
-  const firstFocusableRef = useRef(null)
   const titleId = useId()
 
   const sizeClasses = {
@@ -194,6 +193,7 @@ Modal.Footer = ({ children, className = '' }) => (
     {children}
   </div>
 )
+Modal.Footer.displayName = 'Modal.Footer'
 
 // Modal Section for grouping content
 Modal.Section = ({ title, children, className = '' }) => (
@@ -204,5 +204,6 @@ Modal.Section = ({ title, children, className = '' }) => (
     {children}
   </div>
 )
+Modal.Section.displayName = 'Modal.Section'
 
 export default Modal

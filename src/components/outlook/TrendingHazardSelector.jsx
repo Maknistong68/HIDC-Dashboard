@@ -145,7 +145,6 @@ const TrendingHazardSelector = ({
               .map(hazard => {
                 const isSelected = selectedHazards.includes(hazard.name)
                 const trend = getTrendBadge(hazard.trendLevel)
-                const TrendIcon = trend.icon
 
                 return (
                   <button

@@ -1,52 +1,28 @@
-import React, { useMemo, useDeferredValue, useState, useCallback, memo } from 'react'
+import { useMemo, useState, useCallback, memo } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 import {
   BarChart3,
   CheckCircle,
   AlertTriangle,
-  AlertCircle,
-  XCircle,
-  TrendingUp,
-  Users,
   FileText,
-  FileX,
-  Building2,
-  Download,
   ChevronDown,
   ChevronUp,
   Tag,
   Eye,
-  Brain,
-  Target,
-  Zap,
+  Users,
   Type,
   Copy,
   AlignLeft,
-  HelpCircle,
+  Zap,
   AlertOctagon,
   MessageSquareWarning,
-  Flag,
-  Search,
-  X
 } from 'lucide-react'
 import FilterBar from '../components/common/FilterBar'
 import TimePeriodToggle from '../components/common/TimePeriodToggle'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import { AnimatedNumber } from '../components/ui'
 import Skeleton from '../components/ui/Skeleton'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  ReferenceLine
-} from 'recharts'
-import { useDataState, useDataActions } from '../context/DataContext'
+import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
 import { useFilteredData } from '../context/FilteredDataContext'
 import { useTabCache } from '../hooks/useTabCache'
@@ -57,18 +33,17 @@ import {
   getReporterMetrics,
   getContractorMetrics,
   getReporterDeepDive,
-  extractHour,
   getImportClassificationMetrics,
 } from '../utils/dataQualityCalculations'
-import { parseSentence, analyzeForRootCause } from '../utils/sentenceParser'
-import { categorizeHazard } from '../utils/excelParser'
 import ReporterModal from '../components/common/ReporterModal'
 
 import QualityScoreTrend from '../components/dataQuality/QualityScoreTrend'
 import NearMissComplianceTrend from '../components/dataQuality/NearMissComplianceTrend'
+import ObservationTesterPanel from '../components/dataQuality/ObservationTesterPanel'
+import ContractorPerformancePanel from '../components/dataQuality/ContractorPerformancePanel'
+import ReporterPerformancePanel from '../components/dataQuality/ReporterPerformancePanel'
 import ContractorModal from '../components/common/ContractorModal'
 import DrillDownModal from '../components/common/DrillDownModal'
-import BatchImportModal from '../components/fileManager/BatchImportModal'
 
 // Status → icon bubble color mapping (matches KPICard pattern)
 const getStatusBubbleColors = (status) => {
@@ -82,26 +57,12 @@ const getStatusBubbleColors = (status) => {
 
 const DataQuality = () => {
   const { incidents, isLoading, importWarnings } = useDataState()
-  const { updateIncident } = useDataActions()
   const isMobile = useIsMobile(640) // sm breakpoint for mobile detection
-  const [expandedSection, setExpandedSection] = useState(null)
-  const [reporterSort, setReporterSort] = useState('total')
-  const [contractorSort, setContractorSort] = useState('totalObs')
   const [selectedReporter, setSelectedReporter] = useState(null)
   const [selectedContractor, setSelectedContractor] = useState(null)
-  const [showDuplicates, setShowDuplicates] = useState(false)
-  const [showImportModal, setShowImportModal] = useState(false)
   const [showClassificationReview, setShowClassificationReview] = useState(false)
   const [classificationTab, setClassificationTab] = useState('summary') // 'summary' | 'detailed'
-  const [showMisclassification, setShowMisclassification] = useState(false)
   const [misclassificationTab, setMisclassificationTab] = useState('detailed') // 'detailed' | 'byCurrent' | 'bySuggested'
-  const [showUnclassifiable, setShowUnclassifiable] = useState(false)
-  const [showSpellingIssues, setShowSpellingIssues] = useState(false)
-  const [showObservationTester, setShowObservationTester] = useState(false)
-  const [testObservation, setTestObservation] = useState('')
-  const [testResult, setTestResult] = useState(null)
-  const [reporterSearch, setReporterSearch] = useState('')
-  const [contractorSearch, setContractorSearch] = useState('')
 
   // Drill-down state
   const [drillDown, setDrillDown] = useState({
@@ -115,12 +76,11 @@ const DataQuality = () => {
   })
 
   // Shared filter state from context
-  const { period, customDateRange, filters, contractor, site, subRegion, excludedReporters } = useFilterState()
+  const { period, customDateRange, filters, excludedReporters } = useFilterState()
   const { setPeriod, setFilter, clearFilters, setExcludedReporters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, filterConfig, filterFingerprint } = useFilteredData()
-  const filteredIncidents = useDeferredValue(_fi)
+  const { filteredIncidents, filterConfig, filterFingerprint } = useFilteredData()
 
   // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
   const activeFilters = useMemo(
@@ -152,8 +112,8 @@ const DataQuality = () => {
 
   // Misclassification analysis - detects records with wrong categories
   // Offloaded to Web Worker to keep main thread free
-  const { result: misclassificationData, isPending: misclassificationPending } = useWorkerTask(
-    'misclassification', filteredIncidents, null, [filteredIncidents], null
+  const { result: misclassificationData } = useWorkerTask(
+    'misclassification', filteredIncidents, null, [filteredIncidents], null, filterFingerprint
   )
 
   // Group 1: Core quality score metrics (depends on misclassification data)
@@ -168,12 +128,12 @@ const DataQuality = () => {
 
   // Group 2: Categorization metrics - offloaded to Web Worker
   const { result: categorizationMetrics } = useWorkerTask(
-    'categorization', filteredIncidents, null, [filteredIncidents], null
+    'categorization', filteredIncidents, null, [filteredIncidents], null, filterFingerprint
   )
 
   // Group 3: Text analysis (spelling, duplicates, vague hazards) - offloaded to Web Worker
   const { result: textAnalysisMetrics } = useWorkerTask(
-    'textAnalysis', filteredIncidents, null, [filteredIncidents], null
+    'textAnalysis', filteredIncidents, null, [filteredIncidents], null, filterFingerprint
   )
 
   // Group 4: Reporter and contractor metrics (includes classification accuracy)
@@ -187,7 +147,7 @@ const DataQuality = () => {
 
   // Group 5: Flagged records - offloaded to Web Worker
   const { result: trendAndFlaggedMetrics } = useWorkerTask(
-    'trendFlagged', filteredIncidents, null, [filteredIncidents], null
+    'trendFlagged', filteredIncidents, null, [filteredIncidents], null, filterFingerprint
   )
 
   // Combined quality data object - only creates new reference when sub-memos change
@@ -229,42 +189,8 @@ const DataQuality = () => {
       // Legacy empty array
       alerts: [],
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- WORKER_DEFAULTS are static fallback values
   }, [coreQualityMetrics, categorizationMetrics, textAnalysisMetrics, reporterContractorMetrics, trendAndFlaggedMetrics])
-
-  // Sort reporters
-  const sortedReporters = useMemo(() => {
-    if (!qualityData) return []
-
-    // Filter by search term first
-    let filtered = [...qualityData.reporters]
-    if (reporterSearch.trim()) {
-      const searchLower = reporterSearch.toLowerCase().trim()
-      filtered = filtered.filter(r => r.name.toLowerCase().includes(searchLower))
-    }
-
-    // Then sort (no slice limit - show all reporters)
-    return filtered.sort((a, b) => {
-      if (reporterSort === 'total') return b.total - a.total
-      if (reporterSort === 'nearMiss') return b.nearMiss - a.nearMiss
-      if (reporterSort === 'quality') return parseFloat(b.qualityRate) - parseFloat(a.qualityRate)
-      return 0
-    })
-  }, [qualityData, reporterSort, reporterSearch])
-
-  // Sort contractors
-  const sortedContractors = useMemo(() => {
-    if (!qualityData) return []
-    let filtered = [...qualityData.contractors]
-    if (contractorSearch.trim()) {
-      const searchLower = contractorSearch.toLowerCase().trim()
-      filtered = filtered.filter(c => c.name.toLowerCase().includes(searchLower))
-    }
-    return filtered.sort((a, b) => {
-      if (contractorSort === 'totalObs') return b.totalObs - a.totalObs
-      if (contractorSort === 'qualityScore') return b.qualityScore - a.qualityScore
-      return 0
-    })
-  }, [qualityData, contractorSort, contractorSearch])
 
   // Reporter deep dive data
   const reporterDeepDive = useMemo(() => {
@@ -311,57 +237,6 @@ const DataQuality = () => {
     })
   }, [])
 
-  // Day of week drill-down
-  const handleDayDrillDown = useCallback((dayData) => {
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const dayIndex = dayNames.findIndex(d => d.slice(0, 3) === dayData.day)
-    const records = filteredIncidents.filter(inc => {
-      if (!inc.date) return false
-      const incidentDay = new Date(inc.date).getDay()
-      return incidentDay === dayIndex
-    })
-    openDrillDown(
-      `${dayNames[dayIndex]} Observations`,
-      records,
-      ['Data Quality', 'Day of Week', dayNames[dayIndex]],
-      { day: dayNames[dayIndex], dayIndex }
-    )
-  }, [filteredIncidents, openDrillDown])
-
-  // Hour drill-down
-  const handleHourDrillDown = useCallback((hourData) => {
-    // hourData has hourNum (integer) and hour (formatted string like "09:00")
-    const hourNum = hourData.hourNum
-    const records = filteredIncidents.filter(inc => {
-      // Use extractHour which checks eventTime and date fields - same as the chart calculation
-      const incHour = extractHour(inc.eventTime, inc.date)
-      return incHour === hourNum
-    })
-    const hourLabel = `${String(hourNum).padStart(2, '0')}:00 - ${String(hourNum).padStart(2, '0')}:59`
-    openDrillDown(
-      `${hourLabel} Observations`,
-      records,
-      ['Data Quality', 'Hour of Day', hourLabel],
-      { hour: hourNum }
-    )
-  }, [filteredIncidents, openDrillDown])
-
-  // Contractor click - opens modal
-  const handleContractorDrillDown = useCallback((contractor) => {
-    setSelectedContractor(contractor.name)
-  }, [])
-
-  // KPI drill-down
-  const handleKPIDrillDown = useCallback((metric, title, filterFn) => {
-    const records = filteredIncidents.filter(filterFn)
-    openDrillDown(
-      title,
-      records,
-      ['Data Quality', metric],
-      { metric }
-    )
-  }, [filteredIncidents, openDrillDown])
-
   // Description quality drill-down
   const handleDescriptionDrillDown = (range, label) => {
     let filterFn
@@ -402,45 +277,6 @@ const DataQuality = () => {
       group.incidents,
       ['Data Quality', 'Duplicates'],
       { description: group.description }
-    )
-  }
-
-  // Spelling drill-down - show single incident with misspellings
-  const handleSpellingDrillDown = (record) => {
-    openDrillDown(
-      `Spelling Issue - ${record.misspellings.length} misspelling${record.misspellings.length > 1 ? 's' : ''}`,
-      [record.incident],
-      ['Data Quality', 'Spelling'],
-      { misspellings: record.misspellings }
-    )
-  }
-
-  // Foul words drill-down - show single incident with flagged words
-  const handleFoulWordsDrillDown = (record) => {
-    openDrillDown(
-      `Inappropriate Language - ${record.flaggedWords.length} word${record.flaggedWords.length > 1 ? 's' : ''} flagged`,
-      [record.incident],
-      ['Data Quality', 'Foul Words'],
-      {
-        flaggedWords: record.flaggedWords,
-        severity: record.severity,
-        reporter: record.reporter
-      }
-    )
-  }
-
-  // Vague hazards drill-down - show single incident with vague terms
-  const handleVagueHazardsDrillDown = (record) => {
-    openDrillDown(
-      `Vague Description - "${record.vagueTerms[0]?.term}" needs specificity`,
-      [record.incident],
-      ['Data Quality', 'Vague Hazards'],
-      {
-        vagueTerms: record.vagueTerms,
-        wordCount: record.wordCount,
-        improvement: record.improvement,
-        reporter: record.reporter
-      }
     )
   }
 
@@ -489,49 +325,6 @@ const DataQuality = () => {
     }).catch(() => {
       alert('Failed to copy report')
     })
-  }
-
-  // Test observation parsing
-  const handleTestObservation = () => {
-    if (!testObservation.trim()) {
-      setTestResult(null)
-      return
-    }
-
-    const text = testObservation.trim()
-    const parsed = parseSentence(text)
-    const rootCause = analyzeForRootCause(text)
-    const category = categorizeHazard(text)
-
-    setTestResult({
-      text,
-      parsed,
-      rootCause,
-      category
-    })
-  }
-
-  // Other hazard drill-down - show single incident details
-  const handleOtherHazardDrillDown = (suggestion) => {
-    // Single suggestion = single incident
-    openDrillDown(
-      `Suggested: ${suggestion.suggestedHazard}`,
-      [suggestion.incident], // Wrap in array for RecordsTable
-      ['Data Quality', 'Other Hazard', suggestion.suggestedHazard],
-      { suggestedHazard: suggestion.suggestedHazard, keywords: suggestion.keywords }
-    )
-  }
-
-  // Other hazard drill-down - show all suggestions for a hazard category
-  const handleOtherHazardCategoryDrillDown = (hazardName) => {
-    const matchingSuggestions = otherHazards?.suggestions?.filter(s => s.suggestedHazard === hazardName) || []
-    const records = matchingSuggestions.map(s => s.incident)
-    openDrillDown(
-      `${hazardName} - Reclassification Candidates`,
-      records,
-      ['Data Quality', 'Other Hazard', hazardName],
-      { suggestedHazard: hazardName }
-    )
   }
 
   // Classification review drill-down - show single incident details
@@ -675,7 +468,7 @@ const DataQuality = () => {
     )
   }
 
-  const { quality, description, nearMiss, reporters, contractors, alerts, duplicates, spellingIssues, otherHazards, autoClassification, unclassifiableRecords, flaggedRecords } = qualityData
+  const { quality, description, nearMiss, reporters, contractors, alerts, duplicates, spellingIssues, otherHazards, autoClassification } = qualityData
 
   return (
     <div className="space-y-3 safe-area-bottom pb-3">
@@ -694,240 +487,11 @@ const DataQuality = () => {
         <div className={isMobile ? 'flex items-center gap-2' : 'flex items-center gap-2'}>
           {/* Time Period Toggle */}
           <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
-
-          {/* Observation Tester Button */}
-          <button
-            onClick={() => setShowObservationTester(!showObservationTester)}
-            className={`flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              isMobile ? 'flex-1 h-11 px-3' : 'px-3 py-2'
-            } ${
-              showObservationTester
-                ? 'bg-purple-600 text-white'
-                : 'bg-white border border-purple-300 text-purple-700 hover:bg-purple-50'
-            }`}
-          >
-            <Brain size={isMobile ? 18 : 16} />
-            {isMobile ? 'Test' : 'Test Parser'}
-          </button>
         </div>
       </div>
 
-      {/* Observation Tester Panel */}
-      {showObservationTester && (
-        <div className="bg-white border border-purple-200 rounded-lg p-4 shadow-soft">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-2">
-              <Brain size={16} />
-              Observation Parser Tester
-            </h3>
-            <button
-              onClick={() => setShowObservationTester(false)}
-              className="text-surface-400 hover:text-surface-600"
-            >
-              <XCircle size={18} />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {/* Input */}
-            <div>
-              <label className="text-xs font-medium text-surface-600 mb-1 block">
-                Paste observation text to test:
-              </label>
-              <div className="flex gap-2">
-                <textarea
-                  value={testObservation}
-                  onChange={(e) => setTestObservation(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleTestObservation()
-                    }
-                  }}
-                  placeholder="e.g., Worker not wearing harness while working at height on scaffold"
-                  className="flex-1 px-3 py-2 border border-surface-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  rows={2}
-                />
-                <button
-                  onClick={handleTestObservation}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium self-end"
-                >
-                  Parse
-                </button>
-              </div>
-            </div>
-
-            {/* Results */}
-            {testResult && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-                {/* Sentence Breakdown */}
-                <div className="bg-surface-50 border border-surface-200 rounded-lg p-3">
-                  <h4 className="text-xs font-semibold text-surface-700 uppercase mb-2 flex items-center gap-1">
-                    <AlignLeft size={12} />
-                    Sentence Breakdown
-                  </h4>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-start">
-                      <span className="w-16 text-surface-500 font-medium shrink-0">WHO:</span>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span className="text-surface-800">{testResult.parsed.actor || '(none)'}</span>
-                        {testResult.parsed.actorType && (
-                          <span className="text-purple-600 text-[10px]">[{testResult.parsed.actorType}]</span>
-                        )}
-                        {testResult.parsed.actorIsSpecialist && (
-                          <span className="bg-green-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">SPECIALIST</span>
-                        )}
-                        {testResult.parsed.actorSuggestedHazard && (
-                          <span className="text-green-600 text-[10px]">→ {testResult.parsed.actorSuggestedHazard} ({Math.round(testResult.parsed.actorHazardConfidence * 100)}%)</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="w-16 text-surface-500 font-medium shrink-0">WHAT:</span>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span className="text-surface-800">{testResult.parsed.object || '(none)'}</span>
-                        {testResult.parsed.objectType && (
-                          <span className="text-purple-600 text-[10px]">[{testResult.parsed.objectType}]</span>
-                        )}
-                        {testResult.parsed.objectSuggestedHazard && (
-                          <span className="text-blue-600 text-[10px]">→ {testResult.parsed.objectSuggestedHazard}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="w-16 text-surface-500 font-medium shrink-0">ACTION:</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-surface-800">{testResult.parsed.action || '(none)'}</span>
-                        {testResult.parsed.actionType && (
-                          <span className="text-purple-600 text-[10px]">[{testResult.parsed.actionType}]</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="w-16 text-surface-500 font-medium shrink-0">WHERE:</span>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span className="text-surface-800">{testResult.parsed.location || '(none)'}</span>
-                        {testResult.parsed.locationInfo?.preposition && (
-                          <span className="text-orange-600 text-[10px]">[{testResult.parsed.locationInfo.preposition}]</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="w-16 text-surface-500 font-medium shrink-0">SUBJECT:</span>
-                      <span className="text-surface-800 font-semibold">{testResult.parsed.mainSubject || '(none)'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Classification Result */}
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                  <h4 className="text-xs font-semibold text-purple-700 uppercase mb-2 flex items-center gap-1">
-                    <Target size={12} />
-                    Classification
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="text-lg font-bold text-purple-900">
-                      {testResult.category}
-                    </div>
-                    {testResult.parsed.keywords?.length > 0 && (
-                      <div>
-                        <span className="text-xs text-surface-500 font-medium">Keywords:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {testResult.parsed.keywords.map((k, i) => (
-                            <span
-                              key={i}
-                              className={`text-xs px-1.5 py-0.5 rounded ${
-                                k.role === 'SUBJECT' ? 'bg-green-100 text-green-700' :
-                                k.role === 'OBJECT' ? 'bg-blue-100 text-blue-700' :
-                                k.role === 'ACTOR' ? (k.isSpecialist ? 'bg-green-200 text-green-800 font-bold' : 'bg-yellow-100 text-yellow-700') :
-                                k.role === 'ACTION' ? 'bg-orange-100 text-orange-700' :
-                                k.role === 'LOCATION' ? 'bg-gray-100 text-gray-600' :
-                                'bg-surface-100 text-surface-600'
-                              }`}
-                              title={k.suggestedHazard ? `Suggests: ${k.suggestedHazard}` : ''}
-                            >
-                              {k.text} ({Math.round(k.weight * 100)}%)
-                              {k.isSpecialist && ' ⭐'}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Ambiguity Resolution */}
-                {testResult.parsed.ambiguities?.length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-yellow-700 uppercase mb-2 flex items-center gap-1">
-                      <HelpCircle size={12} />
-                      Ambiguity Resolution
-                    </h4>
-                    <div className="space-y-1.5 text-xs">
-                      {testResult.parsed.ambiguities.map((amb, i) => (
-                        <div key={i} className="flex items-start gap-1">
-                          <span className="font-medium text-yellow-800">"{amb.word}"</span>
-                          <span className="text-surface-500">→</span>
-                          <span className={amb.resolved ? 'text-green-700' : 'text-orange-600'}>
-                            {amb.hazard} ({Math.round(amb.confidence * 100)}%)
-                          </span>
-                          {amb.resolved && <span className="text-green-600 text-[10px]">✓ context matched</span>}
-                          {!amb.resolved && <span className="text-orange-500 text-[10px]">(default)</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Root Cause Analysis */}
-                {testResult.rootCause && (
-                  <div className={`bg-amber-50 border border-amber-200 rounded-lg p-3 ${!testResult.parsed.ambiguities?.length ? 'lg:col-span-1' : ''}`}>
-                    <h4 className="text-xs font-semibold text-amber-700 uppercase mb-2 flex items-center gap-1">
-                      <Zap size={12} />
-                      Root Cause Components
-                    </h4>
-                    <div className="space-y-1 text-xs">
-                      <div>
-                        <span className="text-surface-500 font-medium">Deviation: </span>
-                        <span className="text-surface-800">{testResult.rootCause.deviation || '(none)'}</span>
-                      </div>
-                      <div>
-                        <span className="text-surface-500 font-medium">Cause: </span>
-                        <span className="text-surface-800">{testResult.rootCause.immediateCause || testResult.rootCause.cause || '(none)'}</span>
-                      </div>
-                      <div>
-                        <span className="text-surface-500 font-medium">Consequence: </span>
-                        <span className="text-surface-800">{testResult.rootCause.consequence || '(none)'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Confidence Summary */}
-                <div className="md:col-span-2 lg:col-span-3 bg-surface-100 border border-surface-200 rounded-lg p-3">
-                  <div className="flex flex-wrap items-center gap-4 text-xs">
-                    <div>
-                      <span className="text-surface-500 font-medium">Pattern: </span>
-                      <span className="text-surface-800 font-mono">{testResult.parsed.pattern || 'NONE'}</span>
-                    </div>
-                    <div>
-                      <span className="text-surface-500 font-medium">Parse Confidence: </span>
-                      <span className={`font-bold ${testResult.parsed.confidence >= 0.7 ? 'text-green-600' : testResult.parsed.confidence >= 0.5 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {Math.round(testResult.parsed.confidence * 100)}%
-                      </span>
-                    </div>
-                    {testResult.parsed.actorIsSpecialist && (
-                      <div className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                        Specialist Role Detected → Higher Confidence
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Observation Tester - renders its own toggle button + expandable panel */}
+      <ObservationTesterPanel isMobile={isMobile} />
 
       {/* Content wrapper - bg-surface-50 makes white cards pop (matches Dashboard) */}
       <div className="space-y-3 bg-surface-50 p-2 -m-2">
@@ -1369,7 +933,7 @@ const DataQuality = () => {
                       className="px-3 py-1.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors cursor-pointer"
                       title={`${item.count} record${item.count > 1 ? 's' : ''} using "${item.term}"`}
                     >
-                      "{item.term}" ({item.count})
+                      &quot;{item.term}&quot; ({item.count})
                     </button>
                   ))}
                 </div>
@@ -1981,520 +1545,20 @@ const DataQuality = () => {
         </div>
       )}
 
-      {/* SECTION: Contractor Performance (Full Width) */}
-      <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
-        <div className={isMobile ? 'space-y-3 mb-4' : 'flex items-center justify-between mb-4'}>
-          <div className="flex items-center justify-between">
-            <h3 className={`font-medium text-surface-500 uppercase tracking-wide flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              <Building2 size={16} />
-              Contractor Performance
-              <InfoTooltip text="HOW CONTRACTOR METRICS ARE CALCULATED: For each contractor, we analyze all their observations to calculate: TOTAL OBS: How many observations they've submitted. REPORTERS: Number of unique reporters from that contractor. QUALITY RATE: Average quality of their descriptions. NM RATE: Near-miss reporting rate. SCORE: Composite quality score. FLAGS: Low Quality (quality rate < 30%), Zero NM (no near-misses with 10+ obs), Top Performer (score >= 70 with 10+ obs). Click any row to see detailed analytics for that contractor." />
-            </h3>
-            {isMobile && (
-              <select
-                value={contractorSort}
-                onChange={(e) => setContractorSort(e.target.value)}
-                className="text-xs border border-surface-200 rounded px-2 py-1 h-9"
-              >
-                <option value="totalObs">By Total</option>
-                <option value="qualityScore">By Score</option>
-              </select>
-            )}
-          </div>
-          <div className={isMobile ? 'flex items-center gap-2 flex-wrap' : 'flex items-center gap-3'}>
-            {/* Search Bar */}
-            <div className="relative">
-              <Search
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-surface-400"
-                size={14}
-              />
-              <input
-                type="text"
-                placeholder="Search contractors..."
-                value={contractorSearch}
-                onChange={(e) => setContractorSearch(e.target.value)}
-                className={`pl-8 pr-8 py-1.5 text-xs border border-surface-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                  isMobile ? 'w-36' : 'w-44'
-                }`}
-              />
-              {contractorSearch && (
-                <button
-                  onClick={() => setContractorSearch('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-surface-400 hover:text-surface-600"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            {contractorSearch && (
-              <span className="text-xs text-surface-500">
-                Showing {sortedContractors.length} of {contractors.length}
-              </span>
-            )}
-            {/* Performance Flags Summary */}
-            <div className={`flex items-center gap-2 text-xs ${isMobile ? 'flex-wrap' : ''}`}>
-              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
-                <AlertTriangle size={12} />
-                {contractors.filter(c => parseFloat(c.qualityRate || 0) < 30).length} {isMobile ? 'Low' : 'Low Quality'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
-                <Target size={12} />
-                {contractors.filter(c => parseFloat(c.classificationAccuracy) < 85).length} {isMobile ? 'Acc' : 'Low Accuracy'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                <AlertCircle size={12} />
-                {contractors.filter(c => c.nearMissRate === 0 && c.totalObs >= 10).length} {isMobile ? 'NM' : 'Zero NM'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded">
-                <CheckCircle size={12} />
-                {contractors.filter(c => c.qualityScore >= 70 && c.totalObs >= 10).length} {isMobile ? 'Top' : 'Top Performers'}
-              </span>
-            </div>
-            {!isMobile && (
-              <select
-                value={contractorSort}
-                onChange={(e) => setContractorSort(e.target.value)}
-                className="text-xs border border-surface-200 rounded px-2 py-1"
-              >
-                <option value="totalObs">Sort by Total</option>
-                <option value="qualityScore">Sort by Score</option>
-              </select>
-            )}
-          </div>
-        </div>
+      {/* SECTION: Contractor Performance (extracted) */}
+      <ContractorPerformancePanel
+        contractors={contractors}
+        onContractorClick={setSelectedContractor}
+        isMobile={isMobile}
+      />
 
-        {/* KPI Cards */}
-        <div className={`grid gap-3 mb-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          <div className="bg-surface-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-surface-800 ${isMobile ? 'text-xl' : 'text-2xl'}`}>{contractors.length}</div>
-            <div className="text-xs text-surface-500">Total Contractors</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-blue-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {contractors.filter(c => c.totalObs >= 10).length}
-            </div>
-            <div className="text-xs text-surface-500">Active (10+ obs)</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-green-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {contractors.length > 0 ? (contractors.reduce((sum, c) => sum + parseFloat(c.qualityRate || 0), 0) / contractors.length).toFixed(0) : 0}%
-            </div>
-            <div className="text-xs text-surface-500">Avg Quality Rate</div>
-          </div>
-          <div className="bg-amber-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-amber-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {contractors.length > 0 ? (contractors.reduce((sum, c) => sum + c.totalObs, 0) / contractors.length).toFixed(0) : 0}
-            </div>
-            <div className="text-xs text-surface-500">Avg Obs/Contractor</div>
-          </div>
-        </div>
 
-        {/* Contractor Table */}
-        {isMobile ? (
-          /* Mobile Card View */
-          <div className="space-y-2 max-h-80 overflow-auto">
-            {sortedContractors.map((contractor) => {
-              const lowQuality = parseFloat(contractor.qualityRate || 0) < 30
-              const zeroNM = contractor.nearMissRate === 0 && contractor.totalObs >= 10
-              const topPerformer = contractor.qualityScore >= 70 && contractor.totalObs >= 10
-              const lowAccuracy = parseFloat(contractor.classificationAccuracy) < 85
-              return (
-                <div
-                  key={contractor.name}
-                  onClick={() => handleContractorDrillDown(contractor)}
-                  className="p-3 bg-surface-50 rounded-lg cursor-pointer active:bg-surface-100 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-blue-600 truncate flex-1">{contractor.name}</span>
-                    <div className="flex gap-1 ml-2">
-                      {lowQuality && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">Low Q</span>}
-                      {lowAccuracy && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">Low Acc</span>}
-                      {zeroNM && <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]">0 NM</span>}
-                      {topPerformer && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">Star</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-surface-500">
-                    <span><strong>{contractor.totalObs}</strong> obs</span>
-                    <span className={
-                      contractor.qualityScore >= 70 ? 'text-green-600' :
-                      contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }>
-                      Score: <strong>{contractor.qualityScore}</strong>
-                    </span>
-                    <span className={
-                      parseFloat(contractor.classificationAccuracy) >= 95 ? 'text-green-600' :
-                      parseFloat(contractor.classificationAccuracy) >= 85 ? 'text-yellow-600' : 'text-red-600'
-                    }>
-                      Acc: <strong>{contractor.classificationAccuracy}%</strong>
-                    </span>
-                    <span>{contractor.activeReporters} reporters</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          /* Desktop Table View */
-          <div className="overflow-auto max-h-80">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-surface-50">
-                <tr>
-                  <th className="text-left p-2 font-medium text-surface-600">Contractor</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Total</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Reporters</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Quality Rate</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Accuracy</th>
-                  <th className="text-center p-2 font-medium text-surface-600">NM Rate</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Score</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Flags</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedContractors.map((contractor, idx) => {
-                  const lowQuality = parseFloat(contractor.qualityRate || 0) < 30
-                  const zeroNM = contractor.nearMissRate === 0 && contractor.totalObs >= 10
-                  const topPerformer = contractor.qualityScore >= 70 && contractor.totalObs >= 10
-                  const lowAccuracy = parseFloat(contractor.classificationAccuracy) < 85
-                  return (
-                    <tr
-                      key={contractor.name}
-                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                      onClick={() => handleContractorDrillDown(contractor)}
-                      title="Click to view detailed analytics"
-                    >
-                      <td className="p-2">
-                        <span className="text-blue-600 hover:underline font-medium">{contractor.name}</span>
-                      </td>
-                      <td className="p-2 text-center font-bold">{contractor.totalObs}</td>
-                      <td className="p-2 text-center text-surface-600">{contractor.activeReporters}</td>
-                      <td className="p-2 text-center">
-                        <span className={`font-medium ${
-                          parseFloat(contractor.qualityRate || 0) >= 75 ? 'text-green-600' :
-                          parseFloat(contractor.qualityRate || 0) >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {contractor.qualityRate || 0}%
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className={`font-medium ${
-                          parseFloat(contractor.classificationAccuracy) >= 95 ? 'text-green-600' :
-                          parseFloat(contractor.classificationAccuracy) >= 85 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {contractor.classificationAccuracy}%
-                        </span>
-                      </td>
-                      <td className="p-2 text-center text-surface-500">{contractor.nearMissRate || 0}%</td>
-                      <td className="p-2 text-center">
-                        <span className={
-                          contractor.qualityScore >= 70 ? 'text-green-600' :
-                          contractor.qualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }>
-                          {contractor.qualityScore}
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {lowQuality && (
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="Low quality rate">
-                              Low Q
-                            </span>
-                          )}
-                          {lowAccuracy && (
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="Low classification accuracy">
-                              Low Acc
-                            </span>
-                          )}
-                          {zeroNM && (
-                            <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]" title="No near misses reported">
-                              0 NM
-                            </span>
-                          )}
-                          {topPerformer && (
-                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]" title="Top performer">
-                              Star
-                            </span>
-                          )}
-                          {!lowQuality && !lowAccuracy && !zeroNM && !topPerformer && (
-                            <span className="text-surface-300">-</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Footer with quality review recommendation */}
-        {contractors.some(c => parseFloat(c.qualityRate || 0) < 30 && c.totalObs >= 10) && (
-          <div className="mt-3 pt-3 border-t border-surface-200 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
-            <AlertTriangle size={14} />
-            <span className="font-medium">Quality Review Recommended:</span>
-            <span>{contractors.filter(c => parseFloat(c.qualityRate || 0) < 30 && c.totalObs >= 10).length} contractors with 10+ observations have quality rates below 30% - consider a quality improvement discussion.</span>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION: Reporter Performance (Full Width with Flags) */}
-      <div className="bg-white border border-surface-200 rounded-lg p-3 shadow-soft">
-        <div className={isMobile ? 'space-y-3 mb-4' : 'flex items-center justify-between mb-4'}>
-          <div className="flex items-center justify-between">
-            <h3 className={`font-medium text-surface-500 uppercase tracking-wide flex items-center gap-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              <Users size={16} />
-              Reporter Performance
-              <InfoTooltip text="HOW REPORTER METRICS ARE CALCULATED: For each individual reporter, we analyze: TOTAL OBSERVATIONS: How many they've submitted. POSITIVE %: What percentage of their reports are positive observations (recognizing safe behaviors). AVG QUALITY: Average quality score of their descriptions. FLAGS: Special indicators like 'Top Reporter' (high volume), 'Quality Star' (consistently detailed), or concerns like 'Declining' (fewer reports recently) or 'Low Quality' (brief descriptions). Click any row to see detailed analytics for that reporter. WHY THIS MATTERS: Helps identify your safety champions (high reporters), people who may need coaching (low quality), and concerning trends (declining activity) so you can provide targeted support and recognition." />
-            </h3>
-            {isMobile && (
-              <select
-                value={reporterSort}
-                onChange={(e) => setReporterSort(e.target.value)}
-                className="text-xs border border-surface-200 rounded px-2 py-1 h-9"
-              >
-                <option value="total">By Total</option>
-                <option value="nearMiss">By Near Miss</option>
-                <option value="quality">By Quality</option>
-              </select>
-            )}
-          </div>
-          <div className={isMobile ? 'flex items-center gap-2 flex-wrap' : 'flex items-center gap-3'}>
-            {/* Search Bar */}
-            <div className="relative">
-              <Search
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-surface-400"
-                size={14}
-              />
-              <input
-                type="text"
-                placeholder="Search reporters..."
-                value={reporterSearch}
-                onChange={(e) => setReporterSearch(e.target.value)}
-                className={`pl-8 pr-8 py-1.5 text-xs border border-surface-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                  isMobile ? 'w-36' : 'w-44'
-                }`}
-              />
-              {reporterSearch && (
-                <button
-                  onClick={() => setReporterSearch('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-surface-400 hover:text-surface-600"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            {reporterSearch && (
-              <span className="text-xs text-surface-500">
-                Showing {sortedReporters.length} of {reporters.length}
-              </span>
-            )}
-            {/* Performance Flags Summary */}
-            <div className={`flex items-center gap-2 text-xs ${isMobile ? 'flex-wrap' : ''}`}>
-              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
-                <AlertTriangle size={12} />
-                {reporters.filter(r => r.nearMiss === 0 && r.total >= 5).length} {isMobile ? 'NM' : 'Zero NM'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                <AlertCircle size={12} />
-                {reporters.filter(r => parseFloat(r.qualityRate) < 50).length} {isMobile ? 'Low' : 'Low Quality'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded">
-                <Target size={12} />
-                {reporters.filter(r => parseFloat(r.classificationAccuracy) < 85).length} {isMobile ? 'Acc' : 'Low Accuracy'}
-              </span>
-              <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded">
-                <CheckCircle size={12} />
-                {reporters.filter(r => r.nearMiss > 0 && parseFloat(r.qualityRate) >= 75).length} {isMobile ? 'Top' : 'Top Performers'}
-              </span>
-            </div>
-            {!isMobile && (
-              <select
-                value={reporterSort}
-                onChange={(e) => setReporterSort(e.target.value)}
-                className="text-xs border border-surface-200 rounded px-2 py-1"
-              >
-                <option value="total">Sort by Total</option>
-                <option value="nearMiss">Sort by Near Miss</option>
-                <option value="quality">Sort by Quality</option>
-              </select>
-            )}
-          </div>
-        </div>
-
-        {/* Performance Insights */}
-        <div className={`grid gap-3 mb-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          <div className="bg-surface-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-surface-800 ${isMobile ? 'text-xl' : 'text-2xl'}`}>{reporters.length}</div>
-            <div className="text-xs text-surface-500">Total Reporters</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-blue-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {reporters.filter(r => r.total >= 10).length}
-            </div>
-            <div className="text-xs text-surface-500">Active (10+ obs)</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-green-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {(reporters.reduce((sum, r) => sum + parseFloat(r.qualityRate), 0) / reporters.length).toFixed(0)}%
-            </div>
-            <div className="text-xs text-surface-500">Avg Quality Rate</div>
-          </div>
-          <div className="bg-amber-50 rounded-lg p-3 text-center">
-            <div className={`font-bold text-amber-700 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-              {(reporters.reduce((sum, r) => sum + r.nearMiss, 0) / reporters.length).toFixed(1)}
-            </div>
-            <div className="text-xs text-surface-500">Avg NM/Reporter</div>
-          </div>
-        </div>
-
-        {/* Reporter Table with Flags */}
-        {isMobile ? (
-          /* Mobile Card View */
-          <div className="space-y-2 max-h-80 overflow-auto">
-            {sortedReporters.map((reporter) => {
-              const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
-              const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
-              const lowQuality = parseFloat(reporter.qualityRate) < 50
-              const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
-              const lowAccuracy = parseFloat(reporter.classificationAccuracy) < 85
-              return (
-                <div
-                  key={reporter.name}
-                  onClick={() => handleReporterClick(reporter.name)}
-                  className="p-3 bg-surface-50 rounded-lg cursor-pointer active:bg-surface-100 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-blue-600 truncate flex-1">{reporter.name}</span>
-                    <div className="flex gap-1 ml-2">
-                      {hasZeroNM && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">0 NM</span>}
-                      {lowQuality && <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]">Low Q</span>}
-                      {lowAccuracy && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">Low Acc</span>}
-                      {topPerformer && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">Star</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-surface-500">
-                    <span><strong>{reporter.total}</strong> total</span>
-                    <span className={reporter.nearMiss === 0 ? 'text-red-600' : 'text-green-600'}>
-                      <strong>{reporter.nearMiss}</strong> NM
-                    </span>
-                    <span className={
-                      parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
-                      parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }>
-                      <strong>{reporter.qualityRate}%</strong> quality
-                    </span>
-                    <span className={
-                      parseFloat(reporter.classificationAccuracy) >= 95 ? 'text-green-600' :
-                      parseFloat(reporter.classificationAccuracy) >= 85 ? 'text-yellow-600' : 'text-red-600'
-                    }>
-                      <strong>{reporter.classificationAccuracy}%</strong> acc
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          /* Desktop Table View */
-          <div className="overflow-auto max-h-80">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-surface-50">
-                <tr>
-                  <th className="text-left p-2 font-medium text-surface-600">Reporter</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Total</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Near Miss</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Quality Rate</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Accuracy</th>
-                  <th className="text-center p-2 font-medium text-surface-600">NM Rate</th>
-                  <th className="text-center p-2 font-medium text-surface-600">Flags</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedReporters.map((reporter, idx) => {
-                  const nmRate = reporter.total > 0 ? ((reporter.nearMiss / reporter.total) * 100).toFixed(1) : 0
-                  const hasZeroNM = reporter.nearMiss === 0 && reporter.total >= 5
-                  const lowQuality = parseFloat(reporter.qualityRate) < 50
-                  const topPerformer = reporter.nearMiss > 0 && parseFloat(reporter.qualityRate) >= 75 && reporter.total >= 10
-                  const lowAccuracy = parseFloat(reporter.classificationAccuracy) < 85
-                  return (
-                    <tr
-                      key={reporter.name}
-                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-surface-50'} cursor-pointer hover:bg-blue-50 transition-colors`}
-                      onClick={() => handleReporterClick(reporter.name)}
-                      title="Click to view detailed analytics"
-                    >
-                      <td className="p-2">
-                        <span className="text-blue-600 hover:underline font-medium">{reporter.name}</span>
-                      </td>
-                      <td className="p-2 text-center font-bold">{reporter.total}</td>
-                      <td className="p-2 text-center">
-                        <span className={`px-2 py-0.5 rounded ${
-                          reporter.nearMiss === 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                          {reporter.nearMiss}
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className={`font-medium ${
-                          parseFloat(reporter.qualityRate) >= 75 ? 'text-green-600' :
-                          parseFloat(reporter.qualityRate) >= 50 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {reporter.qualityRate}%
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className={`font-medium ${
-                          parseFloat(reporter.classificationAccuracy) >= 95 ? 'text-green-600' :
-                          parseFloat(reporter.classificationAccuracy) >= 85 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {reporter.classificationAccuracy}%
-                        </span>
-                      </td>
-                      <td className="p-2 text-center text-surface-500">{nmRate}%</td>
-                      <td className="p-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {hasZeroNM && (
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="No near misses reported - training needed">
-                              0 NM
-                            </span>
-                          )}
-                          {lowQuality && (
-                            <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]" title="Low description quality">
-                              Low Q
-                            </span>
-                          )}
-                          {lowAccuracy && (
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]" title="Low classification accuracy">
-                              Low Acc
-                            </span>
-                          )}
-                          {topPerformer && (
-                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px]" title="Top performer">
-                              Star
-                            </span>
-                          )}
-                          {!hasZeroNM && !lowQuality && !lowAccuracy && !topPerformer && (
-                            <span className="text-surface-300">-</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Footer with training suggestion */}
-        {reporters.some(r => r.nearMiss === 0 && r.total >= 10) && (
-          <div className="mt-3 pt-3 border-t border-surface-200 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
-            <AlertTriangle size={14} />
-            <span className="font-medium">Training Recommended:</span>
-            <span>{reporters.filter(r => r.nearMiss === 0 && r.total >= 10).length} reporters with 10+ observations have reported 0 near misses - this may indicate a need for hazard recognition training.</span>
-          </div>
-        )}
-      </div>
+      {/* SECTION: Reporter Performance (extracted) */}
+      <ReporterPerformancePanel
+        reporters={reporters}
+        onReporterClick={handleReporterClick}
+        isMobile={isMobile}
+      />
 
       </div>{/* End content wrapper */}
 

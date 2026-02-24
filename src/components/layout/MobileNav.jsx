@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, Target, ShieldCheck, Eye, EyeOff, Trash2, FileText, FolderOpen, Gauge } from 'lucide-react'
 import { useDataState, useUIState } from '../../context/DataContext'

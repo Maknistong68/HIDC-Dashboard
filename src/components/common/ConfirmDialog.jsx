@@ -1,4 +1,4 @@
-import React from 'react'
+// React import removed (jsx-runtime)
 import { AlertTriangle, Info, CheckCircle } from 'lucide-react'
 import Modal from './Modal'
 import { Button } from '../ui'

@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef, startTransition, memo } from 'react'
 import { Target, AlertTriangle, Layers, Zap, Shield, HelpCircle, TrendingUp } from 'lucide-react'
 import { useDataState } from '../context/DataContext'
 import { useFilterState, useFilterActions } from '../context/FilterContext'
@@ -14,6 +14,7 @@ import { isPositiveType } from '../utils/rootCauseEngine'
 import { MethodologyExplorerModal } from '../components/methodology'
 import { plotHazardsOnMatrix } from '../utils/riskMatrix'
 import { getCached, CACHE_KEYS } from '../utils/dashboardCache'
+import Skeleton from '../components/ui/Skeleton'
 
 /**
  * TrendSummary - Compact inline summary for Hazards
@@ -130,8 +131,7 @@ const SafetyOutlook = () => {
   const { setPeriod, setFilter, clearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, filterConfig, filterFingerprint } = useFilteredData()
-  const filteredIncidents = useDeferredValue(_fi)
+  const { filteredIncidents, filterConfig, filterFingerprint } = useFilteredData()
 
   // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
   const activeFilters = useMemo(
@@ -139,28 +139,33 @@ const SafetyOutlook = () => {
     [filters, period, customDateRange]
   )
 
-  // Local state
-  const [activeMainTab, setActiveMainTab] = useState('correlations')
+  // Local state — persist main tab and predictive sub-tab in sessionStorage
+  // so navigating away and back remembers which tab was active
+  const [activeMainTab, setActiveMainTab] = useState(() =>
+    sessionStorage.getItem('outlook_mainTab') || 'correlations'
+  )
   const [activeSubTab, setActiveSubTab] = useState('hazards') // 'hazards' or 'factors'
   const [selectedHazard, setSelectedHazard] = useState(null)
   const [selectedFactor, setSelectedFactor] = useState(null)
   const [showGuide, setShowGuide] = useState(false)
-  const [activePredictiveSubTab, setActivePredictiveSubTab] = useState('smsa')
+  const [activePredictiveSubTab, setActivePredictiveSubTab] = useState(() =>
+    sessionStorage.getItem('outlook_predictiveSubTab') || 'smsa'
+  )
 
   // uniqueContractors, siteOptions, filterConfig, filteredIncidents
   // are now provided by FilteredDataContext (see useFilteredData() above)
 
   // Calculate hazard trends (current month vs previous month)
   // Offloaded to Web Worker to keep main thread free
-  const { result: sortedHazards, isPending: sortedHazardsPending } = useWorkerTask(
-    'hazardTrending', filteredIncidents, null, [filteredIncidents], []
+  const { result: sortedHazards, isPending: hazardsPending } = useWorkerTask(
+    'hazardTrending', filteredIncidents, null, [filteredIncidents], [], filterFingerprint
   )
 
   // Calculate contributing factors (all observations including positive)
   // Offloaded to Web Worker to keep main thread free
-  const { result: factorData, isPending: factorDataPending } = useWorkerTask(
+  const { result: factorData } = useWorkerTask(
     'aggregateFactors', filteredIncidents, null, [filteredIncidents],
-    { byFactor: [], analyzed: 0, total: 0 }
+    { byFactor: [], analyzed: 0, total: 0 }, filterFingerprint
   )
 
   // Calculate hazard trend data for selected hazard
@@ -337,10 +342,12 @@ const SafetyOutlook = () => {
   }, [])
 
   // Track visited tabs for keep-alive rendering (mount once, hide with display:none)
-  const visitedTabsRef = useRef(new Set(['correlations']))
+  // Initialize with both 'correlations' (always) and the persisted activeMainTab
+  const visitedTabsRef = useRef(new Set(['correlations', activeMainTab]))
 
   const handleMainTabChange = useCallback((tab) => {
     visitedTabsRef.current.add(tab)
+    sessionStorage.setItem('outlook_mainTab', tab)
     startTransition(() => {
       setActiveMainTab(tab)
     })
@@ -353,6 +360,7 @@ const SafetyOutlook = () => {
   }, [])
 
   const handlePredictiveSubTabChange = useCallback((tab) => {
+    sessionStorage.setItem('outlook_predictiveSubTab', tab)
     startTransition(() => {
       setActivePredictiveSubTab(tab)
     })
@@ -390,6 +398,31 @@ const SafetyOutlook = () => {
   }
 
   if (!hasData) {
+    // Worker still processing — show loading skeletons instead of "No Data" empty state
+    if (filteredIncidents.length > 0 && hazardsPending) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <FilterBar
+                filters={filterConfig}
+                activeFilters={activeFilters}
+                onFilterChange={handleFilterChange}
+                onClearFilters={handleClearFilters}
+              />
+            </div>
+            <TimePeriodToggle period={period} onPeriodChange={handlePeriodChange} showAll />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Skeleton.KPICard />
+            <Skeleton.KPICard />
+            <Skeleton.KPICard />
+          </div>
+          <Skeleton.Chart height={180} />
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-3">
         {/* Filters Row */}
@@ -464,7 +497,7 @@ const SafetyOutlook = () => {
               title="How everything is calculated — with your data"
             >
               <HelpCircle size={14} />
-              <span className="hidden sm:inline">How it's Calculated?</span>
+              <span className="hidden sm:inline">How it&apos;s Calculated?</span>
             </button>
           </div>
         )}

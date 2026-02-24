@@ -45,34 +45,8 @@ const DataTimelineComponent = ({ files = [], incidents = [] }) => {
     }
   }, [fileData, totalDays])
 
-  // Show empty state if no valid data
-  if (!fileData.length) {
-    return (
-      <Card className="border-0 shadow-lg">
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-primary-100 rounded-xl">
-              <Calendar size={24} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-surface-900">Data Timeline</h2>
-              <p className="text-sm text-surface-500">Visualize your data coverage over time</p>
-            </div>
-          </div>
-          <div className="py-12 text-center bg-surface-50/50 rounded-2xl border-2 border-dashed border-surface-200">
-            <div className="w-16 h-16 mx-auto mb-4 bg-surface-100 rounded-2xl flex items-center justify-center">
-              <Clock size={28} className="text-surface-400" />
-            </div>
-            <p className="text-surface-600 font-medium">No timeline data available</p>
-            <p className="text-sm text-surface-400 mt-1">Import files with date information to see coverage</p>
-          </div>
-        </div>
-      </Card>
-    )
-  }
-
   // Calculate max density for normalization
-  const maxDensity = Math.max(...fileData.map(f => f.density))
+  const maxDensity = fileData.length ? Math.max(...fileData.map(f => f.density)) : 0
 
   // Get color based on density
   const getDensityColor = (density) => {
@@ -143,12 +117,38 @@ const DataTimelineComponent = ({ files = [], incidents = [] }) => {
     }
 
     return markers
-  }, [timelineStart, timelineEnd])
+  }, [timelineStart, timelineEnd]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sort files by start date for better visualization
   const sortedFileData = useMemo(() => {
     return [...fileData].sort((a, b) => a.dataStartDate - b.dataStartDate)
   }, [fileData])
+
+  // Show empty state if no valid data
+  if (!fileData.length) {
+    return (
+      <Card className="border-0 shadow-lg">
+        <div className="p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-primary-100 rounded-xl">
+              <Calendar size={24} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-surface-900">Data Timeline</h2>
+              <p className="text-sm text-surface-500">Visualize your data coverage over time</p>
+            </div>
+          </div>
+          <div className="py-12 text-center bg-surface-50/50 rounded-2xl border-2 border-dashed border-surface-200">
+            <div className="w-16 h-16 mx-auto mb-4 bg-surface-100 rounded-2xl flex items-center justify-center">
+              <Clock size={28} className="text-surface-400" />
+            </div>
+            <p className="text-surface-600 font-medium">No timeline data available</p>
+            <p className="text-sm text-surface-400 mt-1">Import files with date information to see coverage</p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
 
   // Mobile card view
   if (isMobile) {

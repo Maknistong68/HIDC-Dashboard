@@ -23,11 +23,6 @@ import { getOverdueCutoffDate } from './dateUtils'
 import { setCached, CACHE_KEYS } from './dashboardCache'
 import { scheduler } from './tabPriorityScheduler'
 
-// Fallback for warmInitialDashboardCaches (runs before tabs exist)
-const scheduleIdle = typeof requestIdleCallback === 'function'
-  ? (cb) => requestIdleCallback(cb, { timeout: 5000 })
-  : (cb) => setTimeout(cb, 1)
-
 /**
  * Warm the Web Worker's internal cache for the inactive dataset variant.
  * Uses scheduler to respect tab priority — active tab computations run first.

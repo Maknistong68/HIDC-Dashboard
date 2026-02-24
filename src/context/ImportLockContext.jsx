@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -75,7 +75,7 @@ export const ImportLockProvider = ({ children }) => {
     // Push a state to prevent back navigation
     window.history.pushState({ importLock: true }, '')
 
-    const handlePopState = (e) => {
+    const handlePopState = (_e) => {
       // Push state again to prevent navigation
       window.history.pushState({ importLock: true }, '')
       // Optionally show a message

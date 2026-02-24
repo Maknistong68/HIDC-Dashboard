@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo, Fragment } from 'react'
 import { X, TrendingUp, Shield, Calculator, Search, ArrowRight, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   CONSEQUENCE_TYPE_MAP,
   CONSEQUENCE_LABELS,
   LIKELIHOOD_LABELS,
   LIKELIHOOD_PROBABILITY_THRESHOLDS,
-  ASSESSMENT_PERIOD_DAYS,
   getScoreColor,
   getRiskZone,
   calculatePoissonProbability,
@@ -163,7 +162,7 @@ const VisualMiniMatrix = ({ highlightL, highlightC }) => (
       </div>
     ))}
     {[5, 4, 3, 2, 1].map(c => (
-      <React.Fragment key={`row-${c}`}>
+      <Fragment key={`row-${c}`}>
         <div className={`text-[9px] font-bold pr-1 flex items-center justify-end ${c === highlightC ? 'text-primary-700' : 'text-surface-400'}`}>
           C{c}
         </div>
@@ -181,7 +180,7 @@ const VisualMiniMatrix = ({ highlightL, highlightC }) => (
             </div>
           )
         })}
-      </React.Fragment>
+      </Fragment>
     ))}
   </div>
 )
@@ -226,13 +225,13 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
       </h3>
 
       <p className="text-sm text-surface-600 leading-relaxed">
-        Every hazard gets a <strong>Risk Score</strong> from 1 to 25. The higher the score, the more dangerous the hazard. Here's how we calculate it in 3 simple steps:
+        Every hazard gets a <strong>Risk Score</strong> from 1 to 25. The higher the score, the more dangerous the hazard. Here&apos;s how we calculate it in 3 simple steps:
       </p>
 
       {/* ---- STEP 1: LIKELIHOOD ---- */}
       <StepCard step={1} title="How likely is it to happen again?">
         <p className="text-xs text-surface-500 mb-3">
-          We look at how often this hazard caused incidents in your data. If it happens frequently, it's more likely to happen again in the next 12 months.
+          We look at how often this hazard caused incidents in your data. If it happens frequently, it&apos;s more likely to happen again in the next 12 months.
         </p>
         <div className="space-y-1.5">
           {[5, 4, 3, 2, 1].map(level => (
@@ -248,7 +247,7 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
         <DeepDive title="How we calculate the chance">
           <p className="mb-2">We count how many incidents happened for each hazard, then work out the <strong>chance of it happening at least once in the next 12 months</strong>.</p>
           <div className="bg-surface-50 rounded-lg p-3 mb-2">
-            <p className="text-xs text-surface-600">For example: If "Working at Height" had <strong>3 incidents over 2 years</strong>, that's about 1.5 per year — giving a <strong>78% chance</strong> of happening again next year → <strong>Level 4 (Likely)</strong>.</p>
+            <p className="text-xs text-surface-600">For example: If &quot;Working at Height&quot; had <strong>3 incidents over 2 years</strong>, that&apos;s about 1.5 per year — giving a <strong>78% chance</strong> of happening again next year → <strong>Level 4 (Likely)</strong>.</p>
           </div>
           <div className="space-y-1.5">
             {LIKELIHOOD_PROBABILITY_THRESHOLDS.map(t => (
@@ -292,13 +291,13 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
               { types: 'Fatality, Fire, Env major', level: 4 },
               { types: 'Multiple fatalities', level: 5 },
             ].map(row => (
-              <React.Fragment key={row.level}>
+              <Fragment key={row.level}>
                 <span className="text-surface-500">{row.types}</span>
                 <div className="flex items-center gap-1.5">
                   <ArrowRight size={10} className="text-surface-400" />
                   <span className="font-bold" style={{ color: CONSEQUENCE_COLORS[row.level] }}>Level {row.level}</span>
                 </div>
-              </React.Fragment>
+              </Fragment>
             ))}
           </div>
         </div>
@@ -376,7 +375,7 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
         <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-[10px] font-semibold text-amber-700 uppercase mb-1">Example</p>
           <p className="text-xs text-surface-600">
-            "Working at Height" has incidents happening <strong>frequently (Likely = 4)</strong> and has had an <strong>LTI (Medium = 3)</strong>.
+            &quot;Working at Height&quot; has incidents happening <strong>frequently (Likely = 4)</strong> and has had an <strong>LTI (Medium = 3)</strong>.
             Risk Score = 4 × 3 = <strong>12 → High Risk</strong>.
           </p>
         </div>
@@ -401,13 +400,8 @@ const RiskMatrixMethodologySection = ({ matrixData }) => {
 // ============================================================================
 
 const HazardBreakdownCard = ({ hazard, matrixData }) => {
-  if (!hazard) return null
-
-  const scoreColor = getScoreColor(hazard.riskScore)
-  const zone = getRiskZone(hazard.likelihood, hazard.consequence)
-
   const worstType = useMemo(() => {
-    if (!hazard.incidents?.length) return null
+    if (!hazard?.incidents?.length) return null
     let worst = null
     let worstSeverity = 0
     for (const inc of hazard.incidents) {
@@ -419,11 +413,13 @@ const HazardBreakdownCard = ({ hazard, matrixData }) => {
       }
     }
     return worst
-  }, [hazard.incidents])
+  }, [hazard?.incidents])
 
   const probability = useMemo(() => {
-    return hazard.probability ?? calculatePoissonProbability(hazard.negativeCount || 0, matrixData.totalDays || 1)
-  }, [hazard.probability, hazard.negativeCount, matrixData.totalDays])
+    if (!hazard) return 0
+    return hazard.probability ?? calculatePoissonProbability(hazard.negativeCount || 0, matrixData?.totalDays || 1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only recompute on specific property changes
+  }, [hazard?.probability, hazard?.negativeCount, matrixData?.totalDays])
 
   const readableRate = useMemo(() => {
     const rate = hazard.rate || 0
@@ -432,7 +428,12 @@ const HazardBreakdownCard = ({ hazard, matrixData }) => {
     if (rate >= 1 / 30) return `${(rate * 30).toFixed(1)} per month`
     if (rate >= 1 / 90) return `${(rate * 90).toFixed(1)} per quarter`
     return `${(rate * 365).toFixed(1)} per year`
-  }, [hazard.rate])
+  }, [hazard?.rate])
+
+  if (!hazard) return null
+
+  const scoreColor = getScoreColor(hazard.riskScore)
+  const zone = getRiskZone(hazard.likelihood, hazard.consequence)
 
   const isCountCapped = hazard.negativeCount < 5
   const isDaysCapped = matrixData.totalDays < 30
@@ -487,7 +488,7 @@ const HazardBreakdownCard = ({ hazard, matrixData }) => {
               <span className="font-bold text-surface-700">{matrixData.totalDays} days</span>
             </div>
             <div className="flex justify-between items-center">
-              <span>That's about</span>
+              <span>That&apos;s about</span>
               <span className="font-bold text-surface-700">{readableRate}</span>
             </div>
             <div className="border-t border-blue-200 pt-1.5 flex justify-between items-center">
@@ -643,10 +644,10 @@ const MethodologyExplorerModal = ({
   isOpen,
   onClose,
   matrixData,
-  filteredIncidents,
-  sortedHazards,
+  filteredIncidents: _filteredIncidents,
+  sortedHazards: _sortedHazards,
   forecastData,
-  negativeIncidents,
+  negativeIncidents: _negativeIncidents,
 }) => {
   const [activeSection, setActiveSection] = useState('risk-matrix')
   const contentRef = useRef(null)
@@ -763,4 +764,4 @@ const MethodologyExplorerModal = ({
   )
 }
 
-export default React.memo(MethodologyExplorerModal)
+export default memo(MethodologyExplorerModal)

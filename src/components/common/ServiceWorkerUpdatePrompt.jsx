@@ -1,4 +1,4 @@
-import React from 'react'
+// React import removed (jsx-runtime)
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { RefreshCw, X } from 'lucide-react'
 

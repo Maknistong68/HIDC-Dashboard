@@ -143,7 +143,7 @@ export const mergeWithDefaults = (savedSettings) => {
 }
 
 // Validate settings structure
-export const validateSettings = (settings) => {
+export const validateSettings = (_settings) => {
   // Always valid since we use hardcoded defaults
   return { isValid: true, errors: [] }
 }

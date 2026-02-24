@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Shield, FileText, AlertTriangle, Lock } from 'lucide-react'
 import PrivacyPolicy from '../components/legal/PrivacyPolicy'

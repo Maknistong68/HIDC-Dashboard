@@ -1,4 +1,4 @@
-import React from 'react'
+import { memo } from 'react'
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, AlertCircle } from 'lucide-react'
 
 /**
@@ -46,7 +46,7 @@ const IncidentTypeRiskIndicator = ({ data }) => {
 
       {/* Risk bars */}
       <div className="space-y-3">
-        {risks.slice(0, 4).map((risk, index) => (
+        {risks.slice(0, 4).map((risk) => (
           <div key={risk.type} className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
@@ -136,4 +136,4 @@ const IncidentTypeRiskIndicator = ({ data }) => {
   )
 }
 
-export default React.memo(IncidentTypeRiskIndicator)
+export default memo(IncidentTypeRiskIndicator)

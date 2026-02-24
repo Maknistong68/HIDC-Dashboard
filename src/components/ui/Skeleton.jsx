@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * Skeleton - Loading placeholder components
@@ -48,10 +47,12 @@ Skeleton.Text = ({ lines = 1, className = '' }) => (
     ))}
   </div>
 )
+Skeleton.Text.displayName = 'Skeleton.Text'
 
 Skeleton.Avatar = ({ size = 40, className = '' }) => (
   <Skeleton variant="circular" width={size} height={size} className={className} />
 )
+Skeleton.Avatar.displayName = 'Skeleton.Avatar'
 
 Skeleton.Card = ({ className = '' }) => (
   <div className={`p-4 bg-white rounded-lg border border-surface-200 ${className}`}>
@@ -62,6 +63,7 @@ Skeleton.Card = ({ className = '' }) => (
     <Skeleton.Text lines={3} />
   </div>
 )
+Skeleton.Card.displayName = 'Skeleton.Card'
 
 Skeleton.KPICard = ({ className = '' }) => (
   <div className={`p-4 bg-white rounded-lg border border-surface-200 ${className}`}>
@@ -70,6 +72,7 @@ Skeleton.KPICard = ({ className = '' }) => (
     <Skeleton variant="text" width={80} height={12} />
   </div>
 )
+Skeleton.KPICard.displayName = 'Skeleton.KPICard'
 
 Skeleton.Table = ({ rows = 5, cols = 4, className = '' }) => (
   <div className={`bg-white rounded-lg border border-surface-200 overflow-hidden ${className}`}>
@@ -97,6 +100,7 @@ Skeleton.Table = ({ rows = 5, cols = 4, className = '' }) => (
     ))}
   </div>
 )
+Skeleton.Table.displayName = 'Skeleton.Table'
 
 Skeleton.Chart = ({ height = 200, className = '' }) => (
   <div className={`p-4 bg-white rounded-lg border border-surface-200 ${className}`}>
@@ -104,5 +108,6 @@ Skeleton.Chart = ({ height = 200, className = '' }) => (
     <Skeleton height={height} />
   </div>
 )
+Skeleton.Chart.displayName = 'Skeleton.Chart'
 
 export default Skeleton

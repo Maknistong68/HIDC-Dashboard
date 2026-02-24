@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import {
   RefreshCw,
   TrendingDown,
   ArrowRight,
-  CheckCircle,
   Clock,
   Moon,
   Target,
@@ -416,7 +415,7 @@ const WhatIfSimulator = ({ incidents, overdueCount, currentNightPct, topRootCaus
             <div>
               <p className="font-medium text-surface-800">3. Root Cause Intervention</p>
               <p className="text-xs mt-1">Formula: <strong>(Root cause % of total) × (your reduction %)</strong></p>
-              <p className="text-xs text-surface-500">e.g., If "Inadequate Training" is 20% of incidents and you reduce it by 30%, effect = 6%</p>
+              <p className="text-xs text-surface-500">e.g., If &quot;Inadequate Training&quot; is 20% of incidents and you reduce it by 30%, effect = 6%</p>
             </div>
             <div>
               <p className="font-medium text-surface-800">4. Training Increase</p>
@@ -460,4 +459,4 @@ const ControlCard = ({ icon: Icon, iconColor, iconBg, title, description, effect
   </div>
 )
 
-export default React.memo(WhatIfSimulator)
+export default memo(WhatIfSimulator)

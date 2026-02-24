@@ -8,7 +8,7 @@
  * - Date utility functions
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getCurrentDate,
   getToday,
@@ -88,6 +88,7 @@ export const DateProvider = ({ children }) => {
     last7Days: getLastNDaysRange(7),
     last30Days: getLastNDaysRange(30),
     last90Days: getLastNDaysRange(90),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentDate triggers recalc of date-relative ranges
   }), [currentDate])
 
   // Memoized cutoff dates
@@ -95,10 +96,11 @@ export const DateProvider = ({ children }) => {
     overdue30Days: getOverdueCutoffDate(30),
     overdue7Days: getOverdueCutoffDate(7),
     overdue14Days: getOverdueCutoffDate(14),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentDate triggers recalc
   }), [currentDate])
 
   // Current shift
-  const currentShift = useMemo(() => getCurrentShift(), [currentDate])
+  const currentShift = useMemo(() => getCurrentShift(), [currentDate]) // eslint-disable-line react-hooks/exhaustive-deps -- currentDate triggers recalc
 
   // Context value
   const value = useMemo(() => ({

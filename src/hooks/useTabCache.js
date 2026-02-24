@@ -1,19 +1,38 @@
-import { useRef, useContext } from 'react'
-import { TabVisibilityContext } from './useDeferredMemo'
+import { useRef } from 'react'
 
-const MAX_ENTRIES_PER_KEY = 5
+const MAX_ENTRIES_PER_KEY = 10
+
+// Default fingerprints for "all filters cleared" state (workRelatedOnly true/false)
+const DEFAULT_FINGERPRINTS = new Set([
+  'c=|s=|sr=|d=|wr=1',
+  'c=|s=|sr=|d=|wr=0',
+])
 
 /**
  * Per-tab LRU caches, keyed by computation name.
  * Structure: Map<string, Map<fingerprint, result>>
  *
- * Each computation (e.g. 'dashboardAggregates') maintains its own LRU(5) cache
- * of fingerprint → result pairs. This means toggling between 5 filter states
+ * Each computation (e.g. 'dashboardAggregates') maintains its own LRU(10) cache
+ * of fingerprint → result pairs. This means toggling between 10 filter states
  * returns instant cached results with zero recomputation.
  *
  * Cleared on data import/delete via clearAllTabCaches().
  */
 const tabCaches = new Map()
+
+/**
+ * Permanent defaults cache — stores "all filters cleared" results outside the LRU.
+ * These are NEVER evicted by filter cycling, so clearing filters is always instant.
+ * Structure: Map<compositeFingerprint, result>
+ */
+const defaultsCache = new Map()
+
+function isDefaultFingerprint(compositeFingerprint) {
+  // compositeFingerprint format: "c=|s=|sr=|d=|wr=X||depsKey"
+  // Extract the filter fingerprint (before the || separator)
+  const filterPart = compositeFingerprint.split('||')[0]
+  return DEFAULT_FINGERPRINTS.has(filterPart)
+}
 
 function getCache(key) {
   if (!tabCaches.has(key)) tabCaches.set(key, new Map())
@@ -39,18 +58,17 @@ function lruSet(cacheMap, fingerprint, value) {
 }
 
 /**
- * useTabCache - Like useDeferredMemo, but with fingerprint-keyed LRU caching.
+ * useTabCache - Fingerprint-keyed LRU memo hook.
  *
  * When the filterFingerprint matches a previously cached result:
  *   → Returns instantly (no factory call, no recomputation)
  *
- * When a hidden tab becomes visible with an unchanged fingerprint:
- *   → Returns cached result (no recomputation)
- *
  * When fingerprint is new:
  *   → Calls factory, caches result, returns it
  *
- * Hidden tabs never recompute — they return the last known result.
+ * Default (all-cleared) fingerprints are pinned in a permanent cache
+ * outside the LRU, so clearing filters is always instant regardless
+ * of how many filter combinations have been cycled through.
  *
  * @param {string} cacheKey - Unique name for this computation (e.g. 'dashboardAggregates')
  * @param {Function} factory - Computation function (same as useMemo)
@@ -59,10 +77,8 @@ function lruSet(cacheMap, fingerprint, value) {
  * @returns {any} The computed or cached result
  */
 export function useTabCache(cacheKey, factory, fingerprint, deps) {
-  const isVisible = useContext(TabVisibilityContext)
   const cachedRef = useRef(undefined)
   const prevFingerprintRef = useRef(undefined)
-  const prevDepsRef = useRef(undefined)
 
   // Build a composite key that includes both fingerprint and non-filter deps
   // This handles cases where e.g. cutoffDates change without filter changes
@@ -84,34 +100,53 @@ export function useTabCache(cacheKey, factory, fingerprint, deps) {
     return cachedRef.current
   }
 
-  // Fingerprint changed — check LRU cache for a previous result
+  // Fingerprint changed — check permanent defaults cache FIRST
+  const defaultKey = `${cacheKey}|${compositeFingerprint}`
+  const defaultHit = defaultsCache.get(defaultKey)
+  if (defaultHit !== undefined) {
+    cachedRef.current = defaultHit
+    prevFingerprintRef.current = compositeFingerprint
+    return defaultHit
+  }
+
+  // Then check LRU cache for a previous result
   const cache = getCache(cacheKey)
   const lruHit = lruGet(cache, compositeFingerprint)
   if (lruHit !== undefined) {
-    // Cache hit! Return instantly without calling factory
-    if (import.meta.env.DEV) console.debug(`[useTabCache] HIT ${cacheKey}`)
     cachedRef.current = lruHit
     prevFingerprintRef.current = compositeFingerprint
-    prevDepsRef.current = deps
     return lruHit
-  }
-
-  // Cache miss — only compute if visible (hidden tabs defer)
-  if (!isVisible && cachedRef.current !== undefined) {
-    // Hidden tab with stale data — return stale value
-    return cachedRef.current
   }
 
   // Compute new result
   const result = factory()
   cachedRef.current = result
   prevFingerprintRef.current = compositeFingerprint
-  prevDepsRef.current = deps
 
   // Store in LRU cache
   lruSet(cache, compositeFingerprint, result)
 
+  // Also pin in defaults cache if this is a default fingerprint
+  if (isDefaultFingerprint(compositeFingerprint)) {
+    defaultsCache.set(defaultKey, result)
+  }
+
   return result
+}
+
+/**
+ * Seed a result into the permanent defaults cache.
+ * Called during import pre-computation to ensure first render is instant.
+ *
+ * @param {string} cacheKey - Computation name (e.g. 'dashboardAggregates')
+ * @param {string} fingerprint - Filter fingerprint (e.g. 'c=|s=|sr=|d=|wr=1')
+ * @param {string} depsKey - Serialized deps key
+ * @param {any} result - The pre-computed result to seed
+ */
+export function seedDefaultCache(cacheKey, fingerprint, depsKey, result) {
+  const compositeFingerprint = `${fingerprint}||${depsKey}`
+  const defaultKey = `${cacheKey}|${compositeFingerprint}`
+  defaultsCache.set(defaultKey, result)
 }
 
 /**
@@ -120,4 +155,5 @@ export function useTabCache(cacheKey, factory, fingerprint, deps) {
  */
 export function clearAllTabCaches() {
   tabCaches.clear()
+  defaultsCache.clear()
 }

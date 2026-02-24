@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * Event Dashboard Logo - Oxagon-inspired hexagonal design with flowing curves

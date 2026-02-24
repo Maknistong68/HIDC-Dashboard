@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState, useRef, useEffect, useCallback, memo } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react'
 import {
   FileText,
   CheckCircle,
@@ -28,7 +28,7 @@ import ReportModal from '../components/common/ReportModal'
 import DrillDownModal from '../components/common/DrillDownModal'
 import { InfoTooltip } from '../components/ui/Tooltip'
 import Skeleton from '../components/ui/Skeleton'
-import { INCIDENT_TYPES, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS, NEGATIVE_OBSERVATION_TYPES, PROACTIVE_TYPES, INCIDENT_CATEGORY_TYPES } from '../utils/constants'
+import { SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, PYRAMID_SECTIONS, NEGATIVE_OBSERVATION_TYPES, PROACTIVE_TYPES, INCIDENT_CATEGORY_TYPES } from '../utils/constants'
 import { memoize } from '../utils/memoizedCalculations'
 import { getCached, setCached, CACHE_KEYS } from '../utils/dashboardCache'
 import { format, parseISO, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns'
@@ -54,15 +54,19 @@ const makePieFormatter = (dataArray) => (value, name) => {
 }
 
 // Generic pie legend formatter - creates label with count and percent
-const makePieLegendFormatter = (dataArray) => (value) => {
-  const item = dataArray.find(d => d.name === value)
-  const total = dataArray.reduce((sum, d) => sum + d.value, 0)
-  const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
-  return (
-    <span className="text-xs text-surface-700">
-      {value}: {item?.value} ({percent}%)
-    </span>
-  )
+const makePieLegendFormatter = (dataArray) => {
+  const PieLegendFormatter = (value) => {
+    const item = dataArray.find(d => d.name === value)
+    const total = dataArray.reduce((sum, d) => sum + d.value, 0)
+    const percent = total > 0 ? Math.round((item?.value / total) * 100) : 0
+    return (
+      <span className="text-xs text-surface-700">
+        {value}: {item?.value} ({percent}%)
+      </span>
+    )
+  }
+  PieLegendFormatter.displayName = 'PieLegendFormatter'
+  return PieLegendFormatter
 }
 
 // O(1) lookup maps for hazard sorting (avoids O(n) findIndex in sort comparator)
@@ -108,9 +112,7 @@ const Dashboard = () => {
   const { setPeriod, setFilter, clearFilters: contextClearFilters } = useFilterActions()
 
   // Centralized filtered data from shared context (eliminates ~5 duplicate useMemos)
-  const { filteredIncidents: _fi, heatmapIncidents: _hi, filterConfig, filterFingerprint } = useFilteredData()
-  const filteredIncidents = useDeferredValue(_fi)
-  const heatmapIncidents = useDeferredValue(_hi)
+  const { filteredIncidents, heatmapIncidents, filterConfig, filterFingerprint } = useFilteredData()
 
   // Stable prop for FilterBar — prevents React.memo defeat from inline spreading
   const activeFilters = useMemo(
@@ -168,7 +170,7 @@ const Dashboard = () => {
     setPeriod(newPeriod)
     setDrillDown({ chart: null, filter: null, level: 1, period: null, modalOpen: false })
     setHeatmapDrillDown({ hazard: null, month: null, modalOpen: false })
-  }, [])
+  }, [setPeriod])
 
   // Handle filter changes - uses shared context (resets site when contractor changes)
   const handleFilterChange = useCallback((key, value) => {
@@ -222,7 +224,7 @@ const Dashboard = () => {
   // Offloaded to Web Worker to keep main thread free during tab switches
   const { result: factorData } = useWorkerTask(
     'aggregateFactors', heatmapIncidents, null, [heatmapIncidents],
-    { byFactor: [], analyzed: 0, total: 0 }
+    { byFactor: [], analyzed: 0, total: 0 }, filterFingerprint
   )
 
   // Get filtered data based on drill-down selection
@@ -277,7 +279,7 @@ const Dashboard = () => {
       }
     }
     return filtered
-  }, [drillDown.chart, drillDown.filter, filteredIncidents])
+  }, [drillDown.chart, drillDown.filter, filteredIncidents, siteClassifications])
 
   // Monthly breakdown for level 2
   const monthlyBreakdown = useMemo(() => {

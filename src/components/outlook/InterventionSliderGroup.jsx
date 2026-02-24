@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Settings, Shield, User, Leaf, HelpCircle, Calculator, Target } from 'lucide-react'
+import { ChevronDown, ChevronUp, Settings, Shield, User, Leaf, HelpCircle, Target } from 'lucide-react'
 import { CONTROL_HIERARCHY, getTopKeywordsForFactor } from '../insights/ScenarioSimulatorEngine'
 
 // Category icons and colors

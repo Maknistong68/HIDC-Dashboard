@@ -1,5 +1,5 @@
-import React from 'react'
-import { TrendingUp, TrendingDown, AlertTriangle, ChevronRight, Zap } from 'lucide-react'
+import { memo } from 'react'
+import { TrendingUp, TrendingDown, ChevronRight, Zap } from 'lucide-react'
 
 /**
  * AnomalyAlert - Individual anomaly display with severity and context
@@ -134,4 +134,4 @@ const AnomalyAlert = ({ anomaly, onClick }) => {
   )
 }
 
-export default React.memo(AnomalyAlert)
+export default memo(AnomalyAlert)

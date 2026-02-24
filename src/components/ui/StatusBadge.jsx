@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * StatusBadge - Badge component for incident types and action statuses

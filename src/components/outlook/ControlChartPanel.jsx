@@ -8,7 +8,6 @@ import {
   Tooltip,
   ReferenceLine,
   ResponsiveContainer,
-  Dot,
 } from 'recharts'
 import { ChevronDown, AlertTriangle, CheckCircle } from 'lucide-react'
 import { analyzeControlChart } from '../../utils/controlCharts'

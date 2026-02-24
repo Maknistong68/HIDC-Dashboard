@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState, memo } from 'react'
 import { Info, ChevronRight } from 'lucide-react'
 import { getHazardInsights } from '../../utils/insightsCalculations'
 import { getKeywordsForFactor } from '../../utils/rootCauseEngine'
@@ -26,7 +26,7 @@ const HazardInsightsTab = ({
   allIncidents = [],
   factorData = null,
   filterMonth = null,  // For month-specific insights (e.g., from heatmap)
-  onViewRecords,
+  onViewRecords: _onViewRecords,
   onFilterByRootCause,
   isMobile = false
 }) => {
@@ -77,7 +77,7 @@ const HazardInsightsTab = ({
         </div>
         <h3 className="text-base font-semibold text-surface-700 mb-1">No Insights Available</h3>
         <p className="text-sm text-surface-500 text-center max-w-xs">
-          Not enough data to generate insights for "{hazardName}".
+          Not enough data to generate insights for &quot;{hazardName}&quot;.
           {hazardIncidents.length === 0 && ' No observations found for this hazard.'}
         </p>
       </div>
@@ -139,4 +139,4 @@ const HazardInsightsTab = ({
   )
 }
 
-export default React.memo(HazardInsightsTab)
+export default memo(HazardInsightsTab)

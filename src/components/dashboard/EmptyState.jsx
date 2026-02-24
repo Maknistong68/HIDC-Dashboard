@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react'
+import { memo, useState } from 'react'
 import { FileSpreadsheet, Lightbulb, Upload } from 'lucide-react'
 import BatchImportModal from '../fileManager/BatchImportModal'
 import { Card } from '../ui'

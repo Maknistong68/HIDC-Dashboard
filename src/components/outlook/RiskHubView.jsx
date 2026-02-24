@@ -132,7 +132,7 @@ const HubCenter = ({ hazard, rank, total, isAnimating }) => {
 /**
  * FactorCard - Contributing factor spoke on left side
  */
-const FactorCard = ({ factor, index }) => {
+const FactorCard = ({ factor }) => {
   const barWidth = Math.min(100, Math.max(10, factor.percentage || 0))
 
   return (
@@ -544,7 +544,7 @@ const FactorSlider = ({ slider, value, onChange }) => {
 /**
  * ImpactScoreCard - Shows intervention impact on risk (not observation reduction)
  */
-const ImpactScoreCard = ({ impactScore, factorsAddressed, confidence, breakdown }) => {
+const ImpactScoreCard = ({ impactScore, factorsAddressed, confidence }) => {
   // Impact score is positive = good (risk reduction potential)
   const hasImpact = impactScore > 0
 
@@ -900,11 +900,9 @@ const SimulationDrawer = ({
  * Shows hazard at center with factors, times, and trend connected around it
  */
 const RiskHubView = ({
-  filteredIncidents,
   negativeIncidents,
   sortedHazards,
   factorData,
-  period,
   siteClassifications = {},
   initialIndex = 0
 }) => {

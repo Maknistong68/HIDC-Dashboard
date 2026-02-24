@@ -23,7 +23,6 @@ import {
   importAllData as idbImportAllData,
   getSetting,
   setSetting,
-  getAllSettings
 } from './indexedDBStorage'
 import { safeJsonParse, safeJsonStringify } from './safeJson'
 import { logAuditEvent, AUDIT_ACTIONS } from './auditLogger'

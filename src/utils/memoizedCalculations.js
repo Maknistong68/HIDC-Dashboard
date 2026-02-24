@@ -12,6 +12,7 @@
 import { clearDashboardCache } from './dashboardCache'
 import { clearHierarchicalFilterCache } from './filterCache'
 import { clearAllTabCaches } from '../hooks/useTabCache'
+import { clearWorkerResultCache } from '../hooks/useWorkerTask'
 
 /**
  * Simple LRU (Least Recently Used) Cache
@@ -405,6 +406,7 @@ export const clearAllCaches = () => {
   clearDashboardCache()
   clearHierarchicalFilterCache()
   clearAllTabCaches()
+  clearWorkerResultCache()
 }
 
 /**
@@ -420,6 +422,7 @@ export const clearDataCaches = () => {
   clearDashboardCache()
   clearHierarchicalFilterCache()
   clearAllTabCaches()
+  clearWorkerResultCache()
 }
 
 /**

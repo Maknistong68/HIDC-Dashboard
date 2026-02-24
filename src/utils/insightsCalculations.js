@@ -5,16 +5,13 @@
 
 import { parseISO, format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, subDays, differenceInDays } from 'date-fns'
 import { getContractorMetrics, getNearMissMetrics, getObservationsByHour, getObservationsByDayOfWeek } from './dataQualityCalculations'
-import { MAJOR_HAZARDS, ALL_HAZARDS, ROOT_CAUSES, PRIMARY_FACTORS, CONTRIBUTING_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, INCIDENT_CATEGORY_TYPES, PROACTIVE_TYPES } from './constants'
-import { parseSentence, DEVIATION_INDICATORS } from './sentenceParser'
+import { MAJOR_HAZARDS, ALL_HAZARDS, PRIMARY_FACTORS, SIGNIFICANT_HAZARDS, SUB_SIGNIFICANT_HAZARDS, RECORDABLE_INCIDENT_TYPES, NEGATIVE_OBSERVATION_TYPES, INCIDENT_CATEGORY_TYPES, PROACTIVE_TYPES } from './constants'
+import { DEVIATION_INDICATORS } from './sentenceParser'
 import { aggregateRootCausesForHazard, getObservationTypeStats, isPositiveType, detectContributingFactors } from './rootCauseEngine'
 import {
   getSortedDates,
-  getIncidentDateRange,
   filterByHazard,
   isOpenAction,
-  buildDailyCounts,
-  calculateLinearRegression
 } from './incidentHelpers'
 import { walkForwardValidation as walkForwardValidationSync, compareModels as compareModelsSync } from './forecastValidation'
 import { ensembleForecast } from './forecastModels'
@@ -34,7 +31,7 @@ export { getObservationTypeStats }
  * NOTE: Only includes predictive alerts (trending hazards, overdue actions)
  * Contractor and coverage alerts are handled in Data Control tab
  */
-export const generateRecommendations = (incidents, qualityData = null) => {
+export const generateRecommendations = (incidents, _qualityData = null) => {
   const recommendations = []
 
   // Get trending hazard alerts (predictive)
@@ -1616,7 +1613,6 @@ export const predictIncidentTypeProbability = (incidents, lookbackMonths = 6) =>
   const monthlyTypeCounts = []
   for (let m = 0; m < lookbackMonths; m++) {
     const monthStart = startOfMonth(subMonths(endDate, m))
-    const monthEnd = endOfMonth(monthStart)
     const monthStr = format(monthStart, 'yyyy-MM')
 
     const monthIncidents = incidents.filter(i => {
@@ -2784,9 +2780,6 @@ export const getTopSignals = (incidents, limit = 6) => {
       isAnomaly: false
     }))
 
-  // Add anomaly flags
-  const anomalyDates = new Set(anomalies.anomalies.map(a => a.date))
-
   // Check if any trending hazards have anomalies
   trendingSignals.forEach(signal => {
     const relatedAnomalies = anomalies.anomalies.filter(a =>
@@ -2805,7 +2798,7 @@ export const getTopSignals = (incidents, limit = 6) => {
  * Calculate contractor trend (current vs previous period)
  * Enhanced version of getContractorBenchmark with trend data
  */
-export const getContractorTrend = (incidents, periodDays = 30) => {
+export const getContractorTrend = (incidents, _periodDays = 30) => {
   const benchmark = getContractorBenchmark(incidents)
 
   if (!benchmark.hasData) return benchmark
@@ -2822,12 +2815,6 @@ export const getContractorTrend = (incidents, periodDays = 30) => {
     if (!i.date) return false
     const d = parseISO(i.date.substring(0, 10))
     return d >= startDate && d < midDate
-  })
-
-  const currentPeriod = incidents.filter(i => {
-    if (!i.date) return false
-    const d = parseISO(i.date.substring(0, 10))
-    return d >= midDate && d <= endDate
   })
 
   // Calculate scores for each period
@@ -2995,7 +2982,7 @@ export const getTrendLevel = (changePercent, isNew = false, currentCount = 0) =>
  * @param {Date} endDate - Reference end date (most recent)
  * @returns {number} Weight between 0 and 1
  */
-const calculateTimeWeight = (incidentDate, endDate) => {
+const _calculateTimeWeight = (incidentDate, endDate) => {
   const daysAgo = differenceInDays(endDate, incidentDate)
 
   // Recent data (within 90 days) gets full weight
@@ -3454,7 +3441,7 @@ const DEVIATION_CATEGORIES = {
 /**
  * Normalize a deviation string into a standard category
  */
-const normalizeDeviation = (deviation) => {
+const _normalizeDeviation = (deviation) => {
   if (!deviation) return null
   const lowerDev = deviation.toLowerCase()
 
@@ -3482,7 +3469,7 @@ const normalizeDeviation = (deviation) => {
 /**
  * Extract the deviation/deficiency from a parsed sentence and original text
  */
-const extractDeviation = (parsed, originalText) => {
+const _extractDeviation = (parsed, originalText) => {
   if (!originalText) return null
   const lowerText = originalText.toLowerCase()
 
@@ -3650,7 +3637,7 @@ export const getDayOfWeekPatterns = (incidents) => {
       } else {
         severityCounts[dayIndex].low++
       }
-    } catch (e) { /* skip invalid dates */ }
+    } catch { /* skip invalid dates */ }
   })
 
   const total = counts.reduce((a, b) => a + b, 0)
@@ -3726,9 +3713,7 @@ export const getDayOfWeekPatterns = (incidents) => {
 
   // Weekend vs weekday analysis
   const weekendCount = counts[0] + counts[6]
-  const weekdayCount = total - weekendCount
   const weekendExpected = (total / 7) * 2
-  const weekdayExpected = (total / 7) * 5
   const weekendRatio = weekendExpected > 0 ? weekendCount / weekendExpected : 1
 
   if (weekendRatio > 1.2) {
@@ -3933,7 +3918,7 @@ export const getMonthlySeasonality = (incidents) => {
 
       const yearMonth = format(date, 'yyyy-MM')
       monthYearCounts[yearMonth] = (monthYearCounts[yearMonth] || 0) + 1
-    } catch (e) { /* skip invalid dates */ }
+    } catch { /* skip invalid dates */ }
   })
 
   const total = monthCounts.reduce((a, b) => a + b, 0)
@@ -3979,7 +3964,6 @@ export const getMonthlySeasonality = (incidents) => {
   // Find peak and low months
   const sortedByCount = [...patterns].sort((a, b) => b.count - a.count)
   const peakMonths = sortedByCount.slice(0, 3).filter(p => p.riskIndex > 100)
-  const lowMonths = sortedByCount.slice(-3).filter(p => p.riskIndex < 100)
 
   // Seasonal analysis
   const seasonCounts = { winter: 0, spring: 0, summer: 0, fall: 0 }
@@ -4314,7 +4298,7 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
 
     // Pre-process items in single pass for performance
     let severeCount = 0, openActions = 0, majorCount = 0, nmCount = 0, posCount = 0
-    let current30 = 0, prev30to60 = 0, current60 = 0, prev60to120 = 0
+    let current30 = 0, current60 = 0, prev60to120 = 0
     // Site coverage tracking: site -> month -> count
     const siteMonthMap = new Map()
     items.forEach(i => {
@@ -4374,7 +4358,6 @@ export const calculateEntityRiskRanking = (incidents, dimension = 'contractor', 
           const d = differenceInDays(today, parseISO(i.date))
           // 30-day buckets for spike detection
           if (d <= 30) current30++
-          else if (d <= 60) prev30to60++
           // 60-day buckets for smoother trend
           if (d <= 60) current60++
           else if (d <= 120) prev60to120++
@@ -5209,7 +5192,7 @@ export const getHazardInsights = (allIncidents, hazardName, factorData = null, o
  * @param {Array} allIncidents - All incidents for comparison (optional)
  * @returns {Object} Category insights package
  */
-export const getCategoryInsights = (incidents, categoryType, allIncidents = null) => {
+export const getCategoryInsights = (incidents, categoryType, _allIncidents = null) => {
   if (!incidents?.length || !categoryType) {
     return {
       hasData: false,
@@ -5395,7 +5378,7 @@ export const getCategoryInsights = (incidents, categoryType, allIncidents = null
  * @param {Array} allIncidents - All incidents for comparison (optional)
  * @returns {Object} Observer insights package
  */
-export const getObserverInsights = (incidents, observerName, allIncidents = null) => {
+export const getObserverInsights = (incidents, observerName, _allIncidents = null) => {
   if (!incidents?.length || !observerName) {
     return {
       hasData: false,

@@ -48,8 +48,10 @@ const RISK_TEXT = {
  * PredictiveSimulationTab — Compact executive view
  * KPI strip + 2 charts + insight strip. Scannable in 5 seconds.
  */
-const PredictiveSimulationTab = ({ filteredIncidents, period }) => {
+const PredictiveSimulationTab = ({ filteredIncidents }) => {
   const [forecastDays, setForecastDays] = useState(30)
+  const [showMethodology, setShowMethodology] = useState(false)
+  const [showModelHealth, setShowModelHealth] = useState(false)
 
   const metrics = useMemo(() => {
     if (!filteredIncidents || filteredIncidents.length === 0) return null
@@ -67,6 +69,16 @@ const PredictiveSimulationTab = ({ filteredIncidents, period }) => {
   const handleForecastPeriodChange = useCallback((days) => {
     setForecastDays(days)
   }, [])
+
+  // Statistical diagnostics
+  const diagnostics = useMemo(() => {
+    if (!metrics?.forecast?.historical?.length) return null
+    const dailyValues = metrics.forecast.historical.map(h => h.value)
+    // Build residuals from linear regression model
+    const model = metrics.forecast.model
+    const residuals = model ? dailyValues.map((v, i) => v - (model.slope * i + model.intercept)) : null
+    return runDiagnostics(dailyValues, residuals, 27)
+  }, [metrics])
 
   if (!filteredIncidents?.length) {
     return (
@@ -99,19 +111,6 @@ const PredictiveSimulationTab = ({ filteredIncidents, period }) => {
   const accuracyBadge = validation?.badge
   const accuracyPct = validation?.accuracy ?? null
   const BADGE_COLORS = { high: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-red-100 text-red-700' }
-  const [showMethodology, setShowMethodology] = useState(false)
-  const [showModelHealth, setShowModelHealth] = useState(false)
-
-  // Statistical diagnostics
-  const diagnostics = useMemo(() => {
-    if (!metrics?.forecast?.historical?.length) return null
-    const dailyValues = metrics.forecast.historical.map(h => h.value)
-    // Build residuals from linear regression model
-    const n = dailyValues.length
-    const model = metrics.forecast.model
-    const residuals = model ? dailyValues.map((v, i) => v - (model.slope * i + model.intercept)) : null
-    return runDiagnostics(dailyValues, residuals, 27)
-  }, [metrics])
 
   return (
     <div className="space-y-3 animate-fade-in">

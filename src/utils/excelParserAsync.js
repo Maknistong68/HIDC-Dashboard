@@ -10,7 +10,6 @@
 // (these are lightweight string operations, fine on main thread)
 import {
   EXPECTED_COLUMNS,
-  FOOTER_MARKER_PATTERNS,
   detectFooterStart,
 } from './excelParser'
 

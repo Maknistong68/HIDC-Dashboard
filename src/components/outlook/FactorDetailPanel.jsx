@@ -29,7 +29,7 @@ const getBarColor = (count, maxCount) => {
 /**
  * DetectionSummary - Shows detection rate and stats in a grid layout for better readability
  */
-const DetectionSummary = React.memo(({ factor, totalIncidents, analyzedIncidents, detectedIncidents }) => {
+const DetectionSummary = React.memo(({ factor, totalIncidents, _analyzedIncidents, detectedIncidents }) => {
   if (!factor) return null
 
   const detectionRate = totalIncidents > 0
@@ -66,8 +66,8 @@ DetectionSummary.displayName = 'DetectionSummary'
  */
 const HazardBarChart = React.memo(({ hazardBreakdown, isTransitioning, onBarClick }) => {
   // Pre-calculate chart data and colors for performance
-  const { chartData, maxCount } = useMemo(() => {
-    if (!hazardBreakdown?.length) return { chartData: [], maxCount: 0 }
+  const { chartData } = useMemo(() => {
+    if (!hazardBreakdown?.length) return { chartData: [] }
 
     // Show all hazards (no limit) for scrollable view
     const data = hazardBreakdown.map(h => ({

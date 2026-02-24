@@ -92,7 +92,7 @@ export const getReviewQueue = () => {
   try {
     const stored = localStorage.getItem(REVIEW_QUEUE_KEY)
     return stored ? JSON.parse(stored) : []
-  } catch (error) {
+  } catch {
     // error handled silently
     return []
   }
@@ -146,7 +146,7 @@ export const addToReviewQueue = (observation, result) => {
     }
 
     return true
-  } catch (error) {
+  } catch {
     // error handled silently
     return false
   }
@@ -171,7 +171,7 @@ export const markAsReviewed = (itemId, correctCategory) => {
 
     localStorage.setItem(REVIEW_QUEUE_KEY, JSON.stringify(queue))
     return true
-  } catch (error) {
+  } catch {
     // error handled silently
     return false
   }
@@ -199,7 +199,7 @@ export const getReviewedItems = () => {
 export const clearReviewQueue = () => {
   try {
     localStorage.removeItem(REVIEW_QUEUE_KEY)
-  } catch (error) {
+  } catch {
     // error handled silently
   }
 }
@@ -284,7 +284,7 @@ export const getUnknownTerms = () => {
   try {
     const stored = localStorage.getItem(UNKNOWN_TERMS_KEY)
     return stored ? JSON.parse(stored) : {}
-  } catch (error) {
+  } catch {
     // error handled silently
     return {}
   }
@@ -313,7 +313,7 @@ export const addUnknownTerms = (terms) => {
     } else {
       localStorage.setItem(UNKNOWN_TERMS_KEY, JSON.stringify(existing))
     }
-  } catch (error) {
+  } catch {
     // error handled silently
   }
 }
@@ -337,7 +337,7 @@ export const getTopUnknownTerms = (limit = 20) => {
 export const clearUnknownTerms = () => {
   try {
     localStorage.removeItem(UNKNOWN_TERMS_KEY)
-  } catch (error) {
+  } catch {
     // error handled silently
   }
 }
@@ -351,7 +351,7 @@ export const removeUnknownTerm = (term) => {
     const terms = getUnknownTerms()
     delete terms[term.toLowerCase()]
     localStorage.setItem(UNKNOWN_TERMS_KEY, JSON.stringify(terms))
-  } catch (error) {
+  } catch {
     // error handled silently
   }
 }

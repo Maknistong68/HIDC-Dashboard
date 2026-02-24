@@ -1,5 +1,3 @@
-import React from 'react'
-
 const PrivacyPolicy = () => {
   return (
     <div className="prose prose-sm max-w-none">
@@ -8,7 +6,7 @@ const PrivacyPolicy = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">1. Introduction</h3>
         <p className="text-surface-600 mb-3">
-          Event Dashboard Team ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how the Event Dashboard application handles your data.
+          Event Dashboard Team (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how the Event Dashboard application handles your data.
         </p>
         <p className="text-surface-600">
           This application is designed for internal HSE (Health, Safety, and Environment) observation tracking within your organization.
@@ -32,9 +30,9 @@ const PrivacyPolicy = () => {
           <p className="text-blue-800 font-medium">Important: All data is stored locally in your browser.</p>
         </div>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
-          <li>Data is stored using your browser's localStorage feature</li>
+          <li>Data is stored using your browser&apos;s localStorage feature</li>
           <li>Data remains on your device only and is not transmitted to any external server</li>
-          <li>Each user's data is isolated to their own browser and device</li>
+          <li>Each user&apos;s data is isolated to their own browser and device</li>
           <li>Data is not synchronized across devices or shared between users</li>
         </ul>
       </section>
@@ -64,9 +62,9 @@ const PrivacyPolicy = () => {
         <h3 className="text-lg font-semibold text-surface-900 mb-3">6. Data Retention</h3>
         <p className="text-surface-600 mb-3">Your data is retained until:</p>
         <ul className="list-disc pl-6 text-surface-600 space-y-2">
-          <li>You manually delete it using the "Clear Data" function</li>
-          <li>You clear your browser's localStorage or browsing data</li>
-          <li>Your browser's storage is cleared by the browser or operating system</li>
+          <li>You manually delete it using the &quot;Clear Data&quot; function</li>
+          <li>You clear your browser&apos;s localStorage or browsing data</li>
+          <li>Your browser&apos;s storage is cleared by the browser or operating system</li>
         </ul>
       </section>
 
@@ -84,7 +82,7 @@ const PrivacyPolicy = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">8. Third-Party Sharing</h3>
         <p className="text-surface-600">
-          We do not share your data with any third parties. Since all data remains in your browser's local storage, there is no mechanism for us or any third party to access your information.
+          We do not share your data with any third parties. Since all data remains in your browser&apos;s local storage, there is no mechanism for us or any third party to access your information.
         </p>
       </section>
 
@@ -98,7 +96,7 @@ const PrivacyPolicy = () => {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-surface-900 mb-3">10. Changes to This Policy</h3>
         <p className="text-surface-600">
-          We may update this Privacy Policy from time to time. Any changes will be reflected in the "Last Updated" date at the top of this policy. Continued use of the application after changes constitutes acceptance of the updated policy.
+          We may update this Privacy Policy from time to time. Any changes will be reflected in the &quot;Last Updated&quot; date at the top of this policy. Continued use of the application after changes constitutes acceptance of the updated policy.
         </p>
       </section>
     </div>

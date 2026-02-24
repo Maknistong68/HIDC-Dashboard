@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, memo } from 'react'
 import {
   ChevronDown,
   ChevronUp,
@@ -7,17 +7,9 @@ import {
   Minus,
   HelpCircle,
   Zap,
-  RefreshCw,
   Calculator,
-  Target,
   BarChart3,
-  Activity,
-  Shield,
-  Settings,
-  User,
-  Leaf,
-  CheckCircle2,
-  Info
+  Activity
 } from 'lucide-react'
 import {
   PieChart,
@@ -29,47 +21,11 @@ import {
 import CalculationBreakdownModal from './CalculationBreakdownModal'
 import PredictionTrendChart from './PredictionTrendChart'
 import RiskGauge from './RiskGauge'
-import InterventionComparison from './InterventionComparison'
 import {
-  CONTROL_HIERARCHY,
   calculateFactorPrevalence,
-  generateDynamicSliders,
   calculateFullProjection,
-  getTopKeywordsForFactor
 } from './ScenarioSimulatorEngine'
 import { ScenarioSimulatorCompact } from '../outlook'
-
-// Category icons and colors
-const CATEGORY_CONFIG = {
-  engineering: {
-    icon: Settings,
-    color: 'blue',
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-700',
-    borderColor: 'border-blue-200'
-  },
-  administrative: {
-    icon: Shield,
-    color: 'indigo',
-    bgColor: 'bg-indigo-50',
-    textColor: 'text-indigo-700',
-    borderColor: 'border-indigo-200'
-  },
-  ppe: {
-    icon: User,
-    color: 'amber',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-700',
-    borderColor: 'border-amber-200'
-  },
-  environmental: {
-    icon: Leaf,
-    color: 'green',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-700',
-    borderColor: 'border-green-200'
-  }
-}
 
 /**
  * UnifiedPredictivePanel - Combined forecasting and scenario simulation
@@ -110,26 +66,10 @@ const UnifiedPredictivePanel = ({
     if (selectedHazardName && selectedHazardName !== selectedHazard) {
       setSelectedHazard(selectedHazardName)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-way sync from external prop
   }, [selectedHazardName])
 
   const { weekly, monthly, typeProbability, typeRisk } = incidentPrediction || {}
-
-  // Get unique hazards for dropdown
-  const hazardOptions = useMemo(() => {
-    if (!filteredIncidents?.length) return []
-
-    const hazardCounts = {}
-    filteredIncidents.forEach(i => {
-      const hazard = i.location?.trim()
-      if (hazard && hazard !== 'Not Specified' && hazard !== 'Not specified') {
-        hazardCounts[hazard] = (hazardCounts[hazard] || 0) + 1
-      }
-    })
-
-    return Object.entries(hazardCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ name, count }))
-  }, [filteredIncidents])
 
   // Filter incidents by selected hazard
   const hazardFilteredIncidents = useMemo(() => {
@@ -168,31 +108,6 @@ const UnifiedPredictivePanel = ({
     if (!factorData?.byFactor || incidentStats.totalNegative === 0) return {}
     return calculateFactorPrevalence(factorData, incidentStats.totalNegative)
   }, [factorData, incidentStats.totalNegative])
-
-  // Generate dynamic sliders based on top factors in the data
-  const dynamicSliders = useMemo(() => {
-    if (!factorData?.byFactor) return []
-    const result = generateDynamicSliders(factorData, selectedHazard, incidentStats.totalNegative)
-    return result.sliders || result
-  }, [factorData, selectedHazard, incidentStats.totalNegative])
-
-  // Group sliders by HSE control category
-  const slidersByCategory = useMemo(() => {
-    const grouped = {
-      engineering: [],
-      administrative: [],
-      ppe: [],
-      environmental: []
-    }
-
-    for (const slider of dynamicSliders) {
-      if (grouped[slider.categoryKey]) {
-        grouped[slider.categoryKey].push(slider)
-      }
-    }
-
-    return grouped
-  }, [dynamicSliders])
 
   // Calculate weekly average for comparison
   const weeklyAverage = useMemo(() => {
@@ -307,25 +222,11 @@ const UnifiedPredictivePanel = ({
     }
   }, [weekly, sliders, actionsToClose, factorData, incidentStats, selectedHazard, hazardFilteredIncidents, filteredIncidents, hazardTrend])
 
-  const handleSliderChange = useCallback((id, value) => {
-    setSliders(prev => ({ ...prev, [id]: value }))
-  }, [])
-
-  const handleActionsChange = useCallback((value) => {
-    setActionsToClose(value)
-  }, [])
-
   const handleHazardChange = useCallback((e) => {
     setSelectedHazard(e.target.value)
     // Reset sliders when hazard changes
     setSliders({})
     setActionsToClose(0)
-  }, [])
-
-  const handleReset = useCallback(() => {
-    setSliders({})
-    setActionsToClose(0)
-    setSelectedHazard('all')
   }, [])
 
   const openBreakdown = useCallback((type, extraData = {}) => {
@@ -355,8 +256,6 @@ const UnifiedPredictivePanel = ({
   const closeBreakdown = useCallback(() => {
     setBreakdownModal({ isOpen: false, type: null, data: null })
   }, [])
-
-  const hasChanges = Object.values(sliders).some(v => v !== 0) || actionsToClose > 0 || selectedHazard !== 'all'
 
   // Don't render if no meaningful data
   if (!weekly && !monthly && !typeProbability?.hasData) {
@@ -498,7 +397,7 @@ const UnifiedPredictivePanel = ({
               selectedHazard={selectedHazard}
               onHazardChange={handleHazardChange}
               weekly={weekly}
-              onProjectionChange={(proj) => {
+              onProjectionChange={(_proj) => {
                 // Optional: handle projection changes
               }}
             />
@@ -797,310 +696,6 @@ const RiskAssessmentSection = ({ data, onClick }) => {
 }
 
 /**
- * ScenarioSlider - Data-driven scenario slider with prevalence indicator and "Why?" explanation
- */
-const ScenarioSlider = ({
-  id,
-  label,
-  sublabel,
-  value,
-  min,
-  max,
-  unit = '',
-  leftLabel,
-  rightLabel,
-  colorClass,
-  onChange,
-  prevalence,
-  maxReduction,
-  topKeywords = [],
-  effectiveness = 0,
-  categoryName = ''
-}) => {
-  const [showExplanation, setShowExplanation] = useState(false)
-  const displayValue = value > 0 ? `+${value}` : value.toString()
-  const isPositive = value > 0
-  const isNegative = value < 0
-
-  // Calculate actual impact based on slider value
-  const actualImpact = prevalence && effectiveness
-    ? (prevalence * effectiveness * (value / 100)).toFixed(1)
-    : 0
-  const effortPercent = value
-
-  return (
-    <div className="space-y-1.5 pl-2">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium text-surface-700">{label}</span>
-          {sublabel && (
-            <p className="text-xs text-surface-400 truncate">{sublabel}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {prevalence !== null && prevalence !== undefined && (
-            <span className="text-2xs bg-surface-100 text-surface-500 px-1.5 py-0.5 rounded whitespace-nowrap">
-              {prevalence.toFixed(1)}%
-            </span>
-          )}
-          <span className={`text-sm font-bold min-w-[50px] text-right ${
-            isPositive ? 'text-green-600' : isNegative ? 'text-red-500' : 'text-surface-500'
-          }`}>
-            {displayValue}{unit}
-          </span>
-        </div>
-      </div>
-      <div className="w-full">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(e) => onChange(id, parseInt(e.target.value))}
-          className={`unified-slider ${colorClass} w-full block`}
-          style={{ width: '100%' }}
-        />
-      </div>
-      <div className="flex justify-between text-2xs text-surface-400">
-        <span>{leftLabel}</span>
-        {maxReduction !== undefined && (
-          <span className="text-green-600">Max impact: -{maxReduction.toFixed(1)}%</span>
-        )}
-        <span>{rightLabel}</span>
-      </div>
-
-      {/* Why? Explanation Button */}
-      {prevalence !== null && prevalence !== undefined && maxReduction !== undefined && (
-        <button
-          onClick={() => setShowExplanation(!showExplanation)}
-          className="flex items-center gap-1 text-2xs text-primary-600 hover:text-primary-700 transition-colors mt-1"
-        >
-          {showExplanation ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          <HelpCircle size={10} />
-          <span>Why {maxReduction > 0 ? `-${maxReduction.toFixed(1)}%` : '0%'} max impact?</span>
-        </button>
-      )}
-
-      {/* Expandable Explanation Panel */}
-      {showExplanation && prevalence !== null && (
-        <div className="mt-2 p-3 bg-surface-50 rounded-lg border border-surface-200 text-xs space-y-3">
-          {/* Formula Breakdown */}
-          <div>
-            <p className="font-semibold text-surface-700 mb-1.5 flex items-center gap-1">
-              <Calculator size={12} className="text-primary-500" />
-              Impact Calculation
-            </p>
-            <div className="bg-white rounded p-2 border border-surface-200">
-              <div className="font-mono text-2xs text-surface-600 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>Prevalence</span>
-                  <span className="font-semibold">{prevalence.toFixed(1)}%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>× Control Effectiveness</span>
-                  <span className="font-semibold">{(effectiveness * 100).toFixed(0)}%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>× Effort Applied</span>
-                  <span className={`font-semibold ${value > 0 ? 'text-green-600' : value < 0 ? 'text-red-500' : 'text-surface-500'}`}>
-                    {effortPercent}%
-                  </span>
-                </div>
-                <div className="border-t border-surface-200 pt-1 mt-1 flex items-center justify-between">
-                  <span className="font-semibold">= Current Impact</span>
-                  <span className={`font-bold ${parseFloat(actualImpact) > 0 ? 'text-green-600' : parseFloat(actualImpact) < 0 ? 'text-red-500' : 'text-surface-600'}`}>
-                    {parseFloat(actualImpact) > 0 ? '-' : ''}{Math.abs(parseFloat(actualImpact)).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-            <p className="text-2xs text-surface-400 mt-1.5">
-              At 100% effort: {prevalence.toFixed(1)}% × {(effectiveness * 100).toFixed(0)}% = -{maxReduction.toFixed(1)}% reduction
-            </p>
-          </div>
-
-          {/* Control Category Info */}
-          {categoryName && (
-            <div className="flex items-center gap-2 text-2xs text-surface-500 bg-white rounded px-2 py-1.5 border border-surface-100">
-              <Info size={10} className="text-surface-400" />
-              <span>
-                <strong>{categoryName}</strong> controls have <strong>{(effectiveness * 100).toFixed(0)}%</strong> effectiveness (HSE/NIOSH standard)
-              </span>
-            </div>
-          )}
-
-          {/* Top Contributors */}
-          {topKeywords && topKeywords.length > 0 && (
-            <div>
-              <p className="font-semibold text-surface-700 mb-1.5 flex items-center gap-1">
-                <Target size={12} className="text-amber-500" />
-                Top Contributors ({prevalence.toFixed(1)}% of incidents)
-              </p>
-              <div className="space-y-1">
-                {topKeywords.map((kw, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-2xs">
-                    <span className="text-surface-400">•</span>
-                    <span className="text-surface-700 font-medium flex-1">{kw.keyword}</span>
-                    <span className="text-surface-500 bg-surface-100 px-1.5 py-0.5 rounded">
-                      {kw.count} observations
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* No keywords message */}
-          {(!topKeywords || topKeywords.length === 0) && (
-            <div className="text-2xs text-surface-400 italic">
-              Keyword analysis not available for this factor.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * ProjectedImpactBox - Shows the projected impact (numbers mode)
- */
-const ProjectedImpactBox = ({ projection, hasChanges, onClick, selectedHazard }) => {
-  const { baseline, projected, changePercent, riskLevel, isImproved, hazardRatio, isFiltered, hazardTrendDirection, hazardTrendFactor } = projection
-
-  // Get trend indicator for hazard-specific predictions
-  const getTrendIndicator = () => {
-    if (!isFiltered || !hazardTrendDirection || hazardTrendDirection === 'stable') return null
-
-    if (hazardTrendDirection === 'increasing') {
-      return (
-        <span className="ml-1 text-2xs text-red-600 flex items-center gap-0.5" title={`Hazard trending up (+${((hazardTrendFactor - 1) * 100).toFixed(0)}% adjustment)`}>
-          <TrendingUp size={10} />
-          trending
-        </span>
-      )
-    }
-
-    if (hazardTrendDirection === 'decreasing') {
-      return (
-        <span className="ml-1 text-2xs text-green-600 flex items-center gap-0.5" title={`Hazard trending down (${((hazardTrendFactor - 1) * 100).toFixed(0)}% adjustment)`}>
-          <TrendingDown size={10} />
-          trending
-        </span>
-      )
-    }
-
-    return null
-  }
-
-  const getRiskColor = (level) => {
-    switch (level) {
-      case 'low': return 'bg-green-500'
-      case 'medium': return 'bg-amber-500'
-      case 'high': return 'bg-orange-500'
-      case 'critical': return 'bg-red-500'
-      default: return 'bg-surface-400'
-    }
-  }
-
-  const getRiskWidth = (level) => {
-    switch (level) {
-      case 'low': return '25%'
-      case 'medium': return '50%'
-      case 'high': return '75%'
-      case 'critical': return '100%'
-      default: return '50%'
-    }
-  }
-
-  const Wrapper = hasChanges ? 'button' : 'div'
-  const wrapperProps = hasChanges ? {
-    onClick,
-    className: `w-full text-left p-4 rounded-lg border-2 group relative transition-all ${
-      isImproved
-        ? 'bg-green-50 border-green-200 hover:border-green-300'
-        : 'bg-red-50 border-red-200 hover:border-red-300'
-    }`
-  } : {
-    className: 'p-4 rounded-lg border-2 bg-surface-50 border-surface-200'
-  }
-
-  return (
-    <Wrapper {...wrapperProps}>
-      {hasChanges && (
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Calculator size={14} className="text-primary-400" />
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-surface-600 uppercase tracking-wide">
-          Projected Impact
-          {isFiltered && selectedHazard !== 'all' && (
-            <span className="ml-2 text-primary-600 normal-case">for "{selectedHazard}"</span>
-          )}
-        </span>
-        {isFiltered && (
-          <div className="flex items-center gap-1">
-            <span className="text-2xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
-              {hazardRatio}% of total
-            </span>
-            {getTrendIndicator()}
-          </div>
-        )}
-      </div>
-
-      {hasChanges ? (
-        <>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-baseline gap-1">
-              <span className={`text-2xl font-bold ${isImproved ? 'text-green-600' : 'text-red-600'}`}>
-                {projected}
-              </span>
-              <span className="text-sm text-surface-500">/week</span>
-            </div>
-            <span className="text-sm text-surface-400">(was {baseline})</span>
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${
-              isImproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}>
-              {isImproved ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
-              <span className="text-sm font-bold">
-                {changePercent > 0 ? '+' : ''}{changePercent}%
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="h-2.5 bg-surface-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getRiskColor(riskLevel)}`}
-                style={{ width: getRiskWidth(riskLevel) }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-surface-400">Risk Level:</span>
-              <span className={`font-semibold ${
-                riskLevel === 'low' ? 'text-green-600' :
-                riskLevel === 'medium' ? 'text-amber-600' :
-                riskLevel === 'high' ? 'text-orange-600' :
-                'text-red-600'
-              }`}>
-                {riskLevel?.toUpperCase()}
-              </span>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="flex items-center gap-2 text-surface-500">
-          <Minus size={16} />
-          <span className="text-sm">Adjust sliders above to see projected impact</span>
-        </div>
-      )}
-    </Wrapper>
-  )
-}
-
-/**
  * MethodologySection - Explanation of calculations
  */
 const MethodologySection = ({ filteredIncidents, hazardFilteredIncidents, selectedHazard }) => (
@@ -1202,4 +797,4 @@ const getRiskBarColor = (riskLevel) => {
   return 'bg-green-500'
 }
 
-export default React.memo(UnifiedPredictivePanel)
+export default memo(UnifiedPredictivePanel)

@@ -1,5 +1,5 @@
-import React from 'react'
-import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
+import { memo } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 /**
  * IncidentPredictionCard - Shows predicted incident count for a period (week/month)
@@ -87,4 +87,4 @@ const IncidentPredictionCard = ({
   )
 }
 
-export default React.memo(IncidentPredictionCard)
+export default memo(IncidentPredictionCard)

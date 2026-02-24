@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { Upload, FileSpreadsheet, FolderOpen, Check, AlertTriangle, Play, CheckCircle2, X, MapPin } from 'lucide-react'
 import { useDataState, useDataActions, useUIState } from '../../context/DataContext'
 import Logo from '../ui/Logo'
@@ -12,7 +12,7 @@ import {
 } from '../../utils/excelParser'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
-import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
+import { validateFile } from '../../utils/fileValidator'
 import { precomputeAllData } from '../../utils/dashboardPrecompute'
 
 /**

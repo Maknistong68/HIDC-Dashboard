@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Info, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 
-const DataConfidenceFooter = ({ negativeIncidents, weekly }) => {
+const DataConfidenceFooter = ({ negativeIncidents }) => {
   const [showCaveats, setShowCaveats] = useState(false)
 
   const stats = useMemo(() => {

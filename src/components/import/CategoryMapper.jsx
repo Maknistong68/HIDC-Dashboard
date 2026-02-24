@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronUp, Check } from 'lucide-react'
-import { INCIDENT_TYPES } from '../../utils/constants'
+import { useState } from 'react'
+import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
 
 const MAPPING_OPTIONS = [
   { value: 'unsafe-condition', label: 'Unsafe Condition', color: '#6366f1' },
@@ -64,7 +63,7 @@ const CategoryMapper = ({ items, mappedItems, onMappingChange }) => {
               {items.length} items need manual categorization
             </p>
             <p className="text-sm text-orange-700 mt-1">
-              These observations have classifications that couldn't be automatically mapped.
+              These observations have classifications that couldn&apos;t be automatically mapped.
               Please assign each to the appropriate category.
             </p>
           </div>

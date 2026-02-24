@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Upload, X, FileSpreadsheet, Check, AlertTriangle, Play, CheckCircle2, FolderOpen, MapPin } from 'lucide-react'
 import { useDataState, useDataActions, useUIState } from '../../context/DataContext'
 import {
@@ -11,7 +11,7 @@ import {
 import { parseExcelFileAsync } from '../../utils/excelParserAsync'
 import { calculateFileHash } from '../../utils/fileHashUtils'
 import { checkFileHashExists } from '../../utils/storage'
-import { validateFile, MAX_FILE_SIZE_MB } from '../../utils/fileValidator'
+import { validateFile } from '../../utils/fileValidator'
 import { precomputeAllData } from '../../utils/dashboardPrecompute'
 
 /**
@@ -339,7 +339,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     const totalRecords = newResults.reduce((sum, r) => sum + (r.recordCount || 0), 0)
 
     if (import.meta.env.DEV) {
-      console.log(`[BatchImport] Batch complete: ${successCount} files imported, ${totalRecords} total records`)
+      console.warn(`[BatchImport] Batch complete: ${successCount} files imported, ${totalRecords} total records`)
     }
 
     // Collect unique sites from all successfully imported records
@@ -372,7 +372,7 @@ const BatchImportModal = ({ onClose, onProcessingStart, onProcessingEnd }) => {
     try {
       await reloadFiles({ silent: true })
       if (import.meta.env.DEV) {
-        console.log('[BatchImport] Files reloaded successfully')
+        console.warn('[BatchImport] Files reloaded successfully')
       }
     } catch (error) {
       if (import.meta.env.DEV) {

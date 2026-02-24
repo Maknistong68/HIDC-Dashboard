@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { BarChart3, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
+import { useMemo, memo } from 'react'
+import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react'
 
 const formatTypeName = (type) => {
   if (!type) return 'Unknown'
@@ -27,7 +27,7 @@ const TYPE_COLORS = {
   'unsafe-act': '#8b5cf6', 'unsafe-condition': '#ec4899', 'ncr': '#6366f1', 'positive': '#22c55e'
 }
 
-const IncidentTypeOutlook = ({ typeProbability, typeRisk, onShowBreakdown }) => {
+const IncidentTypeOutlook = ({ typeProbability, onShowBreakdown }) => {
   const types = useMemo(() => {
     return typeProbability?.types?.map(t => ({
       type: t.type, name: formatTypeName(t.type),
@@ -82,4 +82,4 @@ const IncidentTypeOutlook = ({ typeProbability, typeRisk, onShowBreakdown }) => 
   )
 }
 
-export default React.memo(IncidentTypeOutlook)
+export default memo(IncidentTypeOutlook)

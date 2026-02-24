@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link2, Users, AlertTriangle, ArrowRight } from 'lucide-react'
+import { memo } from 'react'
+import { Users, AlertTriangle, ArrowRight } from 'lucide-react'
 
 /**
  * CorrelationPatternCard - Displays a statistically significant correlation pattern
@@ -124,4 +124,4 @@ const CorrelationPatternCard = ({ pattern, onClick }) => {
   )
 }
 
-export default React.memo(CorrelationPatternCard)
+export default memo(CorrelationPatternCard)

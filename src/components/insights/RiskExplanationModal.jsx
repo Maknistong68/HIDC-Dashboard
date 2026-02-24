@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import Modal from '../common/Modal'
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import {
@@ -23,9 +23,9 @@ const RiskExplanationModal = ({
   factorData,
   predicted,
   average,
-  trendAnalysis
+  trendAnalysis: _trendAnalysis
 }) => {
-  const { level, label, changePercent, isAbove } = riskAnalysis || {}
+  const { level: _level, label, changePercent, isAbove } = riskAnalysis || {}
 
   // Threshold zones data for the chart
   const thresholdZones = useMemo(() => [
@@ -215,7 +215,7 @@ const RiskExplanationModal = ({
 
           {/* Zone labels */}
           <div className="flex justify-between text-2xs px-4">
-            {thresholdZones.map((zone, idx) => (
+            {thresholdZones.map((zone) => (
               <div
                 key={zone.zone}
                 className={`text-center ${zone.zone === label ? 'font-bold' : 'text-surface-400'}`}
@@ -399,4 +399,4 @@ const RiskExplanationModal = ({
   )
 }
 
-export default React.memo(RiskExplanationModal)
+export default memo(RiskExplanationModal)

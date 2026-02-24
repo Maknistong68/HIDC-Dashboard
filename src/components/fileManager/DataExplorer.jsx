@@ -1,4 +1,4 @@
-import React, {
+import {
   useState,
   useMemo,
   useCallback,
@@ -16,7 +16,6 @@ import {
   Filter,
   Columns3,
   Eye,
-  EyeOff,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -28,8 +27,6 @@ import {
   Tag,
   FileText,
   Shield,
-  ChevronLeft,
-  ChevronRight,
   CircleCheck,
 } from 'lucide-react'
 import { List as VirtualList } from 'react-window'
@@ -1114,4 +1111,4 @@ const DataExplorer = ({ incidents, files }) => {
   )
 }
 
-export default React.memo(DataExplorer)
+export default memo(DataExplorer)

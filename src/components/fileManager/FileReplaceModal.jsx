@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import ModalPortal from '../common/ModalPortal'
 import { RefreshCw, FileSpreadsheet, Upload, X, Check, AlertTriangle } from 'lucide-react'
 import { useDataState, useDataActions } from '../../context/DataContext'

@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import { memo } from 'react'
 import { Clock, MapPin, AlertTriangle, Eye } from 'lucide-react'
 
 const RISK_LEVEL_COLORS = {

@@ -30,7 +30,6 @@ import {
   HAZARD_SEVERITY,
   OBJECT_ACTION_OUTCOMES,
   SIGNIFICANT_HAZARDS,
-  SUB_SIGNIFICANT_HAZARDS,
   HSE_ABBREVIATIONS,
   EQUIPMENT_SYNONYMS,
   EQUIPMENT_TO_CATEGORY,
@@ -44,10 +43,6 @@ import { levenshteinDistance } from './stringMatching'
 
 import {
   parseSentence,
-  extractActor,
-  extractObject,
-  extractLocation,
-  extractAction,
   ACTOR_HAZARD_CONFIDENCE,
   OBJECT_HAZARD_CONFIDENCE
 } from './sentenceParser'
@@ -526,7 +521,7 @@ const determineOutcome = (text, objects, action) => {
 
   // Second, infer outcome from object + action combination
   if (objects.length > 0 && action) {
-    for (const [ruleKey, rule] of Object.entries(OBJECT_ACTION_OUTCOMES)) {
+    for (const [_ruleKey, rule] of Object.entries(OBJECT_ACTION_OUTCOMES)) {
       const objectMatch = objects.some(obj =>
         rule.objects.some(ruleObj => obj.object.includes(ruleObj) || ruleObj.includes(obj.object))
       )
@@ -671,7 +666,7 @@ const determineSubHazard = (text, primaryCategory) => {
 // STEP 8: Calculate Confidence Score
 // ============================================================================
 
-const calculateConfidence = (disambiguation, outcome, objects, action) => {
+const _calculateConfidence = (disambiguation, outcome, objects, action) => {
   // Start with base confidence
   let confidence = 50
 
@@ -717,7 +712,7 @@ const calculateConfidence = (disambiguation, outcome, objects, action) => {
 // STEP 9: Generate Reasoning Explanation
 // ============================================================================
 
-const generateReasoning = (disambiguation, objects, action, outcome) => {
+const _generateReasoning = (disambiguation, objects, action, outcome) => {
   const parts = []
 
   if (disambiguation) {
@@ -1326,7 +1321,7 @@ const aggregateVotes = (votes) => {
 /**
  * Generate detailed voting reasoning for display
  */
-const generateVotingReasoning = (aggregated) => {
+const _generateVotingReasoning = (aggregated) => {
   const parts = []
 
   // Main result
@@ -1370,7 +1365,7 @@ const generateVotingReasoning = (aggregated) => {
  * @param {string} existingCategory - The existing category from Excel (if any)
  * @returns {Object} Classification result with voting details, confidence, and reasoning
  */
-export const analyzeObservation = (description, existingCategory = '') => {
+export const analyzeObservation = (description, _existingCategory = '') => {
   // Default result for empty input
   if (!description || description.trim() === '') {
     return {

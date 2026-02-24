@@ -11,8 +11,6 @@ import {
   calculatePyramidRanking,
   ASSESSMENT_PERIOD_DAYS,
   LIKELIHOOD_PROBABILITY_THRESHOLDS,
-  CONSEQUENCE_TYPE_MAP,
-  DESCRIPTION_SEVERITY_SIGNALS,
 } from './riskMatrix'
 
 // ============================================================================
@@ -524,8 +522,6 @@ describe('plotHazardsOnMatrix', () => {
   })
 
   it('assigns higher likelihood to more frequent hazards', () => {
-    const baseDate = '2025-01-01'
-    const endDate = '2025-12-31'
     // Hazard A: 20 incidents (frequent)
     const incidentsA = Array.from({ length: 20 }, (_, i) =>
       makeIncident('Hazard A', 'mti', `2025-${String((i % 12) + 1).padStart(2, '0')}-10`)

@@ -1,7 +1,10 @@
 import { isPositiveType } from './rootCauseEngine'
 import { getSortedDates } from './incidentHelpers'
 import { SEVERITY_WEIGHTS } from './calculations'
-import { SIGNIFICANT_HAZARDS, PYRAMID_SECTIONS } from './constants'
+import { SIGNIFICANT_HAZARDS, PYRAMID_SECTIONS, RECORDABLE_INCIDENT_TYPES } from './constants'
+
+// Set of recordable incident types for likelihood filtering (excludes observations like near-miss, unsafe-act, etc.)
+const RECORDABLE_SET = new Set(RECORDABLE_INCIDENT_TYPES)
 
 // ============================================================================
 // IMPACT AXIS - "What is the worst that has happened?"
@@ -437,12 +440,12 @@ export const plotHazardsOnMatrix = (allIncidents, sortedHazards) => {
   const lastDate = new Date(dates[dates.length - 1])
   const totalDays = Math.max(1, Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) + 1)
 
-  // Group incidents by hazard, excluding positive types
+  // Group incidents by hazard, including only recordable incident types
   const hazardIncidentMap = new Map()
   for (const incident of allIncidents) {
     const hazardName = incident.location
     if (!hazardName) continue
-    if (isPositiveType(incident.type)) continue
+    if (!RECORDABLE_SET.has(incident.type?.toLowerCase())) continue
     if (!hazardIncidentMap.has(hazardName)) {
       hazardIncidentMap.set(hazardName, [])
     }

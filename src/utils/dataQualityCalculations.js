@@ -222,7 +222,7 @@ export const getDescriptionMetrics = (incidents) => {
     qualityRate: qualityRate.toFixed(1),
     flaggedCount: distribution.veryShort,
     flaggedRecords: flaggedRecords.slice(0, 50), // Limit to 50
-    status: qualityRate >= 75 ? 'good' : qualityRate >= 50 ? 'warning' : 'poor'
+    status: qualityRate >= 90 ? 'good' : qualityRate >= 50 ? 'warning' : 'poor'
   }
 }
 
@@ -823,7 +823,6 @@ export const getQualityScoreTrend = (incidents, granularity = 'monthly') => {
 
   // Compute per-month quality scores, skipping empty and immature months
   const monthlyData = monthsInRange.map(monthStart => {
-    const monthEnd = endOfMonth(monthStart)
     const monthStr = format(monthStart, 'yyyy-MM')
 
     // Immature month exclusion: skip current month if <80% elapsed
@@ -1556,8 +1555,8 @@ export const getReporterDeepDive = (incidents, reporterName, allIncidents, miscl
     }
   })
   const duplicateDescriptions = Object.entries(descriptionCounts)
-    .filter(([_, data]) => data.count > 1)
-    .flatMap(([desc, data]) => data.records.map(r => ({
+    .filter(([, data]) => data.count > 1)
+    .flatMap(([, data]) => data.records.map(r => ({
       id: r.externalId,
       date: r.date,
       description: r.description,
@@ -1811,8 +1810,8 @@ export const getContractorDeepDive = (incidents, contractorName, allIncidents, m
     }
   })
   const duplicateDescriptions = Object.entries(descriptionCounts)
-    .filter(([_, data]) => data.count > 1)
-    .flatMap(([desc, data]) => data.records.map(r => ({
+    .filter(([, data]) => data.count > 1)
+    .flatMap(([, data]) => data.records.map(r => ({
       id: r.externalId,
       date: r.date,
       description: r.description,

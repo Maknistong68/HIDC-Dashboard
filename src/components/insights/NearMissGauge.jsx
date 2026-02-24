@@ -1,5 +1,5 @@
-import React from 'react'
-import { Target, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react'
+import { memo } from 'react'
+import { Target, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react'
 
 /**
  * NearMissGauge - Gauge visualization for near-miss compliance
@@ -140,4 +140,4 @@ const NearMissGauge = ({ data }) => {
   )
 }
 
-export default React.memo(NearMissGauge)
+export default memo(NearMissGauge)

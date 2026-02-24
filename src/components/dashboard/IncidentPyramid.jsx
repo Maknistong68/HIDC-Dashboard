@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useTransition, useCallback } from 'react'
+import { useState, useMemo, useTransition, useCallback, memo } from 'react'
 import DrillDownModal from '../common/DrillDownModal'
 import { InfoTooltip } from '../ui/Tooltip'
 import { Card } from '../ui'
@@ -16,7 +16,7 @@ import { PYRAMID_SECTIONS, ENV_SUB_TYPES, DMG_SUB_TYPES } from '../../utils/cons
 const ALL_TYPES = PYRAMID_SECTIONS.flatMap(s => s.types)
 const TOTAL_LEVELS = ALL_TYPES.length
 
-const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) => {
+const IncidentPyramid = ({ data: _data, pyramidData, showOpenClosed, incidents = [] }) => {
   const [selectedType, setSelectedType] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [, startTransition] = useTransition()
@@ -77,7 +77,7 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
 
       {/* Centered Triangle Pyramid */}
       <div className="flex flex-col">
-        {PYRAMID_SECTIONS.map((section, sectionIdx) => {
+        {PYRAMID_SECTIONS.map((section) => {
           const sectionRows = section.types.map((level) => {
             const idx = globalIdx
             globalIdx++
@@ -204,4 +204,4 @@ const IncidentPyramid = ({ data, pyramidData, showOpenClosed, incidents = [] }) 
   )
 }
 
-export default React.memo(IncidentPyramid)
+export default memo(IncidentPyramid)

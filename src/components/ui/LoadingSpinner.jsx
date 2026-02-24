@@ -1,4 +1,3 @@
-import React from 'react'
 
 /**
  * LoadingSpinner - Consistent loading indicator across the app

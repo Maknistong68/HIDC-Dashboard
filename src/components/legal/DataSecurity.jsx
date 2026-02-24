@@ -1,4 +1,3 @@
-import React from 'react'
 import { Shield, HardDrive, Wifi, WifiOff, Eye, Database, Monitor, Chrome, Search, Lock } from 'lucide-react'
 
 const DataSecurity = () => {
@@ -40,7 +39,7 @@ const DataSecurity = () => {
             <Lock className="w-5 h-5 text-surface-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-surface-800">Browser-Isolated</p>
-              <p className="text-sm text-surface-600">Each browser has separate storage - Chrome data isn't visible in Firefox</p>
+              <p className="text-sm text-surface-600">Each browser has separate storage - Chrome data isn&apos;t visible in Firefox</p>
             </div>
           </div>
           <div className="bg-surface-50 rounded-lg p-3 flex items-start gap-3">
@@ -65,7 +64,7 @@ const DataSecurity = () => {
           <ol className="list-decimal pl-5 text-blue-700 space-y-2 text-sm">
             <li>Open Event Dashboard application in your browser</li>
             <li>Press <kbd className="px-2 py-0.5 bg-blue-100 rounded text-blue-800 font-mono">F12</kbd> to open Developer Tools</li>
-            <li>Click the <strong>"Network"</strong> tab</li>
+            <li>Click the <strong>&quot;Network&quot;</strong> tab</li>
             <li>Import an Excel file or use the app normally</li>
             <li>Observe the Network tab - you will see <strong>NO outgoing data requests</strong></li>
           </ol>
@@ -100,8 +99,8 @@ const DataSecurity = () => {
           <ol className="list-decimal pl-5 text-amber-700 space-y-2 text-sm">
             <li>Open Event Dashboard application in your browser</li>
             <li>Press <kbd className="px-2 py-0.5 bg-amber-100 rounded text-amber-800 font-mono">F12</kbd> to open Developer Tools</li>
-            <li>Click the <strong>"Application"</strong> tab (Chrome) or <strong>"Storage"</strong> tab (Firefox)</li>
-            <li>In the left sidebar, expand <strong>"Local Storage"</strong></li>
+            <li>Click the <strong>&quot;Application&quot;</strong> tab (Chrome) or <strong>&quot;Storage&quot;</strong> tab (Firefox)</li>
+            <li>In the left sidebar, expand <strong>&quot;Local Storage&quot;</strong></li>
             <li>Click on the website URL</li>
             <li>You will see all stored data with these keys:</li>
           </ol>
@@ -287,7 +286,7 @@ const DataSecurity = () => {
           <ul className="space-y-2 text-blue-100">
             <li className="flex items-center gap-2">
               <span className="text-green-400">✓</span>
-              All data is stored exclusively in the user's browser localStorage
+              All data is stored exclusively in the user&apos;s browser localStorage
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-400">✓</span>
