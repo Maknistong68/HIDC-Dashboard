@@ -9,6 +9,22 @@ const DEFAULT_FINGERPRINTS = new Set([
 ])
 
 /**
+ * Cached JSON.stringify via WeakMap — avoids re-stringifying the same object
+ * reference on every render. O(1) for repeated calls with the same reference.
+ *
+ * This is critical for deps that include large worker results (misclassificationData,
+ * textAnalysisMetrics, etc.) — without caching, JSON.stringify runs on every render
+ * even when the object hasn't changed.
+ */
+const jsonCache = new WeakMap()
+function cachedStringify(obj) {
+  if (jsonCache.has(obj)) return jsonCache.get(obj)
+  const s = JSON.stringify(obj)
+  jsonCache.set(obj, s)
+  return s
+}
+
+/**
  * Per-tab LRU caches, keyed by computation name.
  * Structure: Map<string, Map<fingerprint, result>>
  *
@@ -82,11 +98,13 @@ export function useTabCache(cacheKey, factory, fingerprint, deps) {
 
   // Build a composite key that includes both fingerprint and non-filter deps
   // This handles cases where e.g. cutoffDates change without filter changes
+  // Uses cachedStringify for objects to avoid re-serializing large worker results
+  // (misclassificationData, etc.) on every render — O(1) for same object references
   const depsKey = deps.length > 0
     ? deps.map(d => {
         if (d === null || d === undefined) return 'null'
         if (Array.isArray(d)) return `arr${d.length}`
-        if (typeof d === 'object') return JSON.stringify(d)
+        if (typeof d === 'object') return cachedStringify(d)
         return String(d)
       }).join('|')
     : ''

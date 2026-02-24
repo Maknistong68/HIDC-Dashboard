@@ -217,6 +217,40 @@ export function useWorkerTask(taskName, incidents, params, deps, fallback = null
   const mountedRef = useRef(true)
   const prevKeyRef = useRef(null)
 
+  // ── Synchronous cache sync during render ──────────────────────────────
+  // When the fingerprint/data changes back to a previously cached value
+  // (e.g., filter clear → default), update result state DURING RENDER so
+  // downstream hooks (useTabCache) see correct data in the SAME render pass.
+  //
+  // Without this, effects are deferred to after paint, causing a 1-render
+  // stale data gap where useTabCache sees old worker results + new fingerprint
+  // → composite fingerprint mismatch → expensive O(n) factory recomputation.
+  //
+  // React's "setState during render" pattern: condition becomes false after
+  // the restart (result === cachedHit), so no infinite loop.
+  if (incidents && incidents.length > 0) {
+    const paramsKey = params ? JSON.stringify(params) : ''
+    let cachedHit
+
+    // Check permanent defaults cache first (fingerprint-based, O(1))
+    if (fingerprint && DEFAULT_FINGERPRINTS.has(fingerprint)) {
+      const fpKey = `${taskName}|fp:${fingerprint}|${paramsKey}`
+      cachedHit = defaultResultCache.get(fpKey)
+    }
+
+    // Fall back to LRU cache (hash-based) — peek without promoting
+    if (cachedHit === undefined) {
+      const hash = hashIncidents(incidents)
+      const cacheKey = `${taskName}|${hash}|${paramsKey}`
+      if (resultCache.has(cacheKey)) cachedHit = resultCache.get(cacheKey)
+    }
+
+    if (cachedHit !== undefined && result !== cachedHit) {
+      setResult(cachedHit)
+      if (isPending) setIsPending(false)
+    }
+  }
+
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }

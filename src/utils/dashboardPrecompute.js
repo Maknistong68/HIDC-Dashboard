@@ -321,8 +321,32 @@ export async function precomputeAllData(incidents, siteClassifications, onProgre
       }
     })
 
+    // Seed DataQuality useTabCache defaults (coreQualityMetrics, reporterContractorMetrics)
+    // Uses worker results from Phase 2 so clearing filters on Data Control is instant
+    // even on the very first visit — the useTabCache defaultsCache has the result pre-computed.
+    onProgress('Seeding Data Control defaults...', 81)
+    const misclassResult = workerSettled[3]
+    if (misclassResult != null) {
+      const { calculateQualityScore, getNearMissMetrics, getReporterMetrics, getContractorMetrics } = await import('./dataQualityCalculations')
+      const misclassJson = JSON.stringify(misclassResult)
+      const dqDepsKey = `arr${wrFiltered.length}|${misclassJson}`
+
+      const coreQuality = {
+        quality: calculateQualityScore(wrFiltered, misclassResult),
+        nearMiss: getNearMissMetrics(wrFiltered),
+      }
+      seedDefaultCache('coreQualityMetrics', WR1, dqDepsKey, coreQuality)
+
+      const reporterContractor = {
+        reporters: getReporterMetrics(wrFiltered, misclassResult),
+        contractors: getContractorMetrics(wrFiltered, misclassResult),
+      }
+      seedDefaultCache('reporterContractorMetrics', WR1, dqDepsKey, reporterContractor)
+    }
+    await yieldToUI()
+
     // ═══════════════════════════════════════════════════════════════════
-    // PHASE 3: Risk matrix + pyramid ranking (80-100%)
+    // PHASE 3: Risk matrix + pyramid ranking (82-100%)
     // ═══════════════════════════════════════════════════════════════════
 
     onProgress('Computing risk matrix...', 82)
